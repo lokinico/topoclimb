@@ -59,24 +59,43 @@ class Router
     public function loadRoutes(string $file): self
     {
         if (file_exists($file)) {
+            $this->logger->info("Loading routes from file: $file");
+            
             $routes = require $file;
             
-            if (is_array($routes)) {
-                foreach ($routes as $route) {
-                    $method = $route['method'] ?? 'GET';
-                    $path = $route['path'] ?? '/';
-                    $controller = $route['controller'] ?? '';
-                    $action = $route['action'] ?? '';
-                    
-                    if ($controller && $action) {
-                        $this->logger->info("Adding route: $method $path -> $controller::$action");
-                        $this->addRoute($method, $path, [
-                            'controller' => $controller,
-                            'action' => $action
-                        ]);
-                    }
-                }
+            if (!is_array($routes)) {
+                $this->logger->error("Routes file does not return an array");
+                return $this;
             }
+            
+            $count = 0;
+            foreach ($routes as $route) {
+                if (!isset($route['method']) || !isset($route['path']) || 
+                    !isset($route['controller']) || !isset($route['action'])) {
+                    $this->logger->warning("Invalid route configuration", [
+                        'route' => $route
+                    ]);
+                    continue;
+                }
+                
+                $method = strtoupper($route['method']);
+                $path = $route['path'];
+                $controller = $route['controller'];
+                $action = $route['action'];
+                
+                $this->logger->debug("Adding route: $method $path -> $controller::$action");
+                
+                $this->addRoute($method, $path, [
+                    'controller' => $controller,
+                    'action' => $action
+                ]);
+                
+                $count++;
+            }
+            
+            $this->logger->info("Added $count routes successfully");
+        } else {
+            $this->logger->error("Routes file not found: $file");
         }
         
         return $this;
@@ -100,16 +119,33 @@ class Router
             $path = '/' . $path;
         }
         
+        // Store the original path
+        $originalPath = $path;
+        
         // Convert path to regex pattern
         $pattern = $this->pathToRegex($path);
         
         // Register the route
+        if (!isset($this->routes[$method])) {
+            $this->routes[$method] = [];
+        }
+        
         $this->routes[$method][$pattern] = [
-            'path' => $path,
+            'path' => $originalPath,
             'handler' => $handler
         ];
         
         return $this;
+    }
+
+    /**
+     * Get all registered routes for debugging
+     *
+     * @return array
+     */
+    public function getRoutes(): array
+    {
+        return $this->routes;
     }
 
     /**
@@ -150,8 +186,11 @@ class Router
         // Debug log
         $this->logger->debug("Resolving route for: $method $path");
         
+        // Ensure method is uppercase
+        $method = strtoupper($method);
+        
         // Get routes for the HTTP method
-        $routes = $this->routes[strtoupper($method)] ?? [];
+        $routes = $this->routes[$method] ?? [];
         
         if (empty($routes)) {
             $this->logger->warning("No routes defined for method: $method");
