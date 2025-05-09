@@ -101,7 +101,6 @@ class ContainerBuilder
             ->addArgument(new Reference(SectorService::class))
             ->addArgument(new Reference(MediaService::class))
             ->addArgument(new Reference(Database::class));
-            
-        // Autres contrôleurs à enregistrer...
+        
     }
 }
