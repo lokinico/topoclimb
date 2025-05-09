@@ -161,30 +161,36 @@ class Router
      * @param Request $request
      * @return Response
      */
-      public function dispatch(Request $request): Response
-        {
-            // Utiliser getPathInfo() systématiquement
-            $path = $request->getPathInfo();
-            
-            // Resolve the route
-            $route = $this->resolve($request->getMethod(), $path);
-            
-            // Add URL parameters to the request with type conversion
-            foreach ($route['params'] as $key => $value) {
-                // Conversion de type automatique
-                if (is_numeric($value) && intval($value) == $value) {
-                    $value = (int)$value;
-                } elseif ($value === 'true') {
-                    $value = true;
-                } elseif ($value === 'false') {
-                    $value = false;
-                }
-                $request->attributes->set($key, $value);
-            }
-            
-            // Execute the route handler
-            return $this->executeHandler($route['handler'], $request);
+    public function dispatch(Request $request): Response
+    {
+        // S'assurer d'utiliser le bon format de chemin
+        $path = rtrim($request->getPathInfo() ?: '/', '/');
+        // Ajouter un slash au début s'il n'y en a pas
+        if (empty($path)) {
+            $path = '/';
+        } elseif ($path[0] !== '/') {
+            $path = '/' . $path;
         }
+        
+        // Resolve the route
+        $route = $this->resolve($request->getMethod(), $path);
+        
+        // Add URL parameters to the request with type conversion
+        foreach ($route['params'] as $key => $value) {
+            // Conversion de type automatique
+            if (is_numeric($value) && intval($value) == $value) {
+                $value = (int)$value;
+            } elseif ($value === 'true') {
+                $value = true;
+            } elseif ($value === 'false') {
+                $value = false;
+            }
+            $request->attributes->set($key, $value);
+        }
+        
+        // Execute the route handler
+        return $this->executeHandler($route['handler'], $request);
+    }
 
     /**
      * Execute the route handler
