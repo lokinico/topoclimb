@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Core;
+namespace TopoclimbCH\Core;
 
-use App\Models\User;
+use TopoclimbCH\Models\User;
 
 class Auth
 {

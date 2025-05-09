@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Services;
+namespace TopoclimbCH\Services;
 
-use App\Models\Route;
-use App\Models\DifficultySystem;
-use App\Models\UserAscent;
-use App\Core\Database;
-use App\Core\Pagination;
+use TopoclimbCH\Models\Route;
+use TopoclimbCH\Models\DifficultySystem;
+use TopoclimbCH\Models\UserAscent;
+use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Pagination;
 
 class RouteService
 {
