@@ -1,0 +1,214 @@
+<?php
+
+namespace TopoclimbCH\Core;
+
+class Session
+{
+    /**
+     * Indique si la session est démarrée
+     *
+     * @var bool
+     */
+    private bool $started = false;
+
+    /**
+     * Constructeur
+     */
+    public function __construct()
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+            $this->started = true;
+        } else {
+            $this->started = session_status() === PHP_SESSION_ACTIVE;
+        }
+    }
+
+    /**
+     * Démarre la session si elle n'est pas déjà démarrée
+     *
+     * @return bool
+     */
+    public function start(): bool
+    {
+        if (!$this->started) {
+            $this->started = session_start();
+        }
+        return $this->started;
+    }
+
+    /**
+     * Vérifie si la session est démarrée
+     *
+     * @return bool
+     */
+    public function isStarted(): bool
+    {
+        return $this->started;
+    }
+
+    /**
+     * Définit une variable de session
+     *
+     * @param string $key Clé de la variable
+     * @param mixed $value Valeur de la variable
+     * @return void
+     */
+    public function set(string $key, mixed $value): void
+    {
+        $_SESSION[$key] = $value;
+    }
+
+    /**
+     * Récupère une variable de session
+     *
+     * @param string $key Clé de la variable
+     * @param mixed $default Valeur par défaut si la variable n'existe pas
+     * @return mixed
+     */
+    public function get(string $key, mixed $default = null): mixed
+    {
+        return $_SESSION[$key] ?? $default;
+    }
+
+    /**
+     * Vérifie si une variable de session existe
+     *
+     * @param string $key Clé de la variable
+     * @return bool
+     */
+    public function has(string $key): bool
+    {
+        return isset($_SESSION[$key]);
+    }
+
+    /**
+     * Supprime une variable de session
+     *
+     * @param string $key Clé de la variable
+     * @return void
+     */
+    public function remove(string $key): void
+    {
+        if ($this->has($key)) {
+            unset($_SESSION[$key]);
+        }
+    }
+
+    /**
+     * Récupère toutes les variables de session
+     *
+     * @return array
+     */
+    public function all(): array
+    {
+        return $_SESSION ?? [];
+    }
+
+    /**
+     * Définit un message flash qui sera disponible uniquement pour la prochaine requête
+     *
+     * @param string $type Type de message (success, error, info, warning)
+     * @param string $message Contenu du message
+     * @return void
+     */
+    public function flash(string $type, string $message): void
+    {
+        $flashes = $this->get('_flashes', []);
+        $flashes[$type][] = $message;
+        $this->set('_flashes', $flashes);
+    }
+
+    /**
+     * Récupère les messages flash pour un type donné
+     *
+     * @param string|null $type Type de message (null pour tous les types)
+     * @return array
+     */
+    public function getFlashes(?string $type = null): array
+    {
+        $flashes = $this->get('_flashes', []);
+        
+        if ($type === null) {
+            $result = $flashes;
+            $this->remove('_flashes');
+            return $result;
+        }
+        
+        $result = $flashes[$type] ?? [];
+        unset($flashes[$type]);
+        $this->set('_flashes', $flashes);
+        
+        return $result;
+    }
+
+    /**
+     * Régénère l'ID de session
+     *
+     * @param bool $deleteOldSession Supprimer les données de l'ancienne session
+     * @return bool
+     */
+    public function regenerate(bool $deleteOldSession = true): bool
+    {
+        return session_regenerate_id($deleteOldSession);
+    }
+
+    /**
+     * Détruit la session
+     *
+     * @return bool
+     */
+    public function destroy(): bool
+    {
+        if ($this->started) {
+            $this->started = false;
+            $_SESSION = [];
+            
+            if (ini_get("session.use_cookies")) {
+                $params = session_get_cookie_params();
+                setcookie(
+                    session_name(),
+                    '',
+                    time() - 42000,
+                    $params["path"],
+                    $params["domain"],
+                    $params["secure"],
+                    $params["httponly"]
+                );
+            }
+            
+            return session_destroy();
+        }
+        
+        return true;
+    }
+
+    /**
+     * Définit un token CSRF
+     *
+     * @return string Token CSRF généré
+     */
+    public function setCsrfToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->set('_csrf_token', $token);
+        return $token;
+    }
+
+    /**
+     * Vérifie si un token CSRF est valide
+     *
+     * @param string $token Token CSRF à vérifier
+     * @return bool
+     */
+    public function validateCsrfToken(string $token): bool
+    {
+        $csrfToken = $this->get('_csrf_token');
+        
+        if ($csrfToken === null) {
+            return false;
+        }
+        
+        return hash_equals($csrfToken, $token);
+    }
+}

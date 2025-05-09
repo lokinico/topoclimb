@@ -2,176 +2,300 @@
 
 namespace TopoclimbCH\Core;
 
-use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use TopoclimbCH\Controllers\ErrorController;
 use TopoclimbCH\Exceptions\RouteNotFoundException;
 
 class Router
 {
     /**
+     * Routes enregistrées
+     *
      * @var array
      */
     private array $routes = [];
-
+    
     /**
-     * @var LoggerInterface
-     */
-    private LoggerInterface $logger;
-
-    /**
-     * @var ContainerBuilder
-     */
-    private ContainerBuilder $container;
-
-    /**
-     * Router constructor.
+     * Paramètres d'URL extraits
      *
-     * @param LoggerInterface $logger
-     * @param ContainerBuilder $container
+     * @var array
      */
-    public function __construct(LoggerInterface $logger, ContainerBuilder $container)
+    private array $params = [];
+    
+    /**
+     * Namespace par défaut pour les contrôleurs
+     *
+     * @var string
+     */
+    private string $namespace = 'TopoclimbCH\\Controllers\\';
+
+    /**
+     * Ajoute une route pour la méthode GET
+     *
+     * @param string $path Chemin de la route
+     * @param string|callable $handler Gestionnaire de la route (contrôleur@méthode ou callable)
+     * @return Router
+     */
+    public function get(string $path, string|callable $handler): self
     {
-        $this->logger = $logger;
-        $this->container = $container;
-        $this->loadRoutes();
+        return $this->addRoute('GET', $path, $handler);
     }
 
     /**
-     * Load all application routes.
+     * Ajoute une route pour la méthode POST
      *
-     * @return void
+     * @param string $path Chemin de la route
+     * @param string|callable $handler Gestionnaire de la route (contrôleur@méthode ou callable)
+     * @return Router
      */
-    private function loadRoutes(): void
+    public function post(string $path, string|callable $handler): self
     {
-        // Charger les routes depuis le fichier de configuration
-        $routesFile = BASE_PATH . '/config/routes.php';
-        if (file_exists($routesFile)) {
-            $routes = require $routesFile;
-            foreach ($routes as $route) {
-                $this->addRoute(
-                    $route['method'] ?? 'GET',
-                    $route['path'],
-                    $route['controller'],
-                    $route['action']
-                );
+        return $this->addRoute('POST', $path, $handler);
+    }
+
+    /**
+     * Ajoute une route pour la méthode PUT
+     *
+     * @param string $path Chemin de la route
+     * @param string|callable $handler Gestionnaire de la route (contrôleur@méthode ou callable)
+     * @return Router
+     */
+    public function put(string $path, string|callable $handler): self
+    {
+        return $this->addRoute('PUT', $path, $handler);
+    }
+
+    /**
+     * Ajoute une route pour la méthode DELETE
+     *
+     * @param string $path Chemin de la route
+     * @param string|callable $handler Gestionnaire de la route (contrôleur@méthode ou callable)
+     * @return Router
+     */
+    public function delete(string $path, string|callable $handler): self
+    {
+        return $this->addRoute('DELETE', $path, $handler);
+    }
+
+    /**
+     * Ajoute une route pour toutes les méthodes HTTP
+     *
+     * @param string $path Chemin de la route
+     * @param string|callable $handler Gestionnaire de la route (contrôleur@méthode ou callable)
+     * @return Router
+     */
+    public function any(string $path, string|callable $handler): self
+    {
+        $methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+        foreach ($methods as $method) {
+            $this->addRoute($method, $path, $handler);
+        }
+        return $this;
+    }
+
+    /**
+     * Ajoute une route
+     *
+     * @param string $method Méthode HTTP
+     * @param string $path Chemin de la route
+     * @param string|callable $handler Gestionnaire de la route (contrôleur@méthode ou callable)
+     * @return Router
+     */
+    public function addRoute(string $method, string $path, string|callable $handler): self
+    {
+        // Convertit le chemin en expression régulière
+        $pattern = $this->pathToRegex($path);
+        
+        // Enregistre la route
+        $this->routes[$method][$pattern] = [
+            'path' => $path,
+            'handler' => $handler
+        ];
+        
+        return $this;
+    }
+
+    /**
+     * Convertit un chemin en expression régulière
+     *
+     * @param string $path Chemin de la route
+     * @return string Expression régulière
+     */
+    private function pathToRegex(string $path): string
+    {
+        // Échappe les caractères spéciaux de regex
+        $path = preg_quote($path, '/');
+        
+        // Convertit les paramètres {param} en groupes de capture nommés
+        $path = preg_replace('/\\\{([a-zA-Z0-9_]+)\\\}/', '(?P<$1>[^\/]+)', $path);
+        
+        // Convertit les paramètres {param?} en groupes de capture nommés optionnels
+        $path = preg_replace('/\\\{([a-zA-Z0-9_]+)\\\?\\\}/', '(?P<$1>[^\/]+)?', $path);
+        
+        return '/^' . $path . '$/';
+    }
+
+    /**
+     * Résout une route en fonction de la méthode HTTP et du chemin
+     *
+     * @param string $method Méthode HTTP
+     * @param string $path Chemin de la requête
+     * @return array Information sur la route résolue
+     * @throws RouteNotFoundException Si aucune route ne correspond
+     */
+    public function resolve(string $method, string $path): array
+    {
+        // Récupère les routes pour la méthode HTTP
+        $routes = $this->routes[$method] ?? [];
+        
+        // Parcourt toutes les routes pour trouver une correspondance
+        foreach ($routes as $pattern => $route) {
+            if (preg_match($pattern, $path, $matches)) {
+                // Extrait les paramètres capturés
+                $params = array_filter($matches, function ($key) {
+                    return !is_numeric($key);
+                }, ARRAY_FILTER_USE_KEY);
+                
+                $this->params = $params;
+                
+                return [
+                    'handler' => $route['handler'],
+                    'params' => $params
+                ];
             }
         }
+        
+        // Aucune route ne correspond
+        throw new RouteNotFoundException("Route non trouvée pour $method $path");
     }
 
     /**
-     * Add a route to the router.
+     * Récupère les paramètres d'URL extraits
      *
-     * @param string $method
-     * @param string $path
-     * @param string $controller
-     * @param string $action
-     * @return void
+     * @return array
      */
-    public function addRoute(string $method, string $path, string $controller, string $action): void
+    public function getParams(): array
     {
-        $this->routes[] = [
-            'method' => strtoupper($method),
-            'path' => $path,
-            'controller' => $controller,
-            'action' => $action
-        ];
+        return $this->params;
     }
 
     /**
-     * Dispatch the request to the appropriate controller.
+     * Dispatche la requête et retourne la réponse
      *
-     * @param Request $request
+     * @param Request $request Requête HTTP
      * @return Response
      */
     public function dispatch(Request $request): Response
     {
-        $method = $request->getMethod();
-        $path = $request->getPathInfo();
-
-        $this->logger->info('Dispatching route', [
-            'method' => $method,
-            'path' => $path
-        ]);
-
         try {
-            // Trouver la route correspondante
-            foreach ($this->routes as $route) {
-                if ($this->matchRoute($route, $method, $path)) {
-                    return $this->executeController($route['controller'], $route['action'], $request);
+            // Essaie de résoudre la route
+            $route = $this->resolve($request->getMethod(), $request->getPath());
+            
+            // Ajoute les paramètres d'URL à la requête
+            foreach ($route['params'] as $key => $value) {
+                $request->setParam($key, $value);
+            }
+            
+            // Exécute le gestionnaire de route
+            return $this->executeHandler($route['handler'], $request);
+        } catch (RouteNotFoundException $e) {
+            // Gère les routes introuvables
+            return $this->handleNotFound($request);
+        } catch (\Exception $e) {
+            // Gère les autres exceptions
+            return $this->handleError($request, $e);
+        }
+    }
+
+    /**
+     * Exécute le gestionnaire de route
+     *
+     * @param mixed $handler Gestionnaire de route
+     * @param Request $request Requête HTTP
+     * @return Response
+     * @throws \Exception
+     */
+    private function executeHandler(mixed $handler, Request $request): Response
+    {
+        // Si le gestionnaire est un callable
+        if (is_callable($handler)) {
+            return call_user_func($handler, $request);
+        }
+        
+        // Si le gestionnaire est une chaîne au format 'Controller@method'
+        if (is_string($handler) && strpos($handler, '@') !== false) {
+            [$controller, $method] = explode('@', $handler);
+            $controllerClass = $this->namespace . $controller;
+            
+            if (!class_exists($controllerClass)) {
+                throw new \Exception("Le contrôleur '$controllerClass' n'existe pas.");
+            }
+            
+            $controllerInstance = new $controllerClass();
+            
+            if (!method_exists($controllerInstance, $method)) {
+                throw new \Exception("La méthode '$method' n'existe pas dans le contrôleur '$controllerClass'.");
+            }
+            
+            return $controllerInstance->$method($request);
+        }
+        
+        throw new \Exception("Le gestionnaire de route n'est pas valide.");
+    }
+
+    /**
+     * Gère les routes introuvables
+     *
+     * @param Request $request Requête HTTP
+     * @return Response
+     */
+    private function handleNotFound(Request $request): Response
+    {
+        $response = new Response();
+        $response->setStatusCode(404);
+        $response->setContent('404 - Page non trouvée');
+        return $response;
+    }
+
+    /**
+     * Gère les erreurs
+     *
+     * @param Request $request Requête HTTP
+     * @param \Exception $exception Exception survenue
+     * @return Response
+     */
+    private function handleError(Request $request, \Exception $exception): Response
+    {
+        $response = new Response();
+        $response->setStatusCode(500);
+        $response->setContent('500 - Erreur serveur interne: ' . $exception->getMessage());
+        return $response;
+    }
+
+    /**
+     * Charge les routes à partir d'un fichier
+     *
+     * @param string $file Chemin du fichier
+     * @return Router
+     */
+    public function loadRoutes(string $file): self
+    {
+        if (file_exists($file)) {
+            $routes = require $file;
+            
+            if (is_array($routes)) {
+                foreach ($routes as $route) {
+                    $method = $route['method'] ?? 'GET';
+                    $path = $route['path'] ?? '/';
+                    $controller = $route['controller'] ?? '';
+                    $action = $route['action'] ?? '';
+                    
+                    if ($controller && $action) {
+                        $handler = $controller . '@' . $action;
+                        $this->addRoute($method, $path, $handler);
+                    }
                 }
             }
-
-            // Aucune route correspondante trouvée
-            throw new RouteNotFoundException("No route found for $method $path");
-        } catch (RouteNotFoundException $e) {
-            $this->logger->warning('Route not found', [
-                'method' => $method,
-                'path' => $path,
-                'exception' => $e
-            ]);
-
-            // Rediriger vers le contrôleur d'erreur 404
-            $controller = new ErrorController();
-            return $controller->notFound($request);
-        } catch (\Throwable $e) {
-            $this->logger->error('Error dispatching route', [
-                'method' => $method,
-                'path' => $path,
-                'exception' => $e
-            ]);
-
-            // Rediriger vers le contrôleur d'erreur 500
-            $controller = new ErrorController();
-            return $controller->serverError($request, $e);
         }
-    }
-
-    /**
-     * Check if a route matches the request.
-     *
-     * @param array $route
-     * @param string $method
-     * @param string $path
-     * @return bool
-     */
-    private function matchRoute(array $route, string $method, string $path): bool
-    {
-        if ($route['method'] !== $method) {
-            return false;
-        }
-
-        // TODO: Implémenter le matching des paramètres d'URL
-        return $route['path'] === $path;
-    }
-
-    /**
-     * Execute the controller action.
-     *
-     * @param string $controllerClass
-     * @param string $action
-     * @param Request $request
-     * @return Response
-     * @throws \ReflectionException
-     */
-    private function executeController(string $controllerClass, string $action, Request $request): Response
-    {
-        // Vérifier si le contrôleur existe
-        if (!class_exists($controllerClass)) {
-            throw new \RuntimeException("Controller $controllerClass does not exist");
-        }
-
-        // Créer une instance du contrôleur
-        $controller = new $controllerClass();
-
-        // Vérifier si l'action existe
-        if (!method_exists($controller, $action)) {
-            throw new \RuntimeException("Action $action does not exist in controller $controllerClass");
-        }
-
-        // Exécuter l'action et retourner la réponse
-        return $controller->$action($request);
+        
+        return $this;
     }
 }
