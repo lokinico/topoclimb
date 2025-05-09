@@ -65,7 +65,7 @@ class View
             return url($path);
         }));
         
-        // Correction du component helper
+        // Component helper - seule déclaration
         $this->twig->addFunction(new TwigFunction('component', function (string $name, array $data = []) {
             // Échapper les données qui ne sont pas marquées comme 'raw'
             foreach ($data as $key => $value) {
@@ -74,7 +74,7 @@ class View
                 }
             }
             return $this->renderComponent($name, $data);
-        }, ['needs_environment' => true, 'is_safe' => ['html']]));
+        }, ['is_safe' => ['html']]));
         
         // Add asset() function for loading assets
         $this->twig->addFunction(new TwigFunction('asset', function (string $path) {
@@ -109,10 +109,7 @@ class View
             return $messages;
         }));
         
-        // Add component function
-        $this->twig->addFunction(new TwigFunction('component', function (string $name, array $data = []) {
-            return $this->renderComponent($name, $data);
-        }, ['needs_environment' => true, 'is_safe' => ['html']]));
+        // SUPPRIMÉ: Doublon de la fonction component
     }
     
     /**
