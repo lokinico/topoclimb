@@ -1,12 +1,29 @@
 <?php
+// src/Controllers/HomeController.php
 
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use TopoclimbCH\Core\View;
 
 class HomeController
 {
+    /**
+     * @var View
+     */
+    private View $view;
+
+    /**
+     * Constructor
+     *
+     * @param View $view
+     */
+    public function __construct(View $view)
+    {
+        $this->view = $view;
+    }
+
     /**
      * Page d'accueil
      *
@@ -24,31 +41,9 @@ class HomeController
         ];
         
         // Rendre la vue
-        $content = $this->renderView('home/index.php', $data);
+        $content = $this->view->render('home/index.php', $data);
         $response->setContent($content);
         
         return $response;
-    }
-    
-    /**
-     * Méthode d'aide pour le rendu des vues
-     *
-     * @param string $view
-     * @param array $data
-     * @return string
-     */
-    private function renderView(string $view, array $data = []): string
-    {
-        $viewPath = BASE_PATH . '/resources/views/' . $view;
-        
-        if (!file_exists($viewPath)) {
-            return 'Error: View file not found';
-        }
-        
-        extract($data);
-        
-        ob_start();
-        include $viewPath;
-        return ob_get_clean();
     }
 }

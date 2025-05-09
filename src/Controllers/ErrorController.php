@@ -1,14 +1,31 @@
 <?php
+// src/Controllers/ErrorController.php
 
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use TopoclimbCH\Core\View;
 
 class ErrorController
 {
     /**
-     * Page d'erreur 404
+     * @var View
+     */
+    private View $view;
+
+    /**
+     * Constructor
+     *
+     * @param View $view
+     */
+    public function __construct(View $view)
+    {
+        $this->view = $view;
+    }
+
+    /**
+     * 404 error page
      *
      * @param Request $request
      * @return Response
@@ -17,13 +34,13 @@ class ErrorController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_NOT_FOUND);
-        $response->setContent($this->renderView('errors/404.php'));
+        $response->setContent($this->view->render('errors/404.php'));
         
         return $response;
     }
     
     /**
-     * Page d'erreur 500
+     * 500 error page
      *
      * @param Request $request
      * @param \Throwable|null $exception
@@ -33,13 +50,24 @@ class ErrorController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR);
-        $response->setContent($this->renderView('errors/500.php'));
+        
+        $data = [];
+        if ($exception && $_ENV['APP_ENV'] === 'development') {
+            $data['exception'] = [
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => $exception->getTraceAsString()
+            ];
+        }
+        
+        $response->setContent($this->view->render('errors/500.php', $data));
         
         return $response;
     }
     
     /**
-     * Page d'erreur 403
+     * 403 error page
      *
      * @param Request $request
      * @return Response
@@ -48,30 +76,8 @@ class ErrorController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_FORBIDDEN);
-        $response->setContent($this->renderView('errors/403.php'));
+        $response->setContent($this->view->render('errors/403.php'));
         
         return $response;
-    }
-    
-    /**
-     * Méthode d'aide pour le rendu des vues
-     *
-     * @param string $view
-     * @param array $data
-     * @return string
-     */
-    private function renderView(string $view, array $data = []): string
-    {
-        $viewPath = BASE_PATH . '/resources/views/' . $view;
-        
-        if (!file_exists($viewPath)) {
-            return 'Error: View file not found';
-        }
-        
-        extract($data);
-        
-        ob_start();
-        include $viewPath;
-        return ob_get_clean();
     }
 }
