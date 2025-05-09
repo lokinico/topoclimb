@@ -1,4 +1,204 @@
-# topoclimb
+Installer les dépendances
+bashcomposer install
+
+Copier le fichier d'environnement
+bashcp .env.example .env
+
+Configurer votre fichier .env avec vos paramètres de base de données
+Créer la base de données
+bash# Importer le fichier SQL
+mysql -u utilisateur -p nom_base_de_donnees < database/schema.sql
+
+Démarrer le serveur de développement
+bashphp -S localhost:8000 -t public
+
+
+Structure du projet
+
+config/ - Configuration de l'application
+public/ - Point d'entrée public, assets
+resources/ - Templates, fichiers non-PHP
+src/ - Code source principal
+tests/ - Tests unitaires et fonctionnels
+
+Contribuer
+Les contributions sont les bienvenues ! Veuillez consulter CONTRIBUTING.md pour plus d'informations.
+Licence
+Ce projet est sous licence MIT.
+
+## 2. CONTRIBUTING.md
+
+```markdown
+# Contribuer à TopoclimbCH
+
+Nous sommes ravis que vous souhaitiez contribuer à TopoclimbCH !
+
+## Processus de développement
+
+1. Forker le projet
+2. Créer une branche pour votre fonctionnalité (`git checkout -b feature/amazing-feature`)
+3. Commiter vos changements (`git commit -m 'Add some amazing feature'`)
+4. Pousser vers la branche (`git push origin feature/amazing-feature`)
+5. Ouvrir une Pull Request
+
+## Standards de codage
+
+- Suivre les standards PSR-12
+- Écrire des tests unitaires pour les nouvelles fonctionnalités
+- Maintenir la couverture de code actuelle ou l'améliorer
+- Documenter le code avec PHPDoc
+
+## Environnement de développement
+
+```bash
+# Vérifier les standards de codage
+composer cs
+
+# Exécuter l'analyse statique
+composer stan
+
+# Exécuter les tests
+composer test
+Rapport de bugs
+Veuillez utiliser les issues GitHub pour signaler les bugs, en incluant:
+
+Une description claire du problème
+Les étapes pour reproduire
+Le comportement attendu
+Des captures d'écran si nécessaire
+Votre environnement (OS, navigateur, etc.)
+
+
+## 3. LICENSE (MIT comme exemple)
+MIT License
+Copyright (c) 2025 TopoclimbCH
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## 4. Configuration Docker
+
+Créez un fichier `docker-compose.yml` à la racine :
+
+```yaml
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: topoclimbch-app
+    restart: unless-stopped
+    volumes:
+      - .:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - topoclimb-network
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx:alpine
+    container_name: topoclimbch-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - topoclimb-network
+    depends_on:
+      - app
+
+  db:
+    image: mariadb:10.6
+    container_name: topoclimbch-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - topoclimb-data:/var/lib/mysql
+    networks:
+      - topoclimb-network
+    ports:
+      - "3306:3306"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: topoclimbch-phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USERNAME}
+      PMA_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "8080:80"
+    networks:
+      - topoclimb-network
+    depends_on:
+      - db
+
+networks:
+  topoclimb-network:
+    driver: bridge
+
+volumes:
+  topoclimb-data:
+Créez aussi un docker/Dockerfile :
+dockerfileFROM php:8.1-fpm
+
+# Arguments définis dans docker-compose.yml
+ARG user=topoclimb
+ARG uid=1000
+
+# Installer les dépendances
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip
+
+# Nettoyer le cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Installer les extensions PHP
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Obtenir Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Créer un utilisateur système
+RUN useradd -G www-data,root -u $uid -d /home/$user $user
+RUN mkdir -p /home/$user/.composer && \
+    chown -R $user:$user /home/$user
+
+# Définir le répertoire de travail
+WORKDIR /var/www/html
+
+USER $user
+
 
 Prompt Claude.ai
 
