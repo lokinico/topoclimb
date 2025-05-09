@@ -34,7 +34,7 @@ class ErrorController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_NOT_FOUND);
-        $response->setContent($this->view->render('errors/404.php'));
+        $response->setContent($this->view->render('errors/404.twig'));
         
         return $response;
     }
@@ -61,7 +61,7 @@ class ErrorController
             ];
         }
         
-        $response->setContent($this->view->render('errors/500.php', $data));
+        $response->setContent($this->view->render('errors/500.twig', $data));
         
         return $response;
     }
@@ -76,7 +76,7 @@ class ErrorController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_FORBIDDEN);
-        $response->setContent($this->view->render('errors/403.php'));
+        $response->setContent($this->view->render('errors/403.twig'));
         
         return $response;
     }
