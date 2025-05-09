@@ -52,11 +52,13 @@ try {
     $response->send();
 } catch (Throwable $e) {
     // Logger l'erreur
-    $logger = $container->get(\Psr\Log\LoggerInterface::class);
-    $logger->error($e->getMessage(), [
-        'exception' => $e,
-        'trace' => $e->getTraceAsString()
-    ]);
+    if ($container->has(\Psr\Log\LoggerInterface::class)) {
+        $logger = $container->get(\Psr\Log\LoggerInterface::class);
+        $logger->error($e->getMessage(), [
+            'exception' => $e,
+            'trace' => $e->getTraceAsString()
+        ]);
+    }
     
     // Afficher une page d'erreur générique en production
     if ($environment !== 'development') {
