@@ -1,0 +1,71 @@
+# Fichiers d'environnement
+.env
+.env.backup
+.env.local
+.env.production
+
+# Composer
+/vendor/
+composer.phar
+composer.lock
+
+# Fichiers de logs et caches
+/logs/*
+!/logs/.gitkeep
+/cache/*
+!/cache/.gitkeep
+*.log
+
+# Fichiers temporaires
+/tmp/
+/temp/
+*.tmp
+*.swp
+*.cache
+
+# Fichiers d'IDE et éditeurs
+/.idea/
+/.vscode/
+/.phpstorm.meta.php
+/.phpunit.result.cache
+.phpunit.cache/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Dossiers publics générés
+/public/uploads/
+/public/storage/
+/public/hot
+/public/build
+
+# Node.js (si vous utilisez des assets JS/CSS)
+/node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+/dist/
+
+# PHPUnit
+/coverage/
+
+# Fichiers spécifiques à l'application
+config.php
+
+# Dossiers et fichiers spécifiques au déploiement
+/deploy/
+.ftpconfig
+.ftpignore
+.htpasswd
+
+# Autres
+*.bak
+*.sql
+*.sqlite
+phpDocumentor.phar
