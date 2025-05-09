@@ -1,46 +1,77 @@
 <?php
+// src/Controllers/RouteController.php
 
-namespace App\Controllers;
+namespace TopoclimbCH\Controllers;
 
-use App\Core\Request;
-use App\Core\Response;
-use App\Core\Session;
-use App\Core\View;
-use App\Services\RouteService;
-use App\Services\MediaService;
-use App\Services\SectorService;
-use App\Models\Route;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Database;
+use TopoclimbCH\Services\RouteService;
+use TopoclimbCH\Services\MediaService;
+use TopoclimbCH\Services\SectorService;
+use TopoclimbCH\Services\AuthService;
 
 class RouteController extends BaseController
 {
+    /**
+     * @var RouteService
+     */
     protected RouteService $routeService;
+    
+    /**
+     * @var MediaService
+     */
     protected MediaService $mediaService;
+    
+    /**
+     * @var SectorService
+     */
     protected SectorService $sectorService;
     
+    /**
+     * @var AuthService
+     */
+    protected AuthService $authService;
+    
+    /**
+     * Constructor
+     *
+     * @param View $view
+     * @param Session $session
+     * @param RouteService $routeService
+     * @param MediaService $mediaService
+     * @param SectorService $sectorService
+     * @param AuthService $authService
+     */
     public function __construct(
-        Request $request,
-        Response $response,
-        Session $session,
         View $view,
+        Session $session,
         RouteService $routeService,
         MediaService $mediaService,
-        SectorService $sectorService
+        SectorService $sectorService,
+        AuthService $authService
     ) {
-        parent::__construct($request, $response, $session, $view);
+        parent::__construct($view, $session);
         $this->routeService = $routeService;
         $this->mediaService = $mediaService;
         $this->sectorService = $sectorService;
+        $this->authService = $authService;
     }
     
     /**
      * Affiche la liste des voies
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         // Récupère les paramètres de filtrage
-        $filters = $this->request->getAllQuery();
-        $page = (int) $this->request->getQuery('page', 1);
-        $perPage = (int) $this->request->getQuery('per_page', 30);
+        $filters = $request->query->all();
+        $page = (int) $request->query->get('page', 1);
+        $perPage = (int) $request->query->get('per_page', 30);
         
         // Récupère les secteurs pour le filtre
         $sectors = $this->sectorService->getAllSectors();
@@ -57,9 +88,14 @@ class RouteController extends BaseController
     
     /**
      * Affiche une voie spécifique
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function show(int $id): Response
+    public function show(Request $request): Response
     {
+        $id = (int) $request->attributes->get('id');
+        
         $route = $this->routeService->getRouteWithRelations($id, ['sector', 'media']);
         
         if (!$route) {
@@ -82,14 +118,17 @@ class RouteController extends BaseController
     
     /**
      * Affiche le formulaire de création d'une voie
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         // Vérifie les permissions
         $this->authorize('create-route');
         
         // Récupère le secteur si fourni
-        $sectorId = (int) $this->request->getQuery('sector_id', 0);
+        $sectorId = (int) $request->query->get('sector_id', 0);
         $sector = $sectorId ? $this->sectorService->getSector($sectorId) : null;
         
         // Récupère les données pour les dropdown
@@ -105,14 +144,17 @@ class RouteController extends BaseController
     
     /**
      * Enregistre une nouvelle voie
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function store(): Response
+    public function store(Request $request): Response
     {
         // Vérifie les permissions
         $this->authorize('create-route');
         
         // Valide les données
-        $data = $this->validate($this->request->getAllPost(), [
+        $data = $this->validate($request->request->all(), [
             'sector_id' => 'required|integer',
             'name' => 'required|max:255',
             'difficulty' => 'required|max:10',
@@ -126,7 +168,7 @@ class RouteController extends BaseController
         ]);
         
         // Gère les fichiers uploadés
-        $mediaFiles = $this->request->getAllFiles()['media'] ?? [];
+        $mediaFiles = $request->files->get('media') ?? [];
         
         try {
             // Crée la voie
@@ -147,9 +189,14 @@ class RouteController extends BaseController
     
     /**
      * Affiche le formulaire d'édition d'une voie
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function edit(int $id): Response
+    public function edit(Request $request): Response
     {
+        $id = (int) $request->attributes->get('id');
+        
         $route = $this->routeService->getRoute($id);
         
         if (!$route) {
@@ -175,9 +222,14 @@ class RouteController extends BaseController
     
     /**
      * Met à jour une voie
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function update(int $id): Response
+    public function update(Request $request): Response
     {
+        $id = (int) $request->attributes->get('id');
+        
         $route = $this->routeService->getRoute($id);
         
         if (!$route) {
@@ -189,7 +241,7 @@ class RouteController extends BaseController
         $this->authorize('update-route', $route);
         
         // Valide les données
-        $data = $this->validate($this->request->getAllPost(), [
+        $data = $this->validate($request->request->all(), [
             'sector_id' => 'required|integer',
             'name' => 'required|max:255',
             'difficulty' => 'required|max:10',
@@ -203,7 +255,7 @@ class RouteController extends BaseController
         ]);
         
         // Gère les fichiers uploadés
-        $mediaFiles = $this->request->getAllFiles()['media'] ?? [];
+        $mediaFiles = $request->files->get('media') ?? [];
         
         try {
             // Met à jour la voie
@@ -224,9 +276,14 @@ class RouteController extends BaseController
     
     /**
      * Supprime une voie
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function delete(int $id): Response
+    public function delete(Request $request): Response
     {
+        $id = (int) $request->attributes->get('id');
+        
         $route = $this->routeService->getRoute($id);
         
         if (!$route) {
@@ -251,11 +308,16 @@ class RouteController extends BaseController
     
     /**
      * Enregistre une ascension pour une voie
+     *
+     * @param Request $request
+     * @return Response
      */
-    public function recordAscent(int $id): Response
+    public function recordAscent(Request $request): Response
     {
+        $id = (int) $request->attributes->get('id');
+        
         // Vérifie que l'utilisateur est connecté
-        if (!auth()->check()) {
+        if (!$this->authService->check()) {
             $this->flash('error', 'Vous devez être connecté pour enregistrer une ascension');
             return $this->redirect('/login');
         }
@@ -268,7 +330,7 @@ class RouteController extends BaseController
         }
         
         // Valide les données
-        $data = $this->validate($this->request->getAllPost(), [
+        $data = $this->validate($request->request->all(), [
             'ascent_type' => 'required|in:flash,onsight,redpoint,attempt',
             'ascent_date' => 'required|date',
             'quality_rating' => 'nullable|integer|min:0|max:5',
@@ -280,7 +342,7 @@ class RouteController extends BaseController
         
         try {
             // Ajoute l'ID utilisateur
-            $data['user_id'] = auth()->id();
+            $data['user_id'] = $this->authService->id();
             $data['route_id'] = $route->id;
             
             // Enregistre l'ascension
