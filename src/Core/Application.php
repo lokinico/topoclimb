@@ -49,7 +49,27 @@ class Application
                 'uri' => $this->request->getUri()
             ]);
 
+            // Charger explicitement les routes
+            $routesFile = BASE_PATH . '/config/routes.php';
+            if (file_exists($routesFile)) {
+                $this->logger->info('Loading routes from file: ' . $routesFile);
+                $this->router->loadRoutes($routesFile);
+            } else {
+                $this->logger->error('Routes file not found: ' . $routesFile);
+            }
+            
+            // Débogage - afficher les routes chargées
+            $this->logger->debug('Routes loaded: ' . json_encode($this->router->getRoutes()));
+
             return $this->router->dispatch($this->request);
+        } catch (RouteNotFoundException $e) {
+            $this->logger->warning('Route not found', [
+                'uri' => $this->request->getUri(),
+                'message' => $e->getMessage(),
+                'exception' => $e
+            ]);
+            
+            return $this->handleNotFound();
         } catch (\Throwable $e) {
             $this->logger->error('Error handling request', [
                 'exception' => $e,
@@ -57,7 +77,7 @@ class Application
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw $e;
+            return $this->handleError($e);
         }
     }
 }
