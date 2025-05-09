@@ -1,0 +1,27 @@
+<div class="card {{ classes|default('') }}">
+    {% if image %}
+        <div class="card-image">
+            <img src="{{ image }}" alt="{{ title }}">
+        </div>
+    {% endif %}
+    
+    <div class="card-body">
+        {% if title %}
+            <h3 class="card-title">{{ title }}</h3>
+        {% endif %}
+        
+        {% if content %}
+            <div class="card-content">{{ content|raw }}</div>
+        {% endif %}
+        
+        {% if slot is defined %}
+            {{ slot|raw }}
+        {% endif %}
+    </div>
+    
+    {% if footer %}
+        <div class="card-footer">
+            {{ footer|raw }}
+        </div>
+    {% endif %}
+</div>

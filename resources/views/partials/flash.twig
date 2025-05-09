@@ -1,0 +1,11 @@
+{% set messages = flash() %}
+{% if messages %}
+    {% for type, typeMessages in messages %}
+        {% for message in typeMessages %}
+            <div class="alert alert-{{ type }}">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+{% endif %}

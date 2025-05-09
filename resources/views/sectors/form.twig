@@ -1,0 +1,295 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}
+    {% if sector.id %}
+        Modifier le secteur {{ sector.name }}
+    {% else %}
+        Ajouter un secteur
+    {% endif %}
+    - TopoclimbCH
+{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h1>
+            {% if sector.id %}
+                Modifier le secteur {{ sector.name }}
+            {% else %}
+                Ajouter un secteur
+            {% endif %}
+        </h1>
+    </div>
+    
+    <div class="form-container">
+        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors/create') }}" 
+              method="post" 
+              enctype="multipart/form-data" 
+              class="form form-horizontal">
+            
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
+                <label for="book_id">Site</label>
+                <select name="book_id" id="book_id" class="form-control" required>
+                    <option value="">Sélectionnez un site</option>
+                    {% for book in books %}
+                        <option value="{{ book.id }}" {% if sector.book_id == book.id %}selected{% endif %}>
+                            {{ book.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="region_id">Région</label>
+                <select name="region_id" id="region_id" class="form-control">
+                    <option value="">Sélectionnez une région</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id }}" {% if sector.region_id == region.id %}selected{% endif %}>
+                            {{ region.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="name">Nom</label>
+                <input type="text" name="name" id="name" class="form-control" value="{{ sector.name }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="code">Code</label>
+                <input type="text" name="code" id="code" class="form-control" value="{{ sector.code }}" required>
+                <small class="form-text text-muted">Identifiant unique du secteur</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="color">Couleur</label>
+                <input type="color" name="color" id="color" class="form-control" value="{{ sector.color|default('#FF0000') }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea name="description" id="description" class="form-control" rows="5">{{ sector.description }}</textarea>
+            </div>
+            
+            <div class="form-section">
+                <h3>Informations d'accès</h3>
+                
+                <div class="form-group">
+                    <label for="access_info">Informations d'accès</label>
+                    <textarea name="access_info" id="access_info" class="form-control" rows="3">{{ sector.access_info }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="access_time">Temps d'accès (en minutes)</label>
+                    <input type="number" name="access_time" id="access_time" class="form-control" value="{{ sector.access_time }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="approach">Marche d'approche</label>
+                    <textarea name="approach" id="approach" class="form-control" rows="3">{{ sector.approach }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="parking_info">Informations de parking</label>
+                    <textarea name="parking_info" id="parking_info" class="form-control" rows="3">{{ sector.parking_info }}</textarea>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Caractéristiques</h3>
+                
+                <div class="form-group">
+                    <label for="altitude">Altitude (en mètres)</label>
+                    <input type="number" name="altitude" id="altitude" class="form-control" value="{{ sector.altitude }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="height">Hauteur (en mètres)</label>
+                    <input type="number" name="height" id="height" step="0.1" class="form-control" value="{{ sector.height }}">
+                </div>
+                
+                <div class="form-group">
+                    <label>Expositions</label>
+                    <div class="checkbox-group">
+                        {% for exposure in exposures %}
+                            <div class="form-check">
+                                <input type="checkbox" 
+                                       name="exposures[]" 
+                                       id="exposure_{{ exposure.id }}" 
+                                       value="{{ exposure.id }}" 
+                                       {% if exposure.id in currentExposures %}checked{% endif %}>
+                                <label for="exposure_{{ exposure.id }}">
+                                    {{ exposure.name }} ({{ exposure.code }})
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Exposition principale</label>
+                    <div class="radio-group">
+                        {% for exposure in exposures %}
+                            <div class="form-check">
+                                <input type="radio" 
+                                       name="primary_exposure" 
+                                       id="primary_exposure_{{ exposure.id }}" 
+                                       value="{{ exposure.id }}" 
+                                       {% if exposure.id == primaryExposure %}checked{% endif %}>
+                                <label for="primary_exposure_{{ exposure.id }}">
+                                    {{ exposure.name }} ({{ exposure.code }})
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Coordonnées</h3>
+                
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="coordinates_lat">Latitude</label>
+                        <input type="text" name="coordinates_lat" id="coordinates_lat" class="form-control" value="{{ sector.coordinates_lat }}">
+                    </div>
+                    
+                    <div class="form-group col-md-6">
+                        <label for="coordinates_lng">Longitude</label>
+                        <input type="text" name="coordinates_lng" id="coordinates_lng" class="form-control" value="{{ sector.coordinates_lng }}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="coordinates_swiss_e">Coordonnées suisses E</label>
+                        <input type="text" name="coordinates_swiss_e" id="coordinates_swiss_e" class="form-control" value="{{ sector.coordinates_swiss_e }}">
+                    </div>
+                    
+                    <div class="form-group col-md-6">
+                        <label for="coordinates_swiss_n">Coordonnées suisses N</label>
+                        <input type="text" name="coordinates_swiss_n" id="coordinates_swiss_n" class="form-control" value="{{ sector.coordinates_swiss_n }}">
+                    </div>
+                </div>
+                
+                <div class="map-picker">
+                    <div id="map" style="height: 400px;"></div>
+                    <button type="button" class="btn btn-secondary" id="locate-button">
+                        <i class="icon-location"></i> Ma position
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Images</h3>
+                
+                <div class="form-group">
+                    <label for="image">Image principale</label>
+                    <input type="file" name="image" id="image" class="form-control-file" accept="image/*">
+                </div>
+                
+                {% if media and media|length > 0 %}
+                    <div class="existing-media">
+                        <h4>Images existantes</h4>
+                        <div class="media-gallery">
+                            {% for item in media %}
+                                <div class="media-item">
+                                    <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="{{ item.title }}">
+                                    <div class="media-actions">
+                                        <a href="{{ url('/media/' ~ item.id ~ '/edit') }}" class="btn btn-sm btn-secondary">
+                                            <i class="icon-edit"></i>
+                                        </a>
+                                        <a href="{{ url('/media/' ~ item.id ~ '/delete') }}" class="btn btn-sm btn-danger" 
+                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette image?')">
+                                            <i class="icon-trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="active">État</label>
+                <select name="active" id="active" class="form-control">
+                    <option value="1" {% if sector.active != 0 %}selected{% endif %}>Actif</option>
+                    <option value="0" {% if sector.active == 0 %}selected{% endif %}>Inactif</option>
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    {% if sector.id %}
+                        Mettre à jour
+                    {% else %}
+                        Créer
+                    {% endif %}
+                </button>
+                
+                <a href="{{ url('/sectors' ~ (sector.id ? '/' ~ sector.id : '')) }}" class="btn btn-secondary">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialisation de la carte
+            const map = L.map('map').setView([46.8, 8.2], 8); // Centre sur la Suisse
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            let marker;
+            
+            // Initialiser le marqueur si des coordonnées sont disponibles
+            {% if sector.coordinates_lat and sector.coordinates_lng %}
+                marker = L.marker([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}]).addTo(map);
+                map.setView([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}], 15);
+            {% endif %}
+            
+            // Mettre à jour les coordonnées lors d'un clic sur la carte
+            map.on('click', function(e) {
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+                
+                marker = L.marker(e.latlng).addTo(map);
+                
+                document.getElementById('coordinates_lat').value = e.latlng.lat.toFixed(8);
+                document.getElementById('coordinates_lng').value = e.latlng.lng.toFixed(8);
+                
+                // Convertir en coordonnées suisses si nécessaire
+                // Cette conversion nécessiterait une bibliothèque spécifique
+            });
+            
+            // Bouton de localisation
+            document.getElementById('locate-button').addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        if (marker) {
+                            map.removeLayer(marker);
+                        }
+                        
+                        marker = L.marker([lat, lng]).addTo(map);
+                        map.setView([lat, lng], 15);
+                        
+                        document.getElementById('coordinates_lat').value = lat.toFixed(8);
+                        document.getElementById('coordinates_lng').value = lng.toFixed(8);
+                    });
+                }
+            });
+        });
+    </script>
+{% endblock %}
