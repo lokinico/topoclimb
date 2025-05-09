@@ -1,21 +1,19 @@
 <?php
-// src/Models/Region.php
-
 namespace TopoclimbCH\Models;
+
+use TopoclimbCH\Core\Model;
+use TopoclimbCH\Models\Sector;
+use TopoclimbCH\Models\Country;
 
 class Region extends Model
 {
     /**
-     * Nom de la table
-     *
-     * @var string
+     * Nom de la table en base de données
      */
-    protected string $table = 'climbing_regions';
+    protected static string $table = 'climbing_regions';
     
     /**
-     * Champs autorisés
-     *
-     * @var array
+     * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
         'country_id',
@@ -27,41 +25,18 @@ class Region extends Model
     ];
     
     /**
-     * Récupère les secteurs de cette région
-     *
-     * @return array
+     * Relation avec les secteurs
      */
     public function sectors(): array
     {
-        $sectorModel = new Sector($this->db);
-        return $this->db->fetchAll(
-            "SELECT * FROM {$sectorModel->getTable()} WHERE region_id = ?",
-            [$this->attributes[$this->primaryKey]]
-        );
+        return $this->hasMany(Sector::class);
     }
     
     /**
-     * Récupère le pays associé à cette région
-     *
-     * @return Country|null
+     * Relation avec le pays
      */
     public function country(): ?Country
     {
-        if (!isset($this->attributes['country_id'])) {
-            return null;
-        }
-        
-        $countryModel = new Country($this->db);
-        return $countryModel->find($this->attributes['country_id']);
-    }
-    
-    /**
-     * Accesseur pour la table
-     *
-     * @return string
-     */
-    public function getTable(): string
-    {
-        return $this->table;
+        return $this->belongsTo(Country::class);
     }
 }
