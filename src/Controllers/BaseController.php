@@ -44,21 +44,21 @@ abstract class BaseController
      * @param array $data
      * @return Response
      */
-    protected function render(string $view, array $data = []): Response
-    {
-        $response = new Response();
-        $data['flashes'] = $this->session->getFlashes();
-        
-        // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
-        if (!str_ends_with($view, '.twig')) {
-            $view .= '.twig';
+        protected function render(string $view, array $data = []): Response
+        {
+            $response = new Response();
+            $data['flashes'] = $this->session->getFlashes();
+            
+            // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
+            if (!str_ends_with($view, '.twig')) {
+                $view .= '.twig';
+            }
+            
+            $content = $this->view->render($view, $data);
+            $response->setContent($content);
+            
+            return $response;
         }
-        
-        $content = $this->view->render($view, $data);
-        $response->setContent($content);
-        
-        return $response;
-    }
 
    
     
