@@ -58,10 +58,23 @@ class View
      */
     private function registerFunctions(): void
     {
-        // Add url() function
         $this->twig->addFunction(new TwigFunction('url', function (string $path = '') {
+            if (strpos($path, '://') !== false) {
+                return $path; // URL absolue
+            }
             return url($path);
         }));
+        
+        // Correction du component helper
+        $this->twig->addFunction(new TwigFunction('component', function (string $name, array $data = []) {
+            // Échapper les données qui ne sont pas marquées comme 'raw'
+            foreach ($data as $key => $value) {
+                if (is_string($value) && !isset($data[$key . '_raw'])) {
+                    $data[$key] = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+                }
+            }
+            return $this->renderComponent($name, $data);
+        }, ['needs_environment' => true, 'is_safe' => ['html']]));
         
         // Add asset() function for loading assets
         $this->twig->addFunction(new TwigFunction('asset', function (string $path) {
