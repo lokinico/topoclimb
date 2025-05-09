@@ -35,11 +35,6 @@ class Application
      * @var string
      */
     private string $environment;
-    
-    /**
-     * @var Session
-     */
-    private Session $session;
 
     /**
      * Application constructor.
@@ -60,17 +55,6 @@ class Application
         $this->container = $container;
         $this->environment = $environment;
         $this->request = Request::createFromGlobals();
-        $this->session = new Session();
-    }
-    
-    /**
-     * Check if environment is development
-     *
-     * @return bool
-     */
-    public function isDevelopment(): bool
-    {
-        return $this->environment === 'development';
     }
 
     /**
@@ -81,115 +65,72 @@ class Application
     public function handle(): Response
     {
         try {
-            $this->logger->info('Application handling request', [
-                'method' => $this->request->getMethod(),
-                'uri' => $this->request->getUri()
-            ]);
-
-            // Load routes if they haven't been loaded yet
-            if ($this->router->isEmpty()) {
-                $routesFile = BASE_PATH . '/config/routes.php';
-                if (file_exists($routesFile)) {
-                    $this->logger->info('Loading routes from file: ' . $routesFile);
-                    $this->router->loadRoutes($routesFile);
-                } else {
-                    $this->logger->error('Routes file not found: ' . $routesFile);
-                }
-            }
-
             return $this->router->dispatch($this->request);
         } catch (RouteNotFoundException $e) {
-            $this->logger->warning('Route not found', [
-                'uri' => $this->request->getUri(),
-                'exception' => $e
-            ]);
-            
-            return $this->notFoundResponse();
+            return $this->createNotFoundResponse($e);
         } catch (\Throwable $e) {
-            $this->logger->error('Error handling request', [
-                'exception' => $e,
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return $this->errorResponse($e);
+            return $this->createErrorResponse($e);
         }
     }
     
     /**
-     * Handle 404 errors
+     * Create a 404 response
      *
+     * @param \Throwable $e
      * @return Response
      */
-    private function notFoundResponse(): Response
+    private function createNotFoundResponse(\Throwable $e): Response
     {
+        $this->logger->warning('Route not found', [
+            'uri' => $this->request->getUri(),
+            'message' => $e->getMessage()
+        ]);
+        
         try {
-            $errorController = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
-            return $errorController->notFound($this->request);
+            $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
+            return $controller->notFound($this->request);
         } catch (\Throwable $e) {
-            // Fallback if the error controller fails
+            // Fallback if error controller fails
             $response = new Response('Page not found', 404);
-            $response->headers->set('Content-Type', 'text/plain');
+            $response->headers->set('Content-Type', 'text/html');
+            $response->setContent('<h1>404 - Page Not Found</h1><p>The requested page could not be found.</p>');
             return $response;
         }
     }
     
     /**
-     * Handle other errors
+     * Create a 500 error response
      *
-     * @param \Throwable $exception
+     * @param \Throwable $e
      * @return Response
      */
-    private function errorResponse(\Throwable $exception): Response
+    private function createErrorResponse(\Throwable $e): Response
     {
+        $this->logger->error('Application error', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
         try {
-            $errorController = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
-            return $errorController->serverError($this->request, $exception);
+            $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
+            return $controller->serverError($this->request, $e);
         } catch (\Throwable $e) {
-            // Fallback if the error controller fails
+            // Fallback if error controller fails
             $response = new Response('Internal Server Error', 500);
-            $response->headers->set('Content-Type', 'text/plain');
+            $response->headers->set('Content-Type', 'text/html');
+            $response->setContent('<h1>500 - Internal Server Error</h1>');
+            
+            if ($this->environment === 'development') {
+                $response->setContent(
+                    $response->getContent() . 
+                    '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>' .
+                    '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ' (line ' . $e->getLine() . ')</p>' .
+                    '<h2>Stack Trace</h2>' .
+                    '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>'
+                );
+            }
+            
             return $response;
         }
-    }
-    
-    /**
-     * Get the container
-     *
-     * @return ContainerInterface
-     */
-    public function getContainer(): ContainerInterface
-    {
-        return $this->container;
-    }
-    
-    /**
-     * Get the router
-     *
-     * @return Router
-     */
-    public function getRouter(): Router
-    {
-        return $this->router;
-    }
-    
-    /**
-     * Get the session
-     *
-     * @return Session
-     */
-    public function getSession(): Session
-    {
-        return $this->session;
-    }
-    
-    /**
-     * Get the request
-     *
-     * @return Request
-     */
-    public function getRequest(): Request
-    {
-        return $this->request;
     }
 }
