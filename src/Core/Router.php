@@ -65,15 +65,16 @@ class Router
                 foreach ($routes as $route) {
                     $method = $route['method'] ?? 'GET';
                     $path = $route['path'] ?? '/';
-                    $controller = $route['controller'] ?? '';
-                    $action = $route['action'] ?? '';
                     
-                    if ($controller && $action) {
-                        $this->addRoute($method, $path, [
-                            'controller' => $controller,
-                            'action' => $action
-                        ]);
+                    // S'assurer que les chemins commencent toujours par /
+                    if ($path !== '/' && $path[0] !== '/') {
+                        $path = '/' . $path;
                     }
+                    
+                    $this->addRoute($method, $path, [
+                        'controller' => $route['controller'],
+                        'action' => $route['action']
+                    ]);
                 }
             }
         }
@@ -133,6 +134,10 @@ class Router
      */
     public function resolve(string $method, string $path): array
     {
+         // Débogage - à enlever après résolution
+        error_log("Attempting to resolve route for: $method $path");
+        error_log("Available routes: " . json_encode(array_keys($this->routes[$method] ?? [])));
+        
         // Get routes for the HTTP method
         $routes = $this->routes[$method] ?? [];
         
