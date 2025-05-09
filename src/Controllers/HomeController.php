@@ -41,7 +41,7 @@ class HomeController
         ];
         
         // Rendre la vue
-        $content = $this->view->render('home/index.php', $data);
+        $content = $this->view->render('home/index.twig', $data);
         $response->setContent($content);
         
         return $response;
