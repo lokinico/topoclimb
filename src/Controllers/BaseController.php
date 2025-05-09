@@ -44,10 +44,27 @@ abstract class BaseController
      * @param array $data
      * @return Response
      */
-        protected function render(string $view, array $data = []): Response
+    protected function render(string $view, array $data = []): Response
         {
             $response = new Response();
-            $data['flashes'] = $this->session->getFlashes();
+            
+            // Ajouter automatiquement des données globales
+            $globalData = [
+                'flashes' => $this->session->getFlashes(),
+                'app' => [
+                    'debug' => env('APP_DEBUG', false),
+                    'environment' => env('APP_ENV', 'production'),
+                    'version' => env('APP_VERSION', '1.0.0')
+                ]
+            ];
+            
+            // Ajouter l'utilisateur authentifié si disponible
+            if (isset($this->auth) && $this->auth->check()) {
+                $globalData['auth_user'] = $this->auth->user();
+            }
+            
+            // Fusionner avec les données fournies
+            $data = array_merge($globalData, $data);
             
             // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
             if (!str_ends_with($view, '.twig')) {
@@ -56,6 +73,16 @@ abstract class BaseController
             
             $content = $this->view->render($view, $data);
             $response->setContent($content);
+            
+            // Configurer la mise en cache selon l'environnement
+            if (env('APP_ENV') === 'production') {
+                $response->setPublic();
+                $response->setMaxAge(60); // 1 minute
+                $response->setSharedMaxAge(120); // 2 minutes
+            } else {
+                $response->setPrivate();
+                $response->headers->addCacheControlDirective('no-store', true);
+            }
             
             return $response;
         }
