@@ -65,16 +65,16 @@ class Router
                 foreach ($routes as $route) {
                     $method = $route['method'] ?? 'GET';
                     $path = $route['path'] ?? '/';
+                    $controller = $route['controller'] ?? '';
+                    $action = $route['action'] ?? '';
                     
-                    // S'assurer que les chemins commencent toujours par /
-                    if ($path !== '/' && $path[0] !== '/') {
-                        $path = '/' . $path;
+                    if ($controller && $action) {
+                        $this->logger->info("Adding route: $method $path -> $controller::$action");
+                        $this->addRoute($method, $path, [
+                            'controller' => $controller,
+                            'action' => $action
+                        ]);
                     }
-                    
-                    $this->addRoute($method, $path, [
-                        'controller' => $route['controller'],
-                        'action' => $route['action']
-                    ]);
                 }
             }
         }
@@ -92,6 +92,14 @@ class Router
      */
     public function addRoute(string $method, string $path, array|callable $handler): self
     {
+        // Ensure method is uppercase
+        $method = strtoupper($method);
+        
+        // Ensure path starts with /
+        if ($path !== '/' && !str_starts_with($path, '/')) {
+            $path = '/' . $path;
+        }
+        
         // Convert path to regex pattern
         $pattern = $this->pathToRegex($path);
         
@@ -112,16 +120,21 @@ class Router
      */
     private function pathToRegex(string $path): string
     {
+        // Special case for root path
+        if ($path === '/') {
+            return '#^/$#';
+        }
+        
         // Escape regex special chars
-        $path = preg_quote($path, '/');
+        $path = preg_quote($path, '#');
         
         // Convert {param} to named capture groups
-        $path = preg_replace('/\\\{([a-zA-Z0-9_]+)\\\}/', '(?P<$1>[^\/]+)', $path);
+        $path = preg_replace('#\\\{([a-zA-Z0-9_]+)\\\}#', '(?P<$1>[^/]+)', $path);
         
         // Convert {param?} to optional named capture groups
-        $path = preg_replace('/\\\{([a-zA-Z0-9_]+)\\\?\\\}/', '(?P<$1>[^\/]+)?', $path);
+        $path = preg_replace('#\\\{([a-zA-Z0-9_]+)\\\?\\\}#', '(?P<$1>[^/]+)?', $path);
         
-        return '/^' . $path . '$/';
+        return '#^' . $path . '$#';
     }
 
     /**
@@ -134,20 +147,31 @@ class Router
      */
     public function resolve(string $method, string $path): array
     {
-         // Débogage - à enlever après résolution
-        error_log("Attempting to resolve route for: $method $path");
-        error_log("Available routes: " . json_encode(array_keys($this->routes[$method] ?? [])));
+        // Debug log
+        $this->logger->debug("Resolving route for: $method $path");
         
         // Get routes for the HTTP method
-        $routes = $this->routes[$method] ?? [];
+        $routes = $this->routes[strtoupper($method)] ?? [];
+        
+        if (empty($routes)) {
+            $this->logger->warning("No routes defined for method: $method");
+            throw new RouteNotFoundException("No routes defined for method: $method");
+        }
+        
+        // Debug log
+        $this->logger->debug("Available patterns: " . implode(', ', array_keys($routes)));
         
         // Find a matching route
         foreach ($routes as $pattern => $route) {
+            $this->logger->debug("Testing pattern: $pattern against: $path");
+            
             if (preg_match($pattern, $path, $matches)) {
                 // Extract captured parameters
                 $params = array_filter($matches, function ($key) {
                     return !is_numeric($key);
                 }, ARRAY_FILTER_USE_KEY);
+                
+                $this->logger->debug("Route matched! Params: " . json_encode($params));
                 
                 return [
                     'handler' => $route['handler'],
@@ -157,6 +181,7 @@ class Router
         }
         
         // No route matches
+        $this->logger->warning("Route not found for $method $path");
         throw new RouteNotFoundException("Route not found for $method $path");
     }
 
@@ -168,14 +193,13 @@ class Router
      */
     public function dispatch(Request $request): Response
     {
-        // S'assurer d'utiliser le bon format de chemin
-        $path = rtrim($request->getPathInfo() ?: '/', '/');
-        // Ajouter un slash au début s'il n'y en a pas
+        // Normalize the path
+        $path = $request->getPathInfo();
         if (empty($path)) {
             $path = '/';
-        } elseif ($path[0] !== '/') {
-            $path = '/' . $path;
         }
+        
+        $this->logger->info("Dispatching request: {$request->getMethod()} {$path}");
         
         // Resolve the route
         $route = $this->resolve($request->getMethod(), $path);
@@ -207,32 +231,42 @@ class Router
      */
     private function executeHandler(mixed $handler, Request $request): Response
     {
-        // Support pour les fonctions/callables
-        if (is_callable($handler)) {
-            return $handler($request);
-        }
-        
-        // Support pour les invokable controllers
-        if (is_object($handler) && method_exists($handler, '__invoke')) {
-            return $handler($request);
-        }
-        
-        // Support pour le format ['controller' => Class, 'action' => method]
-        if (is_array($handler) && isset($handler['controller']) && isset($handler['action'])) {
-            $controllerClass = $handler['controller'];
-            $action = $handler['action'];
-            
-            // Obtenir l'instance du contrôleur depuis le conteneur
-            $controller = $this->container->get($controllerClass);
-            
-            if (!method_exists($controller, $action)) {
-                throw new \Exception("Action '$action' not found in controller '$controllerClass'");
+        try {
+            // Support pour les fonctions/callables
+            if (is_callable($handler)) {
+                return $handler($request);
             }
             
-            // Exécuter l'action du contrôleur
-            return $controller->$action($request);
+            // Support pour les invokable controllers
+            if (is_object($handler) && method_exists($handler, '__invoke')) {
+                return $handler($request);
+            }
+            
+            // Support pour le format ['controller' => Class, 'action' => method]
+            if (is_array($handler) && isset($handler['controller']) && isset($handler['action'])) {
+                $controllerClass = $handler['controller'];
+                $action = $handler['action'];
+                
+                $this->logger->debug("Executing controller: $controllerClass::{$action}");
+                
+                // Obtenir l'instance du contrôleur depuis le conteneur
+                $controller = $this->container->get($controllerClass);
+                
+                if (!method_exists($controller, $action)) {
+                    throw new \Exception("Action '$action' not found in controller '$controllerClass'");
+                }
+                
+                // Exécuter l'action du contrôleur
+                return $controller->$action($request);
+            }
+            
+            throw new \Exception("Invalid route handler.");
+        } catch (\Exception $e) {
+            $this->logger->error("Error executing handler: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
         }
-        
-        throw new \Exception("Invalid route handler.");
     }
 }
