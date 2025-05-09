@@ -156,59 +156,53 @@ class Router
     }
 
     /**
-     * Dispatch the request and return a response
+     * Dispatch the request to the appropriate route
      *
-     * @param Request $request HTTP request
+     * @param Request $request
      * @return Response
      */
-    public function dispatch(Request $request): Response
-    {
-        // Resolve the route
-        $route = $this->resolve($request->getMethod(), $request->getPathInfo());
-        
-        // Add URL parameters to the request
-        foreach ($route['params'] as $key => $value) {
-            $request->attributes->set($key, $value);
+      public function dispatch(Request $request): Response
+        {
+            // Utiliser getPathInfo() systématiquement
+            $path = $request->getPathInfo();
+            
+            // Resolve the route
+            $route = $this->resolve($request->getMethod(), $path);
+            
+            // Add URL parameters to the request with type conversion
+            foreach ($route['params'] as $key => $value) {
+                // Conversion de type automatique
+                if (is_numeric($value) && intval($value) == $value) {
+                    $value = (int)$value;
+                } elseif ($value === 'true') {
+                    $value = true;
+                } elseif ($value === 'false') {
+                    $value = false;
+                }
+                $request->attributes->set($key, $value);
+            }
+            
+            // Execute the route handler
+            return $this->executeHandler($route['handler'], $request);
         }
-        
-        // Execute the route handler
-        return $this->executeHandler($route['handler'], $request);
-    }
 
     /**
-     * Execute a route handler
+     * Execute the route handler
      *
      * @param mixed $handler Route handler
-     * @param Request $request HTTP request
+     * @param Request $request
      * @return Response
      * @throws \Exception
      */
-    private function executeHandler(mixed $handler, Request $request): Response
-    {
-        // If handler is a callable
-        if (is_callable($handler)) {
-            return call_user_func($handler, $request);
-        }
-        
-        // If handler is an array with controller and action
-        if (is_array($handler) && isset($handler['controller']) && isset($handler['action'])) {
-            $controllerClass = $handler['controller'];
-            $method = $handler['action'];
-            
-            // Get controller from container to enable DI
-            if (!$this->container->has($controllerClass)) {
-                throw new \Exception("Controller '$controllerClass' is not registered in the container.");
+        private function executeHandler(mixed $handler, Request $request): Response
+        {
+            // Support pour les invokable controllers
+            if (is_object($handler) && method_exists($handler, '__invoke')) {
+                return $handler($request);
             }
             
-            $controller = $this->container->get($controllerClass);
-            
-            if (!method_exists($controller, $method)) {
-                throw new \Exception("Method '$method' not found in controller '$controllerClass'.");
-            }
-            
-            return $controller->$method($request);
-        }
-        
         throw new \Exception("Invalid route handler.");
+          
+
     }
 }
