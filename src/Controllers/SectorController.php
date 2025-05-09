@@ -28,27 +28,6 @@ class SectorController extends BaseController
      */
     private Database $db;
     
-    /**
-     * Constructor
-     *
-     * @param View $view
-     * @param Session $session
-     * @param SectorService $sectorService
-     * @param MediaService $mediaService
-     * @param Database $db
-     */
-    public function __construct(
-        View $view, 
-        Session $session, 
-        SectorService $sectorService,
-        MediaService $mediaService,
-        Database $db
-    ) {
-        parent::__construct($view, $session);
-        $this->sectorService = $sectorService;
-        $this->mediaService = $mediaService;
-        $this->db = $db;
-    }
     
     /**
      * List all sectors
@@ -68,18 +47,19 @@ class SectorController extends BaseController
             $title = 'Tous les secteurs';
         }
         
-        return $this->render('sectors/index.php', [
+        // Récupérer toutes les régions pour le filtre
+        $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+        
+        return $this->render('sectors/index', [
             'title' => $title,
             'sectors' => $sectors,
+            'regions' => $regions,
             'currentRegionId' => $regionId
         ]);
     }
     
     /**
      * Show a single sector
-     *
-     * @param Request $request
-     * @return Response
      */
     public function show(Request $request): Response
     {
@@ -102,7 +82,7 @@ class SectorController extends BaseController
         $routes = $this->sectorService->getSectorRoutes((int) $id);
         $media = $this->sectorService->getSectorMedia((int) $id);
         
-        return $this->render('sectors/show.php', [
+        return $this->render('sectors/show', [
             'title' => $sector['name'],
             'sector' => $sector,
             'exposures' => $exposures,
@@ -110,6 +90,29 @@ class SectorController extends BaseController
             'routes' => $routes
         ]);
     }
+      
+    /**
+     * Constructor
+     *
+     * @param View $view
+     * @param Session $session
+     * @param SectorService $sectorService
+     * @param MediaService $mediaService
+     * @param Database $db
+     */
+    public function __construct(
+        View $view, 
+        Session $session, 
+        SectorService $sectorService,
+        MediaService $mediaService,
+        Database $db
+    ) {
+        parent::__construct($view, $session);
+        $this->sectorService = $sectorService;
+        $this->mediaService = $mediaService;
+        $this->db = $db;
+    }
+
     
     /**
      * Display create sector form

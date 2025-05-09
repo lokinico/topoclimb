@@ -1,0 +1,25 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Erreur serveur - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-container">
+        <h1>500</h1>
+        <h2>Erreur serveur</h2>
+        <p>Une erreur est survenue sur le serveur. Veuillez réessayer plus tard.</p>
+        <a href="{{ url('/') }}" class="btn">Retour à l'accueil</a>
+    </div>
+    
+    {% if exception is defined and app_env == 'development' %}
+        <div class="exception-details">
+            <h3>Détails de l'erreur (visible uniquement en développement)</h3>
+            <div class="exception-message">{{ exception.message }}</div>
+            <div class="exception-location">
+                Fichier: {{ exception.file }} (ligne {{ exception.line }})
+            </div>
+            <pre class="exception-trace">{{ exception.trace }}</pre>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

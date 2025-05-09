@@ -89,3 +89,16 @@ function dd(mixed $value): void
         die();
     }
 }
+
+// Fonction d'authentification
+if (!function_exists('auth')) {
+    /**
+     * Récupère le service d'authentification
+     *
+     * @return \TopoclimbCH\Services\AuthService
+     */
+    function auth()
+    {
+        return \TopoclimbCH\Core\Container::getInstance()->get(\TopoclimbCH\Services\AuthService::class);
+    }
+}

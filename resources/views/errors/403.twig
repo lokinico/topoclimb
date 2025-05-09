@@ -1,0 +1,14 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Accès interdit - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-container">
+        <h1>403</h1>
+        <h2>Accès interdit</h2>
+        <p>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+        <a href="{{ url('/') }}" class="btn">Retour à l'accueil</a>
+    </div>
+</div>
+{% endblock %}
