@@ -10,10 +10,6 @@ use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBu
 use Symfony\Component\DependencyInjection\Reference;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\MediaService;
-use TopoclimbCH\Services\RouteService;
-use TopoclimbCH\Services\AuthService;
-use TopoclimbCH\Services\RegionService;
-use TopoclimbCH\Services\SiteService;
 
 class ContainerBuilder
 {
@@ -52,24 +48,11 @@ class ContainerBuilder
             ->addArgument('%views_path%')
             ->addArgument(BASE_PATH . '/cache/views');
             
-        // Services
+        // Services existants
         $container->register(SectorService::class, SectorService::class)
             ->addArgument(new Reference(Database::class));
             
         $container->register(MediaService::class, MediaService::class)
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(RouteService::class, RouteService::class)
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(AuthService::class, AuthService::class)
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(RegionService::class, RegionService::class)
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(SiteService::class, SiteService::class)
             ->addArgument(new Reference(Database::class));
 
         // Configuration du routeur
@@ -84,7 +67,7 @@ class ContainerBuilder
             ->addArgument($container)
             ->addArgument('%environment%');
 
-        // Enregistrement des contrôleurs
+        // Enregistrement des contrôleurs existants
         $this->registerControllers($container);
 
         // Retourner le conteneur configuré
@@ -114,32 +97,5 @@ class ContainerBuilder
             ->addArgument(new Reference(SectorService::class))
             ->addArgument(new Reference(MediaService::class))
             ->addArgument(new Reference(Database::class));
-        
-        // AuthController
-        $container->register(\TopoclimbCH\Controllers\AuthController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(AuthService::class));
-        
-        // RegionController
-        $container->register(\TopoclimbCH\Controllers\RegionController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(RegionService::class));
-        
-        // SiteController
-        $container->register(\TopoclimbCH\Controllers\SiteController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(SiteService::class));
-        
-        // RouteController
-        $container->register(\TopoclimbCH\Controllers\RouteController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(RouteService::class))
-            ->addArgument(new Reference(MediaService::class))
-            ->addArgument(new Reference(SectorService::class))
-            ->addArgument(new Reference(AuthService::class));
     }
 }
