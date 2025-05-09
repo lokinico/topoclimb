@@ -65,4 +65,54 @@ return [
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'index'
     ],
+    
+    // Routes pour les secteurs
+    [
+        'method' => 'GET',
+        'path' => '/sectors',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'index'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'show'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sectors/create',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'create'
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/sectors/create',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'store'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'edit'
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/sectors/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'update'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}/delete',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'delete'
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/sectors/{id}/delete',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'delete'
+    ],
 ];
