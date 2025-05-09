@@ -38,11 +38,20 @@ if ($environment === 'development') {
 }
 
 // Démarrer la session
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Initialiser le conteneur d'injection de dépendances
 $containerBuilder = new \TopoclimbCH\Core\ContainerBuilder();
 $container = $containerBuilder->build();
+
+// Initialiser manuellement le routeur avec les routes
+$router = $container->get(\TopoclimbCH\Core\Router::class);
+$routesFile = BASE_PATH . '/config/routes.php';
+if (file_exists($routesFile)) {
+    $router->loadRoutes($routesFile);
+}
 
 // Créer et exécuter l'application
 try {
@@ -65,7 +74,11 @@ try {
         http_response_code(500);
         include BASE_PATH . '/resources/views/errors/500.php';
     } else {
-        // En développement, laisser Whoops afficher l'erreur
-        throw $e;
+        // En développement, afficher les détails de l'erreur
+        echo "<h1>Erreur</h1>";
+        echo "<p><strong>Message:</strong> " . $e->getMessage() . "</p>";
+        echo "<p><strong>Fichier:</strong> " . $e->getFile() . " (ligne " . $e->getLine() . ")</p>";
+        echo "<h2>Trace</h2>";
+        echo "<pre>" . $e->getTraceAsString() . "</pre>";
     }
 }
