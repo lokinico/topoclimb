@@ -8,7 +8,8 @@ use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\HttpFoundation\Request;
+use TopoclimbCH\Services\SectorService;
+use TopoclimbCH\Services\MediaService;
 
 class ContainerBuilder
 {
@@ -43,9 +44,19 @@ class ContainerBuilder
             ->addArgument('%db_user%')
             ->addArgument('%db_password%');
 
+        // Configuration de la session
+        $container->register(Session::class, Session::class);
+
         // Configuration de la vue
         $container->register(View::class, View::class)
             ->addArgument('%views_path%');
+
+        // Services
+        $container->register(SectorService::class, SectorService::class)
+            ->addArgument(new Reference(Database::class));
+            
+        $container->register(MediaService::class, MediaService::class)
+            ->addArgument(new Reference(Database::class));
 
         // Configuration du routeur
         $container->register(Router::class, Router::class)
@@ -81,6 +92,14 @@ class ContainerBuilder
         // HomeController
         $container->register(\TopoclimbCH\Controllers\HomeController::class)
             ->addArgument(new Reference(View::class));
+            
+        // SectorController
+        $container->register(\TopoclimbCH\Controllers\SectorController::class)
+            ->addArgument(new Reference(View::class))
+            ->addArgument(new Reference(Session::class))
+            ->addArgument(new Reference(SectorService::class))
+            ->addArgument(new Reference(MediaService::class))
+            ->addArgument(new Reference(Database::class));
             
         // Autres contrôleurs à enregistrer...
     }
