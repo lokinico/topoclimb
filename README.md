@@ -246,7 +246,7 @@ Je développe le système de modèles pour mon application d'escalade TopoclimbC
 Utilise PHP 8.1+ avec les types de retour, les propriétés typées et les autres fonctionnalités modernes.
 
 Étape 4: Contrôleurs et services
-Prompt pour Claude:
+
 Pour mon application d'escalade TopoclimbCH, j'ai besoin d'implémenter:
 
 1. Une classe BaseController abstraite avec méthodes utilitaires communes
@@ -262,7 +262,7 @@ Pour mon application d'escalade TopoclimbCH, j'ai besoin d'implémenter:
 Sépare bien la logique métier des contrôleurs et utilise l'injection de dépendances.
 
 Étape 5: Système de templates et vues
-Prompt pour Claude:
+
 Pour mon application d'escalade TopoclimbCH, j'ai besoin d'un système de templates:
 
 1. Une classe View pour le rendu des templates
@@ -278,7 +278,7 @@ Pour mon application d'escalade TopoclimbCH, j'ai besoin d'un système de templa
 J'utilise PHP natif pour les templates (pas de moteur externe comme Twig).
 
 Étape 6: Authentication et autorisation
-Prompt pour Claude:
+
 Pour mon application d'escalade TopoclimbCH, j'ai besoin d'un système d'authentification et d'autorisation:
 
 1. Une classe Auth pour gérer l'authentification
@@ -292,7 +292,7 @@ Pour mon application d'escalade TopoclimbCH, j'ai besoin d'un système d'authent
 Privilégiez la sécurité et suivez les bonnes pratiques OWASP.
 
 Étape 7: Fonctionnalités spécifiques à l'escalade
-Prompt pour Claude:
+
 Pour mon application d'escalade TopoclimbCH, j'ai besoin d'implémenter les fonctionnalités métier suivantes:
 
 1. Système de gestion des expositions (points cardinaux) pour les secteurs
@@ -305,7 +305,7 @@ Pour mon application d'escalade TopoclimbCH, j'ai besoin d'implémenter les fonc
 Pour chaque système, j'ai besoin des modèles, contrôleurs, services et vues associés.
 
 Étape 8: Gestion des médias
-Prompt pour Claude:
+
 Pour mon application d'escalade TopoclimbCH, j'ai besoin d'un système de gestion des médias:
 
 1. Une classe MediaManager pour gérer l'upload, le redimensionnement et la suppression des images
@@ -319,7 +319,7 @@ Pour mon application d'escalade TopoclimbCH, j'ai besoin d'un système de gestio
 Utilise la bibliothèque Intervention/Image pour la manipulation d'images.
 
 Étape 9: API et interactivité AJAX
-Prompt pour Claude:
+
 Pour mon application d'escalade TopoclimbCH, j'ai besoin d'une API REST et de fonctionnalités AJAX:
 
 1. Une classe ApiController de base pour gérer les réponses JSON
@@ -336,7 +336,7 @@ Pour mon application d'escalade TopoclimbCH, j'ai besoin d'une API REST et de fo
 Utilise Fetch API côté client et JSON pour les échanges de données.
 
 Étape 10: Tests et assurance qualité
-Prompt pour Claude:
+
 Pour mon application d'escalade TopoclimbCH, j'ai besoin de mettre en place des tests:
 
 1. Configuration de PHPUnit pour les tests unitaires
