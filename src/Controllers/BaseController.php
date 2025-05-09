@@ -48,11 +48,19 @@ abstract class BaseController
     {
         $response = new Response();
         $data['flashes'] = $this->session->getFlashes();
+        
+        // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
+        if (!str_ends_with($view, '.twig')) {
+            $view .= '.twig';
+        }
+        
         $content = $this->view->render($view, $data);
         $response->setContent($content);
         
         return $response;
     }
+
+   
     
     /**
      * Redirect to a route
