@@ -194,15 +194,34 @@ class Router
      * @return Response
      * @throws \Exception
      */
-        private function executeHandler(mixed $handler, Request $request): Response
-        {
-            // Support pour les invokable controllers
-            if (is_object($handler) && method_exists($handler, '__invoke')) {
-                return $handler($request);
+    private function executeHandler(mixed $handler, Request $request): Response
+    {
+        // Support pour les fonctions/callables
+        if (is_callable($handler)) {
+            return $handler($request);
+        }
+        
+        // Support pour les invokable controllers
+        if (is_object($handler) && method_exists($handler, '__invoke')) {
+            return $handler($request);
+        }
+        
+        // Support pour le format ['controller' => Class, 'action' => method]
+        if (is_array($handler) && isset($handler['controller']) && isset($handler['action'])) {
+            $controllerClass = $handler['controller'];
+            $action = $handler['action'];
+            
+            // Obtenir l'instance du contrôleur depuis le conteneur
+            $controller = $this->container->get($controllerClass);
+            
+            if (!method_exists($controller, $action)) {
+                throw new \Exception("Action '$action' not found in controller '$controllerClass'");
             }
             
+            // Exécuter l'action du contrôleur
+            return $controller->$action($request);
+        }
+        
         throw new \Exception("Invalid route handler.");
-          
-
     }
 }
