@@ -135,6 +135,7 @@ class View
         }));
     }
 
+    
     /**
      * Render a view
      *
