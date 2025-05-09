@@ -49,8 +49,9 @@ class ContainerBuilder
 
         // Configuration de la vue
         $container->register(View::class, View::class)
-            ->addArgument('%views_path%');
-
+            ->addArgument('%views_path%')
+            ->addArgument(BASE_PATH . '/cache/views');
+            
         // Services
         $container->register(SectorService::class, SectorService::class)
             ->addArgument(new Reference(Database::class));
