@@ -262,29 +262,46 @@ class Router
      */
     private function executeHandler(mixed $handler, Request $request): Response
     {
-        // Support for callable handlers
+        // Support pour callable handlers
         if (is_callable($handler)) {
             return $handler($request);
         }
         
-        // Support for invokable controllers
+        // Support pour invokable controllers
         if (is_object($handler) && method_exists($handler, '__invoke')) {
             return $handler($request);
         }
         
-        // Support for ['controller' => Class, 'action' => method] format
+        // Support pour ['controller' => Class, 'action' => method] format
         if (is_array($handler) && isset($handler['controller']) && isset($handler['action'])) {
             $controllerClass = $handler['controller'];
             $action = $handler['action'];
             
-            // Get controller instance
-            $controller = $this->container->get($controllerClass);
+            // Obtenir l'instance du contrôleur
+            try {
+                // Essayer d'utiliser le conteneur
+                $controller = $this->container->get($controllerClass);
+            } catch (\Exception $e) {
+                // Si ça échoue, essayer de l'instancier directement
+                error_log("Container failed to get controller: " . $e->getMessage());
+                
+                // Vérifier si la classe existe
+                if (!class_exists($controllerClass)) {
+                    throw new \Exception("Controller class '$controllerClass' not found");
+                }
+                
+                // Instancier manuellement avec les services de base
+                $view = $this->container->get(View::class);
+                $session = $this->container->get(Session::class);
+                
+                $controller = new $controllerClass($view, $session);
+            }
             
             if (!method_exists($controller, $action)) {
                 throw new \Exception("Action '$action' not found in controller '$controllerClass'");
             }
             
-            // Execute controller action
+            // Exécuter l'action du contrôleur
             return $controller->$action($request);
         }
         
