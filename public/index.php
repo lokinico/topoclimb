@@ -47,6 +47,14 @@ try {
     $containerBuilder = new \TopoclimbCH\Core\ContainerBuilder();
     $container = $containerBuilder->build();
     
+    // Vérifier si le service existe pour le déboggage
+    $exists = $container->has('TopoclimbCH\Controllers\HomeController');
+    error_log("HomeController exists in container: " . ($exists ? "YES" : "NO"));
+
+    // Initialiser le routeur
+    $logger = $container->get(Psr\Log\LoggerInterface::class);
+    $router = new \TopoclimbCH\Core\Router($logger, $container);
+
     // Initialiser Container.php avec le conteneur Symfony
     $appContainer = \TopoclimbCH\Core\Container::getInstance($container);
     
