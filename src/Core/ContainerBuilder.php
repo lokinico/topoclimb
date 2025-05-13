@@ -28,26 +28,17 @@ class ContainerBuilder
             $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
             $container->setParameter('views_path', BASE_PATH . '/resources/views');
 
-            // Configuration du logger
-            $container->register(LoggerInterface::class, Logger::class)
-                ->addArgument('topoclimbch')
-                ->addMethodCall('pushHandler', [
-                    new StreamHandler(BASE_PATH . '/logs/app.log', Logger::DEBUG)
-                ]);
-
-            // Configuration de la base de données
-            $container->register(Database::class, Database::class);
-
-            // Configuration de la session
-            $container->register(Session::class, Session::class);
-
-            // Configuration de la vue
-            $container->register(View::class, View::class)
-                ->addArgument('%views_path%')
-                ->addArgument(BASE_PATH . '/cache/views');
-
-            // IMPORTANT: Enregistrer les contrôleurs de manière sécurisée
-            $this->registerControllersSecurely($container);
+            // Services de base
+            $this->registerCoreServices($container);
+            
+            // Services métier
+            $this->registerBusinessServices($container);
+            
+            // Contrôleurs
+            $this->registerControllers($container);
+            
+            // Middlewares
+            $this->registerMiddlewares($container);
 
             return $container;
         } catch (\Throwable $e) {
@@ -65,50 +56,152 @@ class ContainerBuilder
     }
     
     /**
-     * Register controllers in a secure way to avoid null references
+     * Register core services
      */
-    private function registerControllersSecurely(SymfonyContainerBuilder $container): void
+    private function registerCoreServices(SymfonyContainerBuilder $container): void
     {
-        // Liste des contrôleurs à enregistrer
+        // Logger
+        $container->register(LoggerInterface::class, Logger::class)
+            ->addArgument('topoclimbch')
+            ->addMethodCall('pushHandler', [
+                new Reference('logger.handler')
+            ]);
+            
+        $container->register('logger.handler', StreamHandler::class)
+            ->addArgument(BASE_PATH . '/logs/app.log')
+            ->addArgument(Logger::DEBUG);
+
+        // Database
+        $container->register(Database::class, Database::class)
+            ->setFactory([Database::class, 'getInstance']);
+
+        // Session
+        $container->register(Session::class, Session::class);
+        
+        // Auth
+        $container->register(Auth::class, Auth::class)
+            ->setFactory([Auth::class, 'getInstance'])
+            ->addArgument(new Reference(Session::class))
+            ->addArgument(new Reference(Database::class));
+
+        // View
+        $container->register(View::class, View::class)
+            ->addArgument('%views_path%')
+            ->addArgument(BASE_PATH . '/cache/views');
+    }
+    
+    /**
+     * Register business services
+     */
+    private function registerBusinessServices(SymfonyContainerBuilder $container): void
+    {
+        // Services
+        $container->register(\TopoclimbCH\Services\AuthService::class)
+            ->addArgument(new Reference(Auth::class))
+            ->addArgument(new Reference(Session::class))
+            ->addArgument(new Reference(Database::class));
+        
+        $container->register(\TopoclimbCH\Services\SectorService::class)
+            ->addArgument(new Reference(Database::class));
+        
+        $container->register(\TopoclimbCH\Services\RouteService::class)
+            ->addArgument(new Reference(Database::class));
+        
+        $container->register(\TopoclimbCH\Services\MediaService::class)
+            ->addArgument(new Reference(Database::class));
+    }
+    
+    /**
+     * Register controllers
+     */
+    private function registerControllers(SymfonyContainerBuilder $container): void
+    {
+        // Liste des contrôleurs avec leurs dépendances
         $controllers = [
-            'ErrorController',
-            'HomeController',
-            'SectorController',
-            // Ajoutez d'autres contrôleurs ici si nécessaire
+            \TopoclimbCH\Controllers\ErrorController::class => [
+                View::class,
+            ],
+            \TopoclimbCH\Controllers\HomeController::class => [
+                View::class,
+            ],
+            \TopoclimbCH\Controllers\AuthController::class => [
+                Session::class,
+                Database::class,
+                View::class,
+                \TopoclimbCH\Services\AuthService::class,
+            ],
+            \TopoclimbCH\Controllers\SectorController::class => [
+                View::class,
+                Session::class,
+                \TopoclimbCH\Services\SectorService::class,
+                \TopoclimbCH\Services\MediaService::class,
+                Database::class,
+            ],
+            \TopoclimbCH\Controllers\RouteController::class => [
+                View::class,
+                Session::class, 
+                \TopoclimbCH\Services\RouteService::class,
+                Database::class,
+            ],
+            \TopoclimbCH\Controllers\RegionController::class => [
+                View::class,
+                Session::class,
+                Database::class,
+            ],
+            \TopoclimbCH\Controllers\SiteController::class => [
+                View::class,
+                Session::class,
+                Database::class,
+            ],
+            \TopoclimbCH\Controllers\AscentController::class => [
+                View::class,
+                Session::class,
+                Database::class,
+                Auth::class,
+            ],
+            \TopoclimbCH\Controllers\AdminController::class => [
+                View::class,
+                Session::class,
+                Database::class, 
+                Auth::class,
+            ],
+            \TopoclimbCH\Controllers\UserController::class => [
+                View::class,
+                Session::class,
+                Database::class,
+                Auth::class,
+            ],
         ];
         
-        // Vérifier et enregistrer chaque contrôleur
-        foreach ($controllers as $controllerName) {
-            $fullClassName = '\\TopoclimbCH\\Controllers\\' . $controllerName;
+        // Enregistrer chaque contrôleur
+        foreach ($controllers as $controller => $dependencies) {
+            $definition = $container->register($controller);
             
-            // Vérifier si la classe existe avant d'essayer de l'enregistrer
-            if (class_exists($fullClassName)) {
-                $container->register($fullClassName)
-                    ->addArgument(new Reference(View::class));
-                
-                // Pour SectorController qui a des dépendances supplémentaires
-                if ($controllerName === 'SectorController' && 
-                    class_exists('\\TopoclimbCH\\Services\\SectorService') && 
-                    class_exists('\\TopoclimbCH\\Services\\MediaService')) {
-                    
-                    // Enregistrer les services requis
-                    $container->register('\\TopoclimbCH\\Services\\SectorService')
-                        ->addArgument(new Reference(Database::class));
-                        
-                    $container->register('\\TopoclimbCH\\Services\\MediaService')
-                        ->addArgument(new Reference(Database::class));
-                    
-                    // Mettre à jour l'enregistrement du contrôleur
-                    $container->register($fullClassName)
-                        ->addArgument(new Reference(View::class))
-                        ->addArgument(new Reference(Session::class))
-                        ->addArgument(new Reference('\\TopoclimbCH\\Services\\SectorService'))
-                        ->addArgument(new Reference('\\TopoclimbCH\\Services\\MediaService'))
-                        ->addArgument(new Reference(Database::class));
-                }
-            } else {
-                error_log("Controller class not found: " . $fullClassName);
+            foreach ($dependencies as $dependency) {
+                $definition->addArgument(new Reference($dependency));
             }
         }
+    }
+    
+    /**
+     * Register middlewares
+     */
+    private function registerMiddlewares(SymfonyContainerBuilder $container): void
+    {
+        // Middlewares
+        $container->register(\TopoclimbCH\Middleware\AuthMiddleware::class)
+            ->addArgument(new Reference(Session::class))
+            ->addArgument(new Reference(Database::class));
+        
+        $container->register(\TopoclimbCH\Middleware\AdminMiddleware::class)
+            ->addArgument(new Reference(Session::class))
+            ->addArgument(new Reference(Database::class));
+        
+        $container->register(\TopoclimbCH\Middleware\ModeratorMiddleware::class)
+            ->addArgument(new Reference(Session::class))
+            ->addArgument(new Reference(Database::class));
+        
+        $container->register(\TopoclimbCH\Middleware\CsrfMiddleware::class)
+            ->addArgument(new Reference(Session::class));
     }
 }
