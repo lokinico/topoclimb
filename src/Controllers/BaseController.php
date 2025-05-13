@@ -4,7 +4,8 @@
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+// Changer l'import pour utiliser notre propre classe Response
+use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Container;
@@ -45,49 +46,48 @@ abstract class BaseController
      * @return Response
      */
     protected function render(string $view, array $data = []): Response
-        {
-            $response = new Response();
-            
-            // Ajouter automatiquement des données globales
-            $globalData = [
-                'flashes' => $this->session->getFlashes(),
-                'app' => [
-                    'debug' => env('APP_DEBUG', false),
-                    'environment' => env('APP_ENV', 'production'),
-                    'version' => env('APP_VERSION', '1.0.0')
-                ]
-            ];
-            
-            // Ajouter l'utilisateur authentifié si disponible
-            if (isset($this->auth) && $this->auth->check()) {
-                $globalData['auth_user'] = $this->auth->user();
-            }
-            
-            // Fusionner avec les données fournies
-            $data = array_merge($globalData, $data);
-            
-            // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
-            if (!str_ends_with($view, '.twig')) {
-                $view .= '.twig';
-            }
-            
-            $content = $this->view->render($view, $data);
-            $response->setContent($content);
-            
-            // Configurer la mise en cache selon l'environnement
-            if (env('APP_ENV') === 'production') {
-                $response->setPublic();
-                $response->setMaxAge(60); // 1 minute
-                $response->setSharedMaxAge(120); // 2 minutes
-            } else {
-                $response->setPrivate();
-                $response->headers->addCacheControlDirective('no-store', true);
-            }
-            
-            return $response;
+    {
+        // Utiliser notre classe Response
+        $response = new Response();
+        
+        // Ajouter automatiquement des données globales
+        $globalData = [
+            'flashes' => $this->session->getFlashes(),
+            'app' => [
+                'debug' => env('APP_DEBUG', false),
+                'environment' => env('APP_ENV', 'production'),
+                'version' => env('APP_VERSION', '1.0.0')
+            ]
+        ];
+        
+        // Ajouter l'utilisateur authentifié si disponible
+        if (isset($this->auth) && $this->auth->check()) {
+            $globalData['auth_user'] = $this->auth->user();
         }
-
-   
+        
+        // Fusionner avec les données fournies
+        $data = array_merge($globalData, $data);
+        
+        // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
+        if (!str_ends_with($view, '.twig')) {
+            $view .= '.twig';
+        }
+        
+        $content = $this->view->render($view, $data);
+        $response->setContent($content);
+        
+        // Configurer la mise en cache selon l'environnement
+        if (env('APP_ENV') === 'production') {
+            $response->setPublic();
+            $response->setMaxAge(60); // 1 minute
+            $response->setSharedMaxAge(120); // 2 minutes
+        } else {
+            $response->setPrivate();
+            $response->headers->addCacheControlDirective('no-store', true);
+        }
+        
+        return $response;
+    }
     
     /**
      * Redirect to a route
@@ -98,11 +98,8 @@ abstract class BaseController
      */
     protected function redirect(string $url, int $status = 302): Response
     {
-        $response = new Response();
-        $response->setStatusCode($status);
-        $response->headers->set('Location', $url);
-        
-        return $response;
+        // Utiliser notre classe Response statique redirect
+        return Response::redirect($url, $status);
     }
     
     /**
@@ -114,12 +111,8 @@ abstract class BaseController
      */
     protected function json(mixed $data, int $status = 200): Response
     {
-        $response = new Response();
-        $response->headers->set('Content-Type', 'application/json');
-        $response->setStatusCode($status);
-        $response->setContent(json_encode($data));
-        
-        return $response;
+        // Utiliser notre classe Response statique json
+        return Response::json($data, $status);
     }
     
     /**
