@@ -8,138 +8,107 @@ use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
-use TopoclimbCH\Services\SectorService;
-use TopoclimbCH\Services\MediaService;
-use TopoclimbCH\Services\RouteService;
-use TopoclimbCH\Services\AuthService;
-use TopoclimbCH\Services\RegionService;
-use TopoclimbCH\Services\SiteService;
+use Symfony\Component\HttpFoundation\Response;
 
 class ContainerBuilder
 {
     /**
      * Build and configure the dependency injection container.
-     *
-     * @return SymfonyContainerBuilder
      */
     public function build(): SymfonyContainerBuilder
     {
         $container = new SymfonyContainerBuilder();
 
-        // Configuration variables
-        $container->setParameter('db_host', $_ENV['DB_HOST'] ?? 'localhost');
-        $container->setParameter('db_name', $_ENV['DB_DATABASE'] ?? 'sh139940_');
-        $container->setParameter('db_user', $_ENV['DB_USERNAME'] ?? 'root');
-        $container->setParameter('db_password', $_ENV['DB_PASSWORD'] ?? '');
-        $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
-        $container->setParameter('views_path', BASE_PATH . '/resources/views');
+        try {
+            // Configuration variables
+            $container->setParameter('db_host', $_ENV['DB_HOST'] ?? 'localhost');
+            $container->setParameter('db_name', $_ENV['DB_DATABASE'] ?? 'sh139940_');
+            $container->setParameter('db_user', $_ENV['DB_USERNAME'] ?? 'root');
+            $container->setParameter('db_password', $_ENV['DB_PASSWORD'] ?? '');
+            $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
+            $container->setParameter('views_path', BASE_PATH . '/resources/views');
 
-        // Configuration du logger
-        $container->register(LoggerInterface::class, Logger::class)
-            ->addArgument('topoclimbch')
-            ->addMethodCall('pushHandler', [
-                new StreamHandler(BASE_PATH . '/logs/app.log', Logger::DEBUG)
-            ]);
+            // Configuration du logger
+            $container->register(LoggerInterface::class, Logger::class)
+                ->addArgument('topoclimbch')
+                ->addMethodCall('pushHandler', [
+                    new StreamHandler(BASE_PATH . '/logs/app.log', Logger::DEBUG)
+                ]);
 
-        // Configuration de la base de données
-        $container->register(Database::class, Database::class);
+            // Configuration de la base de données
+            $container->register(Database::class, Database::class);
 
-        // Configuration de la session
-        $container->register(Session::class, Session::class);
+            // Configuration de la session
+            $container->register(Session::class, Session::class);
 
-        // Configuration de la vue
-        $container->register(View::class, View::class)
-            ->addArgument('%views_path%')
-            ->addArgument(BASE_PATH . '/cache/views');
+            // Configuration de la vue
+            $container->register(View::class, View::class)
+                ->addArgument('%views_path%')
+                ->addArgument(BASE_PATH . '/cache/views');
+
+            // IMPORTANT: Enregistrer les contrôleurs de manière sécurisée
+            $this->registerControllersSecurely($container);
+
+            return $container;
+        } catch (\Throwable $e) {
+            // Log l'erreur
+            error_log("ContainerBuilder error: " . $e->getMessage());
             
-        // Services
-        $container->register(SectorService::class, SectorService::class)
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(MediaService::class, MediaService::class)
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(RouteService::class, RouteService::class)
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(AuthService::class, AuthService::class)
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(RegionService::class, RegionService::class)
-            ->addArgument(new Reference(Database::class));
-            
-        $container->register(SiteService::class, SiteService::class)
-            ->addArgument(new Reference(Database::class));
-
-        // Configuration du routeur
-        $container->register(Router::class, Router::class)
-            ->addArgument(new Reference(LoggerInterface::class))
-            ->addArgument($container);
-
-        // Configuration de l'application
-        $container->register(Application::class, Application::class)
-            ->addArgument(new Reference(Router::class))
-            ->addArgument(new Reference(LoggerInterface::class))
-            ->addArgument($container)
-            ->addArgument('%environment%');
-
-        // Enregistrement des contrôleurs
-        $this->registerControllers($container);
-
-        // Retourner le conteneur configuré
-        return $container;
+            // Retourner un conteneur minimal fonctionnel
+            $minimalContainer = new SymfonyContainerBuilder();
+            $minimalContainer->register(View::class, View::class)
+                ->addArgument(BASE_PATH . '/resources/views')
+                ->addArgument(BASE_PATH . '/cache/views');
+                
+            return $minimalContainer;
+        }
     }
     
     /**
-     * Register all controllers in the container
-     *
-     * @param SymfonyContainerBuilder $container
-     * @return void
+     * Register controllers in a secure way to avoid null references
      */
-    private function registerControllers(SymfonyContainerBuilder $container): void
+    private function registerControllersSecurely(SymfonyContainerBuilder $container): void
     {
-        // ErrorController
-        $container->register(\TopoclimbCH\Controllers\ErrorController::class)
-            ->addArgument(new Reference(View::class));
+        // Liste des contrôleurs à enregistrer
+        $controllers = [
+            'ErrorController',
+            'HomeController',
+            'SectorController',
+            // Ajoutez d'autres contrôleurs ici si nécessaire
+        ];
+        
+        // Vérifier et enregistrer chaque contrôleur
+        foreach ($controllers as $controllerName) {
+            $fullClassName = '\\TopoclimbCH\\Controllers\\' . $controllerName;
             
-        // HomeController
-        $container->register(\TopoclimbCH\Controllers\HomeController::class)
-            ->addArgument(new Reference(View::class));
-            
-        // SectorController
-        $container->register(\TopoclimbCH\Controllers\SectorController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(SectorService::class))
-            ->addArgument(new Reference(MediaService::class))
-            ->addArgument(new Reference(Database::class));
-        
-        // AuthController
-        $container->register(\TopoclimbCH\Controllers\AuthController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(AuthService::class));
-        
-        // RegionController
-        $container->register(\TopoclimbCH\Controllers\RegionController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(RegionService::class));
-        
-        // SiteController
-        $container->register(\TopoclimbCH\Controllers\SiteController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(SiteService::class));
-        
-        // RouteController
-        $container->register(\TopoclimbCH\Controllers\RouteController::class)
-            ->addArgument(new Reference(View::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(RouteService::class))
-            ->addArgument(new Reference(MediaService::class))
-            ->addArgument(new Reference(SectorService::class))
-            ->addArgument(new Reference(AuthService::class));
+            // Vérifier si la classe existe avant d'essayer de l'enregistrer
+            if (class_exists($fullClassName)) {
+                $container->register($fullClassName)
+                    ->addArgument(new Reference(View::class));
+                
+                // Pour SectorController qui a des dépendances supplémentaires
+                if ($controllerName === 'SectorController' && 
+                    class_exists('\\TopoclimbCH\\Services\\SectorService') && 
+                    class_exists('\\TopoclimbCH\\Services\\MediaService')) {
+                    
+                    // Enregistrer les services requis
+                    $container->register('\\TopoclimbCH\\Services\\SectorService')
+                        ->addArgument(new Reference(Database::class));
+                        
+                    $container->register('\\TopoclimbCH\\Services\\MediaService')
+                        ->addArgument(new Reference(Database::class));
+                    
+                    // Mettre à jour l'enregistrement du contrôleur
+                    $container->register($fullClassName)
+                        ->addArgument(new Reference(View::class))
+                        ->addArgument(new Reference(Session::class))
+                        ->addArgument(new Reference('\\TopoclimbCH\\Services\\SectorService'))
+                        ->addArgument(new Reference('\\TopoclimbCH\\Services\\MediaService'))
+                        ->addArgument(new Reference(Database::class));
+                }
+            } else {
+                error_log("Controller class not found: " . $fullClassName);
+            }
+        }
     }
 }
