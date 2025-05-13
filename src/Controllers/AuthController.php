@@ -2,80 +2,83 @@
 
 namespace TopoclimbCH\Controllers;
 
-use TopoclimbCH\Core\Auth;
-use TopoclimbCH\Core\Request;
-use TopoclimbCH\Core\Response;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
-use TopoclimbCH\Models\User;
+use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Services\AuthService;
-use TopoclimbCH\Core\Validation\Validator;
 
 class AuthController extends BaseController
 {
     private Auth $auth;
     private AuthService $authService;
-    private Session $session;
-
+    private Database $db;
     
-    public function __construct(Session $session, Database $db, View $view)
+    public function __construct(View $view, Session $session, Database $db)
     {
-        // Appeler le constructeur parent pour initialiser $view
-        parent::__construct($view);
+        // Appeler le constructeur parent avec les paramètres requis
+        parent::__construct($view, $session);
         
-        $this->session = $session;
+        // Initialiser les propriétés spécifiques à ce contrôleur
+        $this->db = $db;
         $this->auth = Auth::getInstance($session, $db);
         $this->authService = new AuthService($this->auth, $session, $db);
     }
     
-    public function loginForm(): Response
+    public function loginForm(Request $request): Response
     {
         if ($this->auth->check()) {
-            return Response::redirect('/');
+            return $this->redirect('/');
         }
         
-        return $this->view->render('auth/login.twig');
+        // Créer un token CSRF pour le formulaire
+        $csrfToken = $this->createCsrfToken();
+        
+        return $this->render('auth/login', [
+            'csrf_token' => $csrfToken
+        ]);
     }
     
     public function login(Request $request): Response
     {
-        $credentials = $request->getAllPost();
-        
-        // Validation
-        $validator = new Validator($credentials);
-        $validator->rule('required', ['email', 'password']);
-        
-        if (!$validator->validate()) {
-            $this->session->flash('errors', $validator->errors());
-            $this->session->flash('old', $credentials);
-            return Response::redirect('/login');
+        // Vérifier le token CSRF
+        if (!$this->validateCsrfToken($request)) {
+            $this->flash('error', 'Token CSRF invalide, veuillez réessayer.');
+            return $this->redirect('/login');
         }
         
-        // Remember me
-        $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
+        $credentials = [
+            'email' => $request->request->get('email'),
+            'password' => $request->request->get('password')
+        ];
+        
+        // Se souvenir de moi
+        $remember = $request->request->getBoolean('remember');
         
         // Tentative de connexion
         if (!$this->auth->attempt($credentials['email'], $credentials['password'], $remember)) {
-            $this->session->flash('error', 'Identifiants invalides');
+            $this->flash('error', 'Identifiants invalides');
             $this->session->flash('old', ['email' => $credentials['email']]);
-            return Response::redirect('/login');
+            return $this->redirect('/login');
         }
         
-        // Récupération de l'URL intentionnelle si disponible
+        // Redirection vers l'URL initiale si disponible
         $intendedUrl = $this->session->get('intended_url', '/');
         $this->session->remove('intended_url');
         
-        $this->session->flash('success', 'Vous êtes maintenant connecté');
-        return Response::redirect($intendedUrl);
+        $this->flash('success', 'Vous êtes maintenant connecté');
+        return $this->redirect($intendedUrl);
     }
     
-    public function logout(): Response
+    public function logout(Request $request): Response
     {
         $this->auth->logout();
-        $this->session->flash('success', 'Vous avez été déconnecté');
-        return Response::redirect('/');
+        $this->flash('success', 'Vous avez été déconnecté');
+        return $this->redirect('/');
     }
+
     
     public function registerForm(): Response
     {
