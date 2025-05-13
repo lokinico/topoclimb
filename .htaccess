@@ -51,3 +51,11 @@
     ExpiresByType application/javascript "access plus 1 month"
     ExpiresDefault "access plus 1 week"
 </IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirection vers public/
+    RewriteRule ^$ public/ [L]
+    RewriteRule (.*) public/$1 [L]
+</IfModule>
