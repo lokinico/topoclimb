@@ -27,6 +27,8 @@ class ContainerBuilder
         $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
         $container->setParameter('views_path', BASE_PATH . '/resources/views');
         $container->setParameter('cache_path', BASE_PATH . '/cache/views');
+        $container->setParameter('container.dumper.inline_factories', true);
+        $container->setParameter('container.autowiring.strict_mode', false);
 
         // Services de base
         $this->registerCoreServices($container);
@@ -40,8 +42,6 @@ class ContainerBuilder
         // Middlewares
         $this->registerMiddlewares($container);
         
-        // IMPORTANT: Compiler le conteneur après avoir enregistré tous les services
-        $container->compile();
 
         return $container;
     }
