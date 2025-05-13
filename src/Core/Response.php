@@ -143,11 +143,15 @@ class Response extends SymfonyResponse
     /**
      * Envoie la réponse au client
      *
-     * @return void
+     * @return static
      */
-    public function send(): void
+    public function send(): static
     {
+        // Utiliser la méthode parente pour être compatible
         parent::send();
+        
+        // Retourner $this pour compatibilité avec Symfony
+        return $this;
     }
 
     /**
