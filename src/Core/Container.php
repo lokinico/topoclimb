@@ -3,18 +3,18 @@
 
 namespace TopoclimbCH\Core;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 
 class Container
 {
     private static ?Container $instance = null;
-    private ContainerInterface $container;
+    private SymfonyContainerBuilder $container;
 
     /**
      * Constructeur privé pour le Singleton
      */
-    private function __construct(ContainerInterface $container)
+    private function __construct(SymfonyContainerBuilder $container)
     {
         $this->container = $container;
     }
@@ -22,7 +22,7 @@ class Container
     /**
      * Récupère l'instance unique
      */
-    public static function getInstance(ContainerInterface $container = null): self
+    public static function getInstance(SymfonyContainerBuilder $container = null): self
     {
         if (self::$instance === null) {
             if ($container === null) {
@@ -41,6 +41,15 @@ class Container
         try {
             return $this->container->get($id);
         } catch (ServiceNotFoundException $e) {
+            // Tenter de faire une recherche non-stricte (important pour les contrôleurs)
+            // par exemple, si on demande "HomeController" au lieu de "TopoclimbCH\Controllers\HomeController"
+            if (strpos($id, '\\') === false) {
+                $fullId = "TopoclimbCH\\Controllers\\{$id}";
+                if ($this->container->has($fullId)) {
+                    return $this->container->get($fullId);
+                }
+            }
+            
             throw new \InvalidArgumentException("Service $id not found", 0, $e);
         }
     }
@@ -50,54 +59,14 @@ class Container
      */
     public function has(string $id): bool
     {
+        // Vérifier aussi avec le namespace complet
+        if (strpos($id, '\\') === false) {
+            $fullId = "TopoclimbCH\\Controllers\\{$id}";
+            if ($this->container->has($fullId)) {
+                return true;
+            }
+        }
+        
         return $this->container->has($id);
-    }
-
-    /**
-     * Méthodes d'usine pour construire un service avec des dépendances manuelles
-     */
-    public function make(string $class, array $parameters = [])
-    {
-        if ($this->container->has($class)) {
-            return $this->container->get($class);
-        }
-        
-        // Utilise Reflection pour construire le service
-        $reflector = new \ReflectionClass($class);
-        
-        if (!$reflector->isInstantiable()) {
-            throw new \InvalidArgumentException("Class $class is not instantiable");
-        }
-        
-        $constructor = $reflector->getConstructor();
-        
-        if (null === $constructor) {
-            return new $class();
-        }
-        
-        $dependencies = [];
-        foreach ($constructor->getParameters() as $parameter) {
-            $name = $parameter->getName();
-            $type = $parameter->getType();
-            
-            if (isset($parameters[$name])) {
-                $dependencies[] = $parameters[$name];
-                continue;
-            }
-            
-            if ($parameter->isDefaultValueAvailable()) {
-                $dependencies[] = $parameter->getDefaultValue();
-                continue;
-            }
-            
-            if ($type && !$type->isBuiltin() && $this->has($type->getName())) {
-                $dependencies[] = $this->get($type->getName());
-                continue;
-            }
-            
-            throw new \InvalidArgumentException("Cannot resolve parameter $name of $class");
-        }
-        
-        return $reflector->newInstanceArgs($dependencies);
     }
 }
