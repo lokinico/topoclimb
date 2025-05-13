@@ -133,9 +133,9 @@ class Response extends SymfonyResponse
     /**
      * Récupère le contenu de la réponse
      *
-     * @return string|null
+     * @return string|false
      */
-    public function getContent(): ?string
+    public function getContent(): string|false
     {
         return parent::getContent();
     }
