@@ -43,9 +43,12 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 try {
-    // Créer le container
+    // Créer et configurer le conteneur
     $containerBuilder = new \TopoclimbCH\Core\ContainerBuilder();
     $container = $containerBuilder->build();
+    
+    // Initialiser Container.php avec le conteneur Symfony
+    $appContainer = \TopoclimbCH\Core\Container::getInstance($container);
     
     // Créer un logger
     $logger = $container->get(\Psr\Log\LoggerInterface::class);
@@ -58,6 +61,16 @@ try {
     
     // Traiter la requête
     $request = \Symfony\Component\HttpFoundation\Request::createFromGlobals();
+    
+    // Pour du débogage, on peut afficher les services enregistrés
+    if ($environment === 'development' && isset($_GET['debug_container'])) {
+        echo "<h2>Services disponibles:</h2><pre>";
+        var_dump($container->getServiceIds());
+        echo "</pre>";
+        exit;
+    }
+    
+    // Dispatcher la requête
     $response = $router->dispatch($request);
     
     // Envoyer la réponse
@@ -67,6 +80,8 @@ try {
     // Log l'erreur
     if (isset($logger)) {
         $logger->error($e->getMessage(), ['exception' => $e]);
+    } else {
+        error_log($e->getMessage() . "\n" . $e->getTraceAsString());
     }
     
     // Afficher une erreur basique en cas de problème
