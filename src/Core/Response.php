@@ -23,9 +23,9 @@ class Response extends SymfonyResponse
      * Définit le code de statut HTTP
      *
      * @param int $statusCode
-     * @return Response
+     * @return static
      */
-    public function setStatusCode(int $statusCode): self
+    public function setStatusCode(int $statusCode): static
     {
         parent::setStatusCode($statusCode);
         return $this;
@@ -45,10 +45,10 @@ class Response extends SymfonyResponse
      * Définit un en-tête HTTP
      *
      * @param string $name Nom de l'en-tête
-     * @param string $value Valeur de l'en-tête
-     * @return Response
+     * @param string|array $value Valeur de l'en-tête
+     * @return static
      */
-    public function setHeader(string $name, string $value): self
+    public function setHeader(string $name, string|array $value): static
     {
         $this->headers->set($name, $value);
         return $this;
@@ -58,9 +58,9 @@ class Response extends SymfonyResponse
      * Définit plusieurs en-têtes HTTP
      *
      * @param array $headers Tableau d'en-têtes [nom => valeur]
-     * @return Response
+     * @return static
      */
-    public function setHeaders(array $headers): self
+    public function setHeaders(array $headers): static
     {
         foreach ($headers as $name => $value) {
             $this->headers->set($name, $value);
@@ -100,9 +100,9 @@ class Response extends SymfonyResponse
      * @param string $domain Domaine du cookie
      * @param bool $secure Cookie sécurisé (HTTPS)
      * @param bool $httpOnly Cookie accessible uniquement par HTTP
-     * @return Response
+     * @return static
      */
-    public function setCookie(string $name, string $value, int $expire = 0, string $path = '/', string $domain = '', bool $secure = false, bool $httpOnly = true): self
+    public function setCookie(string $name, string $value, int $expire = 0, string $path = '/', string $domain = '', bool $secure = false, bool $httpOnly = true): static
     {
         $cookie = new Cookie(
             $name,
@@ -121,10 +121,10 @@ class Response extends SymfonyResponse
     /**
      * Définit le contenu de la réponse
      *
-     * @param string $content
-     * @return Response
+     * @param string|null $content
+     * @return static
      */
-    public function setContent(string $content): self
+    public function setContent(?string $content): static
     {
         parent::setContent($content);
         return $this;
@@ -133,9 +133,9 @@ class Response extends SymfonyResponse
     /**
      * Récupère le contenu de la réponse
      *
-     * @return string
+     * @return string|null
      */
-    public function getContent(): string
+    public function getContent(): ?string
     {
         return parent::getContent();
     }
@@ -147,10 +147,7 @@ class Response extends SymfonyResponse
      */
     public function send(): static
     {
-        // Utiliser la méthode parente pour être compatible
         parent::send();
-        
-        // Retourner $this pour compatibilité avec Symfony
         return $this;
     }
 
@@ -159,13 +156,13 @@ class Response extends SymfonyResponse
      *
      * @param mixed $data Données à encoder en JSON
      * @param int $statusCode Code de statut HTTP
-     * @return Response
+     * @return static
      */
-    public static function json(mixed $data, int $statusCode = 200): self
+    public static function json(mixed $data, int $statusCode = 200): static
     {
         $content = json_encode($data);
         
-        $response = new self($content, $statusCode);
+        $response = new static($content, $statusCode);
         $response->headers->set('Content-Type', 'application/json');
         
         return $response;
@@ -176,9 +173,9 @@ class Response extends SymfonyResponse
      *
      * @param string $url URL de redirection
      * @param int $statusCode Code de statut HTTP
-     * @return Response
+     * @return static
      */
-    public static function redirect(string $url, int $statusCode = 302): self
+    public static function redirect(string $url, int $statusCode = 302): static
     {
         // Normalisation de l'URL pour les chemins relatifs
         if (!preg_match('#^https?://#i', $url) && $url[0] !== '/') {
@@ -186,7 +183,7 @@ class Response extends SymfonyResponse
             $url = '/' . $url;
         }
         
-        $response = new self('', $statusCode);
+        $response = new static('', $statusCode);
         $response->headers->set('Location', $url);
         
         return $response;
@@ -195,9 +192,9 @@ class Response extends SymfonyResponse
     /**
      * Définit cette réponse comme publique
      * 
-     * @return Response
+     * @return static
      */
-    public function setPublic(): self
+    public function setPublic(): static
     {
         parent::setPublic();
         return $this;
@@ -206,9 +203,9 @@ class Response extends SymfonyResponse
     /**
      * Définit cette réponse comme privée
      * 
-     * @return Response
+     * @return static
      */
-    public function setPrivate(): self
+    public function setPrivate(): static
     {
         parent::setPrivate();
         return $this;
@@ -218,9 +215,9 @@ class Response extends SymfonyResponse
      * Définit le temps maximal de mise en cache
      * 
      * @param int $seconds
-     * @return Response
+     * @return static
      */
-    public function setMaxAge(int $seconds): self
+    public function setMaxAge(int $seconds): static
     {
         parent::setMaxAge($seconds);
         return $this;
@@ -230,9 +227,9 @@ class Response extends SymfonyResponse
      * Définit le temps partagé maximal de mise en cache
      * 
      * @param int $seconds
-     * @return Response
+     * @return static
      */
-    public function setSharedMaxAge(int $seconds): self
+    public function setSharedMaxAge(int $seconds): static
     {
         parent::setSharedMaxAge($seconds);
         return $this;
