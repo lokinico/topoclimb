@@ -12,7 +12,7 @@
                     {% include 'partials/flash.twig' %}
                     
                     <form method="POST" action="/login">
-                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         
                         <div class="mb-3">
                             <label for="email" class="form-label">Email ou nom d'utilisateur</label>
