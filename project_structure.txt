@@ -1,0 +1,206 @@
+Structure du projet TopoclimbCH
+============================
+
+Arborescence des fichiers:
+./.env.example
+./.gitignore
+./.htaccess
+./LICENSE
+./README.md
+./composer.json
+./config/routes.php
+./project_structure.txt
+./public/css/app.css
+./public/index.php
+./public/js/app.js
+./resources/lang/de/messages.php
+./resources/lang/de/validation.php
+./resources/lang/en/messages.php
+./resources/lang/en/validation.php
+./resources/lang/fr/messages.php
+./resources/lang/fr/validation.php
+./resources/views/components/card.twig
+./resources/views/errors/403.twig
+./resources/views/errors/404.php
+./resources/views/errors/404.twig
+./resources/views/errors/500.php
+./resources/views/errors/500.twig
+./resources/views/home/index.twig
+./resources/views/layouts/app.twig
+./resources/views/partials/flash.twig
+./resources/views/partials/footer.twig
+./resources/views/partials/header.twig
+./resources/views/partials/navigation.twig
+./resources/views/sectors/form.twig
+./resources/views/sectors/index.twig
+./resources/views/sectors/show.twig
+./src/Controllers/BaseController.php
+./src/Controllers/ErrorController.php
+./src/Controllers/HomeController.php
+./src/Controllers/RouteController.php
+./src/Controllers/SectorController.php
+./src/Core/Application.php
+./src/Core/Auth.php
+./src/Core/Config.php
+./src/Core/Container.php
+./src/Core/ContainerBuilder.php
+./src/Core/Database.php
+./src/Core/Events/EventDispatcher.php
+./src/Core/Model.php
+./src/Core/Request.php
+./src/Core/Response.php
+./src/Core/Router.php
+./src/Core/Session.php
+./src/Core/UploadedFile.php
+./src/Core/Validation/Validator.php
+./src/Core/View.php
+./src/Exceptions/ModelException.php
+./src/Exceptions/RouteNotFoundException.php
+./src/Helpers/functions.php
+./src/Models/Region.php
+./src/Models/Route.php
+./src/Models/Sector.php
+./src/Models/User.php
+./src/Services/MediaService.php
+./src/Services/RouteService.php
+./src/Services/SectorService.php
+./test-routes.php
+
+Liste des contrôleurs:
+./src/Controllers/BaseController.php
+./src/Controllers/ErrorController.php
+./src/Controllers/HomeController.php
+./src/Controllers/RouteController.php
+./src/Controllers/SectorController.php
+
+Liste des modèles:
+./src/Models/Region.php
+./src/Models/Route.php
+./src/Models/Sector.php
+./src/Models/User.php
+
+Liste des services:
+./src/Services/MediaService.php
+./src/Services/RouteService.php
+./src/Services/SectorService.php
+
+Liste des vues:
+./resources/views/components/card.twig
+./resources/views/errors/403.twig
+./resources/views/errors/404.php
+./resources/views/errors/404.twig
+./resources/views/errors/500.php
+./resources/views/errors/500.twig
+./resources/views/home/index.twig
+./resources/views/layouts/app.twig
+./resources/views/partials/flash.twig
+./resources/views/partials/footer.twig
+./resources/views/partials/header.twig
+./resources/views/partials/navigation.twig
+./resources/views/sectors/form.twig
+./resources/views/sectors/index.twig
+./resources/views/sectors/show.twig
+
+Contenu du composer.json:
+{
+    "name": "topoclimbch/application",
+    "description": "Application de gestion de sites d'escalade en Suisse",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.1",
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "vlucas/phpdotenv": "^5.5",
+        "monolog/monolog": "^3.4",
+        "symfony/http-foundation": "^6.3",
+        "symfony/routing": "^6.3",
+        "symfony/dependency-injection": "^6.3",
+        "doctrine/dbal": "^3.6",
+        "twig/twig": "^3.7",
+        "respect/validation": "^2.2",
+        "ramsey/uuid": "^4.7",
+        "guzzlehttp/guzzle": "^7.7",
+        "league/flysystem": "^3.15",
+        "symfony/mailer": "^6.3",
+        "intervention/image": "^2.7",
+        "filp/whoops": "^2.14"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.2",
+        "phpstan/phpstan": "^1.10",
+        "symfony/var-dumper": "^6.3",
+        "filp/whoops": "^2.15",
+        "fakerphp/faker": "^1.23",
+        "squizlabs/php_codesniffer": "^3.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "TopoclimbCH\\": "src/"
+        },
+        "files": [
+            "src/Helpers/functions.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TopoclimbCH\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "cs": "phpcs --standard=PSR12 src tests",
+        "stan": "phpstan analyse src --level=5",
+        "post-autoload-dump": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
+Contenu du .env.example:
+# Application
+APP_NAME="TopoclimbCH"
+APP_ENV=development
+APP_DEBUG=true
+APP_URL=http://localhost
+APP_KEY=base64:VOTRE_CLE_SECRETE_A_GENERER
+
+# Base de données
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sh139940_
+DB_USERNAME=root
+DB_PASSWORD=
+DB_PREFIX=
+
+# Journalisation
+LOG_CHANNEL=stack
+LOG_LEVEL=debug
+
+# Serveur de courrier électronique
+MAIL_MAILER=smtp
+MAIL_HOST=mailhog
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS=noreply@topoclimb.ch
+MAIL_FROM_NAME="${APP_NAME}"
+
+
+
+# Configuration des sessions
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+
+# Cache
+CACHE_DRIVER=file
+
+# API Météo (si nécessaire)
+WEATHER_API_KEY=
