@@ -1,0 +1,86 @@
+{% extends 'layouts/app.twig' %}
+
+{% block title %}Inscription - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">Inscription</div>
+                <div class="card-body">
+                    {% include 'partials/flash.twig' %}
+                    
+                    <form method="POST" action="/register">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="prenom" class="form-label">Prénom</label>
+                                <input type="text" class="form-control" id="prenom" name="prenom" value="{{ old.prenom }}" required>
+                                {% if errors.prenom %}
+                                    <div class="text-danger">{{ errors.prenom[0] }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="nom" class="form-label">Nom</label>
+                                <input type="text" class="form-control" id="nom" name="nom" value="{{ old.nom }}" required>
+                                {% if errors.nom %}
+                                    <div class="text-danger">{{ errors.nom[0] }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nom d'utilisateur</label>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ old.username }}" required>
+                            {% if errors.username %}
+                                <div class="text-danger">{{ errors.username[0] }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Adresse email</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ old.email }}" required>
+                            {% if errors.email %}
+                                <div class="text-danger">{{ errors.email[0] }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="ville" class="form-label">Ville</label>
+                            <input type="text" class="form-control" id="ville" name="ville" value="{{ old.ville }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            {% if errors.password %}
+                                <div class="text-danger">{{ errors.password[0] }}</div>
+                            {% endif %}
+                            <div class="form-text">Le mot de passe doit contenir au moins 8 caractères.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password_confirmation" class="form-label">Confirmer le mot de passe</label>
+                            <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
+                            {% if errors.password_confirmation %}
+                                <div class="text-danger">{{ errors.password_confirmation[0] }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">S'inscrire</button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <p>Vous avez déjà un compte? <a href="/login" class="text-decoration-none">Se connecter</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
