@@ -19,48 +19,15 @@ class ContainerBuilder
     {
         $container = new SymfonyContainerBuilder();
 
-        try {
-            // Configuration variables
-            $container->setParameter('db_host', $_ENV['DB_HOST'] ?? 'localhost');
-            $container->setParameter('db_name', $_ENV['DB_DATABASE'] ?? 'sh139940_');
-            $container->setParameter('db_user', $_ENV['DB_USERNAME'] ?? 'root');
-            $container->setParameter('db_password', $_ENV['DB_PASSWORD'] ?? '');
-            $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
-            $container->setParameter('views_path', BASE_PATH . '/resources/views');
+        // Configuration variables
+        $container->setParameter('db_host', $_ENV['DB_HOST'] ?? 'localhost');
+        $container->setParameter('db_name', $_ENV['DB_DATABASE'] ?? 'sh139940_');
+        $container->setParameter('db_user', $_ENV['DB_USERNAME'] ?? 'root');
+        $container->setParameter('db_password', $_ENV['DB_PASSWORD'] ?? '');
+        $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
+        $container->setParameter('views_path', BASE_PATH . '/resources/views');
 
-            // Services de base
-            $this->registerCoreServices($container);
-            
-            // Services métier
-            $this->registerBusinessServices($container);
-            
-            // Contrôleurs
-            $this->registerControllers($container);
-            
-            // Middlewares
-            $this->registerMiddlewares($container);
-
-            return $container;
-        } catch (\Throwable $e) {
-            // Log l'erreur
-            error_log("ContainerBuilder error: " . $e->getMessage());
-            
-            // Retourner un conteneur minimal fonctionnel
-            $minimalContainer = new SymfonyContainerBuilder();
-            $minimalContainer->register(View::class, View::class)
-                ->addArgument(BASE_PATH . '/resources/views')
-                ->addArgument(BASE_PATH . '/cache/views');
-                
-            return $minimalContainer;
-        }
-    }
-    
-    /**
-     * Register core services
-     */
-    private function registerCoreServices(SymfonyContainerBuilder $container): void
-    {
-        // Logger
+        // Configuration du logger
         $container->register(LoggerInterface::class, Logger::class)
             ->addArgument('topoclimbch')
             ->addMethodCall('pushHandler', [
@@ -71,137 +38,122 @@ class ContainerBuilder
             ->addArgument(BASE_PATH . '/logs/app.log')
             ->addArgument(Logger::DEBUG);
 
-        // Database
-        $container->register(Database::class, Database::class)
-            ->setFactory([Database::class, 'getInstance']);
+        // Configuration de la base de données
+        $container->register(Database::class, Database::class);
 
-        // Session
+        // Configuration de la session
         $container->register(Session::class, Session::class);
-        
-        // Auth
+
+        // Configuration de la vue
+        $container->register(View::class, View::class)
+            ->addArgument('%views_path%')
+            ->addArgument(BASE_PATH . '/cache/views');
+            
+        // Configuration de l'authentification
         $container->register(Auth::class, Auth::class)
             ->setFactory([Auth::class, 'getInstance'])
             ->addArgument(new Reference(Session::class))
             ->addArgument(new Reference(Database::class));
 
-        // View
-        $container->register(View::class, View::class)
-            ->addArgument('%views_path%')
-            ->addArgument(BASE_PATH . '/cache/views');
+        // Enregistrer les contrôleurs (vérifie leur existence)
+        $this->registerControllersSafely($container);
+        
+        // Enregistrer les middlewares (vérifie leur existence)
+        $this->registerMiddlewaresSafely($container);
+        
+        // Enregistrer les services (vérifie leur existence)
+        $this->registerServicesSafely($container);
+
+        return $container;
     }
     
     /**
-     * Register business services
+     * Register controllers in a safe way to avoid null references
      */
-    private function registerBusinessServices(SymfonyContainerBuilder $container): void
+    private function registerControllersSafely(SymfonyContainerBuilder $container): void
     {
-        // Services
-        $container->register(\TopoclimbCH\Services\AuthService::class)
-            ->addArgument(new Reference(Auth::class))
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class));
-        
-        $container->register(\TopoclimbCH\Services\SectorService::class)
-            ->addArgument(new Reference(Database::class));
-        
-        $container->register(\TopoclimbCH\Services\RouteService::class)
-            ->addArgument(new Reference(Database::class));
-        
-        $container->register(\TopoclimbCH\Services\MediaService::class)
-            ->addArgument(new Reference(Database::class));
-    }
-    
-    /**
-     * Register controllers
-     */
-    private function registerControllers(SymfonyContainerBuilder $container): void
-    {
-        // Liste des contrôleurs avec leurs dépendances
+        // Définir les contrôleurs et leurs dépendances
         $controllers = [
-            \TopoclimbCH\Controllers\ErrorController::class => [
-                View::class,
-            ],
-            \TopoclimbCH\Controllers\HomeController::class => [
-                View::class,
-            ],
-            \TopoclimbCH\Controllers\AuthController::class => [
-                Session::class,
-                Database::class,
-                View::class,
-                \TopoclimbCH\Services\AuthService::class,
-            ],
-            \TopoclimbCH\Controllers\SectorController::class => [
-                View::class,
-                Session::class,
-                \TopoclimbCH\Services\SectorService::class,
-                \TopoclimbCH\Services\MediaService::class,
-                Database::class,
-            ],
-            \TopoclimbCH\Controllers\RouteController::class => [
-                View::class,
-                Session::class, 
-                \TopoclimbCH\Services\RouteService::class,
-                Database::class,
-            ],
-            \TopoclimbCH\Controllers\RegionController::class => [
-                View::class,
-                Session::class,
-                Database::class,
-            ],
-            \TopoclimbCH\Controllers\SiteController::class => [
-                View::class,
-                Session::class,
-                Database::class,
-            ],
-            \TopoclimbCH\Controllers\AscentController::class => [
-                View::class,
-                Session::class,
-                Database::class,
-                Auth::class,
-            ],
-            \TopoclimbCH\Controllers\AdminController::class => [
-                View::class,
-                Session::class,
-                Database::class, 
-                Auth::class,
-            ],
-            \TopoclimbCH\Controllers\UserController::class => [
-                View::class,
-                Session::class,
-                Database::class,
-                Auth::class,
-            ],
+            'HomeController' => [View::class],
+            'AuthController' => [Session::class, Database::class, View::class],
+            'SectorController' => [View::class, Session::class],
+            'RouteController' => [View::class],
+            'RegionController' => [View::class],
+            'SiteController' => [View::class],
+            'UserController' => [View::class, Session::class, Auth::class],
+            'AdminController' => [View::class, Session::class, Auth::class],
+            'AscentController' => [View::class, Session::class, Auth::class],
+            'ErrorController' => [View::class]
         ];
         
-        // Enregistrer chaque contrôleur
-        foreach ($controllers as $controller => $dependencies) {
-            $definition = $container->register($controller);
+        // Enregistrer chaque contrôleur si la classe existe
+        foreach ($controllers as $name => $deps) {
+            $className = "\\TopoclimbCH\\Controllers\\$name";
             
-            foreach ($dependencies as $dependency) {
-                $definition->addArgument(new Reference($dependency));
+            if (class_exists($className)) {
+                $definition = $container->register($className, $className);
+                
+                // Ajouter les dépendances
+                foreach ($deps as $dep) {
+                    $definition->addArgument(new Reference($dep));
+                }
             }
         }
     }
     
     /**
-     * Register middlewares
+     * Register middlewares in a safe way
      */
-    private function registerMiddlewares(SymfonyContainerBuilder $container): void
+    private function registerMiddlewaresSafely(SymfonyContainerBuilder $container): void
     {
-        // Middlewares
-        $container->register(\TopoclimbCH\Middleware\AuthMiddleware::class)
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class));
+        // Définir les middlewares et leurs dépendances
+        $middlewares = [
+            'AuthMiddleware' => [Session::class, Database::class],
+            'AdminMiddleware' => [Session::class, Database::class],
+            'ModeratorMiddleware' => [Session::class, Database::class],
+            'CsrfMiddleware' => [Session::class]
+        ];
         
-        $container->register(\TopoclimbCH\Middleware\AdminMiddleware::class)
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class));
+        // Enregistrer chaque middleware si la classe existe
+        foreach ($middlewares as $name => $deps) {
+            $className = "\\TopoclimbCH\\Middleware\\$name";
+            
+            if (class_exists($className)) {
+                $definition = $container->register($className, $className);
+                
+                // Ajouter les dépendances
+                foreach ($deps as $dep) {
+                    $definition->addArgument(new Reference($dep));
+                }
+            }
+        }
+    }
+    
+    /**
+     * Register services in a safe way
+     */
+    private function registerServicesSafely(SymfonyContainerBuilder $container): void
+    {
+        // Définir les services et leurs dépendances
+        $services = [
+            'AuthService' => [Auth::class, Session::class, Database::class],
+            'SectorService' => [Database::class],
+            'RouteService' => [Database::class],
+            'MediaService' => [Database::class]
+        ];
         
-        $container->register(\TopoclimbCH\Middleware\ModeratorMiddleware::class)
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class));
-        
-        $container->register(\TopoclimbCH\Middleware\CsrfMiddleware::class)
-            ->addArgument(new Reference(Session::class));
+        // Enregistrer chaque service si la classe existe
+        foreach ($services as $name => $deps) {
+            $className = "\\TopoclimbCH\\Services\\$name";
+            
+            if (class_exists($className)) {
+                $definition = $container->register($className, $className);
+                
+                // Ajouter les dépendances
+                foreach ($deps as $dep) {
+                    $definition->addArgument(new Reference($dep));
+                }
+            }
+        }
     }
 }
