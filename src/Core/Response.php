@@ -2,35 +2,22 @@
 
 namespace TopoclimbCH\Core;
 
-class Response
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpFoundation\Cookie;
+
+class Response extends SymfonyResponse
 {
     /**
-     * Code de statut HTTP
+     * Constructeur
      *
-     * @var int
+     * @param string $content Contenu de la réponse
+     * @param int $status Code de statut HTTP
+     * @param array $headers En-têtes HTTP
      */
-    private int $statusCode = 200;
-    
-    /**
-     * En-têtes HTTP
-     *
-     * @var array
-     */
-    private array $headers = [];
-    
-    /**
-     * Contenu de la réponse
-     *
-     * @var string
-     */
-    private string $content = '';
-    
-    /**
-     * Cookies à définir
-     *
-     * @var array
-     */
-    private array $cookies = [];
+    public function __construct(string $content = '', int $status = 200, array $headers = [])
+    {
+        parent::__construct($content, $status, $headers);
+    }
 
     /**
      * Définit le code de statut HTTP
@@ -40,7 +27,7 @@ class Response
      */
     public function setStatusCode(int $statusCode): self
     {
-        $this->statusCode = $statusCode;
+        parent::setStatusCode($statusCode);
         return $this;
     }
 
@@ -51,7 +38,7 @@ class Response
      */
     public function getStatusCode(): int
     {
-        return $this->statusCode;
+        return parent::getStatusCode();
     }
 
     /**
@@ -63,7 +50,7 @@ class Response
      */
     public function setHeader(string $name, string $value): self
     {
-        $this->headers[$name] = $value;
+        $this->headers->set($name, $value);
         return $this;
     }
 
@@ -76,7 +63,7 @@ class Response
     public function setHeaders(array $headers): self
     {
         foreach ($headers as $name => $value) {
-            $this->setHeader($name, $value);
+            $this->headers->set($name, $value);
         }
         return $this;
     }
@@ -90,7 +77,7 @@ class Response
      */
     public function getHeader(string $name, ?string $default = null): ?string
     {
-        return $this->headers[$name] ?? $default;
+        return $this->headers->get($name, $default);
     }
 
     /**
@@ -100,7 +87,7 @@ class Response
      */
     public function getHeaders(): array
     {
-        return $this->headers;
+        return $this->headers->all();
     }
 
     /**
@@ -117,14 +104,17 @@ class Response
      */
     public function setCookie(string $name, string $value, int $expire = 0, string $path = '/', string $domain = '', bool $secure = false, bool $httpOnly = true): self
     {
-        $this->cookies[$name] = [
-            'value' => $value,
-            'expire' => $expire,
-            'path' => $path,
-            'domain' => $domain,
-            'secure' => $secure,
-            'httpOnly' => $httpOnly
-        ];
+        $cookie = new Cookie(
+            $name,
+            $value,
+            $expire !== 0 ? $expire : 0,
+            $path,
+            $domain,
+            $secure,
+            $httpOnly
+        );
+        
+        $this->headers->setCookie($cookie);
         return $this;
     }
 
@@ -136,7 +126,7 @@ class Response
      */
     public function setContent(string $content): self
     {
-        $this->content = $content;
+        parent::setContent($content);
         return $this;
     }
 
@@ -147,7 +137,7 @@ class Response
      */
     public function getContent(): string
     {
-        return $this->content;
+        return parent::getContent();
     }
 
     /**
@@ -157,29 +147,7 @@ class Response
      */
     public function send(): void
     {
-        // Envoi du code de statut
-        http_response_code($this->statusCode);
-        
-        // Envoi des en-têtes
-        foreach ($this->headers as $name => $value) {
-            header("$name: $value");
-        }
-        
-        // Envoi des cookies
-        foreach ($this->cookies as $name => $params) {
-            setcookie(
-                $name,
-                $params['value'],
-                $params['expire'],
-                $params['path'],
-                $params['domain'],
-                $params['secure'],
-                $params['httpOnly']
-            );
-        }
-        
-        // Envoi du contenu
-        echo $this->content;
+        parent::send();
     }
 
     /**
@@ -191,10 +159,11 @@ class Response
      */
     public static function json(mixed $data, int $statusCode = 200): self
     {
-        $response = new self();
-        $response->setHeader('Content-Type', 'application/json');
-        $response->setStatusCode($statusCode);
-        $response->setContent(json_encode($data));
+        $content = json_encode($data);
+        
+        $response = new self($content, $statusCode);
+        $response->headers->set('Content-Type', 'application/json');
+        
         return $response;
     }
 
@@ -207,9 +176,61 @@ class Response
      */
     public static function redirect(string $url, int $statusCode = 302): self
     {
-        $response = new self();
-        $response->setHeader('Location', $url);
-        $response->setStatusCode($statusCode);
+        // Normalisation de l'URL pour les chemins relatifs
+        if (!preg_match('#^https?://#i', $url) && $url[0] !== '/') {
+            // Si l'URL ne commence pas par http:// ou https:// et ne commence pas par /, ajouter /
+            $url = '/' . $url;
+        }
+        
+        $response = new self('', $statusCode);
+        $response->headers->set('Location', $url);
+        
         return $response;
+    }
+    
+    /**
+     * Définit cette réponse comme publique
+     * 
+     * @return Response
+     */
+    public function setPublic(): self
+    {
+        parent::setPublic();
+        return $this;
+    }
+    
+    /**
+     * Définit cette réponse comme privée
+     * 
+     * @return Response
+     */
+    public function setPrivate(): self
+    {
+        parent::setPrivate();
+        return $this;
+    }
+    
+    /**
+     * Définit le temps maximal de mise en cache
+     * 
+     * @param int $seconds
+     * @return Response
+     */
+    public function setMaxAge(int $seconds): self
+    {
+        parent::setMaxAge($seconds);
+        return $this;
+    }
+    
+    /**
+     * Définit le temps partagé maximal de mise en cache
+     * 
+     * @param int $seconds
+     * @return Response
+     */
+    public function setSharedMaxAge(int $seconds): self
+    {
+        parent::setSharedMaxAge($seconds);
+        return $this;
     }
 }
