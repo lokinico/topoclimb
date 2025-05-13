@@ -112,10 +112,13 @@ class Application
         ]);
         
         try {
-            $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
-            return $controller->serverError($this->request, $e);
-        } catch (\Throwable $e) {
-            // Fallback if error controller fails
+            // Vérifier si le contrôleur existe avant de l'utiliser
+            if ($this->container->has(\TopoclimbCH\Controllers\ErrorController::class)) {
+                $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
+                return $controller->serverError($this->request, $e);
+            }
+            
+            // Fallback si le contrôleur n'existe pas
             $response = new Response('Internal Server Error', 500);
             $response->headers->set('Content-Type', 'text/html');
             $response->setContent('<h1>500 - Internal Server Error</h1>');
@@ -130,6 +133,19 @@ class Application
                 );
             }
             
+            return $response;
+        } catch (\Throwable $fallbackError) {
+            // Gestion d'erreur de dernier recours
+            $response = new Response('Internal Server Error', 500);
+            $response->headers->set('Content-Type', 'text/html');
+            $content = '<h1>500 - Internal Server Error</h1>';
+            
+            if ($this->environment === 'development') {
+                $content .= '<p>Original error: ' . htmlspecialchars($e->getMessage()) . '</p>';
+                $content .= '<p>Error handler failed: ' . htmlspecialchars($fallbackError->getMessage()) . '</p>';
+            }
+            
+            $response->setContent($content);
             return $response;
         }
     }
