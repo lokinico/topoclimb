@@ -26,15 +26,6 @@ if ($environment === 'development') {
     $whoops = new \Whoops\Run;
     $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
     $whoops->register();
-} else {
-    // En production, ne pas afficher les erreurs
-    error_reporting(E_ALL);
-    ini_set('display_errors', 0);
-    
-    // Configurer le gestionnaire d'erreurs personnalisé
-    set_error_handler(function ($severity, $message, $file, $line) {
-        throw new ErrorException($message, 0, $severity, $file, $line);
-    });
 }
 
 // Démarrer la session
@@ -42,43 +33,26 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Initialiser le conteneur d'injection de dépendances
-$containerBuilder = new \TopoclimbCH\Core\ContainerBuilder();
-$container = $containerBuilder->build();
-
-// Initialiser manuellement le routeur avec les routes
-$router = $container->get(\TopoclimbCH\Core\Router::class);
-$routesFile = BASE_PATH . '/config/routes.php';
-if (file_exists($routesFile)) {
-    $router->loadRoutes($routesFile);
-}
-
-// Créer et exécuter l'application
 try {
-    /** @var \TopoclimbCH\Core\Application $app */
-    $app = $container->get(\TopoclimbCH\Core\Application::class);
-    $response = $app->handle();
+    // Solution temporaire : Créer manuellement les services essentiels
+    // au lieu d'utiliser le conteneur d'injection de dépendances
+    $view = new \TopoclimbCH\Core\View();
+
+    // Créer un contrôleur et l'exécuter directement
+    $homeController = new \TopoclimbCH\Controllers\HomeController($view);
+    $request = \Symfony\Component\HttpFoundation\Request::createFromGlobals();
+    $response = $homeController->index($request);
     $response->send();
-} catch (Throwable $e) {
-    // Logger l'erreur
-    if ($container->has(\Psr\Log\LoggerInterface::class)) {
-        $logger = $container->get(\Psr\Log\LoggerInterface::class);
-        $logger->error($e->getMessage(), [
-            'exception' => $e,
-            'trace' => $e->getTraceAsString()
-        ]);
-    }
-    
-    // Afficher une page d'erreur générique en production
-    if ($environment !== 'development') {
-        http_response_code(500);
-        include BASE_PATH . '/resources/views/errors/500.php';
-    } else {
-        // En développement, afficher les détails de l'erreur
-        echo "<h1>Erreur</h1>";
-        echo "<p><strong>Message:</strong> " . $e->getMessage() . "</p>";
-        echo "<p><strong>Fichier:</strong> " . $e->getFile() . " (ligne " . $e->getLine() . ")</p>";
+} catch (\Throwable $e) {
+    // Afficher une erreur basique en cas de problème
+    http_response_code(500);
+    if ($environment === 'development') {
+        echo "<h1>Erreur serveur</h1>";
+        echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<p><strong>Fichier:</strong> " . htmlspecialchars($e->getFile()) . " (ligne " . $e->getLine() . ")</p>";
         echo "<h2>Trace</h2>";
-        echo "<pre>" . $e->getTraceAsString() . "</pre>";
+        echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+    } else {
+        include BASE_PATH . '/resources/views/errors/500.php';
     }
 }
