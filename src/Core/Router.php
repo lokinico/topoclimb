@@ -78,11 +78,13 @@ class Router
                     $path = $route['path'] ?? '/';
                     $controller = $route['controller'] ?? '';
                     $action = $route['action'] ?? '';
+                    $middlewares = $route['middlewares'] ?? [];
                     
                     if ($controller && $action) {
                         $this->addRoute($method, $path, [
                             'controller' => $controller,
-                            'action' => $action
+                            'action' => $action,
+                            'middlewares' => $middlewares
                         ]);
                     }
                 }
@@ -110,6 +112,11 @@ class Router
         
         // Convert path to regex pattern
         $pattern = $this->pathToRegex($path);
+        
+        // Ensure middlewares array is set if not provided
+        if (is_array($handler) && !isset($handler['middlewares'])) {
+            $handler['middlewares'] = [];
+        }
         
         // Register the route
         $this->routes[$method][$pattern] = [
@@ -204,8 +211,45 @@ class Router
             $request->attributes->set($key, $value);
         }
         
-        // Execute the route handler
-        return $this->executeHandler($route['handler'], $request);
+        // Get handler and middlewares
+        $handler = $route['handler'];
+        $middlewares = [];
+        
+        if (is_array($handler) && isset($handler['middlewares'])) {
+            $middlewares = $handler['middlewares'];
+        }
+        
+        // Execute the middleware stack and the route handler
+        return $this->executeMiddlewareStack($middlewares, $handler, $request);
+    }
+
+    /**
+     * Execute the middleware stack and then the route handler
+     *
+     * @param array $middlewares
+     * @param mixed $handler
+     * @param Request $request
+     * @return Response
+     */
+    private function executeMiddlewareStack(array $middlewares, mixed $handler, Request $request): Response
+    {
+        // The final handler is always the route handler
+        $stack = function (Request $request) use ($handler) {
+            return $this->executeHandler($handler, $request);
+        };
+        
+        // Build the middleware stack in reverse order (last middleware executes first)
+        foreach (array_reverse($middlewares) as $middleware) {
+            $middlewareInstance = $this->container->get($middleware);
+            
+            // Create a new stack that wraps the current stack with this middleware
+            $stack = function (Request $request) use ($middlewareInstance, $stack) {
+                return $middlewareInstance->handle($request, $stack);
+            };
+        }
+        
+        // Execute the complete middleware stack
+        return $stack($request);
     }
 
     /**
