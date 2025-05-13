@@ -2,20 +2,40 @@
 
 namespace TopoclimbCH\Controllers;
 
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\Database;
-use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Auth;
+use TopoclimbCH\Core\Request;
+use TopoclimbCH\Core\Response;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Database;
+use TopoclimbCH\Models\User;
 use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\Validation\Validator;
 
 class AuthController extends BaseController
 {
-    private Auth $auth;
-    private AuthService $authService;
-    private Database $db;
+    /**
+     * @var Auth
+     */
+    protected Auth $auth;
     
+    /**
+     * @var AuthService
+     */
+    protected AuthService $authService;
+    
+    /**
+     * @var Database
+     */
+    protected Database $db;
+    
+    /**
+     * Constructor
+     *
+     * @param View $view
+     * @param Session $session
+     * @param Database $db
+     */
     public function __construct(View $view, Session $session, Database $db)
     {
         // Appeler le constructeur parent avec les paramètres requis
@@ -27,35 +47,31 @@ class AuthController extends BaseController
         $this->authService = new AuthService($this->auth, $session, $db);
     }
     
-    public function loginForm(Request $request): Response
+    public function loginForm(): Response
     {
         if ($this->auth->check()) {
             return $this->redirect('/');
         }
         
-        // Créer un token CSRF pour le formulaire
-        $csrfToken = $this->createCsrfToken();
-        
-        return $this->render('auth/login', [
-            'csrf_token' => $csrfToken
-        ]);
+        return $this->render('auth/login');
     }
     
     public function login(Request $request): Response
     {
-        // Vérifier le token CSRF
-        if (!$this->validateCsrfToken($request)) {
-            $this->flash('error', 'Token CSRF invalide, veuillez réessayer.');
+        $credentials = $request->getAllPost();
+        
+        // Validation
+        $validator = new Validator($credentials);
+        $validator->rule('required', ['email', 'password']);
+        
+        if (!$validator->validate()) {
+            $this->session->flash('errors', $validator->errors());
+            $this->session->flash('old', $credentials);
             return $this->redirect('/login');
         }
         
-        $credentials = [
-            'email' => $request->request->get('email'),
-            'password' => $request->request->get('password')
-        ];
-        
-        // Se souvenir de moi
-        $remember = $request->request->getBoolean('remember');
+        // Remember me
+        $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
         
         // Tentative de connexion
         if (!$this->auth->attempt($credentials['email'], $credentials['password'], $remember)) {
@@ -64,7 +80,7 @@ class AuthController extends BaseController
             return $this->redirect('/login');
         }
         
-        // Redirection vers l'URL initiale si disponible
+        // Récupération de l'URL intentionnelle si disponible
         $intendedUrl = $this->session->get('intended_url', '/');
         $this->session->remove('intended_url');
         
@@ -72,21 +88,20 @@ class AuthController extends BaseController
         return $this->redirect($intendedUrl);
     }
     
-    public function logout(Request $request): Response
+    public function logout(): Response
     {
         $this->auth->logout();
         $this->flash('success', 'Vous avez été déconnecté');
         return $this->redirect('/');
     }
-
     
     public function registerForm(): Response
     {
         if ($this->auth->check()) {
-            return Response::redirect('/');
+            return $this->redirect('/');
         }
         
-        return $this->view->render('auth/register.twig');
+        return $this->render('auth/register');
     }
     
     public function register(Request $request): Response
@@ -112,7 +127,7 @@ class AuthController extends BaseController
         if (!$validator->validate()) {
             $this->session->flash('errors', $validator->errors());
             $this->session->flash('old', $data);
-            return Response::redirect('/register');
+            return $this->redirect('/register');
         }
         
         // Création de l'utilisateur
@@ -129,13 +144,13 @@ class AuthController extends BaseController
         // Connexion automatique
         $this->auth->attempt($data['email'], $data['password']);
         
-        $this->session->flash('success', 'Votre compte a été créé avec succès');
-        return Response::redirect('/');
+        $this->flash('success', 'Votre compte a été créé avec succès');
+        return $this->redirect('/');
     }
     
     public function forgotPasswordForm(): Response
     {
-        return $this->view->render('auth/forgot-password.twig');
+        return $this->render('auth/forgot-password');
     }
     
     public function forgotPassword(Request $request): Response
@@ -148,14 +163,14 @@ class AuthController extends BaseController
         
         if (!$validator->validate()) {
             $this->session->flash('errors', $validator->errors());
-            return Response::redirect('/forgot-password');
+            return $this->redirect('/forgot-password');
         }
         
         $this->authService->sendPasswordResetEmail($email);
         
         // Message identique que l'email existe ou non (sécurité contre l'énumération)
-        $this->session->flash('success', 'Un email de réinitialisation a été envoyé si cette adresse est associée à un compte');
-        return Response::redirect('/login');
+        $this->flash('success', 'Un email de réinitialisation a été envoyé si cette adresse est associée à un compte');
+        return $this->redirect('/login');
     }
     
     public function resetPasswordForm(Request $request): Response
@@ -163,11 +178,11 @@ class AuthController extends BaseController
         $token = $request->getParam('token');
         
         if (!$this->authService->validateResetToken($token)) {
-            $this->session->flash('error', 'Ce lien de réinitialisation est invalide ou a expiré');
-            return Response::redirect('/login');
+            $this->flash('error', 'Ce lien de réinitialisation est invalide ou a expiré');
+            return $this->redirect('/login');
         }
         
-        return $this->view->render('auth/reset-password.twig', [
+        return $this->render('auth/reset-password', [
             'token' => $token
         ]);
     }
@@ -184,15 +199,15 @@ class AuthController extends BaseController
         
         if (!$validator->validate()) {
             $this->session->flash('errors', $validator->errors());
-            return Response::redirect('/reset-password?token=' . $token);
+            return $this->redirect('/reset-password?token=' . $token);
         }
         
         if ($this->authService->resetPassword($token, $data['password'])) {
-            $this->session->flash('success', 'Votre mot de passe a été réinitialisé avec succès');
-            return Response::redirect('/login');
+            $this->flash('success', 'Votre mot de passe a été réinitialisé avec succès');
+            return $this->redirect('/login');
         }
         
-        $this->session->flash('error', 'Une erreur est survenue lors de la réinitialisation');
-        return Response::redirect('/reset-password?token=' . $token);
+        $this->flash('error', 'Une erreur est survenue lors de la réinitialisation');
+        return $this->redirect('/reset-password?token=' . $token);
     }
 }

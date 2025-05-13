@@ -6,22 +6,19 @@ namespace TopoclimbCH\Controllers;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Session;
 
-class HomeController
+class HomeController extends BaseController
 {
-    /**
-     * @var View
-     */
-    private View $view;
-
     /**
      * Constructor
      *
      * @param View $view
+     * @param Session $session
      */
-    public function __construct(View $view)
+    public function __construct(View $view, Session $session)
     {
-        $this->view = $view;
+        parent::__construct($view, $session);
     }
 
     /**
@@ -32,18 +29,13 @@ class HomeController
      */
     public function index(Request $request): Response
     {
-        $response = new Response();
-        
         // Récupérer les données pour la page d'accueil
         $data = [
             'title' => 'Bienvenue sur TopoclimbCH',
             'description' => 'La plateforme de gestion des sites d\'escalade en Suisse',
         ];
         
-        // Rendre la vue
-        $content = $this->view->render('home/index.twig', $data);
-        $response->setContent($content);
-        
-        return $response;
+        // Utiliser la méthode render du BaseController
+        return $this->render('home/index', $data);
     }
 }

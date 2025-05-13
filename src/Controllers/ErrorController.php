@@ -6,22 +6,19 @@ namespace TopoclimbCH\Controllers;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Session;
 
-class ErrorController
+class ErrorController extends BaseController
 {
-    /**
-     * @var View
-     */
-    private View $view;
-
     /**
      * Constructor
      *
      * @param View $view
+     * @param Session $session
      */
-    public function __construct(View $view)
+    public function __construct(View $view, Session $session)
     {
-        $this->view = $view;
+        parent::__construct($view, $session);
     }
 
     /**
@@ -34,7 +31,8 @@ class ErrorController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_NOT_FOUND);
-        $response->setContent($this->view->render('errors/404.twig'));
+        $content = $this->view->render('errors/404.twig');
+        $response->setContent($content);
         
         return $response;
     }
@@ -61,7 +59,8 @@ class ErrorController
             ];
         }
         
-        $response->setContent($this->view->render('errors/500.twig', $data));
+        $content = $this->view->render('errors/500.twig', $data);
+        $response->setContent($content);
         
         return $response;
     }
@@ -76,7 +75,8 @@ class ErrorController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_FORBIDDEN);
-        $response->setContent($this->view->render('errors/403.twig'));
+        $content = $this->view->render('errors/403.twig');
+        $response->setContent($content);
         
         return $response;
     }

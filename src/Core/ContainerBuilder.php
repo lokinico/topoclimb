@@ -72,18 +72,18 @@ class ContainerBuilder
      */
     private function registerControllersSafely(SymfonyContainerBuilder $container): void
     {
-        // Définir les contrôleurs et leurs dépendances
+        // Mise à jour pour injecter les bonnes dépendances
         $controllers = [
-            'HomeController' => [View::class],
-            'AuthController' => [Session::class, Database::class, View::class],
-            'SectorController' => [View::class, Session::class],
-            'RouteController' => [View::class],
-            'RegionController' => [View::class],
-            'SiteController' => [View::class],
+            'HomeController' => [View::class, Session::class],
+            'ErrorController' => [View::class, Session::class],
+            'AuthController' => [View::class, Session::class, Database::class],
+            'SectorController' => [View::class, Session::class, 'TopoclimbCH\\Services\\SectorService', 'TopoclimbCH\\Services\\MediaService', Database::class],
+            'RouteController' => [View::class, Session::class, 'TopoclimbCH\\Services\\RouteService', 'TopoclimbCH\\Services\\MediaService', 'TopoclimbCH\\Services\\SectorService', 'TopoclimbCH\\Services\\AuthService'],
+            'RegionController' => [View::class, Session::class],
+            'SiteController' => [View::class, Session::class],
             'UserController' => [View::class, Session::class, Auth::class],
             'AdminController' => [View::class, Session::class, Auth::class],
-            'AscentController' => [View::class, Session::class, Auth::class],
-            'ErrorController' => [View::class]
+            'AscentController' => [View::class, Session::class, Auth::class]
         ];
         
         // Enregistrer chaque contrôleur si la classe existe
