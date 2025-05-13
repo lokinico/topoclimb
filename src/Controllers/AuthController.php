@@ -17,14 +17,16 @@ class AuthController extends BaseController
     private Auth $auth;
     private AuthService $authService;
     private Session $session;
-    private View $view;
+
     
     public function __construct(Session $session, Database $db, View $view)
     {
+        // Appeler le constructeur parent pour initialiser $view
+        parent::__construct($view);
+        
+        $this->session = $session;
         $this->auth = Auth::getInstance($session, $db);
         $this->authService = new AuthService($this->auth, $session, $db);
-        $this->session = $session;
-        $this->view = $view;
     }
     
     public function loginForm(): Response
