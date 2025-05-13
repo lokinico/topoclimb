@@ -22,12 +22,13 @@ class Response extends SymfonyResponse
     /**
      * Définit le code de statut HTTP
      *
-     * @param int $statusCode
+     * @param int $code
+     * @param string|null $text
      * @return static
      */
-    public function setStatusCode(int $statusCode): static
+    public function setStatusCode(int $code, ?string $text = null): static
     {
-        parent::setStatusCode($statusCode);
+        parent::setStatusCode($code, $text);
         return $this;
     }
 
