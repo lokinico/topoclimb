@@ -1,0 +1,193 @@
+<?php
+
+namespace TopoclimbCH\Controllers;
+
+use TopoclimbCH\Core\Auth;
+use TopoclimbCH\Core\Request;
+use TopoclimbCH\Core\Response;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Database;
+use TopoclimbCH\Models\User;
+use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\Validation\Validator;
+
+class AuthController extends BaseController
+{
+    private Auth $auth;
+    private AuthService $authService;
+    private Session $session;
+    private View $view;
+    
+    public function __construct(Session $session, Database $db, View $view)
+    {
+        $this->auth = Auth::getInstance($session, $db);
+        $this->authService = new AuthService($this->auth, $session, $db);
+        $this->session = $session;
+        $this->view = $view;
+    }
+    
+    public function loginForm(): Response
+    {
+        if ($this->auth->check()) {
+            return Response::redirect('/');
+        }
+        
+        return $this->view->render('auth/login.twig');
+    }
+    
+    public function login(Request $request): Response
+    {
+        $credentials = $request->getAllPost();
+        
+        // Validation
+        $validator = new Validator($credentials);
+        $validator->rule('required', ['email', 'password']);
+        
+        if (!$validator->validate()) {
+            $this->session->flash('errors', $validator->errors());
+            $this->session->flash('old', $credentials);
+            return Response::redirect('/login');
+        }
+        
+        // Remember me
+        $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
+        
+        // Tentative de connexion
+        if (!$this->auth->attempt($credentials['email'], $credentials['password'], $remember)) {
+            $this->session->flash('error', 'Identifiants invalides');
+            $this->session->flash('old', ['email' => $credentials['email']]);
+            return Response::redirect('/login');
+        }
+        
+        // Récupération de l'URL intentionnelle si disponible
+        $intendedUrl = $this->session->get('intended_url', '/');
+        $this->session->remove('intended_url');
+        
+        $this->session->flash('success', 'Vous êtes maintenant connecté');
+        return Response::redirect($intendedUrl);
+    }
+    
+    public function logout(): Response
+    {
+        $this->auth->logout();
+        $this->session->flash('success', 'Vous avez été déconnecté');
+        return Response::redirect('/');
+    }
+    
+    public function registerForm(): Response
+    {
+        if ($this->auth->check()) {
+            return Response::redirect('/');
+        }
+        
+        return $this->view->render('auth/register.twig');
+    }
+    
+    public function register(Request $request): Response
+    {
+        $data = $request->getAllPost();
+        
+        // Validation
+        $validator = new Validator($data);
+        $validator->rule('required', ['nom', 'prenom', 'email', 'password', 'password_confirmation', 'username']);
+        $validator->rule('email', 'email');
+        $validator->rule('equals', 'password_confirmation', 'password');
+        $validator->rule('lengthMin', 'password', 8);
+        
+        // Vérification des conflits d'email/username
+        if (User::where('mail', $data['email'])->first()) {
+            $validator->addError('email', 'Cet email est déjà utilisé');
+        }
+        
+        if (User::where('username', $data['username'])->first()) {
+            $validator->addError('username', 'Ce nom d\'utilisateur est déjà utilisé');
+        }
+        
+        if (!$validator->validate()) {
+            $this->session->flash('errors', $validator->errors());
+            $this->session->flash('old', $data);
+            return Response::redirect('/register');
+        }
+        
+        // Création de l'utilisateur
+        $user = new User();
+        $user->nom = $data['nom'];
+        $user->prenom = $data['prenom'];
+        $user->mail = $data['email'];
+        $user->username = $data['username'];
+        $user->ville = $data['ville'] ?? '';
+        $user->password = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+        $user->autorisation = '3'; // Utilisateur standard
+        $user->save();
+        
+        // Connexion automatique
+        $this->auth->attempt($data['email'], $data['password']);
+        
+        $this->session->flash('success', 'Votre compte a été créé avec succès');
+        return Response::redirect('/');
+    }
+    
+    public function forgotPasswordForm(): Response
+    {
+        return $this->view->render('auth/forgot-password.twig');
+    }
+    
+    public function forgotPassword(Request $request): Response
+    {
+        $email = $request->getPost('email');
+        
+        $validator = new Validator(['email' => $email]);
+        $validator->rule('required', 'email');
+        $validator->rule('email', 'email');
+        
+        if (!$validator->validate()) {
+            $this->session->flash('errors', $validator->errors());
+            return Response::redirect('/forgot-password');
+        }
+        
+        $this->authService->sendPasswordResetEmail($email);
+        
+        // Message identique que l'email existe ou non (sécurité contre l'énumération)
+        $this->session->flash('success', 'Un email de réinitialisation a été envoyé si cette adresse est associée à un compte');
+        return Response::redirect('/login');
+    }
+    
+    public function resetPasswordForm(Request $request): Response
+    {
+        $token = $request->getParam('token');
+        
+        if (!$this->authService->validateResetToken($token)) {
+            $this->session->flash('error', 'Ce lien de réinitialisation est invalide ou a expiré');
+            return Response::redirect('/login');
+        }
+        
+        return $this->view->render('auth/reset-password.twig', [
+            'token' => $token
+        ]);
+    }
+    
+    public function resetPassword(Request $request): Response
+    {
+        $data = $request->getAllPost();
+        $token = $data['token'] ?? '';
+        
+        $validator = new Validator($data);
+        $validator->rule('required', ['token', 'password', 'password_confirmation']);
+        $validator->rule('equals', 'password_confirmation', 'password');
+        $validator->rule('lengthMin', 'password', 8);
+        
+        if (!$validator->validate()) {
+            $this->session->flash('errors', $validator->errors());
+            return Response::redirect('/reset-password?token=' . $token);
+        }
+        
+        if ($this->authService->resetPassword($token, $data['password'])) {
+            $this->session->flash('success', 'Votre mot de passe a été réinitialisé avec succès');
+            return Response::redirect('/login');
+        }
+        
+        $this->session->flash('error', 'Une erreur est survenue lors de la réinitialisation');
+        return Response::redirect('/reset-password?token=' . $token);
+    }
+}
