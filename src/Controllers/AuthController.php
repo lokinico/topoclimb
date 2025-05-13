@@ -53,7 +53,12 @@ class AuthController extends BaseController
             return $this->redirect('/');
         }
         
-        return $this->render('auth/login');
+        // Générer et passer le token CSRF à la vue
+        $csrfToken = $this->createCsrfToken();
+        
+        return $this->render('auth/login', [
+            'csrf_token' => $csrfToken
+        ]);
     }
     
     public function login(Request $request): Response
