@@ -3,7 +3,7 @@
 namespace TopoclimbCH\Controllers;
 
 use TopoclimbCH\Core\Auth;
-use TopoclimbCH\Core\Request;
+use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
@@ -63,7 +63,7 @@ class AuthController extends BaseController
     
     public function login(Request $request): Response
     {
-        $credentials = $request->getAllPost();
+        $credentials = $request->request->all();
         
         // Validation
         $validator = new Validator($credentials);
@@ -111,7 +111,7 @@ class AuthController extends BaseController
     
     public function register(Request $request): Response
     {
-        $data = $request->getAllPost();
+        $data = $request->request->all();
         
         // Validation
         $validator = new Validator($data);
@@ -160,7 +160,7 @@ class AuthController extends BaseController
     
     public function forgotPassword(Request $request): Response
     {
-        $email = $request->getPost('email');
+        $email = $request->request->get('email');
         
         $validator = new Validator(['email' => $email]);
         $validator->rule('required', 'email');
@@ -180,7 +180,7 @@ class AuthController extends BaseController
     
     public function resetPasswordForm(Request $request): Response
     {
-        $token = $request->getParam('token');
+        $token = $request->attributes->get('token');
         
         if (!$this->authService->validateResetToken($token)) {
             $this->flash('error', 'Ce lien de réinitialisation est invalide ou a expiré');
@@ -194,7 +194,7 @@ class AuthController extends BaseController
     
     public function resetPassword(Request $request): Response
     {
-        $data = $request->getAllPost();
+        $data = $request->request->all();
         $token = $data['token'] ?? '';
         
         $validator = new Validator($data);
