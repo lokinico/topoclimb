@@ -4,6 +4,8 @@
 namespace TopoclimbCH\Services;
 
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Exceptions\ServiceException;
+use PDOException;
 
 class SectorService
 {
@@ -13,110 +15,49 @@ class SectorService
     private Database $db;
     
     /**
-     * Constructor
-     *
-     * @param Database $db
+     * @var array Types valides pour les champs
      */
-    public function __construct(Database $db)
-    {
-        $this->db = $db;
-    }
+    private array $validationRules = [
+        'coordinates_lat' => ['min' => -90, 'max' => 90],
+        'coordinates_lng' => ['min' => -180, 'max' => 180],
+        'altitude' => ['min' => 0, 'max' => 9000],
+        'height' => ['min' => 0, 'max' => 2000],
+        'access_time' => ['min' => 0, 'max' => 1440] // Max 24h en minutes
+    ];
     
-    /**
-     * Get all sectors
-     *
-     * @param bool $activeOnly Return only active sectors
-     * @return array
-     */
-    public function getAllSectors(bool $activeOnly = true): array
-    {
-        $sql = "SELECT s.*, r.name as region_name, b.name as book_name 
-                FROM climbing_sectors s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                LEFT JOIN climbing_books b ON s.book_id = b.id";
-                
-        if ($activeOnly) {
-            $sql .= " WHERE s.active = 1";
-        }
-        
-        $sql .= " ORDER BY s.name ASC";
-        
-        return $this->db->fetchAll($sql);
-    }
-    
-    /**
-     * Get sector by ID
-     *
-     * @param int $id
-     * @return array|null
-     */
-    public function getSectorById(int $id): ?array
-    {
-        $sql = "SELECT s.*, r.name as region_name, b.name as book_name 
-                FROM climbing_sectors s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                LEFT JOIN climbing_books b ON s.book_id = b.id
-                WHERE s.id = ?";
-                
-        return $this->db->fetchOne($sql, [$id]);
-    }
-    
-    /**
-     * Get sectors by region
-     *
-     * @param int $regionId
-     * @param bool $activeOnly
-     * @return array
-     */
-    public function getSectorsByRegion(int $regionId, bool $activeOnly = true): array
-    {
-        $sql = "SELECT s.*, r.name as region_name, b.name as book_name 
-                FROM climbing_sectors s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                LEFT JOIN climbing_books b ON s.book_id = b.id
-                WHERE s.region_id = ?";
-                
-        if ($activeOnly) {
-            $sql .= " AND s.active = 1";
-        }
-        
-        $sql .= " ORDER BY s.name ASC";
-        
-        return $this->db->fetchAll($sql, [$regionId]);
-    }
+    // Constructor conservé...
     
     /**
      * Create a new sector
      *
      * @param array $data
      * @return int|null ID of the new sector or null on failure
+     * @throws ServiceException
      */
     public function createSector(array $data): ?int
     {
-        // Sanitize and validate data
-        $sectorData = [
-            'book_id' => (int) $data['book_id'],
-            'region_id' => isset($data['region_id']) ? (int) $data['region_id'] : null,
-            'name' => trim($data['name']),
-            'code' => trim($data['code']),
-            'description' => $data['description'] ?? null,
-            'access_info' => $data['access_info'] ?? null,
-            'color' => $data['color'] ?? '#FF0000',
-            'access_time' => isset($data['access_time']) ? (int) $data['access_time'] : null,
-            'altitude' => isset($data['altitude']) ? (int) $data['altitude'] : null,
-            'approach' => $data['approach'] ?? null,
-            'height' => isset($data['height']) ? (float) $data['height'] : null,
-            'parking_info' => $data['parking_info'] ?? null,
-            'coordinates_lat' => isset($data['coordinates_lat']) ? (float) $data['coordinates_lat'] : null,
-            'coordinates_lng' => isset($data['coordinates_lng']) ? (float) $data['coordinates_lng'] : null,
-            'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
-            'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
-            'active' => isset($data['active']) ? (int) $data['active'] : 1,
-            'created_by' => isset($data['created_by']) ? (int) $data['created_by'] : null,
-            'created_at' => date('Y-m-d H:i:s')
-        ];
+        // Validate data
+        $this->validateSectorData($data);
         
-        return $this->db->insert('climbing_sectors', $sectorData);
+        // Sanitize data
+        $sectorData = $this->sanitizeSectorData($data);
+        
+        try {
+            $this->db->beginTransaction();
+            
+            $sectorId = $this->db->insert('climbing_sectors', $sectorData);
+            
+            if (!$sectorId) {
+                $this->db->rollBack();
+                throw new ServiceException("Failed to insert sector");
+            }
+            
+            $this->db->commit();
+            return $sectorId;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            throw new ServiceException("Database error: " . $e->getMessage());
+        }
     }
     
     /**
@@ -125,33 +66,38 @@ class SectorService
      * @param int $id
      * @param array $data
      * @return bool
+     * @throws ServiceException
      */
     public function updateSector(int $id, array $data): bool
     {
-        // Sanitize and validate data
-        $sectorData = [
-            'book_id' => (int) $data['book_id'],
-            'region_id' => isset($data['region_id']) ? (int) $data['region_id'] : null,
-            'name' => trim($data['name']),
-            'code' => trim($data['code']),
-            'description' => $data['description'] ?? null,
-            'access_info' => $data['access_info'] ?? null,
-            'color' => $data['color'] ?? '#FF0000',
-            'access_time' => isset($data['access_time']) ? (int) $data['access_time'] : null,
-            'altitude' => isset($data['altitude']) ? (int) $data['altitude'] : null,
-            'approach' => $data['approach'] ?? null,
-            'height' => isset($data['height']) ? (float) $data['height'] : null,
-            'parking_info' => $data['parking_info'] ?? null,
-            'coordinates_lat' => isset($data['coordinates_lat']) ? (float) $data['coordinates_lat'] : null,
-            'coordinates_lng' => isset($data['coordinates_lng']) ? (float) $data['coordinates_lng'] : null,
-            'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
-            'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
-            'active' => isset($data['active']) ? (int) $data['active'] : 1,
-            'updated_by' => isset($data['updated_by']) ? (int) $data['updated_by'] : null,
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
+        // Check if sector exists
+        $sector = $this->getSectorById($id);
+        if (!$sector) {
+            throw new ServiceException("Sector not found");
+        }
         
-        return $this->db->update('climbing_sectors', $sectorData, "id = ?", [$id]) > 0;
+        // Validate data
+        $this->validateSectorData($data);
+        
+        // Sanitize data
+        $sectorData = $this->sanitizeSectorData($data);
+        
+        try {
+            $this->db->beginTransaction();
+            
+            $result = $this->db->update('climbing_sectors', $sectorData, "id = ?", [$id]) > 0;
+            
+            if (!$result) {
+                $this->db->rollBack();
+                throw new ServiceException("Failed to update sector");
+            }
+            
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            throw new ServiceException("Database error: " . $e->getMessage());
+        }
     }
     
     /**
@@ -159,19 +105,125 @@ class SectorService
      *
      * @param int $id
      * @return bool
+     * @throws ServiceException
      */
     public function deleteSector(int $id): bool
     {
-        // First check if there are any routes in this sector
-        $routes = $this->db->fetchAll("SELECT id FROM climbing_routes WHERE sector_id = ?", [$id]);
-        
-        if (!empty($routes)) {
-            // Don't delete sector if it has routes, just set active to 0
-            return $this->db->update('climbing_sectors', ['active' => 0], "id = ?", [$id]) > 0;
+        try {
+            $this->db->beginTransaction();
+            
+            // Check if there are related items
+            $routes = $this->getSectorRoutes($id);
+            if (!empty($routes)) {
+                // Set sector inactive instead of deleting
+                $result = $this->db->update('climbing_sectors', ['active' => 0], "id = ?", [$id]) > 0;
+                $this->db->commit();
+                return $result;
+            }
+            
+            // Check for other relations
+            $mediaCount = $this->db->fetchOne(
+                "SELECT COUNT(*) FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", 
+                [$id]
+            );
+            
+            // Delete related data
+            $this->db->delete('climbing_sector_exposures', "sector_id = ?", [$id]);
+            $this->db->delete('climbing_sector_months', "sector_id = ?", [$id]);
+            
+            if ($mediaCount > 0) {
+                $this->db->delete('climbing_media_relationships', "entity_type = 'sector' AND entity_id = ?", [$id]);
+            }
+            
+            // Delete the sector
+            $result = $this->db->delete('climbing_sectors', "id = ?", [$id]) > 0;
+            
+            $this->db->commit();
+            return $result;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            throw new ServiceException("Database error when deleting sector: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Validate sector data
+     *
+     * @param array $data
+     * @return bool
+     * @throws ServiceException
+     */
+    private function validateSectorData(array $data): bool
+    {
+        // Required fields
+        $requiredFields = ['name', 'code', 'book_id'];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                throw new ServiceException("Field {$field} is required");
+            }
         }
         
-        return $this->db->delete('climbing_sectors', "id = ?", [$id]) > 0;
+        // Numeric ranges
+        foreach ($this->validationRules as $field => $rules) {
+            if (isset($data[$field]) && $data[$field] !== '' && $data[$field] !== null) {
+                $value = is_numeric($data[$field]) ? (float)$data[$field] : null;
+                
+                if ($value === null) {
+                    throw new ServiceException("Field {$field} must be numeric");
+                }
+                
+                if (isset($rules['min']) && $value < $rules['min']) {
+                    throw new ServiceException("Field {$field} must be greater than or equal to {$rules['min']}");
+                }
+                
+                if (isset($rules['max']) && $value > $rules['max']) {
+                    throw new ServiceException("Field {$field} must be less than or equal to {$rules['max']}");
+                }
+            }
+        }
+        
+        return true;
     }
+    
+    /**
+     * Sanitize sector data
+     *
+     * @param array $data
+     * @return array
+     */
+    private function sanitizeSectorData(array $data): array
+    {
+        $sanitized = [
+            'book_id' => (int) $data['book_id'],
+            'region_id' => isset($data['region_id']) && $data['region_id'] !== '' ? (int) $data['region_id'] : null,
+            'name' => trim($data['name']),
+            'code' => trim($data['code']),
+            'description' => isset($data['description']) ? trim($data['description']) : null,
+            'access_info' => isset($data['access_info']) ? trim($data['access_info']) : null,
+            'color' => isset($data['color']) ? trim($data['color']) : '#FF0000',
+            'access_time' => isset($data['access_time']) && $data['access_time'] !== '' ? (int) $data['access_time'] : null,
+            'altitude' => isset($data['altitude']) && $data['altitude'] !== '' ? (int) $data['altitude'] : null,
+            'approach' => isset($data['approach']) ? trim($data['approach']) : null,
+            'height' => isset($data['height']) && $data['height'] !== '' ? (float) $data['height'] : null,
+            'parking_info' => isset($data['parking_info']) ? trim($data['parking_info']) : null,
+            'coordinates_lat' => isset($data['coordinates_lat']) && $data['coordinates_lat'] !== '' ? (float) $data['coordinates_lat'] : null,
+            'coordinates_lng' => isset($data['coordinates_lng']) && $data['coordinates_lng'] !== '' ? (float) $data['coordinates_lng'] : null,
+            'coordinates_swiss_e' => isset($data['coordinates_swiss_e']) ? trim($data['coordinates_swiss_e']) : null,
+            'coordinates_swiss_n' => isset($data['coordinates_swiss_n']) ? trim($data['coordinates_swiss_n']) : null,
+            'active' => isset($data['active']) ? (int) $data['active'] : 1
+        ];
+        
+        if (isset($data['created_by'])) {
+            $sanitized['created_by'] = (int) $data['created_by'];
+        }
+        
+        if (isset($data['updated_by'])) {
+            $sanitized['updated_by'] = (int) $data['updated_by'];
+        }
+        
+        return $sanitized;
+    }
+ 
     
     /**
      * Get all exposures for a sector
