@@ -25,7 +25,54 @@ class SectorService
         'access_time' => ['min' => 0, 'max' => 1440] // Max 24h en minutes
     ];
     
-    // Constructor conservé...
+    /**
+     * Constructor
+     *
+     * @param Database $db
+     */
+    public function __construct(Database $db)
+    {
+        $this->db = $db;
+    }
+    
+    /**
+     * Get sector by ID with region information
+     *
+     * @param int $id
+     * @return array|null
+     */
+    public function getSectorById(int $id): ?array
+    {
+        $sql = "SELECT s.*, r.name as region_name
+                FROM climbing_sectors s
+                LEFT JOIN climbing_regions r ON s.region_id = r.id
+                WHERE s.id = ?";
+                
+        return $this->db->fetchOne($sql, [$id]);
+    }
+    
+    /**
+     * Get sectors by region
+     *
+     * @param int $regionId
+     * @param bool $activeOnly
+     * @return array
+     */
+    public function getSectorsByRegion(int $regionId, bool $activeOnly = true): array
+    {
+        $sql = "SELECT s.*, r.name as region_name
+                FROM climbing_sectors s
+                LEFT JOIN climbing_regions r ON s.region_id = r.id
+                WHERE s.region_id = ?";
+                
+        if ($activeOnly) {
+            $sql .= " AND s.active = 1";
+        }
+        
+        $sql .= " ORDER BY s.name ASC";
+        
+        return $this->db->fetchAll($sql, [$regionId]);
+    }
     
     /**
      * Create a new sector
@@ -44,6 +91,9 @@ class SectorService
         
         try {
             $this->db->beginTransaction();
+            
+            $sectorData['created_at'] = date('Y-m-d H:i:s');
+            $sectorData['updated_at'] = date('Y-m-d H:i:s');
             
             $sectorId = $this->db->insert('climbing_sectors', $sectorData);
             
@@ -81,6 +131,7 @@ class SectorService
         
         // Sanitize data
         $sectorData = $this->sanitizeSectorData($data);
+        $sectorData['updated_at'] = date('Y-m-d H:i:s');
         
         try {
             $this->db->beginTransaction();
@@ -121,19 +172,12 @@ class SectorService
                 return $result;
             }
             
-            // Check for other relations
-            $mediaCount = $this->db->fetchOne(
-                "SELECT COUNT(*) FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", 
-                [$id]
-            );
-            
             // Delete related data
             $this->db->delete('climbing_sector_exposures', "sector_id = ?", [$id]);
             $this->db->delete('climbing_sector_months', "sector_id = ?", [$id]);
-            
-            if ($mediaCount > 0) {
-                $this->db->delete('climbing_media_relationships', "entity_type = 'sector' AND entity_id = ?", [$id]);
-            }
+            $this->db->delete('climbing_media_relationships', "entity_type = 'sector' AND entity_id = ?", [$id]);
+            $this->db->delete('climbing_condition_reports', "entity_type = 'sector' AND entity_id = ?", [$id]);
+            $this->db->delete('climbing_entity_tags', "entity_type = 'sector' AND entity_id = ?", [$id]);
             
             // Delete the sector
             $result = $this->db->delete('climbing_sectors', "id = ?", [$id]) > 0;
@@ -144,6 +188,185 @@ class SectorService
             $this->db->rollBack();
             throw new ServiceException("Database error when deleting sector: " . $e->getMessage());
         }
+    }
+    
+    /**
+     * Update exposures for a sector
+     *
+     * @param int $sectorId
+     * @param array $exposureIds
+     * @param int|null $primaryExposureId
+     * @return bool
+     * @throws ServiceException
+     */
+    public function updateSectorExposures(int $sectorId, array $exposureIds, ?int $primaryExposureId = null): bool
+    {
+        try {
+            $this->db->beginTransaction();
+            
+            // Delete existing exposures
+            $this->db->delete('climbing_sector_exposures', "sector_id = ?", [$sectorId]);
+            
+            // Add new exposures
+            foreach ($exposureIds as $exposureId) {
+                $isPrimary = ($exposureId == $primaryExposureId) ? 1 : 0;
+                $this->db->insert('climbing_sector_exposures', [
+                    'sector_id' => $sectorId,
+                    'exposure_id' => (int) $exposureId,
+                    'is_primary' => $isPrimary,
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+            }
+            
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            throw new ServiceException("Error updating sector exposures: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Update months for a sector
+     *
+     * @param int $sectorId
+     * @param array $monthData
+     * @return bool
+     * @throws ServiceException
+     */
+    public function updateSectorMonths(int $sectorId, array $monthData): bool
+    {
+        try {
+            $this->db->beginTransaction();
+            
+            // Delete existing months
+            $this->db->delete('climbing_sector_months', "sector_id = ?", [$sectorId]);
+            
+            // Add new months
+            foreach ($monthData as $monthId => $data) {
+                if (empty($data['quality'])) {
+                    continue;
+                }
+                
+                $this->db->insert('climbing_sector_months', [
+                    'sector_id' => $sectorId,
+                    'month_id' => (int) $monthId,
+                    'quality' => $data['quality'],
+                    'notes' => $data['notes'] ?? null,
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+            }
+            
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            throw new ServiceException("Error updating sector months: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get all exposures for a sector
+     *
+     * @param int $sectorId
+     * @return array
+     */
+    public function getSectorExposures(int $sectorId): array
+    {
+        $sql = "SELECT se.*, e.name, e.code
+                FROM climbing_sector_exposures se
+                JOIN climbing_exposures e ON se.exposure_id = e.id
+                WHERE se.sector_id = ?
+                ORDER BY se.is_primary DESC, e.sort_order ASC";
+                
+        return $this->db->fetchAll($sql, [$sectorId]);
+    }
+    
+    /**
+     * Get all routes for a sector
+     *
+     * @param int $sectorId
+     * @return array
+     */
+    public function getSectorRoutes(int $sectorId): array
+    {
+        $sql = "SELECT r.*, ds.name as difficulty_system_name
+                FROM climbing_routes r
+                LEFT JOIN climbing_difficulty_systems ds ON r.difficulty_system_id = ds.id
+                WHERE r.sector_id = ? AND r.active = 1
+                ORDER BY r.number ASC";
+                
+        return $this->db->fetchAll($sql, [$sectorId]);
+    }
+    
+    /**
+     * Get all media for a sector
+     *
+     * @param int $sectorId
+     * @return array
+     */
+    public function getSectorMedia(int $sectorId): array
+    {
+        $sql = "SELECT m.*
+                FROM climbing_media m
+                JOIN climbing_media_relationships mr ON m.id = mr.media_id
+                WHERE mr.entity_type = 'sector' AND mr.entity_id = ?
+                ORDER BY mr.relationship_type = 'main' DESC, mr.sort_order ASC";
+                
+        return $this->db->fetchAll($sql, [$sectorId]);
+    }
+    
+    /**
+     * Get months quality data for a sector
+     *
+     * @param int $sectorId
+     * @return array
+     */
+    public function getSectorMonths(int $sectorId): array
+    {
+        $sql = "SELECT sm.*, m.name, m.short_name
+                FROM climbing_sector_months sm
+                JOIN climbing_months m ON sm.month_id = m.id
+                WHERE sm.sector_id = ?
+                ORDER BY m.month_number ASC";
+                
+        return $this->db->fetchAll($sql, [$sectorId]);
+    }
+    
+    /**
+     * Get nearby sectors
+     *
+     * @param int $sectorId
+     * @param float $maxDistance Distance en km
+     * @param int $limit
+     * @return array
+     */
+    public function getNearbySectors(int $sectorId, float $maxDistance = 10.0, int $limit = 5): array
+    {
+        $sector = $this->getSectorById($sectorId);
+        
+        if (!$sector || !isset($sector['coordinates_lat']) || !isset($sector['coordinates_lng'])) {
+            return [];
+        }
+        
+        $lat = $sector['coordinates_lat'];
+        $lng = $sector['coordinates_lng'];
+        
+        // Calculer la distance avec la formule haversine
+        $sql = "SELECT s.*, r.name as region_name,
+                       (6371 * acos(cos(radians(?)) * cos(radians(s.coordinates_lat)) * 
+                        cos(radians(s.coordinates_lng) - radians(?)) + 
+                        sin(radians(?)) * sin(radians(s.coordinates_lat)))) AS distance
+                FROM climbing_sectors s
+                LEFT JOIN climbing_regions r ON s.region_id = r.id
+                WHERE s.id != ? AND s.active = 1 
+                AND s.coordinates_lat IS NOT NULL 
+                AND s.coordinates_lng IS NOT NULL
+                HAVING distance < ?
+                ORDER BY distance
+                LIMIT ?";
+                
+        return $this->db->fetchAll($sql, [$lat, $lng, $lat, $sectorId, $maxDistance, $limit]);
     }
     
     /**
@@ -222,57 +445,5 @@ class SectorService
         }
         
         return $sanitized;
-    }
- 
-    
-    /**
-     * Get all exposures for a sector
-     *
-     * @param int $sectorId
-     * @return array
-     */
-    public function getSectorExposures(int $sectorId): array
-    {
-        $sql = "SELECT se.*, e.name, e.code
-                FROM climbing_sector_exposures se
-                JOIN climbing_exposures e ON se.exposure_id = e.id
-                WHERE se.sector_id = ?
-                ORDER BY se.is_primary DESC, e.sort_order ASC";
-                
-        return $this->db->fetchAll($sql, [$sectorId]);
-    }
-    
-    /**
-     * Get all routes for a sector
-     *
-     * @param int $sectorId
-     * @return array
-     */
-    public function getSectorRoutes(int $sectorId): array
-    {
-        $sql = "SELECT r.*, ds.name as difficulty_system_name
-                FROM climbing_routes r
-                LEFT JOIN climbing_difficulty_systems ds ON r.difficulty_system_id = ds.id
-                WHERE r.sector_id = ? AND r.active = 1
-                ORDER BY r.number ASC";
-                
-        return $this->db->fetchAll($sql, [$sectorId]);
-    }
-    
-    /**
-     * Get all media for a sector
-     *
-     * @param int $sectorId
-     * @return array
-     */
-    public function getSectorMedia(int $sectorId): array
-    {
-        $sql = "SELECT m.*
-                FROM climbing_media m
-                JOIN climbing_media_relationships mr ON m.id = mr.media_id
-                WHERE mr.entity_type = 'sector' AND mr.entity_id = ?
-                ORDER BY mr.relationship_type = 'main' DESC, mr.sort_order ASC";
-                
-        return $this->db->fetchAll($sql, [$sectorId]);
     }
 }
