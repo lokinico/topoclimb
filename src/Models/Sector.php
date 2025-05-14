@@ -347,7 +347,8 @@ class Sector extends Model
         
         // Exécuter la requête principale
         $items = $db->fetchAll($sql, $whereParams);
-        
+        error_log("SQL Count: " . $countSql . " | Params: " . json_encode($whereParams));
+        error_log("SQL Items: " . $sql . " | Results count: " . count($items));
         // Créer et retourner un objet Paginator
         return new \TopoclimbCH\Core\Pagination\Paginator(
             $items,
