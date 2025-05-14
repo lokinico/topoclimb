@@ -78,7 +78,8 @@ class View
         
         // Add asset() function for loading assets
         $this->twig->addFunction(new TwigFunction('asset', function (string $path) {
-            return url('public/' . ltrim($path, '/'));
+            // Retourne directement le chemin à partir de la racine
+            return '/' . ltrim($path, '/');
         }));
         
         // Add auth() function
