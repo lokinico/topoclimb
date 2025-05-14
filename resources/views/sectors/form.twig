@@ -26,11 +26,11 @@
               enctype="multipart/form-data" 
               class="form form-horizontal">
             
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             
             <div class="form-group">
                 <label for="book_id">Site</label>
-                <select name="book_id" id="book_id" class="form-control" required>
+                <select name="book_id" id="book_id" class="form-control" required aria-describedby="book-help">
                     <option value="">Sélectionnez un site</option>
                     {% for book in books %}
                         <option value="{{ book.id }}" {% if sector.book_id == book.id %}selected{% endif %}>
@@ -38,11 +38,12 @@
                         </option>
                     {% endfor %}
                 </select>
+                <small id="book-help" class="form-text text-muted">Site d'escalade auquel appartient ce secteur</small>
             </div>
             
             <div class="form-group">
                 <label for="region_id">Région</label>
-                <select name="region_id" id="region_id" class="form-control">
+                <select name="region_id" id="region_id" class="form-control" aria-describedby="region-help">
                     <option value="">Sélectionnez une région</option>
                     {% for region in regions %}
                         <option value="{{ region.id }}" {% if sector.region_id == region.id %}selected{% endif %}>
@@ -50,27 +51,35 @@
                         </option>
                     {% endfor %}
                 </select>
+                <small id="region-help" class="form-text text-muted">Région géographique du secteur</small>
             </div>
             
             <div class="form-group">
                 <label for="name">Nom</label>
-                <input type="text" name="name" id="name" class="form-control" value="{{ sector.name }}" required>
+                <input type="text" name="name" id="name" class="form-control" value="{{ sector.name }}" 
+                       required maxlength="255" aria-describedby="name-help">
+                <small id="name-help" class="form-text text-muted">Nom complet du secteur</small>
             </div>
             
             <div class="form-group">
                 <label for="code">Code</label>
-                <input type="text" name="code" id="code" class="form-control" value="{{ sector.code }}" required>
-                <small class="form-text text-muted">Identifiant unique du secteur</small>
+                <input type="text" name="code" id="code" class="form-control" value="{{ sector.code }}" 
+                       required maxlength="50" aria-describedby="code-help">
+                <small id="code-help" class="form-text text-muted">Identifiant unique du secteur</small>
             </div>
             
             <div class="form-group">
                 <label for="color">Couleur</label>
-                <input type="color" name="color" id="color" class="form-control" value="{{ sector.color|default('#FF0000') }}">
+                <input type="color" name="color" id="color" class="form-control" 
+                       value="{{ sector.color|default('#FF0000') }}" aria-describedby="color-help">
+                <small id="color-help" class="form-text text-muted">Couleur utilisée pour identifier ce secteur</small>
             </div>
             
             <div class="form-group">
                 <label for="description">Description</label>
-                <textarea name="description" id="description" class="form-control" rows="5">{{ sector.description }}</textarea>
+                <textarea name="description" id="description" class="form-control" 
+                          rows="5" aria-describedby="description-help">{{ sector.description }}</textarea>
+                <small id="description-help" class="form-text text-muted">Description détaillée du secteur</small>
             </div>
             
             <div class="form-section">
@@ -78,22 +87,31 @@
                 
                 <div class="form-group">
                     <label for="access_info">Informations d'accès</label>
-                    <textarea name="access_info" id="access_info" class="form-control" rows="3">{{ sector.access_info }}</textarea>
+                    <textarea name="access_info" id="access_info" class="form-control" 
+                              rows="3" aria-describedby="access-info-help">{{ sector.access_info }}</textarea>
+                    <small id="access-info-help" class="form-text text-muted">Instructions d'accès au secteur</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="access_time">Temps d'accès (en minutes)</label>
-                    <input type="number" name="access_time" id="access_time" class="form-control" value="{{ sector.access_time }}">
+                    <input type="number" name="access_time" id="access_time" class="form-control" 
+                           value="{{ sector.access_time }}" min="0" max="1440" 
+                           aria-describedby="access-time-help">
+                    <small id="access-time-help" class="form-text text-muted">Temps de marche estimé en minutes (max 24h)</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="approach">Marche d'approche</label>
-                    <textarea name="approach" id="approach" class="form-control" rows="3">{{ sector.approach }}</textarea>
+                    <textarea name="approach" id="approach" class="form-control" 
+                              rows="3" aria-describedby="approach-help">{{ sector.approach }}</textarea>
+                    <small id="approach-help" class="form-text text-muted">Instructions détaillées pour l'approche à pied</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="parking_info">Informations de parking</label>
-                    <textarea name="parking_info" id="parking_info" class="form-control" rows="3">{{ sector.parking_info }}</textarea>
+                    <textarea name="parking_info" id="parking_info" class="form-control" 
+                              rows="3" aria-describedby="parking-help">{{ sector.parking_info }}</textarea>
+                    <small id="parking-help" class="form-text text-muted">Indications sur les parkings disponibles</small>
                 </div>
             </div>
             
@@ -102,48 +120,56 @@
                 
                 <div class="form-group">
                     <label for="altitude">Altitude (en mètres)</label>
-                    <input type="number" name="altitude" id="altitude" class="form-control" value="{{ sector.altitude }}">
+                    <input type="number" name="altitude" id="altitude" class="form-control" 
+                           value="{{ sector.altitude }}" min="0" max="9000" aria-describedby="altitude-help">
+                    <small id="altitude-help" class="form-text text-muted">Altitude du secteur en mètres</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="height">Hauteur (en mètres)</label>
-                    <input type="number" name="height" id="height" step="0.1" class="form-control" value="{{ sector.height }}">
+                    <input type="number" name="height" id="height" step="0.1" class="form-control" 
+                           value="{{ sector.height }}" min="0" max="2000" aria-describedby="height-help">
+                    <small id="height-help" class="form-text text-muted">Hauteur moyenne du secteur en mètres</small>
                 </div>
                 
                 <div class="form-group">
                     <label>Expositions</label>
-                    <div class="checkbox-group">
+                    <div class="checkbox-group" role="group" aria-label="Expositions du secteur">
                         {% for exposure in exposures %}
                             <div class="form-check">
                                 <input type="checkbox" 
                                        name="exposures[]" 
                                        id="exposure_{{ exposure.id }}" 
                                        value="{{ exposure.id }}" 
-                                       {% if exposure.id in currentExposures %}checked{% endif %}>
+                                       {% if exposure.id in currentExposures %}checked{% endif %}
+                                       aria-describedby="exposure-help">
                                 <label for="exposure_{{ exposure.id }}">
                                     {{ exposure.name }} ({{ exposure.code }})
                                 </label>
                             </div>
                         {% endfor %}
                     </div>
+                    <small id="exposure-help" class="form-text text-muted">Orientations cardinales du secteur</small>
                 </div>
                 
                 <div class="form-group">
                     <label>Exposition principale</label>
-                    <div class="radio-group">
+                    <div class="radio-group" role="radiogroup" aria-label="Exposition principale du secteur">
                         {% for exposure in exposures %}
                             <div class="form-check">
                                 <input type="radio" 
                                        name="primary_exposure" 
                                        id="primary_exposure_{{ exposure.id }}" 
                                        value="{{ exposure.id }}" 
-                                       {% if exposure.id == primaryExposure %}checked{% endif %}>
+                                       {% if exposure.id == primaryExposure %}checked{% endif %}
+                                       aria-describedby="primary-exposure-help">
                                 <label for="primary_exposure_{{ exposure.id }}">
                                     {{ exposure.name }} ({{ exposure.code }})
                                 </label>
                             </div>
                         {% endfor %}
                     </div>
+                    <small id="primary-exposure-help" class="form-text text-muted">Orientation principale du secteur</small>
                 </div>
             </div>
             
@@ -153,31 +179,41 @@
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="coordinates_lat">Latitude</label>
-                        <input type="text" name="coordinates_lat" id="coordinates_lat" class="form-control" value="{{ sector.coordinates_lat }}">
+                        <input type="number" name="coordinates_lat" id="coordinates_lat" class="form-control" 
+                               value="{{ sector.coordinates_lat }}" step="0.00000001" min="-90" max="90"
+                               aria-describedby="lat-help">
+                        <small id="lat-help" class="form-text text-muted">Latitude en degrés décimaux (ex: 46.2044)</small>
                     </div>
                     
                     <div class="form-group col-md-6">
                         <label for="coordinates_lng">Longitude</label>
-                        <input type="text" name="coordinates_lng" id="coordinates_lng" class="form-control" value="{{ sector.coordinates_lng }}">
+                        <input type="number" name="coordinates_lng" id="coordinates_lng" class="form-control" 
+                               value="{{ sector.coordinates_lng }}" step="0.00000001" min="-180" max="180"
+                               aria-describedby="lng-help">
+                        <small id="lng-help" class="form-text text-muted">Longitude en degrés décimaux (ex: 6.1432)</small>
                     </div>
                 </div>
                 
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="coordinates_swiss_e">Coordonnées suisses E</label>
-                        <input type="text" name="coordinates_swiss_e" id="coordinates_swiss_e" class="form-control" value="{{ sector.coordinates_swiss_e }}">
+                        <input type="text" name="coordinates_swiss_e" id="coordinates_swiss_e" class="form-control" 
+                               value="{{ sector.coordinates_swiss_e }}" aria-describedby="ch-e-help">
+                        <small id="ch-e-help" class="form-text text-muted">Coordonnée Est du système suisse</small>
                     </div>
                     
                     <div class="form-group col-md-6">
                         <label for="coordinates_swiss_n">Coordonnées suisses N</label>
-                        <input type="text" name="coordinates_swiss_n" id="coordinates_swiss_n" class="form-control" value="{{ sector.coordinates_swiss_n }}">
+                        <input type="text" name="coordinates_swiss_n" id="coordinates_swiss_n" class="form-control" 
+                               value="{{ sector.coordinates_swiss_n }}" aria-describedby="ch-n-help">
+                        <small id="ch-n-help" class="form-text text-muted">Coordonnée Nord du système suisse</small>
                     </div>
                 </div>
                 
                 <div class="map-picker">
-                    <div id="map" style="height: 400px;"></div>
+                    <div id="map" style="height: 400px;" aria-label="Carte pour sélectionner la position"></div>
                     <button type="button" class="btn btn-secondary" id="locate-button">
-                        <i class="icon-location"></i> Ma position
+                        <i class="icon-location" aria-hidden="true"></i> Ma position
                     </button>
                 </div>
             </div>
@@ -187,7 +223,9 @@
                 
                 <div class="form-group">
                     <label for="image">Image principale</label>
-                    <input type="file" name="image" id="image" class="form-control-file" accept="image/*">
+                    <input type="file" name="image" id="image" class="form-control-file" 
+                           accept="image/*" aria-describedby="image-help">
+                    <small id="image-help" class="form-text text-muted">Image principale du secteur (max: 5MB, formats: jpg, png)</small>
                 </div>
                 
                 {% if media and media|length > 0 %}
@@ -196,14 +234,16 @@
                         <div class="media-gallery">
                             {% for item in media %}
                                 <div class="media-item">
-                                    <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="{{ item.title }}">
+                                    <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="{{ item.title|default('Image du secteur') }}">
                                     <div class="media-actions">
-                                        <a href="{{ url('/media/' ~ item.id ~ '/edit') }}" class="btn btn-sm btn-secondary">
-                                            <i class="icon-edit"></i>
+                                        <a href="{{ url('/media/' ~ item.id ~ '/edit') }}" class="btn btn-sm btn-secondary" 
+                                           aria-label="Modifier l'image">
+                                            <i class="icon-edit" aria-hidden="true"></i>
                                         </a>
                                         <a href="{{ url('/media/' ~ item.id ~ '/delete') }}" class="btn btn-sm btn-danger" 
-                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette image?')">
-                                            <i class="icon-trash"></i>
+                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette image?')"
+                                           aria-label="Supprimer l'image">
+                                            <i class="icon-trash" aria-hidden="true"></i>
                                         </a>
                                     </div>
                                 </div>
@@ -215,10 +255,11 @@
             
             <div class="form-group">
                 <label for="active">État</label>
-                <select name="active" id="active" class="form-control">
+                <select name="active" id="active" class="form-control" aria-describedby="active-help">
                     <option value="1" {% if sector.active != 0 %}selected{% endif %}>Actif</option>
                     <option value="0" {% if sector.active == 0 %}selected{% endif %}>Inactif</option>
                 </select>
+                <small id="active-help" class="form-text text-muted">L'état détermine si le secteur est visible pour les utilisateurs</small>
             </div>
             
             <div class="form-actions">
@@ -230,7 +271,7 @@
                     {% endif %}
                 </button>
                 
-                <a href="{{ url('/sectors' ~ (sector.id ? '/' ~ sector.id : '')) }}" class="btn btn-secondary">
+                <a href="{{ url('/sectors' ~ (sector.id ? '/' ~ sector.id : '')) }}" class="btn btn-secondary" role="button">
                     Annuler
                 </a>
             </div>
@@ -287,7 +328,16 @@
                         
                         document.getElementById('coordinates_lat').value = lat.toFixed(8);
                         document.getElementById('coordinates_lng').value = lng.toFixed(8);
+                    }, function(error) {
+                        console.error("Erreur de géolocalisation:", error.message);
+                        alert("Impossible d'obtenir votre position. Erreur: " + error.message);
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
                     });
+                } else {
+                    alert("La géolocalisation n'est pas prise en charge par votre navigateur");
                 }
             });
         });
