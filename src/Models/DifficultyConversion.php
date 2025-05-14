@@ -1,4 +1,5 @@
 <?php
+// src/Models/DifficultyConversion.php
 
 namespace TopoclimbCH\Models;
 
@@ -7,41 +8,42 @@ use TopoclimbCH\Core\Model;
 class DifficultyConversion extends Model
 {
     /**
-     * Table associée au modèle
+     * Nom de la table en base de données
      */
-    protected string $table = 'climbing_difficulty_conversions';
-
+    protected static string $table = 'climbing_difficulty_conversions';
+    
     /**
-     * Champs remplissables en masse
+     * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
         'from_grade_id', 'to_grade_id', 'is_approximate'
     ];
-
+    
     /**
      * Règles de validation
      */
     protected array $rules = [
         'from_grade_id' => 'required|numeric',
-        'to_grade_id' => 'required|numeric'
+        'to_grade_id' => 'required|numeric',
+        'is_approximate' => 'in:0,1'
     ];
-
+    
     /**
      * Relation avec le grade source
      */
-    public function fromGrade()
+    public function fromGrade(): ?DifficultyGrade
     {
         return $this->belongsTo(DifficultyGrade::class, 'from_grade_id');
     }
-
+    
     /**
      * Relation avec le grade cible
      */
-    public function toGrade()
+    public function toGrade(): ?DifficultyGrade
     {
         return $this->belongsTo(DifficultyGrade::class, 'to_grade_id');
     }
-
+    
     /**
      * Créer une conversion bidirectionnelle entre deux grades
      */
@@ -57,13 +59,15 @@ class DifficultyConversion extends Model
         $forward->save();
         $conversions[] = $forward;
         
-        // Conversion retour
-        $backward = new self();
-        $backward->from_grade_id = $toGradeId;
-        $backward->to_grade_id = $fromGradeId;
-        $backward->is_approximate = $isApproximate;
-        $backward->save();
-        $conversions[] = $backward;
+        // Conversion retour (si non approximative)
+        if (!$isApproximate) {
+            $backward = new self();
+            $backward->from_grade_id = $toGradeId;
+            $backward->to_grade_id = $fromGradeId;
+            $backward->is_approximate = $isApproximate;
+            $backward->save();
+            $conversions[] = $backward;
+        }
         
         return $conversions;
     }
