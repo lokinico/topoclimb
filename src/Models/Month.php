@@ -1,4 +1,5 @@
 <?php
+// src/Models/Month.php
 
 namespace TopoclimbCH\Models;
 
@@ -7,17 +8,17 @@ use TopoclimbCH\Core\Model;
 class Month extends Model
 {
     /**
-     * Table associée au modèle
+     * Nom de la table en base de données
      */
-    protected string $table = 'climbing_months';
-
+    protected static string $table = 'climbing_months';
+    
     /**
-     * Champs remplissables en masse
+     * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
         'month_number', 'name', 'short_name'
     ];
-
+    
     /**
      * Règles de validation
      */
@@ -26,42 +27,66 @@ class Month extends Model
         'name' => 'required|max:20',
         'short_name' => 'required|max:3'
     ];
-
+    
     /**
      * Relation avec les secteurs (many-to-many)
      */
-    public function sectors()
+    public function sectors(): array
     {
         return $this->belongsToMany(
             Sector::class,
             'climbing_sector_months',
             'month_id',
             'sector_id'
-        )->withPivot(['quality', 'notes']);
+        );
     }
-
+    
     /**
      * Obtenir tous les mois triés par numéro
      */
     public static function getAllSorted(): array
     {
-        return self::all(['month_number' => 'ASC']);
+        $table = static::getTable();
+        
+        try {
+            $sql = "SELECT * FROM {$table} ORDER BY month_number ASC";
+            $statement = static::getConnection()->prepare($sql);
+            $statement->execute();
+            $data = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            
+            $models = [];
+            foreach ($data as $item) {
+                $models[] = new static($item);
+            }
+            
+            return $models;
+        } catch (\PDOException $e) {
+            throw new ModelException("Error loading sorted months: " . $e->getMessage());
+        }
     }
-
+    
     /**
      * Obtenir la qualité des conditions pour un secteur et ce mois
      */
     public function getQualityForSector(int $sectorId): ?string
     {
-        $relation = $this->db()->fetchOne(
-            "SELECT quality FROM climbing_sector_months 
-             WHERE sector_id = ? AND month_id = ?",
-            [$sectorId, $this->id]
-        );
-        
-        return $relation['quality'] ?? null;
+        try {
+            $sql = "SELECT quality FROM climbing_sector_months 
+                    WHERE sector_id = :sectorId AND month_id = :monthId";
+                    
+            $statement = static::getConnection()->prepare($sql);
+            $statement->execute([
+                ':sectorId' => $sectorId,
+                ':monthId' => $this->id
+            ]);
+            
+            $result = $statement->fetch(\PDO::FETCH_ASSOC);
+            return $result ? $result['quality'] : null;
+        } catch (\PDOException $e) {
+            throw new ModelException("Error getting quality for sector: " . $e->getMessage());
+        }
     }
-
+    
     /**
      * Récupère la classe CSS correspondant à la qualité
      */
@@ -95,20 +120,31 @@ class Month extends Model
      */
     public static function getRecommendedMonthsForSector(int $sectorId): array
     {
-        $query = "SELECT m.*, sm.quality, sm.notes 
-                 FROM climbing_months m
-                 JOIN climbing_sector_months sm ON m.id = sm.month_id
-                 WHERE sm.sector_id = ? AND sm.quality IN ('excellent', 'good')
-                 ORDER BY m.month_number ASC";
-                 
-        return array_map(
-            function($data) {
-                $month = self::hydrate($data);
-                $month->quality = $data['quality'];
-                $month->notes = $data['notes'];
-                return $month;
-            },
-            self::getDb()->fetchAll($query, [$sectorId])
-        );
+        $table = static::getTable();
+        
+        try {
+            $sql = "SELECT m.*, sm.quality, sm.notes 
+                    FROM {$table} m
+                    JOIN climbing_sector_months sm ON m.id = sm.month_id
+                    WHERE sm.sector_id = :sectorId AND sm.quality IN ('excellent', 'good')
+                    ORDER BY m.month_number ASC";
+                    
+            $statement = static::getConnection()->prepare($sql);
+            $statement->execute([':sectorId' => $sectorId]);
+            $data = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            
+            $models = [];
+            foreach ($data as $item) {
+                $month = new static($item);
+                // Ajouter les propriétés pivots manuellement
+                $month->quality = $item['quality'];
+                $month->notes = $item['notes'];
+                $models[] = $month;
+            }
+            
+            return $models;
+        } catch (\PDOException $e) {
+            throw new ModelException("Error loading recommended months: " . $e->getMessage());
+        }
     }
 }
