@@ -67,9 +67,28 @@ class AuthController extends BaseController
         ]);
     }
     
+    /**
+     * Handle the login request
+     *
+     * @param Request $request
+     * @return Response
+     */
     public function login(Request $request): Response
     {
+        // Vérification du token CSRF
+        $submittedToken = $request->request->get('_csrf_token');
+        if (!$this->validateCsrfToken($submittedToken)) {
+            $this->flash('error', 'Token CSRF invalide. Veuillez réessayer.');
+            return $this->redirect('/login');
+        }
+
         $credentials = $request->request->all();
+        
+        // Ajouter des logs pour déboguer
+        error_log('Tentative de connexion avec: ' . json_encode([
+            'email' => $credentials['email'] ?? 'non fourni',
+            'password_length' => isset($credentials['password']) ? strlen($credentials['password']) : 0
+        ]));
         
         // Validation
         $rules = [
@@ -81,17 +100,22 @@ class AuthController extends BaseController
         
         if (!empty($errors)) {
             $this->session->flash('errors', $errors);
-            $this->session->flash('old', $credentials);
+            $this->session->flash('old', [
+                'email' => $credentials['email'] ?? ''
+            ]);
             return $this->redirect('/login');
         }
         
         // Remember me
         $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
         
-        // Tentative de connexion
-        if (!$this->auth->attempt($credentials['email'], $credentials['password'], $remember)) {
+        // Tentative de connexion avec logs supplémentaires
+        $loginSuccess = $this->auth->attempt($credentials['email'], $credentials['password'], $remember);
+        error_log('Résultat de la tentative de connexion: ' . ($loginSuccess ? 'succès' : 'échec'));
+        
+        if (!$loginSuccess) {
             $this->flash('error', 'Identifiants invalides');
-            $this->session->flash('old', ['email' => $credentials['email']]);
+            $this->session->flash('old', ['email' => $credentials['email'] ?? '']);
             return $this->redirect('/login');
         }
         
@@ -100,7 +124,35 @@ class AuthController extends BaseController
         $this->session->remove('intended_url');
         
         $this->flash('success', 'Vous êtes maintenant connecté');
+        
+        // Log de la redirection
+        error_log('Redirection après connexion vers: ' . $intendedUrl);
+        
         return $this->redirect($intendedUrl);
+    }
+
+    // Ajoutez cette méthode pour la validation du token CSRF
+    private function validateCsrfToken(?string $token): bool
+    {
+        if (empty($token)) {
+            return false;
+        }
+        
+        $storedToken = $this->session->get('csrf_token');
+        if (empty($storedToken)) {
+            error_log('Token CSRF non trouvé en session');
+            return false;
+        }
+        
+        return hash_equals($storedToken, $token);
+    }
+
+    // Améliorez cette méthode pour la génération du token CSRF
+    private function createCsrfToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->session->set('csrf_token', $token);
+        return $token;
     }
     
     public function logout(): Response
