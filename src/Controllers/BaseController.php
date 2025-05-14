@@ -9,6 +9,8 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Container;
+use TopoclimbCH\Core\Auth;
+use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Validation\Validator;
 use TopoclimbCH\Exceptions\ValidationException;
 use TopoclimbCH\Exceptions\AuthorizationException;
@@ -27,6 +29,11 @@ abstract class BaseController
     protected Session $session;
     
     /**
+     * @var Auth|null
+     */
+    protected ?Auth $auth = null;
+    
+    /**
      * Constructor
      *
      * @param View $view
@@ -36,6 +43,15 @@ abstract class BaseController
     {
         $this->view = $view;
         $this->session = $session;
+        
+        // Initialiser Auth si Database est disponible
+        try {
+            $db = Container::getInstance()->get(Database::class);
+            $this->auth = Auth::getInstance($session, $db);
+        } catch (\Exception $e) {
+            // Auth ne sera pas disponible mais ce n'est pas critique
+            error_log('Impossible d\'initialiser Auth: ' . $e->getMessage());
+        }
     }
     
     /**
@@ -61,7 +77,7 @@ abstract class BaseController
         ];
         
         // Ajouter l'utilisateur authentifié si disponible
-        if (isset($this->auth) && $this->auth->check()) {
+        if ($this->auth && $this->auth->check()) {
             $globalData['auth_user'] = $this->auth->user();
         }
         
@@ -122,16 +138,25 @@ abstract class BaseController
      */
     protected function createCsrfToken(): string
     {
-        return $this->session->setCsrfToken();
+        // Assurer qu'un token est généré même si setCsrfToken n'en retourne pas
+        $token = $this->session->setCsrfToken();
+        
+        // Si setCsrfToken ne retourne pas de token, en générer un et le stocker
+        if (empty($token)) {
+            $token = bin2hex(random_bytes(32));
+            $this->session->set('csrf_token', $token);
+        }
+        
+        return $token;
     }
     
     /**
-     * Validate CSRF token
+     * Validate CSRF token from Request
      *
      * @param Request $request
      * @return bool
      */
-    protected function validateCsrfToken(Request $request): bool
+    protected function validateCsrfRequestToken(Request $request): bool
     {
         $token = $request->request->get('_csrf_token');
         
@@ -139,7 +164,31 @@ abstract class BaseController
             return false;
         }
         
-        return $this->session->validateCsrfToken($token);
+        return $this->validateCsrfToken($token);
+    }
+    
+    /**
+     * Validate CSRF token from string
+     * 
+     * @param string|null $token
+     * @return bool
+     */
+    protected function validateCsrfToken(?string $token): bool
+    {
+        if (empty($token)) {
+            error_log('Token CSRF vide');
+            return false;
+        }
+        
+        $storedToken = $this->session->get('csrf_token');
+        if (empty($storedToken)) {
+            error_log('Token CSRF non trouvé en session');
+            return false;
+        }
+        
+        $result = hash_equals($storedToken, $token);
+        error_log('Validation CSRF: ' . ($result ? 'succès' : 'échec') . ' (soumis: ' . substr($token, 0, 10) . '..., stocké: ' . substr($storedToken, 0, 10) . '...)');
+        return $result;
     }
     
     /**
