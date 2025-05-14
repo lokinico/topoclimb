@@ -23,9 +23,11 @@
             {% for sector in sectors.getItems() %}
                 <div class="col-md-6 col-lg-4">
                     <div class="sector-card" style="border-color: {{ sector.color }}">
-                        {# Ajoute ce bloc pour debug juste avant le lien #}
+
                         <div style="font-size: 0.9em; color: #b00;">
                             ID secteur : {{ sector.id }}<br>
+                            Dump sector : {{ dump(sector) }}<br>
+                            Type sector : {{ sector|type }}<br>
                             Lien généré : {{ url('/sectors/' ~ sector.id) }}
                         </div>
 
