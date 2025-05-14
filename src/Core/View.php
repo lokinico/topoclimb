@@ -109,8 +109,6 @@ class View
             unset($_SESSION['_flashes']);
             return $messages;
         }));
-        
-        // SUPPRIMÉ: Doublon de la fonction component
     }
     
     /**
@@ -143,6 +141,11 @@ class View
         $this->twig->addFilter(new TwigFilter('format_beauty', function ($beauty) {
             $beauty = (int) $beauty;
             return str_repeat('★', $beauty) . str_repeat('☆', 5 - $beauty);
+        }));
+        
+        // Add 'repeat' filter
+        $this->twig->addFilter(new TwigFilter('repeat', function ($string, $times) {
+            return str_repeat($string, $times);
         }));
     }
 
