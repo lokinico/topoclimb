@@ -94,3 +94,17 @@ function auth() {
     return \TopoclimbCH\Core\Container::getInstance()
         ->get(\TopoclimbCH\Services\AuthService::class);
 }
+
+/**
+ * Génère l'URL d'un asset
+ */
+function asset($path) {
+    // Vérifie si le chemin commence par 'css/' ou 'js/'
+    if (strpos($path, 'css/') === 0 || strpos($path, 'js/') === 0) {
+        // Ajoute le préfixe correct
+        return '/public/' . ltrim($path, '/');
+    }
+    
+    // Comportement par défaut pour les autres types d'assets
+    return '/' . ltrim($path, '/');
+}
