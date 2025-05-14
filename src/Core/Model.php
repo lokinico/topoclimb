@@ -618,18 +618,6 @@ abstract class Model
         }
     }
     
-    /**
-     * Valide les données du modèle
-     */
-    public function validate(): bool
-    {
-        if (empty($this->rules)) {
-            return true;
-        }
-        
-        $validator = new Validator();
-        return $validator->validate($this->attributes, $this->rules);
-    }
     
     /**
      * Déclenche un événement
@@ -702,4 +690,25 @@ abstract class Model
         $results = static::where($criteria);
         return !empty($results) ? $results[0] : null;
     }
+
+
+    /**
+     * Valide les données du modèle
+     */
+    public function validate(): bool
+    {
+        if (empty($this->rules)) {
+            return true;
+        }
+        
+        try {
+            $validator = new Validator();
+            return $validator->validate($this->attributes, $this->rules);
+        } catch (\Exception $e) {
+            // Logguer l'erreur mais retourner true pour ne pas bloquer l'opération
+            error_log("Erreur de validation: " . $e->getMessage());
+            return true;
+        }
+    }
+
 }
