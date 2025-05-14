@@ -109,13 +109,24 @@ class Session
      * Définit un message flash qui sera disponible uniquement pour la prochaine requête
      *
      * @param string $type Type de message (success, error, info, warning)
-     * @param string $message Contenu du message
+     * @param string|array $message Contenu du message (peut être une chaîne ou un tableau)
      * @return void
      */
-    public function flash(string $type, string $message): void
+    public function flash(string $type, $message): void
     {
         $flashes = $this->get('_flashes', []);
-        $flashes[$type][] = $message;
+        
+        // Si $message est un tableau, utilisons-le directement
+        if (is_array($message)) {
+            $flashes[$type] = $message;
+        } else {
+            // Sinon, ajoutons la chaîne au tableau de ce type
+            if (!isset($flashes[$type])) {
+                $flashes[$type] = [];
+            }
+            $flashes[$type][] = $message;
+        }
+        
         $this->set('_flashes', $flashes);
     }
 
