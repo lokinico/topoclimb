@@ -243,23 +243,27 @@ class Sector extends Model
     /**
      * Récupère les secteurs avec pagination et filtrage
      *
-     * @param SectorFilter $filter Filtre à appliquer
+     * @param Filter $filter Filtre à appliquer
      * @param int $page Page courante
      * @param int $perPage Nombre d'éléments par page
-     * @param string $sortBy Champ pour le tri
-     * @param string $sortDir Direction du tri (ASC/DESC)
-     * @return array Tableau paginé avec les éléments 'items', 'total', 'page', 'perPage'
+     * @param string|null $orderBy Champ pour le tri
+     * @param string $direction Direction du tri (ASC/DESC)
+     * @return Paginator
      */
     public static function filterAndPaginate(
-        SectorFilter $filter,
+        \TopoclimbCH\Core\Filtering\Filter $filter,
         int $page = 1,
-        int $perPage = 20,
-        string $sortBy = 'name',
-        string $sortDir = 'ASC'
-    ): array {
+        int $perPage = 15,
+        ?string $orderBy = null,
+        string $direction = 'ASC'
+    ): \TopoclimbCH\Core\Pagination\Paginator {
         // S'assurer que les valeurs sont valides
         $page = max(1, $page);
         $perPage = max(1, min(100, $perPage));
+        
+        // Utiliser 'name' comme champ de tri par défaut si non spécifié
+        $sortBy = $orderBy ?? 'name';
+        $sortDir = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
         
         // Préfixe de table pour les secteurs
         $tablePrefix = 's';
@@ -288,13 +292,12 @@ class Sector extends Model
         // Valider et sécuriser le tri
         $allowedSortFields = ['name', 'altitude', 'access_time', 'created_at'];
         $sortBy = in_array($sortBy, $allowedSortFields) ? $sortBy : 'name';
-        $sortDir = strtoupper($sortDir) === 'DESC' ? 'DESC' : 'ASC';
         
         // Construire la requête de base pour le comptage
         $countSql = "SELECT COUNT(DISTINCT {$tablePrefix}.id) as total 
-                     FROM " . static::$table . " {$tablePrefix}
-                     {$joinClause}
-                     {$whereClause}";
+                    FROM " . static::$table . " {$tablePrefix}
+                    {$joinClause}
+                    {$whereClause}";
         
         // Exécuter la requête de comptage
         $countResult = self::getConnection()->fetchOne($countSql, $whereParams);
@@ -316,17 +319,14 @@ class Sector extends Model
         // Exécuter la requête principale
         $items = self::getConnection()->fetchAll($sql, $whereParams);
         
-        // Retourner les résultats avec les métadonnées de pagination
-        return [
-            'items' => $items,
-            'total' => $total,
-            'page' => $page,
-            'perPage' => $perPage,
-            'lastPage' => ceil($total / $perPage),
-            'getItems' => function() use ($items) { return $items; }
-        ];
-    }
-    
+        // Créer et retourner un objet Paginator
+        return new \TopoclimbCH\Core\Pagination\Paginator(
+            $items,
+            $total,
+            $page,
+            $perPage
+        );
+    }    
     /**
      * Récupère tous les secteurs d'une région
      *
