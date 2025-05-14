@@ -10,7 +10,7 @@ use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Models\User;
 use TopoclimbCH\Services\AuthService;
-use TopoclimbCH\Core\Validation\Validator;
+use TopoclimbCH\Services\ValidationService;
 
 class AuthController extends BaseController
 {
@@ -30,6 +30,11 @@ class AuthController extends BaseController
     protected Database $db;
     
     /**
+     * @var ValidationService
+     */
+    protected ValidationService $validationService;
+    
+    /**
      * Constructor
      *
      * @param View $view
@@ -45,6 +50,7 @@ class AuthController extends BaseController
         $this->db = $db;
         $this->auth = Auth::getInstance($session, $db);
         $this->authService = new AuthService($this->auth, $session, $db);
+        $this->validationService = new ValidationService();
     }
     
     public function loginForm(): Response
@@ -66,11 +72,15 @@ class AuthController extends BaseController
         $credentials = $request->request->all();
         
         // Validation
-        $validator = new Validator($credentials);
-        $validator->rule('required', ['email', 'password']);
+        $rules = [
+            'email' => 'required',
+            'password' => 'required'
+        ];
         
-        if (!$validator->validate()) {
-            $this->session->flash('errors', $validator->errors());
+        $errors = $this->validationService->validate($credentials, $rules);
+        
+        if (!empty($errors)) {
+            $this->session->flash('errors', $errors);
             $this->session->flash('old', $credentials);
             return $this->redirect('/login');
         }
@@ -106,7 +116,12 @@ class AuthController extends BaseController
             return $this->redirect('/');
         }
         
-        return $this->render('auth/register');
+        // Générer et passer le token CSRF à la vue
+        $csrfToken = $this->createCsrfToken();
+        
+        return $this->render('auth/register', [
+            'csrf_token' => $csrfToken
+        ]);
     }
     
     public function register(Request $request): Response
@@ -114,23 +129,33 @@ class AuthController extends BaseController
         $data = $request->request->all();
         
         // Validation
-        $validator = new Validator($data);
-        $validator->rule('required', ['nom', 'prenom', 'email', 'password', 'password_confirmation', 'username']);
-        $validator->rule('email', 'email');
-        $validator->rule('equals', 'password_confirmation', 'password');
-        $validator->rule('lengthMin', 'password', 8);
+        $rules = [
+            'nom' => 'required',
+            'prenom' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|min:8',
+            'password_confirmation' => 'required',
+            'username' => 'required'
+        ];
+        
+        $errors = $this->validationService->validate($data, $rules);
+        
+        // Vérification de la correspondance des mots de passe
+        if (!$this->validationService->validateEquals($data, 'password', 'password_confirmation')) {
+            $errors = $this->validationService->addError($errors, 'password_confirmation', 'Les mots de passe ne correspondent pas');
+        }
         
         // Vérification des conflits d'email/username
         if (User::where('mail', $data['email'])->first()) {
-            $validator->addError('email', 'Cet email est déjà utilisé');
+            $errors = $this->validationService->addError($errors, 'email', 'Cet email est déjà utilisé');
         }
         
         if (User::where('username', $data['username'])->first()) {
-            $validator->addError('username', 'Ce nom d\'utilisateur est déjà utilisé');
+            $errors = $this->validationService->addError($errors, 'username', 'Ce nom d\'utilisateur est déjà utilisé');
         }
         
-        if (!$validator->validate()) {
-            $this->session->flash('errors', $validator->errors());
+        if (!empty($errors)) {
+            $this->session->flash('errors', $errors);
             $this->session->flash('old', $data);
             return $this->redirect('/register');
         }
@@ -155,19 +180,27 @@ class AuthController extends BaseController
     
     public function forgotPasswordForm(): Response
     {
-        return $this->render('auth/forgot-password');
+        // Générer et passer le token CSRF à la vue
+        $csrfToken = $this->createCsrfToken();
+        
+        return $this->render('auth/forgot-password', [
+            'csrf_token' => $csrfToken
+        ]);
     }
     
     public function forgotPassword(Request $request): Response
     {
         $email = $request->request->get('email');
         
-        $validator = new Validator(['email' => $email]);
-        $validator->rule('required', 'email');
-        $validator->rule('email', 'email');
+        // Validation
+        $rules = [
+            'email' => 'required|email'
+        ];
         
-        if (!$validator->validate()) {
-            $this->session->flash('errors', $validator->errors());
+        $errors = $this->validationService->validate(['email' => $email], $rules);
+        
+        if (!empty($errors)) {
+            $this->session->flash('errors', $errors);
             return $this->redirect('/forgot-password');
         }
         
@@ -187,8 +220,12 @@ class AuthController extends BaseController
             return $this->redirect('/login');
         }
         
+        // Générer et passer le token CSRF à la vue
+        $csrfToken = $this->createCsrfToken();
+        
         return $this->render('auth/reset-password', [
-            'token' => $token
+            'token' => $token,
+            'csrf_token' => $csrfToken
         ]);
     }
     
@@ -197,13 +234,22 @@ class AuthController extends BaseController
         $data = $request->request->all();
         $token = $data['token'] ?? '';
         
-        $validator = new Validator($data);
-        $validator->rule('required', ['token', 'password', 'password_confirmation']);
-        $validator->rule('equals', 'password_confirmation', 'password');
-        $validator->rule('lengthMin', 'password', 8);
+        // Validation
+        $rules = [
+            'token' => 'required',
+            'password' => 'required|min:8',
+            'password_confirmation' => 'required'
+        ];
         
-        if (!$validator->validate()) {
-            $this->session->flash('errors', $validator->errors());
+        $errors = $this->validationService->validate($data, $rules);
+        
+        // Vérification de la correspondance des mots de passe
+        if (!$this->validationService->validateEquals($data, 'password', 'password_confirmation')) {
+            $errors = $this->validationService->addError($errors, 'password_confirmation', 'Les mots de passe ne correspondent pas');
+        }
+        
+        if (!empty($errors)) {
+            $this->session->flash('errors', $errors);
             return $this->redirect('/reset-password?token=' . $token);
         }
         
