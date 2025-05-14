@@ -10,6 +10,12 @@ use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\MediaService;
+use TopoclimbCH\Core\Filtering\SectorFilter;
+use TopoclimbCH\Models\Sector;
+use TopoclimbCH\Models\Region;
+use TopoclimbCH\Models\Month;
+use TopoclimbCH\Models\Exposure;
+use TopoclimbCH\Exceptions\ServiceException;
 
 class SectorController extends BaseController
 {
@@ -28,78 +34,6 @@ class SectorController extends BaseController
      */
     private Database $db;
     
-    
-    /**
-     * List all sectors
-     *
-     * @param Request $request
-     * @return Response
-     */
-    public function index(Request $request): Response
-    {
-        // Créer le filtre à partir des paramètres de requête
-        $filter = new \TopoclimbCH\Core\Filtering\SectorFilter($request->query->all());
-        
-        // Récupérer la page courante
-        $page = (int) $request->query->get('page', 1);
-        $perPage = (int) $request->query->get('per_page', 20);
-        
-        // Paginer les résultats filtrés
-        $paginatedSectors = \TopoclimbCH\Models\Sector::filterAndPaginate(
-            $filter,
-            $page,
-            $perPage,
-            'name',
-            'ASC'
-        );
-        
-        // Récupérer les données pour les filtres
-        $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-        $exposures = \TopoclimbCH\Models\Exposure::getAllSorted();
-        $months = \TopoclimbCH\Models\Month::getAllSorted();
-        
-        return $this->render('sectors/index', [
-            'sectors' => $paginatedSectors,
-            'filter' => $filter,
-            'regions' => $regions,
-            'exposures' => $exposures,
-            'months' => $months,
-            'currentUrl' => $request->getPathInfo()
-        ]);
-    }    
-    /**
-     * Show a single sector
-     */
-    public function show(Request $request): Response
-    {
-        $id = $request->attributes->get('id');
-        
-        if (!$id) {
-            $this->session->flash('error', 'ID du secteur non spécifié');
-            return $this->redirect('/sectors');
-        }
-        
-        $sector = $this->sectorService->getSectorById((int) $id);
-        
-        if (!$sector) {
-            $this->session->flash('error', 'Secteur non trouvé');
-            return $this->redirect('/sectors');
-        }
-        
-        // Get additional data
-        $exposures = $this->sectorService->getSectorExposures((int) $id);
-        $routes = $this->sectorService->getSectorRoutes((int) $id);
-        $media = $this->sectorService->getSectorMedia((int) $id);
-        
-        return $this->render('sectors/show', [
-            'title' => $sector['name'],
-            'sector' => $sector,
-            'exposures' => $exposures,
-            'media' => $media,
-            'routes' => $routes
-        ]);
-    }
-      
     /**
      * Constructor
      *
@@ -122,7 +56,108 @@ class SectorController extends BaseController
         $this->db = $db;
     }
 
-    
+    /**
+     * List all sectors
+     *
+     * @param Request $request
+     * @return Response
+     */
+    public function index(Request $request): Response
+    {
+        try {
+            // Créer le filtre à partir des paramètres de requête
+            $filter = new SectorFilter($request->query->all());
+            
+            // Récupérer la page courante
+            $page = (int) $request->query->get('page', 1);
+            $perPage = (int) $request->query->get('per_page', 20);
+            
+            // Obtenir le champ et la direction de tri
+            $sortBy = $request->query->get('sort_by', 'name');
+            $sortDir = $request->query->get('sort_dir', 'ASC');
+            
+            // Paginer les résultats filtrés
+            $paginatedSectors = Sector::filterAndPaginate(
+                $filter,
+                $page,
+                $perPage,
+                $sortBy,
+                $sortDir
+            );
+            
+            // Récupérer les données pour les filtres
+            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+            $exposures = Exposure::getAllSorted();
+            $months = Month::getAllSorted();
+            
+            return $this->render('sectors/index', [
+                'sectors' => $paginatedSectors,
+                'filter' => $filter,
+                'regions' => $regions,
+                'exposures' => $exposures,
+                'months' => $months,
+                'currentUrl' => $request->getPathInfo(),
+                'sort_by' => $sortBy,
+                'sort_dir' => $sortDir
+            ]);
+        } catch (\Exception $e) {
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement des secteurs: ' . $e->getMessage());
+            return $this->render('sectors/index', [
+                'sectors' => [],
+                'error' => $e->getMessage()
+            ]);
+        }
+    }    
+
+    /**
+     * Show a single sector
+     *
+     * @param Request $request
+     * @return Response
+     */
+    public function show(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        
+        if (!$id) {
+            $this->session->flash('error', 'ID du secteur non spécifié');
+            return $this->redirect('/sectors');
+        }
+        
+        try {
+            $sector = $this->sectorService->getSectorById((int) $id);
+            
+            if (!$sector) {
+                $this->session->flash('error', 'Secteur non trouvé');
+                return $this->redirect('/sectors');
+            }
+            
+            // Get additional data
+            $exposures = $this->sectorService->getSectorExposures((int) $id);
+            $routes = $this->sectorService->getSectorRoutes((int) $id);
+            $media = $this->sectorService->getSectorMedia((int) $id);
+            $months = $this->sectorService->getSectorMonths((int) $id);
+            $nearbySectors = $this->sectorService->getNearbySectors((int) $id, 10.0, 3);
+            
+            // Get stats
+            $stats = Sector::getStats((int) $id);
+            
+            return $this->render('sectors/show', [
+                'title' => $sector['name'],
+                'sector' => $sector,
+                'exposures' => $exposures,
+                'media' => $media,
+                'routes' => $routes,
+                'months' => $months,
+                'nearbySectors' => $nearbySectors,
+                'stats' => $stats
+            ]);
+        } catch (\Exception $e) {
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return $this->redirect('/sectors');
+        }
+    }
+      
     /**
      * Display create sector form
      *
@@ -131,18 +166,42 @@ class SectorController extends BaseController
      */
     public function create(Request $request): Response
     {
-        // Get data for form selections
-        $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-        $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
-        $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
-        
-        return $this->render('sectors/form', [
-            'title' => 'Créer un nouveau secteur',
-            'regions' => $regions,
-            'books' => $books,
-            'exposures' => $exposures,
-            'csrf_token' => $this->createCsrfToken()
-        ]);
+        try {
+            // Get data for form selections
+            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+            $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
+            $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
+            $months = $this->db->fetchAll("SELECT id, name, short_name FROM climbing_months ORDER BY month_number ASC");
+            
+            // Précharger des valeurs par défaut
+            $sector = [
+                'color' => '#FF0000',
+                'active' => 1
+            ];
+            
+            // Si un region_id est spécifié, préconfigurer le secteur
+            if ($request->query->has('region_id')) {
+                $sector['region_id'] = (int) $request->query->get('region_id');
+            }
+            
+            // Si un book_id est spécifié
+            if ($request->query->has('book_id')) {
+                $sector['book_id'] = (int) $request->query->get('book_id');
+            }
+            
+            return $this->render('sectors/form', [
+                'title' => 'Créer un nouveau secteur',
+                'sector' => $sector,
+                'regions' => $regions,
+                'books' => $books,
+                'exposures' => $exposures,
+                'months' => $months,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return $this->redirect('/sectors');
+        }
     }
     
     /**
@@ -186,15 +245,13 @@ class SectorController extends BaseController
             
             // Handle exposures if provided
             if (!empty($data['exposures'])) {
-                foreach ($data['exposures'] as $exposureId) {
-                    $isPrimary = isset($data['primary_exposure']) && $data['primary_exposure'] == $exposureId;
-                    $this->db->insert('climbing_sector_exposures', [
-                        'sector_id' => $sectorId,
-                        'exposure_id' => (int) $exposureId,
-                        'is_primary' => $isPrimary ? 1 : 0,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                }
+                $primaryExposure = $data['primary_exposure'] ?? null;
+                $this->sectorService->updateSectorExposures($sectorId, $data['exposures'], $primaryExposure);
+            }
+            
+            // Handle months if provided
+            if (!empty($data['months'])) {
+                $this->sectorService->updateSectorMonths($sectorId, $data['months']);
             }
             
             // Handle uploaded image if any
@@ -211,6 +268,10 @@ class SectorController extends BaseController
             $this->db->commit();
             $this->session->flash('success', 'Secteur créé avec succès');
             return $this->redirect('/sectors/' . $sectorId);
+        } catch (ServiceException $e) {
+            $this->db->rollBack();
+            $this->session->flash('error', 'Erreur: ' . $e->getMessage());
+            return $this->redirect('/sectors/create');
         } catch (\Exception $e) {
             $this->db->rollBack();
             error_log($e->getMessage());
@@ -234,44 +295,63 @@ class SectorController extends BaseController
             return $this->redirect('/sectors');
         }
         
-        $sector = $this->sectorService->getSectorById((int) $id);
-        
-        if (!$sector) {
-            $this->session->flash('error', 'Secteur non trouvé');
+        try {
+            $sector = $this->sectorService->getSectorById((int) $id);
+            
+            if (!$sector) {
+                $this->session->flash('error', 'Secteur non trouvé');
+                return $this->redirect('/sectors');
+            }
+            
+            // Get data for form selections
+            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+            $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
+            $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
+            $months = $this->db->fetchAll("SELECT id, name, short_name FROM climbing_months ORDER BY month_number ASC");
+            
+            // Get current exposures for this sector
+            $sectorExposures = $this->sectorService->getSectorExposures((int) $id);
+            $currentExposures = array_column($sectorExposures, 'exposure_id');
+            $primaryExposure = null;
+            
+            foreach ($sectorExposures as $exposure) {
+                if ($exposure['is_primary']) {
+                    $primaryExposure = $exposure['exposure_id'];
+                    break;
+                }
+            }
+            
+            // Get months data
+            $sectorMonths = $this->sectorService->getSectorMonths((int) $id);
+            $monthsData = [];
+            
+            foreach ($sectorMonths as $month) {
+                $monthsData[$month['month_id']] = [
+                    'quality' => $month['quality'],
+                    'notes' => $month['notes']
+                ];
+            }
+            
+            // Get media for this sector
+            $media = $this->sectorService->getSectorMedia((int) $id);
+            
+            return $this->render('sectors/form', [
+                'title' => 'Modifier le secteur ' . $sector['name'],
+                'sector' => $sector,
+                'regions' => $regions,
+                'books' => $books,
+                'exposures' => $exposures,
+                'months' => $months,
+                'currentExposures' => $currentExposures,
+                'primaryExposure' => $primaryExposure,
+                'monthsData' => $monthsData,
+                'media' => $media,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
             return $this->redirect('/sectors');
         }
-        
-        // Get data for form selections
-        $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-        $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
-        $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
-        
-        // Get current exposures for this sector
-        $sectorExposures = $this->sectorService->getSectorExposures((int) $id);
-        $currentExposures = array_column($sectorExposures, 'exposure_id');
-        $primaryExposure = null;
-        
-        foreach ($sectorExposures as $exposure) {
-            if ($exposure['is_primary']) {
-                $primaryExposure = $exposure['exposure_id'];
-                break;
-            }
-        }
-        
-        // Get media for this sector
-        $media = $this->sectorService->getSectorMedia((int) $id);
-        
-        return $this->render('sectors/form', [
-            'title' => 'Modifier le secteur ' . $sector['name'],
-            'sector' => $sector,
-            'regions' => $regions,
-            'books' => $books,
-            'exposures' => $exposures,
-            'currentExposures' => $currentExposures,
-            'primaryExposure' => $primaryExposure,
-            'media' => $media,
-            'csrf_token' => $this->createCsrfToken()
-        ]);
     }
     
     /**
@@ -320,20 +400,18 @@ class SectorController extends BaseController
                 return $this->redirect('/sectors/' . $id . '/edit');
             }
             
-            // Handle exposures - first delete existing
-            $this->db->delete('climbing_sector_exposures', "sector_id = ?", [(int) $id]);
-            
-            // Then add new ones
+            // Handle exposures
             if (!empty($data['exposures'])) {
-                foreach ($data['exposures'] as $exposureId) {
-                    $isPrimary = isset($data['primary_exposure']) && $data['primary_exposure'] == $exposureId;
-                    $this->db->insert('climbing_sector_exposures', [
-                        'sector_id' => (int) $id,
-                        'exposure_id' => (int) $exposureId,
-                        'is_primary' => $isPrimary ? 1 : 0,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                }
+                $primaryExposure = $data['primary_exposure'] ?? null;
+                $this->sectorService->updateSectorExposures((int) $id, $data['exposures'], $primaryExposure);
+            } else {
+                // Si aucune exposition sélectionnée, tout supprimer
+                $this->db->delete('climbing_sector_exposures', "sector_id = ?", [(int) $id]);
+            }
+            
+            // Handle months
+            if (!empty($data['months'])) {
+                $this->sectorService->updateSectorMonths((int) $id, $data['months']);
             }
             
             // Handle uploaded image if any
@@ -350,6 +428,10 @@ class SectorController extends BaseController
             $this->db->commit();
             $this->session->flash('success', 'Secteur mis à jour avec succès');
             return $this->redirect('/sectors/' . $id);
+        } catch (ServiceException $e) {
+            $this->db->rollBack();
+            $this->session->flash('error', 'Erreur: ' . $e->getMessage());
+            return $this->redirect('/sectors/' . $id . '/edit');
         } catch (\Exception $e) {
             $this->db->rollBack();
             error_log($e->getMessage());
@@ -375,23 +457,30 @@ class SectorController extends BaseController
         
         // Check if it's a POST request with confirmation
         if ($request->getMethod() !== 'POST') {
-            $sector = $this->sectorService->getSectorById((int) $id);
-            
-            if (!$sector) {
-                $this->session->flash('error', 'Secteur non trouvé');
+            try {
+                $sector = $this->sectorService->getSectorById((int) $id);
+                
+                if (!$sector) {
+                    $this->session->flash('error', 'Secteur non trouvé');
+                    return $this->redirect('/sectors');
+                }
+                
+                // Get routes count
+                $routesCount = count($this->sectorService->getSectorRoutes((int) $id));
+                $mediaCount = count($this->sectorService->getSectorMedia((int) $id));
+                
+                // Show confirmation page
+                return $this->render('sectors/delete', [
+                    'title' => 'Supprimer le secteur ' . $sector['name'],
+                    'sector' => $sector,
+                    'routesCount' => $routesCount,
+                    'mediaCount' => $mediaCount,
+                    'csrf_token' => $this->createCsrfToken()
+                ]);
+            } catch (\Exception $e) {
+                $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
                 return $this->redirect('/sectors');
             }
-            
-            // Get routes count
-            $routesCount = count($this->sectorService->getSectorRoutes((int) $id));
-            
-            // Show confirmation page
-            return $this->render('sectors/delete', [
-                'title' => 'Supprimer le secteur ' . $sector['name'],
-                'sector' => $sector,
-                'routesCount' => $routesCount,
-                'csrf_token' => $this->createCsrfToken()
-            ]);
         }
         
         // It's a POST request, proceed with deletion
@@ -403,6 +492,12 @@ class SectorController extends BaseController
         }
         
         try {
+            $sector = $this->sectorService->getSectorById((int) $id);
+            if (!$sector) {
+                $this->session->flash('error', 'Secteur non trouvé');
+                return $this->redirect('/sectors');
+            }
+            
             $this->db->beginTransaction();
             $success = $this->sectorService->deleteSector((int) $id);
             
@@ -418,7 +513,7 @@ class SectorController extends BaseController
         } catch (\Exception $e) {
             $this->db->rollBack();
             error_log($e->getMessage());
-            $this->session->flash('error', 'Erreur lors de la suppression du secteur');
+            $this->session->flash('error', 'Erreur lors de la suppression du secteur: ' . $e->getMessage());
             return $this->redirect('/sectors/' . $id . '/delete');
         }
     }
