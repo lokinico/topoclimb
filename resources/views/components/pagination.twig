@@ -1,0 +1,19 @@
+{# resources/views/components/pagination.twig #}
+{% macro render(paginator) %}
+    {% if paginator.hasPages() %}
+        <nav aria-label="Pagination">
+            <ul class="pagination">
+                {% for link in paginator.getLinks() %}
+                    <li class="page-item {{ link.active ? 'active' : '' }} {{ link.disabled ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ link.url }}" {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }}>
+                            {{ link.label|raw }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        <p class="text-muted">
+            Affichage de {{ paginator.getInfo().from }} à {{ paginator.getInfo().to }} sur {{ paginator.getTotal() }} résultats
+        </p>
+    {% endif %}
+{% endmacro %}

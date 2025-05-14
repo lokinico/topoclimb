@@ -1,0 +1,92 @@
+{# resources/views/components/route-filter.twig #}
+{% macro render(filter, sectors, diffSystems, currentUrl) %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Filtrer les voies</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ currentUrl }}">
+                <div class="row g-3">
+                    {# Secteur #}
+                    <div class="col-md-4">
+                        <label for="sector_id" class="form-label">Secteur</label>
+                        <select class="form-select" id="sector_id" name="sector_id">
+                            <option value="">Tous les secteurs</option>
+                            {% for sector in sectors %}
+                                <option value="{{ sector.id }}" {{ filter.getFilter('sector_id') == sector.id ? 'selected' : '' }}>
+                                    {{ sector.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {# Style #}
+                    <div class="col-md-4">
+                        <label for="style" class="form-label">Style</label>
+                        <select class="form-select" id="style" name="style">
+                            <option value="">Tous les styles</option>
+                            <option value="sport" {{ filter.getFilter('style') == 'sport' ? 'selected' : '' }}>Sportif</option>
+                            <option value="trad" {{ filter.getFilter('style') == 'trad' ? 'selected' : '' }}>Traditionnel</option>
+                            <option value="mix" {{ filter.getFilter('style') == 'mix' ? 'selected' : '' }}>Mixte</option>
+                            <option value="boulder" {{ filter.getFilter('style') == 'boulder' ? 'selected' : '' }}>Bloc</option>
+                            <option value="aid" {{ filter.getFilter('style') == 'aid' ? 'selected' : '' }}>Artificiel</option>
+                            <option value="ice" {{ filter.getFilter('style') == 'ice' ? 'selected' : '' }}>Glace</option>
+                            <option value="other" {{ filter.getFilter('style') == 'other' ? 'selected' : '' }}>Autre</option>
+                        </select>
+                    </div>
+                    
+                    {# Beauté #}
+                    <div class="col-md-4">
+                        <label for="beauty" class="form-label">Beauté (minimum)</label>
+                        <select class="form-select" id="beauty" name="beauty">
+                            <option value="">Toutes</option>
+                            {% for i in 1..5 %}
+                                <option value="{{ i }}" {{ filter.getFilter('beauty') == i ? 'selected' : '' }}>
+                                    {{ '★' | repeat(i) }}{{ '☆' | repeat(5 - i) }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {# Longueur #}
+                    <div class="col-md-4">
+                        <label for="length_min" class="form-label">Longueur min (m)</label>
+                        <input type="number" class="form-control" id="length_min" name="length_min" 
+                               value="{{ filter.getFilter('length_min') }}" min="0">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="length_max" class="form-label">Longueur max (m)</label>
+                        <input type="number" class="form-control" id="length_max" name="length_max" 
+                               value="{{ filter.getFilter('length_max') }}" min="0">
+                    </div>
+                    
+                    {# Système de difficulté #}
+                    <div class="col-md-4">
+                        <label for="difficulty_system_id" class="form-label">Système de difficulté</label>
+                        <select class="form-select" id="difficulty_system_id" name="difficulty_system_id">
+                            <option value="">Tous</option>
+                            {% for system in diffSystems %}
+                                <option value="{{ system.id }}" {{ filter.getFilter('difficulty_system_id') == system.id ? 'selected' : '' }}>
+                                    {{ system.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {# Recherche #}
+                    <div class="col-md-12">
+                        <label for="search" class="form-label">Recherche par nom</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ filter.getFilter('search') }}" placeholder="Entrez un terme de recherche...">
+                    </div>
+                    
+                    <div class="col-12 mt-3">
+                        <button type="submit" class="btn btn-primary">Filtrer</button>
+                        <a href="{{ currentUrl }}" class="btn btn-outline-secondary">Réinitialiser</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endmacro %}

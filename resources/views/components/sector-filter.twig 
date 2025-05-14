@@ -1,0 +1,90 @@
+{# resources/views/components/sector-filter.twig #}
+{% macro render(filter, regions, exposures, months, currentUrl) %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Filtrer les secteurs</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ currentUrl }}">
+                <div class="row g-3">
+                    {# Région #}
+                    <div class="col-md-4">
+                        <label for="region_id" class="form-label">Région</label>
+                        <select class="form-select" id="region_id" name="region_id">
+                            <option value="">Toutes les régions</option>
+                            {% for region in regions %}
+                                <option value="{{ region.id }}" {{ filter.getFilter('region_id') == region.id ? 'selected' : '' }}>
+                                    {{ region.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {# Exposition #}
+                    <div class="col-md-4">
+                        <label for="exposure_id" class="form-label">Exposition</label>
+                        <select class="form-select" id="exposure_id" name="exposure_id">
+                            <option value="">Toutes les expositions</option>
+                            {% for exposure in exposures %}
+                                <option value="{{ exposure.id }}" {{ filter.getFilter('exposure_id') == exposure.id ? 'selected' : '' }}>
+                                    {{ exposure.exposureLabel }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {# Altitude #}
+                    <div class="col-md-4">
+                        <label for="altitude_min" class="form-label">Altitude min (m)</label>
+                        <input type="number" class="form-control" id="altitude_min" name="altitude_min" 
+                               value="{{ filter.getFilter('altitude_min') }}" min="0">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="altitude_max" class="form-label">Altitude max (m)</label>
+                        <input type="number" class="form-control" id="altitude_max" name="altitude_max" 
+                               value="{{ filter.getFilter('altitude_max') }}" min="0">
+                    </div>
+                    
+                    {# Mois #}
+                    <div class="col-md-4">
+                        <label for="month_id" class="form-label">Mois</label>
+                        <select class="form-select" id="month_id" name="month_id">
+                            <option value="">Tous les mois</option>
+                            {% for month in months %}
+                                <option value="{{ month.id }}" {{ filter.getFilter('month_id') == month.id ? 'selected' : '' }}>
+                                    {{ month.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {# Qualité #}
+                    <div class="col-md-4">
+                        <label for="quality" class="form-label">Qualité</label>
+                        <select class="form-select" id="quality" name="quality">
+                            <option value="">Toutes</option>
+                            <option value="excellent" {{ filter.getFilter('quality') == 'excellent' ? 'selected' : '' }}>Excellent</option>
+                            <option value="good" {{ filter.getFilter('quality') == 'good' ? 'selected' : '' }}>Bon</option>
+                            <option value="average" {{ filter.getFilter('quality') == 'average' ? 'selected' : '' }}>Moyen</option>
+                            <option value="poor" {{ filter.getFilter('quality') == 'poor' ? 'selected' : '' }}>Mauvais</option>
+                            <option value="avoid" {{ filter.getFilter('quality') == 'avoid' ? 'selected' : '' }}>À éviter</option>
+                        </select>
+                    </div>
+                    
+                    {# Recherche #}
+                    <div class="col-md-12">
+                        <label for="search" class="form-label">Recherche par nom</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ filter.getFilter('search') }}" placeholder="Entrez un terme de recherche...">
+                    </div>
+                    
+                    <div class="col-12 mt-3">
+                        <button type="submit" class="btn btn-primary">Filtrer</button>
+                        <a href="{{ currentUrl }}" class="btn btn-outline-secondary">Réinitialiser</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endmacro %}
