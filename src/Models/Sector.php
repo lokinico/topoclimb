@@ -461,7 +461,6 @@ class Sector extends Model
                 
         return self::getConnection()->fetchAll($sql, [$monthId, $limit]);
     }
-    
     /**
      * Récupère les statistiques d'un secteur
      *
@@ -470,35 +469,36 @@ class Sector extends Model
      */
     public static function getStats(int $sectorId): array
     {
-        $conn = self::getConnection();
+        // Obtenir l'instance de Database
+        $db = \TopoclimbCH\Core\Database::getInstance();
         
         // Compter les voies
-        $routesCount = $conn->fetchOne(
-            "SELECT COUNT(*) FROM climbing_routes WHERE sector_id = ? AND active = 1",
+        $routesCount = $db->fetchOne(
+            "SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1",
             [$sectorId]
         );
         
         // Récupérer la difficulté min et max
-        $difficultyStats = $conn->fetchOne(
+        $difficultyStats = $db->fetchOne(
             "SELECT MIN(numerical_value) as min_difficulty, MAX(numerical_value) as max_difficulty
-             FROM climbing_routes r
-             JOIN climbing_difficulty_grades g ON r.difficulty = g.value AND r.difficulty_system_id = g.system_id
-             WHERE r.sector_id = ? AND r.active = 1",
+            FROM climbing_routes r
+            JOIN climbing_difficulty_grades g ON r.difficulty = g.value AND r.difficulty_system_id = g.system_id
+            WHERE r.sector_id = ? AND r.active = 1",
             [$sectorId]
         );
         
         // Compter les médias
-        $mediaCount = $conn->fetchOne(
-            "SELECT COUNT(*) FROM climbing_media_relationships 
-             WHERE entity_type = 'sector' AND entity_id = ?",
+        $mediaCount = $db->fetchOne(
+            "SELECT COUNT(*) as count FROM climbing_media_relationships 
+            WHERE entity_type = 'sector' AND entity_id = ?",
             [$sectorId]
         );
         
         return [
-            'routes_count' => (int) $routesCount,
+            'routes_count' => (int) ($routesCount['count'] ?? 0),
             'min_difficulty' => $difficultyStats['min_difficulty'] ?? null,
             'max_difficulty' => $difficultyStats['max_difficulty'] ?? null,
-            'media_count' => (int) $mediaCount
+            'media_count' => (int) ($mediaCount['count'] ?? 0)
         ];
     }
     
