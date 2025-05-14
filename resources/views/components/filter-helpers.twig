@@ -1,0 +1,29 @@
+{# Helpers pour les filtres #}
+
+{% macro filter_badge(filter, name, value, label, url) %}
+    {% if filter.hasFilter(name) and filter.getFilter(name) == value %}
+        <a href="{{ filter.getFilterUrl(url, {(name): null}) }}" class="badge bg-primary text-white">
+            {{ label }} <i class="icon-times"></i>
+        </a>
+    {% endif %}
+{% endmacro %}
+
+{% macro filter_badges(filter, currentUrl) %}
+    <div class="filter-badges mb-3">
+        {% if filter.getParams()|length > 0 %}
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted">Filtres actifs:</span>
+                
+                {% for name, value in filter.getParams() %}
+                    <a href="{{ filter.getFilterUrl(currentUrl, {(name): null}) }}" class="badge bg-primary text-white">
+                        {{ name }}: {{ value }} <i class="icon-times"></i>
+                    </a>
+                {% endfor %}
+                
+                <a href="{{ currentUrl }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="icon-refresh"></i> Réinitialiser tous les filtres
+                </a>
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}

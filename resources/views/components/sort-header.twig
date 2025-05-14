@@ -1,0 +1,15 @@
+{% macro sortable_header(label, field, currentSortField, currentSortDir, filter, currentUrl) %}
+    {% set newDir = (field == currentSortField and currentSortDir == 'asc') ? 'desc' : 'asc' %}
+    
+    <th>
+        <a href="{{ filter.getFilterUrl(currentUrl, {'sort': field, 'dir': newDir}) }}" class="sortable-header">
+            {{ label }}
+            
+            {% if field == currentSortField %}
+                <i class="icon-chevron-{{ currentSortDir == 'asc' ? 'up' : 'down' }}"></i>
+            {% else %}
+                <i class="icon-chevron-down text-muted"></i>
+            {% endif %}
+        </a>
+    </th>
+{% endmacro %}
