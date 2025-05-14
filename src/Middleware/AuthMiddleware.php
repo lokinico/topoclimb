@@ -2,8 +2,8 @@
 
 namespace TopoclimbCH\Middleware;
 
+use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Auth;
-use TopoclimbCH\Core\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Database;
@@ -23,7 +23,7 @@ class AuthMiddleware
     {
         if (!$this->auth->check()) {
             $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
-            $this->session->set('intended_url', $request->getServer('REQUEST_URI'));
+            $this->session->set('intended_url', $request->getPathInfo());
             
             return Response::redirect('/login');
         }
