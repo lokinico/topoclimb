@@ -45,23 +45,12 @@ Media: {{ media|length }}
                                 {% set mainImage = url('/uploads/' ~ item.file_path) %}
                                 <img src="{{ mainImage }}" alt="{{ sector.name }}">
                                 {% if not loop.first %}
+                                    {# On sort de la boucle si ce n'est pas le premier élément mais qu'il est featured #}
                                     {% break %}
                                 {% endif %}
                             {% endif %}
                         {% endfor %}
                     </div>
-                    
-                    {% if media|length > 1 %}
-                        <div class="thumbnails">
-                            {% for item in media %}
-                                <a href="{{ url('/uploads/' ~ item.file_path) }}" class="thumbnail">
-                                    <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="">
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endif %}
             
             <div class="sector-info">
                 <div class="info-grid">
