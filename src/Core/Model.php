@@ -649,7 +649,28 @@ abstract class Model
         self::$eventDispatcher->addListener($event, $listener);
     }
 
-    
+    /**
+     * Charge les relations spécifiées pour le modèle
+     *
+     * @param string|array $relations Nom de la relation ou tableau de noms de relations à charger
+     * @return $this
+     */
+    public function load($relations): self
+    {
+        // Convertir une seule relation en tableau
+        if (!is_array($relations)) {
+            $relations = [$relations];
+        }
+        
+        foreach ($relations as $relation) {
+            if (method_exists($this, $relation)) {
+                // Charger la relation et stocker son résultat
+                $this->relations[$relation] = $this->$relation();
+            }
+        }
+        
+        return $this;
+    }
     /**
      * Méthode helper pour permettre les styles d'appel where('column', 'value') et where(['column' => 'value'])
      *
