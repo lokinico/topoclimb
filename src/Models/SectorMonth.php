@@ -1,4 +1,5 @@
 <?php
+// src/Models/SectorMonth.php
 
 namespace TopoclimbCH\Models;
 
@@ -7,17 +8,17 @@ use TopoclimbCH\Core\Model;
 class SectorMonth extends Model
 {
     /**
-     * Table associée au modèle
+     * Nom de la table en base de données
      */
-    protected string $table = 'climbing_sector_months';
-
+    protected static string $table = 'climbing_sector_months';
+    
     /**
-     * Champs remplissables en masse
+     * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
         'sector_id', 'month_id', 'quality', 'notes'
     ];
-
+    
     /**
      * Règles de validation
      */
@@ -26,75 +27,91 @@ class SectorMonth extends Model
         'month_id' => 'required|numeric',
         'quality' => 'required|in:excellent,good,average,poor,avoid'
     ];
-
+    
     /**
      * Relation avec le secteur
      */
-    public function sector()
+    public function sector(): ?Sector
     {
         return $this->belongsTo(Sector::class, 'sector_id');
     }
-
+    
     /**
      * Relation avec le mois
      */
-    public function month()
+    public function month(): ?Month
     {
         return $this->belongsTo(Month::class, 'month_id');
     }
-
+    
     /**
      * Définir la qualité des conditions pour tous les mois d'un secteur
-     * 
-     * @param int $sectorId ID du secteur
-     * @param array $monthData Tableau associatif [month_id => quality]
-     * @return void
      */
     public static function updateSectorMonths(int $sectorId, array $monthData): void
     {
-        $db = self::getDb();
+        $conn = static::getConnection();
         
-        // Supprimer les relations existantes
-        $db->delete('climbing_sector_months', ['sector_id' => $sectorId]);
-        
-        // Créer les nouvelles relations
-        foreach ($monthData as $monthId => $data) {
-            if (empty($data['quality'])) {
-                continue; // Ignorer les mois sans qualité spécifiée
+        try {
+            // Commencer une transaction
+            $conn->beginTransaction();
+            
+            // Supprimer les relations existantes
+            $stmt = $conn->prepare("DELETE FROM " . static::getTable() . " WHERE sector_id = ?");
+            $stmt->execute([$sectorId]);
+            
+            // Préparer l'insertion
+            $stmt = $conn->prepare("INSERT INTO " . static::getTable() . " 
+                                    (sector_id, month_id, quality, notes) 
+                                    VALUES (?, ?, ?, ?)");
+            
+            // Créer les nouvelles relations
+            foreach ($monthData as $monthId => $data) {
+                if (empty($data['quality'])) {
+                    continue; // Ignorer les mois sans qualité spécifiée
+                }
+                
+                $stmt->execute([
+                    $sectorId,
+                    $monthId,
+                    $data['quality'],
+                    $data['notes'] ?? null
+                ]);
             }
             
-            $sectorMonth = new self();
-            $sectorMonth->sector_id = $sectorId;
-            $sectorMonth->month_id = $monthId;
-            $sectorMonth->quality = $data['quality'];
-            $sectorMonth->notes = $data['notes'] ?? null;
-            $sectorMonth->save();
+            // Valider la transaction
+            $conn->commit();
+        } catch (\PDOException $e) {
+            // Annuler les changements si une erreur survient
+            $conn->rollBack();
+            throw new ModelException("Error updating sector months: " . $e->getMessage());
         }
     }
     
     /**
      * Obtenir la matrice des qualités pour un secteur
-     * 
-     * @param int $sectorId ID du secteur
-     * @return array Tableau associatif [month_id => ['quality' => '...', 'notes' => '...']]
      */
     public static function getQualityMatrixForSector(int $sectorId): array
     {
-        $results = self::getDb()->fetchAll(
-            "SELECT month_id, quality, notes 
-             FROM climbing_sector_months 
-             WHERE sector_id = ?",
-            [$sectorId]
-        );
-        
-        $matrix = [];
-        foreach ($results as $row) {
-            $matrix[$row['month_id']] = [
-                'quality' => $row['quality'],
-                'notes' => $row['notes']
-            ];
+        try {
+            $stmt = static::getConnection()->prepare(
+                "SELECT month_id, quality, notes 
+                 FROM " . static::getTable() . " 
+                 WHERE sector_id = ?"
+            );
+            $stmt->execute([$sectorId]);
+            $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            $matrix = [];
+            foreach ($results as $row) {
+                $matrix[$row['month_id']] = [
+                    'quality' => $row['quality'],
+                    'notes' => $row['notes']
+                ];
+            }
+            
+            return $matrix;
+        } catch (\PDOException $e) {
+            throw new ModelException("Error getting quality matrix: " . $e->getMessage());
         }
-        
-        return $matrix;
     }
 }
