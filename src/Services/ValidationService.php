@@ -29,7 +29,11 @@ class ValidationService
         $constraints = $this->createConstraints($rules);
         
         // Valider les données
-        $violations = $this->validator->validate($data, new Assert\Collection($constraints));
+        $violations = $this->validator->validate($data, new Assert\Collection([
+            'fields' => $constraints,
+            'allowExtraFields' => true,
+            'allowMissingFields' => true
+        ]));
         
         // Si pas d'erreurs, retourner un tableau vide
         if (count($violations) === 0) {
@@ -140,7 +144,9 @@ class ValidationService
                 }
             }
             
-            $constraints[$field] = $fieldConstraints;
+            if (!empty($fieldConstraints)) {
+                $constraints[$field] = $fieldConstraints;
+            }
         }
         
         return $constraints;
