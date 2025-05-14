@@ -55,10 +55,13 @@ class Auth
      */
     public function attempt(string $username, string $password, bool $remember = false): bool
     {
-        // Recherche l'utilisateur par username ou email
-        $user = User::where('username', $username)
-            ->orWhere('mail', $username)
-            ->first();
+        // Recherche par username
+        $user = User::where(['username' => $username])->first();
+        
+        // Si pas trouvé, essayer par email
+        if (!$user) {
+            $user = User::where(['mail' => $username])->first();
+        }
         
         if (!$user) {
             return false;
