@@ -97,17 +97,47 @@ class RouteService
     }
     
     /**
-     * Récupère les voies similaires
+     * Récupère les voies similaires à une voie donnée
      */
     public function getSimilarRoutes(Route $route, int $limit = 5): array
     {
-        // Récupère les voies du même secteur avec difficulté similaire
-        return Route::where('sector_id', $route->sector_id)
-            ->where('id', '!=', $route->id)
-            ->where('active', true)
-            ->orderByDifficultyCloseTo($route->difficulty)
-            ->limit($limit)
-            ->get();
+        // Récupère les voies du même secteur mais pas celle en cours
+        $conditions = [
+            'sector_id' => $route->sector_id,
+            'active' => 1
+        ];
+        
+        $sql = "SELECT r.* FROM " . Route::getTable() . " r
+                WHERE r.sector_id = :sectorId 
+                AND r.id != :routeId
+                AND r.active = 1
+                ORDER BY ABS(r.difficulty_system_id - :diffSystem) ASC, 
+                        ABS(r.difficulty - :diff) ASC
+                LIMIT :limit";
+        
+        $params = [
+            ':sectorId' => $route->sector_id,
+            ':routeId' => $route->id,
+            ':diffSystem' => $route->difficulty_system_id,
+            ':diff' => $route->difficulty,
+            ':limit' => $limit
+        ];
+        
+        try {
+            $db = Database::getInstance();
+            $statement = $db->getConnection()->prepare($sql);
+            $statement->execute($params);
+            $data = $statement->fetchAll(PDO::FETCH_ASSOC);
+            
+            $models = [];
+            foreach ($data as $item) {
+                $models[] = new Route($item);
+            }
+            
+            return $models;
+        } catch (PDOException $e) {
+            throw new ModelException("Erreur lors de la recherche de routes similaires: " . $e->getMessage(), 0, $e);
+        }
     }
     
     /**
