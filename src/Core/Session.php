@@ -203,6 +203,7 @@ class Session
     {
         $token = bin2hex(random_bytes(32));
         $this->set('_csrf_token', $token);
+        error_log("CSRF Token généré: " . substr($token, 0, 10) . '...');
         return $token;
     }
 
@@ -217,9 +218,13 @@ class Session
         $csrfToken = $this->get('_csrf_token');
         
         if ($csrfToken === null) {
+            error_log("CSRF: Aucun jeton trouvé en session");
             return false;
         }
         
-        return hash_equals($csrfToken, $token);
+        $result = hash_equals($csrfToken, $token);
+        error_log("CSRF: Comparaison - " . ($result ? "Réussite" : "Échec"));
+        
+        return $result;
     }
 }
