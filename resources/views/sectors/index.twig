@@ -19,23 +19,20 @@
     {{ sectorFilter.render(filter, regions, exposures, months, currentUrl) }}
     
     <div class="sectors-grid">
-        {% if sectors.getItems()|length > 0 %}
-            <div class="row g-4">
-                {% for sector in sectors.getItems() %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="sector-card" style="border-color: {{ sector.color }}">
-                            {% set image = sector.image ? url('/uploads/' ~ sector.image) : url('/images/placeholder-sector.jpg') %}
-                            
-                            {% if sector.image %}
-                                <div class="sector-image">
-                                    <img src="{{ image }}" alt="{{ sector.name }}" class="img-fluid">
+        {% for sector in sectors.getItems() %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="sector-card" style="border-color: {{ sector.color }}">
+                                {# Ajoute ce bloc pour debug juste avant le lien #}
+                                <div style="font-size: 0.9em; color: #b00;">
+                                    ID secteur : {{ sector.id }}<br>
+                                    Lien généré : {{ url('/sectors/' ~ sector.id) }}
                                 </div>
-                            {% endif %}
-                            
-                            <div class="sector-content">
-                                <h3 class="sector-title">
-                                    <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a>
-                                </h3>
+
+                                <div class="sector-content">
+                                    <h3 class="sector-title">
+                                        <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a>
+                                    </h3>
+                                </div>
                                 
                                 <div class="sector-info">
                                     <div class="info-item">
