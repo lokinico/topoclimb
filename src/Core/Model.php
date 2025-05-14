@@ -660,4 +660,35 @@ abstract class Model
         
         self::$eventDispatcher->addListener($event, $listener);
     }
+
+    
+    /**
+     * Méthode helper pour permettre les styles d'appel where('column', 'value') et where(['column' => 'value'])
+     *
+     * @param string|array $column Nom de la colonne ou tableau de critères
+     * @param mixed|null $value Valeur à comparer
+     * @return array
+     */
+    public static function findBy($column, $value = null): array
+    {
+        if (is_array($column)) {
+            return static::where($column);
+        }
+        
+        return static::where([$column => $value]);
+    }
+
+    /**
+     * Retrouve le premier modèle correspondant à la colonne et valeur
+     * 
+     * @param string|array $column Nom de la colonne ou tableau de critères
+     * @param mixed|null $value Valeur à comparer
+     * @return static|null
+     */
+    public static function findOneBy($column, $value = null): ?static
+    {
+        $result = static::findBy($column, $value);
+        return !empty($result) ? $result[0] : null;
+    }
+
 }
