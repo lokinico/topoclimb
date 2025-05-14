@@ -67,15 +67,6 @@ class AuthController extends BaseController
         ]);
     }
     
-    /**
-     * Handle the login request
-     *
-     * @param Request $request
-     * @return Response
-     */
-    /**
-     * Méthode login corrigée sans redéfinir createCsrfToken()
-     */
     public function login(Request $request): Response
     {
         // Vérification du token CSRF
@@ -93,7 +84,7 @@ class AuthController extends BaseController
             'password_length' => isset($credentials['password']) ? strlen($credentials['password']) : 0
         ]));
         
-        // Le reste du code de login comme avant...
+        // Validation
         $rules = [
             'email' => 'required',
             'password' => 'required'
@@ -112,7 +103,7 @@ class AuthController extends BaseController
         // Remember me
         $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
         
-        // Tentative de connexion
+        // Tentative de connexion avec logs supplémentaires
         $loginSuccess = $this->auth->attempt($credentials['email'], $credentials['password'], $remember);
         error_log('Résultat de la tentative de connexion: ' . ($loginSuccess ? 'succès' : 'échec'));
         
@@ -132,35 +123,6 @@ class AuthController extends BaseController
         error_log('Redirection après connexion vers: ' . $intendedUrl);
         
         return $this->redirect($intendedUrl);
-    }
-
-    /**
-     * Ajoutez uniquement cette méthode pour la validation du token CSRF
-     * Avec le même niveau d'accès que dans la classe parente
-     */
-    protected function validateCsrfToken(?string $token): bool
-    {
-        if (empty($token)) {
-            return false;
-        }
-        
-        $storedToken = $this->session->get('csrf_token');
-        if (empty($storedToken)) {
-            error_log('Token CSRF non trouvé en session');
-            return false;
-        }
-        
-        return hash_equals($storedToken, $token);
-    }
-
-
-
-    // Améliorez cette méthode pour la génération du token CSRF
-    private function createCsrfToken(): string
-    {
-        $token = bin2hex(random_bytes(32));
-        $this->session->set('csrf_token', $token);
-        return $token;
     }
     
     public function logout(): Response
@@ -323,5 +285,39 @@ class AuthController extends BaseController
         
         $this->flash('error', 'Une erreur est survenue lors de la réinitialisation');
         return $this->redirect('/reset-password?token=' . $token);
+    }
+    
+    /**
+     * Méthode de validation du token CSRF
+     */
+    protected function validateCsrfToken(?string $token): bool
+    {
+        if (empty($token)) {
+            error_log('Token CSRF vide');
+            return false;
+        }
+        
+        $storedToken = $this->session->get('csrf_token');
+        if (empty($storedToken)) {
+            error_log('Token CSRF non trouvé en session');
+            return false;
+        }
+        
+        $result = hash_equals($storedToken, $token);
+        error_log('Validation CSRF: ' . ($result ? 'succès' : 'échec') . ' (soumis: ' . substr($token, 0, 10) . '..., stocké: ' . substr($storedToken, 0, 10) . '...)');
+        return $result;
+    }
+    
+    /**
+     * Méthode pour tester la connexion à la base de données
+     */
+    public function testDatabase(): Response
+    {
+        try {
+            $result = $this->db->query("SELECT 1")->fetch();
+            return Response::json(['success' => true, 'message' => 'Connexion à la BDD réussie']);
+        } catch (\Exception $e) {
+            return Response::json(['success' => false, 'message' => 'Erreur de connexion: ' . $e->getMessage()]);
+        }
     }
 }
