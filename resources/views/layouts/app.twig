@@ -5,16 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TopoclimbCH{% endblock %}</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="icon" href="{{ asset('images/favicon.ico') }}">
+    <meta name="description" content="Plateforme suisse de sites d'escalade, topos et voies">
     {% block styles %}{% endblock %}
 </head>
 <body>
     <header>
-        {% include 'partials/header.twig' %}
-        {% include 'partials/navigation.twig' %}
+        <nav class="main-nav">
+            <div class="container">
+                <div class="logo">
+                    <a href="{{ url('/') }}">
+                        <h1>TopoclimbCH</h1>
+                    </a>
+                </div>
+                <button class="mobile-menu-toggle" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-links">
+                    <li><a href="{{ url('/') }}" class="{{ is_active('/') ? 'active' : '' }}">Accueil</a></li>
+                    <li><a href="{{ url('/regions') }}" class="{{ is_active('/regions') ? 'active' : '' }}">Régions</a></li>
+                    <li><a href="{{ url('/sites') }}" class="{{ is_active('/sites') ? 'active' : '' }}">Sites</a></li>
+                    <li><a href="{{ url('/sectors') }}" class="{{ is_active('/sectors') ? 'active' : '' }}">Secteurs</a></li>
+                    <li><a href="{{ url('/routes') }}" class="{{ is_active('/routes') ? 'active' : '' }}">Voies</a></li>
+                    
+                    {% if auth() %}
+                        <li class="dropdown">
+                            <a href="#">Mon compte</a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url('/profile') }}">Profil</a></li>
+                                <li><a href="{{ url('/ascents') }}">Mes ascensions</a></li>
+                                <li><a href="{{ url('/logout') }}">Déconnexion</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li><a href="{{ url('/login') }}" class="{{ is_active('/login') ? 'active' : '' }}">Connexion</a></li>
+                        <li><a href="{{ url('/register') }}" class="{{ is_active('/register') ? 'active' : '' }}">Inscription</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
     </header>
 
     <main>
-        <div class="container">
+        <div class="container py-4">
             {% include 'partials/flash.twig' %}
             
             {% block content %}{% endblock %}
@@ -22,7 +57,32 @@
     </main>
 
     <footer>
-        {% include 'partials/footer.twig' %}
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h3>TopoclimbCH</h3>
+                    <p>Base de données des sites d'escalade en Suisse</p>
+                </div>
+                <div class="col-md-4">
+                    <h3>Liens utiles</h3>
+                    <ul>
+                        <li><a href="{{ url('/about') }}">À propos</a></li>
+                        <li><a href="{{ url('/contact') }}">Contact</a></li>
+                        <li><a href="{{ url('/privacy') }}">Politique de confidentialité</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h3>Suivez-nous</h3>
+                    <div class="social-links">
+                        <a href="#" target="_blank">Facebook</a>
+                        <a href="#" target="_blank">Instagram</a>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <p>&copy; {{ "now"|date("Y") }} TopoclimbCH. Tous droits réservés.</p>
+            </div>
+        </div>
     </footer>
 
     <script src="{{ asset('js/app.js') }}"></script>
