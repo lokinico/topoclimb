@@ -691,4 +691,15 @@ abstract class Model
         return !empty($result) ? $result[0] : null;
     }
 
+    /**
+     * Récupère le premier modèle correspondant aux critères
+     *
+     * @param array $criteria Critères de recherche
+     * @return static|null
+     */
+    public static function findOne(array $criteria): ?static
+    {
+        $results = static::where($criteria);
+        return !empty($results) ? $results[0] : null;
+    }
 }
