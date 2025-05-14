@@ -39,9 +39,11 @@
     {% endif %}
     
     <div class="sectors-grid">
-        {% if sectors is iterable %}
+        {% set sectorItems = sectors.items is defined ? sectors.items : (sectors is iterable ? sectors : []) %}
+        
+        {% if sectorItems|length > 0 %}
             <div class="row g-4">
-                {% for sector in sectors %}
+                {% for sector in sectorItems %}
                     <div class="col-md-6 col-lg-4">
                         <div class="sector-card" style="border-color: {{ sector.color }}">
                             {% set image = sector.image ? url('/uploads/' ~ sector.image) : url('/images/placeholder-sector.jpg') %}
@@ -109,7 +111,7 @@
                 {% endfor %}
             </div>
             
-            {% if sectors.getItems is defined %}
+            {% if sectors.items is defined or sectors.total is defined %}
                 <div class="mt-4">
                     {{ pagination.render(sectors) }}
                 </div>
