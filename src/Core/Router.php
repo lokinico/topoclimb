@@ -188,6 +188,7 @@ class Router
         // No route matches
         throw new RouteNotFoundException("Route not found for $method $path");
     }
+    
 
     /**
      * Dispatch the request to the appropriate route
