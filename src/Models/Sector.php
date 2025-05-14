@@ -8,7 +8,124 @@ use TopoclimbCH\Exceptions\ModelException;
 
 class Sector extends Model
 {
-    // Code existant conservé...
+
+    /**
+     * Nom de la table en base de données
+     */
+    protected static string $table = 'climbing_sectors';
+    
+    /**
+     * Liste des attributs remplissables en masse
+     */
+    protected array $fillable = [
+        'book_id', 'region_id', 'name', 'code', 'description', 'access_info', 
+        'color', 'access_time', 'altitude', 'approach', 'height', 
+        'parking_info', 'coordinates_lat', 'coordinates_lng',
+        'coordinates_swiss_e', 'coordinates_swiss_n', 'active'
+    ];
+    
+    
+    /**
+     * Relation avec les voies d'escalade
+     */
+    public function routes(): array
+    {
+        return $this->hasMany(Route::class);
+    }
+    
+    /**
+     * Relation avec la région
+     */
+    public function region(): ?Region
+    {
+        return $this->belongsTo(Region::class);
+    }
+    
+    /**
+     * Relation avec les expositions
+     */
+    public function exposures(): array
+    {
+        return $this->belongsToMany(
+            Exposure::class, 
+            'climbing_sector_exposures', 
+            'sector_id', 
+            'exposure_id'
+        );
+    }
+    
+    /**
+     * Relation avec les mois (qualité par mois)
+     */
+    public function months(): array
+    {
+        return $this->belongsToMany(
+            Month::class, 
+            'climbing_sector_months', 
+            'sector_id', 
+            'month_id'
+        );
+    }
+    
+    /**
+     * Récupère les parkings associés au secteur
+     */
+    public function parkings(): array
+    {
+        return $this->belongsToMany(
+            Parking::class, 
+            'parking_secteur', 
+            'secteur_id', 
+            'parking_id'
+        );
+    }
+    
+    
+    /**
+     * Mutateur pour le champ active
+     */
+    public function setActiveAttribute($value): bool
+    {
+        return (bool) $value;
+    }
+    
+    /**
+     * Récupère les secteurs actifs
+     */
+    public static function active(): array
+    {
+        return static::where(['active' => 1]);
+    }
+    
+    /**
+     * Méthode pour vérifier si le secteur a des coordonnées GPS
+     */
+    public function hasCoordinates(): bool
+    {
+        return isset($this->attributes['coordinates_lat']) && 
+               isset($this->attributes['coordinates_lng']) &&
+               $this->attributes['coordinates_lat'] !== null &&
+               $this->attributes['coordinates_lng'] !== null;
+    }
+    
+    /**
+     * Méthode pour obtenir l'URL Google Maps
+     */
+    public function getGoogleMapsUrl(): ?string
+    {
+        if (!$this->hasCoordinates()) {
+            return null;
+        }
+        
+        $lat = $this->attributes['coordinates_lat'];
+        $lng = $this->attributes['coordinates_lng'];
+        
+        return "https://www.google.com/maps?q={$lat},{$lng}";
+    }
+    
+
+    
+
     
     /**
      * Règles de validation
