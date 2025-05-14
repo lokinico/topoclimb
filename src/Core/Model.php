@@ -311,9 +311,27 @@ abstract class Model
     
     /**
      * Récupère tous les modèles correspondant aux critères
+     *
+     * @param array|string $criteria Critères de recherche ou nom de colonne
+     * @param mixed|null $value Valeur à comparer ou null si $criteria est un tableau
+     * @param string|null $orderBy Colonne pour le tri
+     * @param string $direction Direction du tri (ASC/DESC)
+     * @return array
      */
-    public static function where(array $criteria, string $orderBy = null, string $direction = 'ASC'): array
+    public static function where($criteria, $value = null, string $orderBy = null, string $direction = 'ASC'): array
     {
+        // Convertir les paramètres de style Eloquent en tableau de critères
+        if (!is_array($criteria)) {
+            $criteria = [$criteria => $value];
+            // Remplacer les arguments de tri si nécessaire
+            if (func_num_args() > 2 && is_string($value)) {
+                $orderBy = $value;
+                if (func_num_args() > 3) {
+                    $direction = func_get_arg(2);
+                }
+            }
+        }
+        
         $table = static::getTable();
         
         $wheres = [];
@@ -353,6 +371,18 @@ abstract class Model
         return static::where([], $orderBy, $direction);
     }
     
+    /**
+     * Chaîne de requête de style Eloquent
+     *
+     * @param string|array $column Le nom de la colonne ou un tableau de conditions
+     * @param mixed|null $operator Opérateur ou valeur si l'opérateur est omis
+     * @param mixed|null $value La valeur à comparer
+     * @return Builder|static Une instance du builder ou statique
+     */
+    public static function query()
+    {
+        return new \TopoclimbCH\Core\Query\Builder(static::class);
+    }
     /**
      * Sauvegarde le modèle (insert ou update)
      */
@@ -671,6 +701,7 @@ abstract class Model
         
         return $this;
     }
+
     /**
      * Méthode helper pour permettre les styles d'appel where('column', 'value') et where(['column' => 'value'])
      *
