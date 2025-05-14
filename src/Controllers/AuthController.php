@@ -16,8 +16,9 @@ class AuthController extends BaseController
 {
     /**
      * @var Auth
+     * Modifier cette déclaration pour la rendre compatible avec BaseController
      */
-    protected Auth $auth;
+    protected ?Auth $auth;
     
     /**
      * @var AuthService
@@ -53,6 +54,7 @@ class AuthController extends BaseController
         $this->validationService = new ValidationService();
     }
     
+
     public function loginForm(): Response
     {
         if ($this->auth->check()) {
