@@ -162,6 +162,11 @@ class Router
      */
     public function resolve(string $method, string $path): array
     {
+        // Normalize path by removing trailing slash (except for root path)
+        if (strlen($path) > 1 && substr($path, -1) === '/') {
+            $path = rtrim($path, '/');
+        }
+        
         // Get routes for the HTTP method
         $method = strtoupper($method);
         $routes = $this->routes[$method] ?? [];
