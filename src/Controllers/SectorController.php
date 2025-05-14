@@ -107,8 +107,8 @@ class SectorController extends BaseController
                 'error' => $e->getMessage()
             ]);
         }
-    }    
-
+    } 
+      
     /**
      * Show a single sector
      *
@@ -125,7 +125,13 @@ class SectorController extends BaseController
         }
         
         try {
+            // Debug - vérifier l'ID du secteur
+            error_log("Affichage du secteur: " . $id);
+            
             $sector = $this->sectorService->getSectorById((int) $id);
+            
+            // Debug - vérifier si le secteur est trouvé
+            error_log("Secteur trouvé: " . ($sector ? 'OUI' : 'NON'));
             
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
@@ -136,11 +142,16 @@ class SectorController extends BaseController
             $exposures = $this->sectorService->getSectorExposures((int) $id);
             $routes = $this->sectorService->getSectorRoutes((int) $id);
             $media = $this->sectorService->getSectorMedia((int) $id);
-            $months = $this->sectorService->getSectorMonths((int) $id);
-            $nearbySectors = $this->sectorService->getNearbySectors((int) $id, 10.0, 3);
             
-            // Get stats
-            $stats = Sector::getStats((int) $id);
+            // Utilisons Database directement ici au lieu de Sector::getStats
+            $db = \TopoclimbCH\Core\Database::getInstance();
+            $stats = [
+                'routes_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1", [$id])['count'] ?? 0),
+                'media_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", [$id])['count'] ?? 0)
+            ];
+            
+            // Debug - toutes les données sont prêtes
+            error_log("Données prêtes pour le rendu");
             
             return $this->render('sectors/show', [
                 'title' => $sector['name'],
@@ -148,11 +159,11 @@ class SectorController extends BaseController
                 'exposures' => $exposures,
                 'media' => $media,
                 'routes' => $routes,
-                'months' => $months,
-                'nearbySectors' => $nearbySectors,
                 'stats' => $stats
             ]);
         } catch (\Exception $e) {
+            // Debug - capturer et journaliser les exceptions
+            error_log("Exception dans SectorController::show: " . $e->getMessage());
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
             return $this->redirect('/sectors');
         }
