@@ -146,11 +146,14 @@ class AuthController extends BaseController
         }
         
         // Vérification des conflits d'email/username
-        if (User::where('mail', $data['email'])->first()) {
+        // Utiliser directement une requête SQL pour éviter les problèmes avec Model::where()
+        $emailExists = $this->db->query("SELECT COUNT(*) as count FROM users WHERE mail = ?", [$data['email']])->fetch();
+        if ($emailExists && $emailExists['count'] > 0) {
             $errors = $this->validationService->addError($errors, 'email', 'Cet email est déjà utilisé');
         }
         
-        if (User::where('username', $data['username'])->first()) {
+        $usernameExists = $this->db->query("SELECT COUNT(*) as count FROM users WHERE username = ?", [$data['username']])->fetch();
+        if ($usernameExists && $usernameExists['count'] > 0) {
             $errors = $this->validationService->addError($errors, 'username', 'Ce nom d\'utilisateur est déjà utilisé');
         }
         
