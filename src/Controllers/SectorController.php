@@ -37,27 +37,36 @@ class SectorController extends BaseController
      */
     public function index(Request $request): Response
     {
-        $regionId = $request->query->get('region_id');
+        // Créer le filtre à partir des paramètres de requête
+        $filter = new \TopoclimbCH\Core\Filtering\SectorFilter($request->query->all());
         
-        if ($regionId) {
-            $sectors = $this->sectorService->getSectorsByRegion((int) $regionId);
-            $title = 'Secteurs par région';
-        } else {
-            $sectors = $this->sectorService->getAllSectors();
-            $title = 'Tous les secteurs';
-        }
+        // Récupérer la page courante
+        $page = (int) $request->query->get('page', 1);
+        $perPage = (int) $request->query->get('per_page', 20);
         
-        // Récupérer toutes les régions pour le filtre
+        // Paginer les résultats filtrés
+        $paginatedSectors = \TopoclimbCH\Models\Sector::filterAndPaginate(
+            $filter,
+            $page,
+            $perPage,
+            'name',
+            'ASC'
+        );
+        
+        // Récupérer les données pour les filtres
         $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+        $exposures = \TopoclimbCH\Models\Exposure::getAllSorted();
+        $months = \TopoclimbCH\Models\Month::getAllSorted();
         
         return $this->render('sectors/index', [
-            'title' => $title,
-            'sectors' => $sectors,
+            'sectors' => $paginatedSectors,
+            'filter' => $filter,
             'regions' => $regions,
-            'currentRegionId' => $regionId
+            'exposures' => $exposures,
+            'months' => $months,
+            'currentUrl' => $request->getPathInfo()
         ]);
-    }
-    
+    }    
     /**
      * Show a single sector
      */

@@ -68,21 +68,33 @@ class RouteController extends BaseController
      */
     public function index(Request $request): Response
     {
-        // Récupère les paramètres de filtrage
-        $filters = $request->query->all();
+        // Créer le filtre à partir des paramètres de requête
+        $filter = new \TopoclimbCH\Core\Filtering\RouteFilter($request->query->all());
+        
+        // Récupérer la page courante
         $page = (int) $request->query->get('page', 1);
         $perPage = (int) $request->query->get('per_page', 30);
         
-        // Récupère les secteurs pour le filtre
-        $sectors = $this->sectorService->getAllSectors();
+        // Paginer les résultats filtrés
+        $paginatedRoutes = \TopoclimbCH\Models\Route::filterAndPaginate(
+            $filter,
+            $page,
+            $perPage,
+            'name',
+            'ASC'
+        );
+
+        // Récupérer les données pour les filtres
+        $sectors = \TopoclimbCH\Models\Sector::active();
+        $diffSystems = \TopoclimbCH\Models\DifficultySystem::getActiveSystems();
         
-        // Récupère les voies filtrées et paginées
-        $routes = $this->routeService->getPaginatedRoutes($filters, $page, $perPage);
         
         return $this->render('routes/index', [
-            'routes' => $routes,
+            'routes' => $paginatedRoutes,
+            'filter' => $filter,
             'sectors' => $sectors,
-            'filters' => $filters
+            'diffSystems' => $diffSystems,
+            'currentUrl' => $request->getPathInfo()
         ]);
     }
     
