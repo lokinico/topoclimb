@@ -55,22 +55,25 @@ class Auth
      */
     public function attempt(string $username, string $password, bool $remember = false): bool
     {
-        // Recherche par username
-        $users = User::where(['username' => $username]);
-        $user = !empty($users) ? $users[0] : null;
+        // Recherche directement avec un query SQL qui correspond mieux à votre BDD
+        $query = "SELECT * FROM users WHERE username = ? OR mail = ? LIMIT 1";
+        $result = $this->db->query($query, [$username, $username])->fetch();
         
-        // Si pas trouvé, essayer par email
-        if (!$user) {
-            $users = User::where(['mail' => $username]);
-            $user = !empty($users) ? $users[0] : null;
-        }
-        
-        if (!$user) {
+        if (!$result) {
             return false;
         }
         
-        // Vérifie le mot de passe
-        if (!password_verify($password, $user->password)) {
+        // Créer l'objet User à partir du résultat
+        $user = new User($result);
+        
+        // Vérifier le mot de passe (s'assurer que $result['password'] existe)
+        if (!isset($result['password']) || empty($result['password'])) {
+            error_log("Mot de passe manquant pour l'utilisateur: $username");
+            return false;
+        }
+        
+        // Vérifier le mot de passe
+        if (!password_verify($password, $result['password'])) {
             return false;
         }
         
@@ -193,7 +196,14 @@ class Auth
         $userId = $this->session->get('auth_user_id');
         
         if ($userId) {
-            $this->user = User::find($userId);
+            // Requête directe pour éviter les problèmes avec la classe Model
+            $query = "SELECT * FROM users WHERE id = ? LIMIT 1";
+            $result = $this->db->query($query, [$userId])->fetch();
+            
+            if ($result) {
+                $this->user = new User($result);
+            }
+            
             return;
         }
         
@@ -203,9 +213,12 @@ class Auth
             $userId = $this->getUserIdFromRememberToken($token);
             
             if ($userId) {
-                $user = User::find($userId);
+                // Requête directe pour éviter les problèmes avec la classe Model
+                $query = "SELECT * FROM users WHERE id = ? LIMIT 1";
+                $result = $this->db->query($query, [$userId])->fetch();
                 
-                if ($user) {
+                if ($result) {
+                    $user = new User($result);
                     $this->login($user);
                 }
             }
