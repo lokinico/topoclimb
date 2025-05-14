@@ -711,4 +711,44 @@ abstract class Model
         }
     }
 
+
+    /**
+     * Filtrer les résultats avec un objet Filter
+     *
+     * @param Filter $filter Filtre à appliquer
+     * @param string|null $orderBy Colonne de tri
+     * @param string $direction Direction de tri (ASC/DESC)
+     * @return array Résultats filtrés
+     */
+    public static function filter(\TopoclimbCH\Core\Filtering\Filter $filter, ?string $orderBy = null, string $direction = 'ASC'): array
+    {
+        $conditions = $filter->apply([]);
+        $results = static::where($conditions, $orderBy, $direction);
+        
+        // Appliquer les filtres supplémentaires qui nécessitent un post-traitement
+        return $filter->filterResults($results);
+    }
+
+    /**
+     * Paginer les résultats filtrés
+     *
+     * @param Filter $filter Filtre à appliquer
+     * @param int $page Page courante
+     * @param int $perPage Nombre d'éléments par page
+     * @param string|null $orderBy Colonne de tri
+     * @param string $direction Direction de tri (ASC/DESC)
+     * @return \TopoclimbCH\Core\Pagination\Paginator Résultats paginés
+     */
+    public static function filterAndPaginate(\TopoclimbCH\Core\Filtering\Filter $filter, int $page = 1, int $perPage = 15, ?string $orderBy = null, string $direction = 'ASC'): \TopoclimbCH\Core\Pagination\Paginator
+    {
+        $results = static::filter($filter, $orderBy, $direction);
+        
+        return \TopoclimbCH\Core\Pagination\Paginator::paginate(
+            $results,
+            $page,
+            $perPage,
+            $filter->getParams()
+        );
+    }
+
 }
