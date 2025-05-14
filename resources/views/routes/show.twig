@@ -1,0 +1,306 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ route.name }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="breadcrumbs mb-3">
+                <a href="{{ url('/') }}">Accueil</a> &raquo;
+                <a href="{{ url('/routes') }}">Voies</a> &raquo;
+                {% if route.sector %}
+                    <a href="{{ url('/sectors/' ~ route.sector.id) }}">{{ route.sector.name }}</a> &raquo;
+                {% endif %}
+                <span>{{ route.name }}</span>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h1 class="h3 mb-0">{{ route.name }}</h1>
+                        
+                        <div class="route-actions">
+                            <a href="{{ url('/routes/' ~ route.id ~ '/edit') }}" class="btn btn-sm btn-secondary">
+                                <i class="icon-edit"></i> Modifier
+                            </a>
+                            
+                            {% if auth() %}
+                                <a href="{{ url('/routes/' ~ route.id ~ '/log-ascent') }}" class="btn btn-sm btn-success">
+                                    <i class="icon-plus"></i> Enregistrer une ascension
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h2 class="h4">Caractéristiques</h2>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <th>Secteur</th>
+                                        <td>
+                                            {% if route.sector %}
+                                                <a href="{{ url('/sectors/' ~ route.sector.id) }}">{{ route.sector.name }}</a>
+                                            {% else %}
+                                                Non spécifié
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Difficulté</th>
+                                        <td>{{ route.difficulty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Style</th>
+                                        <td>{{ route.styleFormatted }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Beauté</th>
+                                        <td>{{ route.beautyStars|raw }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Longueur</th>
+                                        <td>{{ route.lengthFormatted }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Équipement</th>
+                                        <td>{{ route.equipmentFormatted }}</td>
+                                    </tr>
+                                    {% if route.rappel %}
+                                        <tr>
+                                            <th>Rappel</th>
+                                            <td>{{ route.rappel }}</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            {% if route.comment %}
+                                <h2 class="h4">Description</h2>
+                                <div class="route-description">
+                                    {{ route.comment|nl2br }}
+                                </div>
+                            {% endif %}
+                            
+                            {% if similarRoutes and similarRoutes|length > 0 %}
+                                <h2 class="h4 mt-4">Voies similaires</h2>
+                                <ul class="list-group">
+                                    {% for similarRoute in similarRoutes %}
+                                        <li class="list-group-item">
+                                            <a href="{{ url('/routes/' ~ similarRoute.id) }}">
+                                                {{ similarRoute.name }} - {{ similarRoute.difficulty }}
+                                            </a>
+                                            {% if similarRoute.beautyStars %}
+                                                <span class="float-end">{{ similarRoute.beautyStars|raw }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if ascentStats %}
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h2 class="h4">Statistiques d'ascension</h2>
+                                <div class="ascent-stats">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <div class="stat-card">
+                                                <div class="stat-value">{{ ascentStats.total_ascents ?? 0 }}</div>
+                                                <div class="stat-label">Ascensions</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="stat-card">
+                                                <div class="stat-value">
+                                                    {{ ascentStats.average_rating|default(0)|number_format(1) }}
+                                                </div>
+                                                <div class="stat-label">Note moyenne</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="stat-card">
+                                                <div class="stat-value">
+                                                    {{ (ascentStats.flash_percent|default(0) * 100)|round }}%
+                                                </div>
+                                                <div class="stat-label">Flash/À vue</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="stat-card">
+                                                <div class="stat-value">
+                                                    {{ ascentStats.average_attempts|default(0)|round(1) }}
+                                                </div>
+                                                <div class="stat-label">Tentatives moy.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if media and media|length > 0 %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h2 class="h4 mb-0">Images</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="route-gallery">
+                            <div class="row g-3">
+                                {% for item in media %}
+                                    <div class="col-md-4">
+                                        <a href="{{ url('/uploads/' ~ item.file_path) }}" class="gallery-item">
+                                            <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="{{ item.title }}" class="img-fluid">
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if auth() and ascents and ascents|length > 0 %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="h4 mb-0">Mes ascensions</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Tentatives</th>
+                                        <th>Note</th>
+                                        <th>Commentaire</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ascent in ascents %}
+                                        <tr>
+                                            <td>{{ ascent.formattedAscentDate }}</td>
+                                            <td>{{ ascent.ascentTypeLabel }}</td>
+                                            <td>{{ ascent.attempts ?? 1 }}</td>
+                                            <td>
+                                                {% if ascent.quality_rating %}
+                                                    {% for i in 1..5 %}
+                                                        {% if i <= ascent.quality_rating %}
+                                                            <i class="icon-star"></i>
+                                                        {% else %}
+                                                            <i class="icon-star-o"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ ascent.comment|slice(0, 50) ~ (ascent.comment|length > 50 ? '...' : '') }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            {% if route.sector and route.sector.coordinates_lat and route.sector.coordinates_lng %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h2 class="h4 mb-0">Localisation</h2>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="map" style="height: 300px;"></div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if recentComments and recentComments|length > 0 %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h2 class="h4 mb-0">Commentaires récents</h2>
+                    </div>
+                    <div class="card-body">
+                        {% for comment in recentComments %}
+                            <div class="comment">
+                                <div class="comment-meta">
+                                    <strong>{{ comment.user.username }}</strong>
+                                    <small class="text-muted">{{ comment.created_at|date('d/m/Y') }}</small>
+                                </div>
+                                <div class="comment-body">
+                                    {{ comment.comment|nl2br }}
+                                </div>
+                            </div>
+                            {% if not loop.last %}
+                                <hr>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <a href="{{ url('/routes/' ~ route.id ~ '/comments') }}" class="btn btn-sm btn-outline-primary mt-3">
+                            Voir tous les commentaires
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if auth() %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="h4 mb-0">Ajouter un commentaire</h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url('/routes/' ~ route.id ~ '/comments') }}" method="post">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            
+                            <div class="mb-3">
+                                <textarea name="comment" class="form-control" rows="3" placeholder="Votre commentaire..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Commenter</button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {% if route.sector and route.sector.coordinates_lat and route.sector.coordinates_lng %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const map = L.map('map').setView([
+                    {{ route.sector.coordinates_lat }}, 
+                    {{ route.sector.coordinates_lng }}
+                ], 15);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+                
+                L.marker([
+                    {{ route.sector.coordinates_lat }}, 
+                    {{ route.sector.coordinates_lng }}
+                ])
+                .addTo(map)
+                .bindPopup('{{ route.sector.name|e('js') }}');
+            });
+        </script>
+    {% endif %}
+{% endblock %}
