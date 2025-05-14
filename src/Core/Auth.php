@@ -60,11 +60,9 @@ class Auth
         $result = $this->db->query($query, [$username, $username])->fetch();
         
         if (!$result) {
+            error_log("Utilisateur non trouvé: $username");
             return false;
         }
-        
-        // Créer l'objet User à partir du résultat
-        $user = new User($result);
         
         // Vérifier le mot de passe (s'assurer que $result['password'] existe)
         if (!isset($result['password']) || empty($result['password'])) {
@@ -72,14 +70,39 @@ class Auth
             return false;
         }
         
-        // Vérifier le mot de passe
-        if (!password_verify($password, $result['password'])) {
+        // AJOUTEZ UN LOG DE DÉBOGAGE ICI
+        error_log("Vérification du mot de passe pour: $username");
+        
+        // Vérifier le mot de passe avec différentes méthodes si nécessaire
+        $passwordVerified = false;
+        
+        // Méthode 1: Vérification standard avec password_verify
+        if (password_verify($password, $result['password'])) {
+            $passwordVerified = true;
+        }
+        // Méthode 2: Pour les mots de passe non hachés ou hachés différemment
+        // Uniquement pour la migration, à retirer ensuite
+        else if ($password === $result['password']) {
+            $passwordVerified = true;
+            // Mettre à jour le hash du mot de passe pour les futures connexions
+            $this->db->query(
+                "UPDATE users SET password = ? WHERE id = ?",
+                [password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]), $result['id']]
+            );
+        }
+        
+        if (!$passwordVerified) {
+            error_log("Échec de vérification du mot de passe pour: $username");
             return false;
         }
+        
+        // Créer l'objet User à partir du résultat
+        $user = new User($result);
         
         // Connecte l'utilisateur
         $this->login($user, $remember);
         
+        error_log("Connexion réussie pour: $username");
         return true;
     }
     
