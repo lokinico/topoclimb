@@ -1,19 +1,20 @@
 <?php
+// src/Models/UserAscent.php
 
 namespace TopoclimbCH\Models;
 
 use TopoclimbCH\Core\Model;
-use DateTime;
+use \DateTime;
 
 class UserAscent extends Model
 {
     /**
-     * Table associée au modèle
+     * Nom de la table en base de données
      */
-    protected string $table = 'user_ascents';
-
+    protected static string $table = 'user_ascents';
+    
     /**
-     * Champs remplissables en masse
+     * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
         'user_id', 'route_id', 'topo_item', 'route_name', 'difficulty',
@@ -21,7 +22,7 @@ class UserAscent extends Model
         'quality_rating', 'difficulty_comment', 'attempts', 'comment',
         'favorite', 'style', 'tags'
     ];
-
+    
     /**
      * Règles de validation
      */
@@ -32,9 +33,10 @@ class UserAscent extends Model
         'difficulty' => 'required|max:50',
         'ascent_type' => 'required|max:50',
         'ascent_date' => 'required|date',
-        'attempts' => 'numeric'
+        'attempts' => 'numeric',
+        'favorite' => 'in:0,1'
     ];
-
+    
     /**
      * Liste des types d'ascension possibles
      */
@@ -46,7 +48,7 @@ class UserAscent extends Model
         'attempt' => 'Essai',
         'repeat' => 'Répétition'
     ];
-
+    
     /**
      * Liste des types d'escalade possibles
      */
@@ -59,23 +61,23 @@ class UserAscent extends Model
         'ice' => 'Glace',
         'mixed' => 'Mixte'
     ];
-
+    
     /**
      * Relation avec l'utilisateur
      */
-    public function user()
+    public function user(): ?User
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
-
+    
     /**
      * Relation avec la voie
      */
-    public function route()
+    public function route(): ?Route
     {
-        return $this->belongsTo(Route::class, 'route_id');
+        return $this->belongsTo(Route::class);
     }
-
+    
     /**
      * Obtenir le libellé du type d'ascension
      */
@@ -83,7 +85,7 @@ class UserAscent extends Model
     {
         return self::ASCENT_TYPES[$this->ascent_type] ?? $this->ascent_type;
     }
-
+    
     /**
      * Obtenir le libellé du type d'escalade
      */
@@ -91,15 +93,19 @@ class UserAscent extends Model
     {
         return self::CLIMBING_TYPES[$this->climbing_type] ?? $this->climbing_type;
     }
-
+    
     /**
-     * Obtenir la date d'ascension formatée
+     * Accesseur pour la date d'ascension formatée
      */
-    public function getFormattedAscentDate(string $format = 'd/m/Y'): string
+    public function getFormattedAscentDateAttribute(): string
     {
-        return (new DateTime($this->ascent_date))->format($format);
+        if (!isset($this->attributes['ascent_date'])) {
+            return '';
+        }
+        
+        return (new DateTime($this->attributes['ascent_date']))->format('d/m/Y');
     }
-
+    
     /**
      * Vérifie si c'est un "à vue" ou un "flash"
      */
@@ -107,96 +113,120 @@ class UserAscent extends Model
     {
         return in_array($this->ascent_type, ['onsight', 'flash']);
     }
-
+    
     /**
      * Calculer les statistiques d'ascension pour un utilisateur
      */
     public static function calculateUserStats(int $userId): array
     {
-        $db = self::getDb();
+        $conn = static::getConnection();
         
-        // Nombre total d'ascensions
-        $totalAscents = $db->fetchOne(
-            "SELECT COUNT(*) as count FROM user_ascents WHERE user_id = ?",
-            [$userId]
-        )['count'] ?? 0;
-        
-        // Nombre d'ascensions par type
-        $ascentsByType = $db->fetchAll(
-            "SELECT ascent_type, COUNT(*) as count 
-             FROM user_ascents 
-             WHERE user_id = ? 
-             GROUP BY ascent_type",
-            [$userId]
-        );
-        
-        // Ascension la plus difficile
-        $hardestAscent = $db->fetchOne(
-            "SELECT ua.*, r.difficulty_system_id 
-             FROM user_ascents ua
-             JOIN climbing_routes r ON ua.route_id = r.id
-             JOIN climbing_difficulty_grades dg ON r.difficulty = dg.value AND r.difficulty_system_id = dg.system_id
-             WHERE ua.user_id = ?
-             ORDER BY dg.numerical_value DESC
-             LIMIT 1",
-            [$userId]
-        );
-        
-        // Jours d'escalade (nombre de jours distincts avec au moins une ascension)
-        $climbingDays = $db->fetchOne(
-            "SELECT COUNT(DISTINCT ascent_date) as days FROM user_ascents WHERE user_id = ?",
-            [$userId]
-        )['days'] ?? 0;
-        
-        return [
-            'total_ascents' => $totalAscents,
-            'ascents_by_type' => $ascentsByType,
-            'hardest_ascent' => $hardestAscent ? self::find($hardestAscent['id']) : null,
-            'climbing_days' => $climbingDays,
-        ];
+        try {
+            // Nombre total d'ascensions
+            $stmt = $conn->prepare("SELECT COUNT(*) as count FROM user_ascents WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            $totalAscents = $stmt->fetchColumn();
+            
+            // Nombre d'ascensions par type
+            $stmt = $conn->prepare("SELECT ascent_type, COUNT(*) as count 
+                                    FROM user_ascents 
+                                    WHERE user_id = ? 
+                                    GROUP BY ascent_type");
+            $stmt->execute([$userId]);
+            $ascentsByType = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            // Ascension la plus difficile
+            $stmt = $conn->prepare("SELECT ua.*, r.difficulty_system_id 
+                                    FROM user_ascents ua
+                                    JOIN climbing_routes r ON ua.route_id = r.id
+                                    JOIN climbing_difficulty_grades dg ON r.difficulty = dg.value AND r.difficulty_system_id = dg.system_id
+                                    WHERE ua.user_id = ?
+                                    ORDER BY dg.numerical_value DESC
+                                    LIMIT 1");
+            $stmt->execute([$userId]);
+            $hardestAscentData = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $hardestAscent = $hardestAscentData ? static::find($hardestAscentData['id']) : null;
+            
+            // Jours d'escalade (nombre de jours distincts avec au moins une ascension)
+            $stmt = $conn->prepare("SELECT COUNT(DISTINCT ascent_date) as days FROM user_ascents WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            $climbingDays = $stmt->fetchColumn();
+            
+            return [
+                'total_ascents' => $totalAscents,
+                'ascents_by_type' => $ascentsByType,
+                'hardest_ascent' => $hardestAscent,
+                'climbing_days' => $climbingDays,
+            ];
+        } catch (\PDOException $e) {
+            throw new ModelException("Error calculating user stats: " . $e->getMessage());
+        }
     }
-
+    
     /**
      * Trouver toutes les voies grimpées par un utilisateur
      */
     public static function findByUser(int $userId, array $options = []): array
     {
-        $query = "SELECT * FROM user_ascents WHERE user_id = ?";
-        $params = [$userId];
+        $table = static::getTable();
+        $query = "SELECT * FROM {$table} WHERE user_id = :userId";
+        $params = [':userId' => $userId];
         
         // Filtrage par type d'ascension
         if (!empty($options['ascent_type'])) {
-            $query .= " AND ascent_type = ?";
-            $params[] = $options['ascent_type'];
+            $query .= " AND ascent_type = :ascentType";
+            $params[':ascentType'] = $options['ascent_type'];
         }
         
         // Filtrage par date
         if (!empty($options['date_from'])) {
-            $query .= " AND ascent_date >= ?";
-            $params[] = $options['date_from'];
+            $query .= " AND ascent_date >= :dateFrom";
+            $params[':dateFrom'] = $options['date_from'];
         }
         
         if (!empty($options['date_to'])) {
-            $query .= " AND ascent_date <= ?";
-            $params[] = $options['date_to'];
+            $query .= " AND ascent_date <= :dateTo";
+            $params[':dateTo'] = $options['date_to'];
         }
         
         // Tri
-        $query .= " ORDER BY " . ($options['sort_by'] ?? 'ascent_date') . " " . 
-                  ($options['sort_dir'] ?? 'DESC');
+        $sortBy = $options['sort_by'] ?? 'ascent_date';
+        $sortDir = $options['sort_dir'] ?? 'DESC';
+        $query .= " ORDER BY {$sortBy} {$sortDir}";
         
         // Pagination
         if (!empty($options['limit'])) {
-            $query .= " LIMIT " . (int)$options['limit'];
+            $query .= " LIMIT :limit";
+            $params[':limit'] = (int)$options['limit'];
             
             if (!empty($options['offset'])) {
-                $query .= " OFFSET " . (int)$options['offset'];
+                $query .= " OFFSET :offset";
+                $params[':offset'] = (int)$options['offset'];
             }
         }
         
-        return array_map(
-            fn($data) => self::hydrate($data),
-            self::getDb()->fetchAll($query, $params)
-        );
+        try {
+            $conn = static::getConnection();
+            $stmt = $conn->prepare($query);
+            
+            // Lier les paramètres
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value, 
+                    is_int($value) ? \PDO::PARAM_INT : \PDO::PARAM_STR
+                );
+            }
+            
+            $stmt->execute();
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            $models = [];
+            foreach ($data as $item) {
+                $models[] = new static($item);
+            }
+            
+            return $models;
+        } catch (\PDOException $e) {
+            throw new ModelException("Error finding ascents: " . $e->getMessage());
+        }
     }
 }
