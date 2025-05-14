@@ -1,3 +1,14 @@
+{% if app.debug %}
+<!-- 
+Debug - Secteur: 
+ID: {{ sector.id }}
+Nom: {{ sector.name }}
+Exposures: {{ exposures|length }}
+Routes: {{ routes|length }}
+Media: {{ media|length }}
+-->
+{% endif %}
+
 {% extends "layouts/app.twig" %}
 
 {% block title %}{{ sector.name }} - TopoclimbCH{% endblock %}
