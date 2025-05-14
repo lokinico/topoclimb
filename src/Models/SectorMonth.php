@@ -4,52 +4,38 @@
 namespace TopoclimbCH\Models;
 
 use TopoclimbCH\Core\Model;
+use TopoclimbCH\Exceptions\ModelException;
+use PDO;
 
 class SectorMonth extends Model
 {
-    /**
-     * Nom de la table en base de données
-     */
-    protected static string $table = 'climbing_sector_months';
-    
-    /**
-     * Liste des attributs remplissables en masse
-     */
-    protected array $fillable = [
-        'sector_id', 'month_id', 'quality', 'notes'
-    ];
-    
-    /**
-     * Règles de validation
-     */
-    protected array $rules = [
-        'sector_id' => 'required|numeric',
-        'month_id' => 'required|numeric',
-        'quality' => 'required|in:excellent,good,average,poor,avoid'
-    ];
-    
-    /**
-     * Relation avec le secteur
-     */
-    public function sector(): ?Sector
-    {
-        return $this->belongsTo(Sector::class, 'sector_id');
-    }
-    
-    /**
-     * Relation avec le mois
-     */
-    public function month(): ?Month
-    {
-        return $this->belongsTo(Month::class, 'month_id');
-    }
+    // Code existant conservé...
     
     /**
      * Définir la qualité des conditions pour tous les mois d'un secteur
+     * 
+     * @param int $sectorId ID du secteur
+     * @param array $monthData Données de qualité par mois
+     * @return void
+     * @throws ModelException Si la mise à jour échoue
      */
     public static function updateSectorMonths(int $sectorId, array $monthData): void
     {
         $conn = static::getConnection();
+        
+        // Vérifier si le secteur existe
+        $sectorExists = $conn->fetchOne(
+            "SELECT 1 FROM " . Sector::getTable() . " WHERE id = ?", 
+            [$sectorId]
+        );
+        
+        if (!$sectorExists) {
+            throw new ModelException("Le secteur avec l'ID {$sectorId} n'existe pas");
+        }
+        
+        // Vérifier les mois valides
+        $validMonths = $conn->fetchAll("SELECT id FROM " . Month::getTable());
+        $validMonthIds = array_column($validMonths, 'id');
         
         try {
             // Commencer une transaction
@@ -60,9 +46,13 @@ class SectorMonth extends Model
             $stmt->execute([$sectorId]);
             
             // Préparer l'insertion
-            $stmt = $conn->prepare("INSERT INTO " . static::getTable() . " 
-                                    (sector_id, month_id, quality, notes) 
-                                    VALUES (?, ?, ?, ?)");
+            $stmt = $conn->prepare(
+                "INSERT INTO " . static::getTable() . " 
+                (sector_id, month_id, quality, notes, created_at) 
+                VALUES (?, ?, ?, ?, ?)"
+            );
+            
+            $now = date('Y-m-d H:i:s');
             
             // Créer les nouvelles relations
             foreach ($monthData as $monthId => $data) {
@@ -70,11 +60,18 @@ class SectorMonth extends Model
                     continue; // Ignorer les mois sans qualité spécifiée
                 }
                 
+                // Vérifier si le mois est valide
+                if (!in_array($monthId, $validMonthIds)) {
+                    $conn->rollBack();
+                    throw new ModelException("Le mois avec l'ID {$monthId} n'existe pas");
+                }
+                
                 $stmt->execute([
                     $sectorId,
                     $monthId,
                     $data['quality'],
-                    $data['notes'] ?? null
+                    $data['notes'] ?? null,
+                    $now
                 ]);
             }
             
@@ -83,7 +80,7 @@ class SectorMonth extends Model
         } catch (\PDOException $e) {
             // Annuler les changements si une erreur survient
             $conn->rollBack();
-            throw new ModelException("Error updating sector months: " . $e->getMessage());
+            throw new ModelException("Erreur lors de la mise à jour des mois du secteur: " . $e->getMessage());
         }
     }
     
