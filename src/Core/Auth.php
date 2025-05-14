@@ -64,27 +64,46 @@ class Auth
             return false;
         }
         
+        // Vérifier si les champs nécessaires existent
+        if (!isset($result['id']) || !isset($result['password'])) {
+            error_log("Données utilisateur incomplètes pour: $username");
+            error_log("Champs disponibles: " . json_encode(array_keys($result)));
+            return false;
+        }
+        
         // Vérifier le mot de passe (s'assurer que $result['password'] existe)
-        if (!isset($result['password']) || empty($result['password'])) {
+        if (empty($result['password'])) {
             error_log("Mot de passe manquant pour l'utilisateur: $username");
             return false;
         }
         
-        // AJOUTEZ UN LOG DE DÉBOGAGE ICI
-        error_log("Vérification du mot de passe pour: $username");
+        // Ajouter un log pour afficher le format du mot de passe stocké
+        error_log("Format du mot de passe stocké: " . substr($result['password'], 0, 13) . "...");
         
-        // Vérifier le mot de passe avec différentes méthodes si nécessaire
+        // Vérifier le mot de passe avec différentes méthodes
         $passwordVerified = false;
         
         // Méthode 1: Vérification standard avec password_verify
         if (password_verify($password, $result['password'])) {
+            error_log("Mot de passe vérifié avec password_verify pour: $username");
             $passwordVerified = true;
         }
         // Méthode 2: Pour les mots de passe non hachés ou hachés différemment
         // Uniquement pour la migration, à retirer ensuite
         else if ($password === $result['password']) {
+            error_log("Mot de passe vérifié avec comparaison directe pour: $username");
             $passwordVerified = true;
             // Mettre à jour le hash du mot de passe pour les futures connexions
+            $this->db->query(
+                "UPDATE users SET password = ? WHERE id = ?",
+                [password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]), $result['id']]
+            );
+        }
+        // Méthode 3: Essayer MD5 pour la compatibilité avec d'anciens systèmes
+        else if (md5($password) === $result['password']) {
+            error_log("Mot de passe vérifié avec MD5 pour: $username");
+            $passwordVerified = true;
+            // Mettre à jour le hash
             $this->db->query(
                 "UPDATE users SET password = ? WHERE id = ?",
                 [password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]), $result['id']]
@@ -97,13 +116,24 @@ class Auth
         }
         
         // Créer l'objet User à partir du résultat
-        $user = new User($result);
-        
-        // Connecte l'utilisateur
-        $this->login($user, $remember);
-        
-        error_log("Connexion réussie pour: $username");
-        return true;
+        error_log("Création de l'objet User avec les données: " . json_encode(array_keys($result)));
+        try {
+            $user = new User($result);
+            
+            // Vérifier que l'objet User a bien été créé
+            if (!$user || !isset($user->id)) {
+                error_log("Échec de création de l'objet User pour: $username");
+                return false;
+            }
+            
+            // Connecte l'utilisateur
+            $this->login($user, $remember);
+            error_log("Connexion réussie pour: $username");
+            return true;
+        } catch (\Exception $e) {
+            error_log("Exception lors de la création de l'utilisateur: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**
