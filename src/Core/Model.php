@@ -320,15 +320,23 @@ abstract class Model
      */
     public static function where($criteria, $value = null, string $orderBy = null, string $direction = 'ASC'): array
     {
-        // Convertir les paramètres de style Eloquent en tableau de critères
+        $argCount = func_num_args();
+        
+        // Si criteria n'est pas un tableau, c'est une colonne et value est sa valeur
         if (!is_array($criteria)) {
-            $criteria = [$criteria => $value];
-            // Remplacer les arguments de tri si nécessaire
-            if (func_num_args() > 2 && is_string($value)) {
+            // Si on a plus de 2 arguments et que value est une chaîne, 
+            // alors c'est probablement la colonne de tri
+            if ($argCount > 2 && is_string($value)) {
+                // Dans ce cas, value devient orderBy, et le 3e argument devient direction
                 $orderBy = $value;
-                if (func_num_args() > 3) {
+                if ($argCount > 3) {
                     $direction = func_get_arg(2);
                 }
+                // Définir la valeur pour le critère (qui est null dans ce cas)
+                $criteria = [$criteria => func_get_arg(3) ?? null];
+            } else {
+                // Cas standard: criteria est une colonne, value est sa valeur
+                $criteria = [$criteria => $value];
             }
         }
         
@@ -343,6 +351,9 @@ abstract class Model
         }
         
         $whereClause = !empty($wheres) ? 'WHERE ' . implode(' AND ', $wheres) : '';
+        
+        // Normalisation de direction pour s'assurer qu'elle est soit "ASC" soit "DESC"
+        $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
         $orderClause = $orderBy ? "ORDER BY {$orderBy} {$direction}" : '';
         
         $sql = "SELECT * FROM {$table} {$whereClause} {$orderClause}";
@@ -368,7 +379,7 @@ abstract class Model
      */
     public static function all(string $orderBy = null, string $direction = 'ASC'): array
     {
-        return static::where([], $orderBy, $direction);
+        return static::where([], null, $orderBy, $direction);
     }
     
     /**
@@ -775,10 +786,7 @@ abstract class Model
     public static function filter(\TopoclimbCH\Core\Filtering\Filter $filter, ?string $orderBy = null, string $direction = 'ASC'): array
     {
         $conditions = $filter->apply([]);
-        $results = static::where($conditions, $orderBy, $direction);
-        
-        // Appliquer les filtres supplémentaires qui nécessitent un post-traitement
-        return $filter->filterResults($results);
+        return static::where($conditions, null, $orderBy, $direction);
     }
 
     /**
@@ -802,5 +810,4 @@ abstract class Model
             $filter->getParams()
         );
     }
-
 }
