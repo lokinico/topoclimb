@@ -73,6 +73,9 @@ class AuthController extends BaseController
      * @param Request $request
      * @return Response
      */
+    /**
+     * Méthode login corrigée sans redéfinir createCsrfToken()
+     */
     public function login(Request $request): Response
     {
         // Vérification du token CSRF
@@ -90,7 +93,7 @@ class AuthController extends BaseController
             'password_length' => isset($credentials['password']) ? strlen($credentials['password']) : 0
         ]));
         
-        // Validation
+        // Le reste du code de login comme avant...
         $rules = [
             'email' => 'required',
             'password' => 'required'
@@ -109,7 +112,7 @@ class AuthController extends BaseController
         // Remember me
         $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
         
-        // Tentative de connexion avec logs supplémentaires
+        // Tentative de connexion
         $loginSuccess = $this->auth->attempt($credentials['email'], $credentials['password'], $remember);
         error_log('Résultat de la tentative de connexion: ' . ($loginSuccess ? 'succès' : 'échec'));
         
@@ -131,8 +134,11 @@ class AuthController extends BaseController
         return $this->redirect($intendedUrl);
     }
 
-    // Ajoutez cette méthode pour la validation du token CSRF
-    private function validateCsrfToken(?string $token): bool
+    /**
+     * Ajoutez uniquement cette méthode pour la validation du token CSRF
+     * Avec le même niveau d'accès que dans la classe parente
+     */
+    protected function validateCsrfToken(?string $token): bool
     {
         if (empty($token)) {
             return false;
@@ -146,6 +152,8 @@ class AuthController extends BaseController
         
         return hash_equals($storedToken, $token);
     }
+
+
 
     // Améliorez cette méthode pour la génération du token CSRF
     private function createCsrfToken(): string
