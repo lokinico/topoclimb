@@ -293,15 +293,18 @@ class Sector extends Model
         $allowedSortFields = ['name', 'altitude', 'access_time', 'created_at'];
         $sortBy = in_array($sortBy, $allowedSortFields) ? $sortBy : 'name';
         
+        // Obtenir l'instance de Database
+        $db = \TopoclimbCH\Core\Database::getInstance();
+        
         // Construire la requête de base pour le comptage
         $countSql = "SELECT COUNT(DISTINCT {$tablePrefix}.id) as total 
                     FROM " . static::$table . " {$tablePrefix}
                     {$joinClause}
                     {$whereClause}";
         
-        // Exécuter la requête de comptage
-        $countResult = self::getConnection()->fetchOne($countSql, $whereParams);
-        $total = (int) $countResult;
+        // Exécuter la requête de comptage en utilisant la méthode de Database
+        $countResult = $db->fetchOne($countSql, $whereParams);
+        $total = (int) ($countResult['total'] ?? 0);
         
         // Calculer l'offset pour la pagination
         $offset = ($page - 1) * $perPage;
@@ -316,8 +319,8 @@ class Sector extends Model
                 ORDER BY {$tablePrefix}.{$sortBy} {$sortDir}
                 LIMIT {$perPage} OFFSET {$offset}";
         
-        // Exécuter la requête principale
-        $items = self::getConnection()->fetchAll($sql, $whereParams);
+        // Exécuter la requête principale en utilisant la méthode de Database
+        $items = $db->fetchAll($sql, $whereParams);
         
         // Créer et retourner un objet Paginator
         return new \TopoclimbCH\Core\Pagination\Paginator(
