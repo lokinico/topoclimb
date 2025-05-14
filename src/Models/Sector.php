@@ -268,13 +268,18 @@ class Sector extends Model
         // Préfixe de table pour les secteurs
         $tablePrefix = 's';
         
+        // Obtenir l'instance de Database
+        $db = \TopoclimbCH\Core\Database::getInstance();
+        
         // Construire la clause WHERE à partir du filtre
         $filterResult = $filter->apply();
         $whereConditions = $filterResult['conditions'] ?? [];
         $whereParams = $filterResult['parameters'] ?? [];
         $joins = $filterResult['joins'] ?? [];
         
-        // Ajouter la condition 'active' par défaut
+        // Simplifier la condition d'active pour déboguer
+        // Note : nous gardons cette condition, mais vous pourriez la commenter temporairement
+        // pour voir si c'est elle qui cause le problème
         $whereConditions[] = "{$tablePrefix}.active = 1";
         
         // Construire la clause WHERE complète
@@ -293,8 +298,20 @@ class Sector extends Model
         $allowedSortFields = ['name', 'altitude', 'access_time', 'created_at'];
         $sortBy = in_array($sortBy, $allowedSortFields) ? $sortBy : 'name';
         
-        // Obtenir l'instance de Database
-        $db = \TopoclimbCH\Core\Database::getInstance();
+        // Vérification directe du nombre de secteurs dans la table
+        $checkSql = "SELECT COUNT(*) as count FROM " . static::$table;
+        $checkResult = $db->fetchOne($checkSql);
+        $totalInTable = (int) ($checkResult['count'] ?? 0);
+        
+        // Si aucun secteur dans la table, retourner un paginateur vide
+        if ($totalInTable === 0) {
+            return new \TopoclimbCH\Core\Pagination\Paginator(
+                [],
+                0,
+                $page,
+                $perPage
+            );
+        }
         
         // Construire la requête de base pour le comptage
         $countSql = "SELECT COUNT(DISTINCT {$tablePrefix}.id) as total 
@@ -302,24 +319,33 @@ class Sector extends Model
                     {$joinClause}
                     {$whereClause}";
         
-        // Exécuter la requête de comptage en utilisant la méthode de Database
+        // Exécuter la requête de comptage
         $countResult = $db->fetchOne($countSql, $whereParams);
         $total = (int) ($countResult['total'] ?? 0);
+        
+        // Si aucun résultat avec les filtres, retourner un paginateur vide
+        if ($total === 0) {
+            return new \TopoclimbCH\Core\Pagination\Paginator(
+                [],
+                0,
+                $page,
+                $perPage
+            );
+        }
         
         // Calculer l'offset pour la pagination
         $offset = ($page - 1) * $perPage;
         
-        // Construire la requête principale avec pagination
+        // Requête simplifiée pour tester
         $sql = "SELECT {$tablePrefix}.*, r.name as region_name 
                 FROM " . static::$table . " {$tablePrefix}
                 LEFT JOIN climbing_regions r ON {$tablePrefix}.region_id = r.id
                 {$joinClause}
                 {$whereClause}
-                GROUP BY {$tablePrefix}.id
                 ORDER BY {$tablePrefix}.{$sortBy} {$sortDir}
                 LIMIT {$perPage} OFFSET {$offset}";
         
-        // Exécuter la requête principale en utilisant la méthode de Database
+        // Exécuter la requête principale
         $items = $db->fetchAll($sql, $whereParams);
         
         // Créer et retourner un objet Paginator
