@@ -1,4 +1,5 @@
 <?php
+// src/Models/DifficultySystem.php
 
 namespace TopoclimbCH\Models;
 
@@ -8,53 +9,56 @@ use TopoclimbCH\Exceptions\ModelException;
 class DifficultySystem extends Model
 {
     /**
-     * Table associée au modèle
+     * Nom de la table en base de données
      */
-    protected string $table = 'climbing_difficulty_systems';
-
+    protected static string $table = 'climbing_difficulty_systems';
+    
     /**
-     * Champs remplissables en masse
+     * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
         'name', 'description', 'is_default'
     ];
-
+    
     /**
      * Règles de validation
      */
     protected array $rules = [
         'name' => 'required|max:50',
-        'is_default' => 'numeric|in:0,1'
+        'is_default' => 'in:0,1'
     ];
-
+    
     /**
-     * Récupérer tous les grades associés à ce système
+     * Relation avec les grades associés à ce système
      */
-    public function grades()
+    public function grades(): array
     {
         return $this->hasMany(DifficultyGrade::class, 'system_id');
     }
-
+    
     /**
      * Récupérer le grade par sa valeur
      */
-    public function getGradeByValue(string $value)
+    public function getGradeByValue(string $value): ?DifficultyGrade
     {
-        return $this->grades()->where('value', $value)->first();
+        return DifficultyGrade::findWhere([
+            'system_id' => $this->id, 
+            'value' => $value
+        ]);
     }
-
+    
     /**
      * Récupérer le système de difficulté par défaut
      */
-    public static function getDefaultSystem()
+    public static function getDefaultSystem(): ?DifficultySystem
     {
-        return static::where('is_default', 1)->first();
+        return static::findWhere(['is_default' => 1]);
     }
-
+    
     /**
-     * Récupérer tous les systèmes de difficulté actifs
+     * Récupérer tous les systèmes de difficulté
      */
-    public static function getActiveSystems()
+    public static function getActiveSystems(): array
     {
         return static::all();
     }
@@ -62,7 +66,7 @@ class DifficultySystem extends Model
     /**
      * Convertir une difficulté d'un système à l'autre
      */
-    public function convertGrade(string $value, DifficultySystem $toSystem)
+    public function convertGrade(string $value, DifficultySystem $toSystem): ?string
     {
         $fromGrade = $this->getGradeByValue($value);
         
@@ -70,6 +74,7 @@ class DifficultySystem extends Model
             throw new ModelException("Grade '$value' not found in system '{$this->name}'");
         }
         
-        return $fromGrade->convertTo($toSystem);
+        $convertedGrade = $fromGrade->convertTo($toSystem);
+        return $convertedGrade ? $convertedGrade->value : null;
     }
 }
