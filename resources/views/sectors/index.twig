@@ -19,58 +19,57 @@
     {{ sectorFilter.render(filter, regions, exposures, months, currentUrl) }}
     
     <div class="sectors-grid">
-        {% for sector in sectors.getItems() %}
-                        <div class="col-md-6 col-lg-4">
-                            <div class="sector-card" style="border-color: {{ sector.color }}">
-                                {# Ajoute ce bloc pour debug juste avant le lien #}
-                                <div style="font-size: 0.9em; color: #b00;">
-                                    ID secteur : {{ sector.id }}<br>
-                                    Lien généré : {{ url('/sectors/' ~ sector.id) }}
-                                </div>
+        {% if sectors.getItems()|length > 0 %}
+            {% for sector in sectors.getItems() %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="sector-card" style="border-color: {{ sector.color }}">
+                        {# Ajoute ce bloc pour debug juste avant le lien #}
+                        <div style="font-size: 0.9em; color: #b00;">
+                            ID secteur : {{ sector.id }}<br>
+                            Lien généré : {{ url('/sectors/' ~ sector.id) }}
+                        </div>
 
-                                <div class="sector-content">
-                                    <h3 class="sector-title">
-                                        <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a>
-                                    </h3>
-                                </div>
-                                
-                                <div class="sector-info">
-                                    <div class="info-item">
-                                        <span class="label">Région:</span>
-                                        <span class="value">{{ sector.region ? sector.region.name : 'Non spécifiée' }}</span>
-                                    </div>
-                                    
-                                    {% if sector.altitude %}
-                                        <div class="info-item">
-                                            <span class="label">Altitude:</span>
-                                            <span class="value">{{ sector.altitude }}m</span>
-                                        </div>
-                                    {% endif %}
-                                    
-                                    {% if sector.access_time %}
-                                        <div class="info-item">
-                                            <span class="label">Accès:</span>
-                                            <span class="value">{{ sector.accessTimeFormatted }}</span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                
-                                {% if sector.description %}
-                                    <div class="sector-description">
-                                        {{ sector.description|slice(0, 100) ~ (sector.description|length > 100 ? '...' : '') }}
-                                    </div>
-                                {% endif %}
+                        <div class="sector-content">
+                            <h3 class="sector-title">
+                                <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a>
+                            </h3>
+                        </div>
+                        
+                        <div class="sector-info">
+                            <div class="info-item">
+                                <span class="label">Région:</span>
+                                <span class="value">{{ sector.region ? sector.region.name : 'Non spécifiée' }}</span>
                             </div>
                             
-                            <div class="sector-footer">
-                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-outline-primary">
-                                    Voir détails
-                                </a>
+                            {% if sector.altitude %}
+                                <div class="info-item">
+                                    <span class="label">Altitude:</span>
+                                    <span class="value">{{ sector.altitude }}m</span>
+                                </div>
+                            {% endif %}
+                            
+                            {% if sector.access_time %}
+                                <div class="info-item">
+                                    <span class="label">Accès:</span>
+                                    <span class="value">{{ sector.accessTimeFormatted }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if sector.description %}
+                            <div class="sector-description">
+                                {{ sector.description|slice(0, 100) ~ (sector.description|length > 100 ? '...' : '') }}
                             </div>
+                        {% endif %}
+
+                        <div class="sector-footer">
+                            <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-outline-primary">
+                                Voir détails
+                            </a>
                         </div>
                     </div>
-                {% endfor %}
-            </div>
+                </div>
+            {% endfor %}
             
             <div class="mt-4">
                 {{ pagination.render(sectors) }}
