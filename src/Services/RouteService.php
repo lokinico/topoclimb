@@ -2,11 +2,14 @@
 
 namespace TopoclimbCH\Services;
 
+use PDO;
+use PDOException;
 use TopoclimbCH\Models\Route;
 use TopoclimbCH\Models\DifficultySystem;
 use TopoclimbCH\Models\UserAscent;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Pagination;
+use TopoclimbCH\Exceptions\ModelException;
 
 class RouteService
 {
@@ -97,29 +100,21 @@ class RouteService
     }
     
     /**
-     * Récupère les voies similaires à une voie donnée
+     * Récupère les voies similaires
      */
     public function getSimilarRoutes(Route $route, int $limit = 5): array
     {
         // Récupère les voies du même secteur mais pas celle en cours
-        $conditions = [
-            'sector_id' => $route->sector_id,
-            'active' => 1
-        ];
-        
         $sql = "SELECT r.* FROM " . Route::getTable() . " r
                 WHERE r.sector_id = :sectorId 
                 AND r.id != :routeId
                 AND r.active = 1
-                ORDER BY ABS(r.difficulty_system_id - :diffSystem) ASC, 
-                        ABS(r.difficulty - :diff) ASC
+                ORDER BY r.number ASC
                 LIMIT :limit";
         
         $params = [
             ':sectorId' => $route->sector_id,
             ':routeId' => $route->id,
-            ':diffSystem' => $route->difficulty_system_id,
-            ':diff' => $route->difficulty,
             ':limit' => $limit
         ];
         
@@ -145,7 +140,7 @@ class RouteService
      */
     public function getAscentStatistics(Route $route): array
     {
-        $ascents = UserAscent::where('route_id', $route->id)->get();
+        $ascents = UserAscent::where(['route_id' => $route->id]);
         
         if (empty($ascents)) {
             return [
@@ -275,11 +270,10 @@ class RouteService
      */
     protected function getNextRouteNumber(int $sectorId): int
     {
-        $maxNumber = Route::where('sector_id', $sectorId)
-            ->orderBy('number', 'desc')
-            ->value('number');
+        $maxNumber = Route::where(['sector_id' => $sectorId], 'number', 'desc');
+        $maxNumber = !empty($maxNumber) ? $maxNumber[0]->number : 0;
         
-        return ($maxNumber ?? 0) + 1;
+        return $maxNumber + 1;
     }
     
     /**
@@ -288,9 +282,10 @@ class RouteService
     public function recordAscent(array $data): UserAscent
     {
         // Vérifie si l'utilisateur a déjà une ascension pour cette voie
-        $existingAscent = UserAscent::where('user_id', $data['user_id'])
-            ->where('route_id', $data['route_id'])
-            ->first();
+        $existingAscent = UserAscent::findWhere([
+            'user_id' => $data['user_id'],
+            'route_id' => $data['route_id']
+        ]);
         
         if ($existingAscent) {
             // Met à jour l'ascension existante
