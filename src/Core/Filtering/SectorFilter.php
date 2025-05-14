@@ -10,6 +10,7 @@ class SectorFilter extends Filter
      */
     protected array $filters = [
         'region_id' => 'region_id',
+        'book_id' => 'book_id',
         'exposure_id' => 'exposure_id',
         'altitude_min' => 'altitude_min',
         'altitude_max' => 'altitude_max',
@@ -36,6 +37,11 @@ class SectorFilter extends Filter
             $parameters['region_id'] = $this->getFilter('region_id');
         }
         
+        if ($this->hasFilter('book_id')) {
+            $conditions[] = "s.book_id = :book_id";
+            $parameters['book_id'] = $this->getFilter('book_id');
+        }
+        
         // Exposition (nécessite une jointure)
         if ($this->hasFilter('exposure_id')) {
             $joins['exposure'] = "LEFT JOIN climbing_sector_exposures se ON s.id = se.sector_id";
@@ -53,8 +59,17 @@ class SectorFilter extends Filter
             }
             
             if ($this->hasFilter('quality')) {
-                $conditions[] = "sm.quality = :quality";
-                $parameters['quality'] = $this->getFilter('quality');
+                if ($this->getFilter('quality') === 'excellent') {
+                    $conditions[] = "sm.quality = 'excellent'";
+                } elseif ($this->getFilter('quality') === 'good') {
+                    $conditions[] = "sm.quality IN ('excellent', 'good')";
+                } elseif ($this->getFilter('quality') === 'average') {
+                    $conditions[] = "sm.quality IN ('excellent', 'good', 'average')";
+                } elseif ($this->getFilter('quality') === 'poor') {
+                    $conditions[] = "sm.quality = 'poor'";
+                } elseif ($this->getFilter('quality') === 'avoid') {
+                    $conditions[] = "sm.quality = 'avoid'";
+                }
             }
         }
         
@@ -69,10 +84,11 @@ class SectorFilter extends Filter
             $parameters['altitude_max'] = (int)$this->getFilter('altitude_max');
         }
         
-        // Recherche par nom
+        // Recherche par nom ou description
         if ($this->hasFilter('search')) {
-            $conditions[] = "s.name LIKE :search OR s.description LIKE :search";
-            $parameters['search'] = '%' . $this->getFilter('search') . '%';
+            $searchTerm = '%' . $this->getFilter('search') . '%';
+            $conditions[] = "(s.name LIKE :search OR s.description LIKE :search OR s.code LIKE :search)";
+            $parameters['search'] = $searchTerm;
         }
         
         return [
@@ -112,18 +128,83 @@ class SectorFilter extends Filter
                 }
             }
             
+            // Filtrer par région
+            if ($this->hasFilter('region_id')) {
+                $regionId = $isObject ? $sector->region_id : $sector['region_id'];
+                if ($regionId != $this->getFilter('region_id')) {
+                    return false;
+                }
+            }
+            
+            // Filtrer par livre/site
+            if ($this->hasFilter('book_id')) {
+                $bookId = $isObject ? $sector->book_id : $sector['book_id'];
+                if ($bookId != $this->getFilter('book_id')) {
+                    return false;
+                }
+            }
+            
             // Filtrer par recherche de texte
             if ($this->hasFilter('search')) {
                 $search = strtolower($this->getFilter('search'));
                 $name = strtolower($isObject ? $sector->name : $sector['name']);
                 $description = strtolower($isObject ? ($sector->description ?? '') : ($sector['description'] ?? ''));
+                $code = strtolower($isObject ? ($sector->code ?? '') : ($sector['code'] ?? ''));
                 
-                if (strpos($name, $search) === false && strpos($description, $search) === false) {
+                if (strpos($name, $search) === false && 
+                    strpos($description, $search) === false && 
+                    strpos($code, $search) === false) {
                     return false;
                 }
             }
             
             return true;
         });
+    }
+    
+    /**
+     * Vérifier si des filtres sont actifs
+     * 
+     * @return bool
+     */
+    public function hasActiveFilters(): bool
+    {
+        foreach ($this->filters as $key => $value) {
+            if ($this->hasFilter($key)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Générer l'URL de suppression d'un filtre
+     * 
+     * @param string $filter Nom du filtre à supprimer
+     * @param string $baseUrl URL de base
+     * @return string URL sans le filtre spécifié
+     */
+    public function getRemoveFilterUrl(string $filter, string $baseUrl): string
+    {
+        $params = $this->params;
+        unset($params[$filter]);
+        
+        if (empty($params)) {
+            return $baseUrl;
+        }
+        
+        return $baseUrl . '?' . http_build_query($params);
+    }
+    
+    /**
+     * Génère l'URL pour réinitialiser tous les filtres
+     * 
+     * @param string $baseUrl URL de base
+     * @return string URL sans filtres
+     */
+    public function getResetUrl(string $baseUrl): string
+    {
+        return $baseUrl;
     }
 }
