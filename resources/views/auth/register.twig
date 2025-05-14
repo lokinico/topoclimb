@@ -12,7 +12,7 @@
                     {% include 'partials/flash.twig' %}
                     
                     <form method="POST" action="/register">
-                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
