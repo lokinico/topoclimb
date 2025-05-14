@@ -141,6 +141,39 @@ class ValidationService
                             'message' => 'Le format de date n\'est pas valide'
                         ]);
                         break;
+                        
+                    case 'alpha':
+                        $fieldConstraints[] = new Assert\Regex([
+                            'pattern' => '/^[a-zA-Z]+$/',
+                            'message' => 'Le champ ne doit contenir que des lettres'
+                        ]);
+                        break;
+                        
+                    case 'alpha_num':
+                        $fieldConstraints[] = new Assert\Regex([
+                            'pattern' => '/^[a-zA-Z0-9]+$/',
+                            'message' => 'Le champ ne doit contenir que des lettres et des chiffres'
+                        ]);
+                        break;
+                        
+                    case 'alpha_dash':
+                        $fieldConstraints[] = new Assert\Regex([
+                            'pattern' => '/^[a-zA-Z0-9_-]+$/',
+                            'message' => 'Le champ ne doit contenir que des lettres, des chiffres, des tirets et des underscores'
+                        ]);
+                        break;
+                        
+                    case 'unique':
+                        // Cette contrainte n'a pas d'équivalent direct dans Symfony Validator
+                        // On pourrait l'implémenter avec un callback ou une contrainte personnalisée
+                        // Pour l'instant, on la saute
+                        break;
+                        
+                    case 'exists':
+                        // Cette contrainte n'a pas d'équivalent direct dans Symfony Validator
+                        // On pourrait l'implémenter avec un callback ou une contrainte personnalisée
+                        // Pour l'instant, on la saute
+                        break;
                 }
             }
             
