@@ -52,10 +52,14 @@
     ExpiresDefault "access plus 1 week"
 </IfModule>
 
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Redirection vers public/
+    # Permettre l'accès direct aux fichiers CSS, JS et images
+    RewriteRule ^public/(css|js|images)/(.*)$ public/$1/$2 [L]
+    
+    # Redirection vers public/ pour les autres requêtes
     RewriteRule ^$ public/ [L]
     RewriteRule (.*) public/$1 [L]
 </IfModule>
