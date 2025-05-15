@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Exceptions\RouteNotFoundException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use TopoclimbCH\Middleware\PreserveCsrfTokenMiddleware;
 
 class Application
 {
@@ -25,12 +26,12 @@ class Application
      * @var Request
      */
     private Request $request;
-    
+
     /**
      * @var ContainerInterface
      */
     private ContainerInterface $container;
-    
+
     /**
      * @var string
      */
@@ -45,8 +46,8 @@ class Application
      * @param string $environment
      */
     public function __construct(
-        Router $router, 
-        LoggerInterface $logger, 
+        Router $router,
+        LoggerInterface $logger,
         ContainerInterface $container,
         string $environment = 'production'
     ) {
@@ -65,14 +66,23 @@ class Application
     public function handle(): Response
     {
         try {
-            return $this->router->dispatch($this->request);
+            // Créer le middleware de préservation CSRF
+            $session = $this->container->get(Session::class);
+            $preserveCsrfMiddleware = new PreserveCsrfTokenMiddleware($session);
+
+            // Exécuter le middleware qui préservera le token CSRF
+            return $preserveCsrfMiddleware->handle($this->request, function ($request) {
+                // Dispatch de la requête enveloppé par le middleware
+                return $this->router->dispatch($request);
+            });
         } catch (RouteNotFoundException $e) {
             return $this->createNotFoundResponse($e);
         } catch (\Throwable $e) {
             return $this->createErrorResponse($e);
         }
     }
-    
+
+
     /**
      * Create a 404 response
      *
@@ -85,7 +95,7 @@ class Application
             'uri' => $this->request->getUri(),
             'message' => $e->getMessage()
         ]);
-        
+
         try {
             $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
             return $controller->notFound($this->request);
@@ -97,7 +107,7 @@ class Application
             return $response;
         }
     }
-    
+
     /**
      * Create a 500 error response
      *
@@ -110,41 +120,41 @@ class Application
             'message' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);
-        
+
         try {
             // Vérifier si le contrôleur existe avant de l'utiliser
             if ($this->container->has(\TopoclimbCH\Controllers\ErrorController::class)) {
                 $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
                 return $controller->serverError($this->request, $e);
             }
-            
+
             // Fallback si le contrôleur n'existe pas
             $response = new Response('Internal Server Error', 500);
             $response->headers->set('Content-Type', 'text/html');
             $response->setContent('<h1>500 - Internal Server Error</h1>');
-            
+
             if ($this->environment === 'development') {
                 $response->setContent(
-                    $response->getContent() . 
-                    '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>' .
-                    '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ' (line ' . $e->getLine() . ')</p>' .
-                    '<h2>Stack Trace</h2>' .
-                    '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>'
+                    $response->getContent() .
+                        '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>' .
+                        '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ' (line ' . $e->getLine() . ')</p>' .
+                        '<h2>Stack Trace</h2>' .
+                        '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>'
                 );
             }
-            
+
             return $response;
         } catch (\Throwable $fallbackError) {
             // Gestion d'erreur de dernier recours
             $response = new Response('Internal Server Error', 500);
             $response->headers->set('Content-Type', 'text/html');
             $content = '<h1>500 - Internal Server Error</h1>';
-            
+
             if ($this->environment === 'development') {
                 $content .= '<p>Original error: ' . htmlspecialchars($e->getMessage()) . '</p>';
                 $content .= '<p>Error handler failed: ' . htmlspecialchars($fallbackError->getMessage()) . '</p>';
             }
-            
+
             $response->setContent($content);
             return $response;
         }
