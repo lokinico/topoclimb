@@ -71,12 +71,19 @@ class AuthController extends BaseController
 
     public function login(Request $request): Response
     {
-        // Vérification du token CSRF
+        // Vérification du token CSRF de manière sécurisée
         $submittedToken = $request->request->get('csrf_token');
-        if (!$this->validateCsrfToken($submittedToken)) {
+        $storedToken = $this->session->get('csrf_token');
+
+        // Comparaison directe, sans appeler de méthode qui pourrait changer le token
+        $tokenValid = !empty($submittedToken) && !empty($storedToken) && hash_equals($storedToken, $submittedToken);
+
+        if (!$tokenValid) {
             $this->flash('error', 'Token CSRF invalide. Veuillez réessayer.');
             return $this->redirect('/login');
         }
+
+        // Important: le token reste inchangé, il n'est pas régénéré ici
 
         $credentials = $request->request->all();
 

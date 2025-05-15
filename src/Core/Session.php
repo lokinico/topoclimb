@@ -161,16 +161,26 @@ class Session
      */
     public function regenerate(bool $deleteOldSession = true): bool
     {
-        // Sauvegarder le token CSRF avant régénération
+        // Sauvegarder toutes les données importantes avant régénération
         $csrfToken = $this->get('csrf_token');
+        $authUserId = $this->get('auth_user_id');
+        $flashes = $this->get('_flashes');
 
         // Régénérer la session
         $result = session_regenerate_id($deleteOldSession);
 
-        // Restaurer le token CSRF s'il existait
+        // Restaurer les données importantes
         if ($csrfToken) {
             $this->set('csrf_token', $csrfToken);
-            error_log("CSRF token préservé lors de la régénération de session: " . substr($csrfToken, 0, 10) . "...");
+            error_log("CSRF token préservé après régénération: " . substr($csrfToken, 0, 10) . "...");
+        }
+
+        if ($authUserId) {
+            $this->set('auth_user_id', $authUserId);
+        }
+
+        if ($flashes) {
+            $this->set('_flashes', $flashes);
         }
 
         return $result;
@@ -209,22 +219,29 @@ class Session
     /**
      * Définit un token CSRF
      *
-     * @param bool $force Forcer la création d'un nouveau token même si un existe déjà
      * @return string Token CSRF généré
      */
-    public function setCsrfToken(bool $force = false): string
+    public function setCsrfToken(): string
     {
-        // Si un token existe déjà et qu'on ne force pas la création
-        if (!$force && $this->has('csrf_token')) {
-            $token = $this->get('csrf_token');
-            error_log("CSRF Token existant réutilisé: " . substr($token, 0, 10) . '...');
-            return $token;
+        // Identifier qui appelle cette méthode
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $caller = isset($backtrace[1]) ?
+            $backtrace[1]['class'] . '::' . $backtrace[1]['function'] : 'unknown';
+
+        // Si c'est après une validation...
+        if (strpos($caller, 'validate') !== false) {
+            error_log("ATTENTION! setCsrfToken est appelé après validation par: $caller");
+            // Option: retourner le token existant au lieu d'en générer un nouveau
+            if ($this->has('csrf_token')) {
+                $existingToken = $this->get('csrf_token');
+                error_log("Réutilisation du token existant: " . substr($existingToken, 0, 10) . '...');
+                return $existingToken;
+            }
         }
 
-        // Sinon, générer un nouveau token
         $token = bin2hex(random_bytes(32));
         $this->set('csrf_token', $token);
-        error_log("CSRF Token généré: " . substr($token, 0, 10) . '...');
+        error_log("CSRF Token généré par $caller: " . substr($token, 0, 10) . '...');
         return $token;
     }
 
