@@ -153,6 +153,7 @@ class Session
         return $result;
     }
 
+
     /**
      * Régénère l'ID de session
      *
@@ -161,16 +162,16 @@ class Session
      */
     public function regenerate(bool $deleteOldSession = true): bool
     {
-        // Sauvegarder le token CSRF avant la régénération
+        // Sauvegarder le token CSRF avant régénération
         $csrfToken = $this->get('csrf_token');
 
-        // Régénérer l'ID de session
+        // Régénérer la session
         $result = session_regenerate_id($deleteOldSession);
 
-        // Restaurer le token CSRF après la régénération
+        // Restaurer le token CSRF s'il existait
         if ($csrfToken) {
             $this->set('csrf_token', $csrfToken);
-            error_log("CSRF token préservé après régénération de session: " . substr($csrfToken, 0, 10) . '...');
+            error_log("CSRF token préservé lors de la régénération de session: " . substr($csrfToken, 0, 10) . "...");
         }
 
         return $result;
@@ -207,12 +208,21 @@ class Session
     }
 
     /**
-     * Définit un token CSRF
+     * Définit un token CSRF ou renvoie celui existant
      *
-     * @return string Token CSRF généré
+     * @param bool $force Force la génération d'un nouveau token même si un existe déjà
+     * @return string Token CSRF
      */
-    public function setCsrfToken(): string
+    public function setCsrfToken(bool $force = false): string
     {
+        // Si un token existe déjà et qu'on ne force pas la régénération, on le retourne
+        if (!$force && $this->has('csrf_token')) {
+            $token = $this->get('csrf_token');
+            error_log("CSRF Token existant réutilisé: " . substr($token, 0, 10) . '...');
+            return $token;
+        }
+
+        // Sinon on génère un nouveau token
         $token = bin2hex(random_bytes(32));
         $this->set('csrf_token', $token);
         error_log("CSRF Token généré: " . substr($token, 0, 10) . '...');
