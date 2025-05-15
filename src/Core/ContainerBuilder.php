@@ -32,20 +32,20 @@ class ContainerBuilder
 
         // Services de base
         $this->registerCoreServices($container);
-        
+
         // Services métier
         $this->registerBusinessServices($container);
-        
+
         // Contrôleurs
         $this->registerControllers($container);
-        
+
         // Middlewares
         $this->registerMiddlewares($container);
-        
+
 
         return $container;
     }
-    
+
     private function registerCoreServices(SymfonyContainerBuilder $container): void
     {
         // Logger
@@ -55,7 +55,7 @@ class ContainerBuilder
             ->addMethodCall('pushHandler', [
                 new Reference('logger.handler')
             ]);
-            
+
         $container->register('logger.handler', StreamHandler::class)
             ->setPublic(true)
             ->addArgument(BASE_PATH . '/logs/app.log')
@@ -69,7 +69,7 @@ class ContainerBuilder
         // Session
         $container->register(Session::class, Session::class)
             ->setPublic(true);
-        
+
         // Auth
         $container->register(Auth::class, Auth::class)
             ->setPublic(true)
@@ -83,14 +83,14 @@ class ContainerBuilder
             ->addArgument('%views_path%')
             ->addArgument('%cache_path%');
     }
-    
+
     private function registerBusinessServices(SymfonyContainerBuilder $container): void
     {
         // Services métier
         $services = [
             'TopoclimbCH\\Services\\AuthService' => [
-                Auth::class, 
-                Session::class, 
+                Auth::class,
+                Session::class,
                 Database::class
             ],
             'TopoclimbCH\\Services\\SectorService' => [
@@ -103,119 +103,118 @@ class ContainerBuilder
                 Database::class
             ]
         ];
-        
+
         foreach ($services as $id => $dependencies) {
             $definition = $container->register($id, $id);
             $definition->setPublic(true);
-            
+
             foreach ($dependencies as $dependency) {
                 $definition->addArgument(new Reference($dependency));
             }
         }
     }
-    
+
     private function registerControllers(SymfonyContainerBuilder $container): void
     {
         // Définition des contrôleurs et leurs dépendances
         $controllers = [
             'TopoclimbCH\\Controllers\\HomeController' => [
-                View::class, 
+                View::class,
                 Session::class
             ],
             'TopoclimbCH\\Controllers\\AuthController' => [
-                View::class, 
-                Session::class, 
+                View::class,
+                Session::class,
                 Database::class
             ],
             'TopoclimbCH\\Controllers\\SectorController' => [
-                View::class, 
-                Session::class, 
-                'TopoclimbCH\\Services\\SectorService', 
-                'TopoclimbCH\\Services\\MediaService', 
+                View::class,
+                Session::class,
+                'TopoclimbCH\\Services\\SectorService',
+                'TopoclimbCH\\Services\\MediaService',
                 Database::class
             ],
             'TopoclimbCH\\Controllers\\RouteController' => [
-                View::class, 
-                Session::class, 
-                'TopoclimbCH\\Services\\RouteService', 
-                'TopoclimbCH\\Services\\MediaService', 
-                'TopoclimbCH\\Services\\SectorService', 
+                View::class,
+                Session::class,
+                'TopoclimbCH\\Services\\RouteService',
+                'TopoclimbCH\\Services\\MediaService',
+                'TopoclimbCH\\Services\\SectorService',
                 'TopoclimbCH\\Services\\AuthService'
             ],
             'TopoclimbCH\\Controllers\\RegionController' => [
-                View::class, 
+                View::class,
                 Session::class
             ],
             'TopoclimbCH\\Controllers\\SiteController' => [
-                View::class, 
+                View::class,
                 Session::class
             ],
             'TopoclimbCH\\Controllers\\ErrorController' => [
-                View::class, 
+                View::class,
                 Session::class
             ],
             'TopoclimbCH\\Controllers\\UserController' => [
-                View::class, 
-                Session::class, 
+                View::class,
+                Session::class,
                 Auth::class
             ],
             'TopoclimbCH\\Controllers\\AdminController' => [
-                View::class, 
-                Session::class, 
+                View::class,
+                Session::class,
                 Auth::class
             ],
             'TopoclimbCH\\Controllers\\AscentController' => [
-                View::class, 
-                Session::class, 
+                View::class,
+                Session::class,
                 Auth::class
             ]
         ];
-        
+
         foreach ($controllers as $id => $dependencies) {
-            if (!class_exists($id)) {
-                error_log("Warning: Controller class $id does not exist");
-                continue;
+            if ($_ENV['APP_ENV'] === 'development') {
+                error_log("HomeController exists in container: " . ($container->has('TopoclimbCH\\Controllers\\HomeController') ? 'YES' : 'NO'));
             }
-            
+
             $definition = $container->register($id, $id);
             $definition->setPublic(true);
-            
+
             foreach ($dependencies as $dependency) {
                 $definition->addArgument(new Reference($dependency));
             }
         }
     }
-    
+
     private function registerMiddlewares(SymfonyContainerBuilder $container): void
     {
         // Définition des middlewares et leurs dépendances
         $middlewares = [
             'TopoclimbCH\\Middleware\\AuthMiddleware' => [
-                Session::class, 
+                Session::class,
                 Database::class
             ],
             'TopoclimbCH\\Middleware\\AdminMiddleware' => [
-                Session::class, 
+                Session::class,
                 Database::class
             ],
             'TopoclimbCH\\Middleware\\ModeratorMiddleware' => [
-                Session::class, 
+                Session::class,
                 Database::class
             ],
             'TopoclimbCH\\Middleware\\CsrfMiddleware' => [
                 Session::class
             ]
         ];
-        
+
         foreach ($middlewares as $id => $dependencies) {
             if (!class_exists($id)) {
                 error_log("Warning: Middleware class $id does not exist");
                 continue;
             }
-            
+
             $definition = $container->register($id, $id);
             $definition->setPublic(true);
-            
+
             foreach ($dependencies as $dependency) {
                 $definition->addArgument(new Reference($dependency));
             }
