@@ -115,7 +115,7 @@ class Session
     public function flash(string $type, $message): void
     {
         $flashes = $this->get('_flashes', []);
-        
+
         // Si $message est un tableau, utilisons-le directement
         if (is_array($message)) {
             $flashes[$type] = $message;
@@ -126,7 +126,7 @@ class Session
             }
             $flashes[$type][] = $message;
         }
-        
+
         $this->set('_flashes', $flashes);
     }
 
@@ -139,17 +139,17 @@ class Session
     public function getFlashes(?string $type = null): array
     {
         $flashes = $this->get('_flashes', []);
-        
+
         if ($type === null) {
             $result = $flashes;
             $this->remove('_flashes');
             return $result;
         }
-        
+
         $result = $flashes[$type] ?? [];
         unset($flashes[$type]);
         $this->set('_flashes', $flashes);
-        
+
         return $result;
     }
 
@@ -174,7 +174,7 @@ class Session
         if ($this->started) {
             $this->started = false;
             $_SESSION = [];
-            
+
             if (ini_get("session.use_cookies")) {
                 $params = session_get_cookie_params();
                 setcookie(
@@ -187,10 +187,10 @@ class Session
                     $params["httponly"]
                 );
             }
-            
+
             return session_destroy();
         }
-        
+
         return true;
     }
 
@@ -202,7 +202,7 @@ class Session
     public function setCsrfToken(): string
     {
         $token = bin2hex(random_bytes(32));
-        $this->set('_csrf_token', $token);
+        $this->set('csrf_token', $token);
         error_log("CSRF Token généré: " . substr($token, 0, 10) . '...');
         return $token;
     }
@@ -215,16 +215,16 @@ class Session
      */
     public function validateCsrfToken(string $token): bool
     {
-        $csrfToken = $this->get('_csrf_token');
-        
+        $csrfToken = $this->get('csrf_token');
+
         if ($csrfToken === null) {
             error_log("CSRF: Aucun jeton trouvé en session");
             return false;
         }
-        
+
         $result = hash_equals($csrfToken, $token);
         error_log("CSRF: Comparaison - " . ($result ? "Réussite" : "Échec"));
-        
+
         return $result;
     }
 }

@@ -22,17 +22,17 @@ abstract class BaseController
      * @var View
      */
     protected View $view;
-    
+
     /**
      * @var Session
      */
     protected Session $session;
-    
+
     /**
      * @var Auth|null
      */
     protected ?Auth $auth = null;
-    
+
     /**
      * Constructor
      *
@@ -43,7 +43,7 @@ abstract class BaseController
     {
         $this->view = $view;
         $this->session = $session;
-        
+
         // Initialiser Auth si Database est disponible
         try {
             $db = Container::getInstance()->get(Database::class);
@@ -53,7 +53,7 @@ abstract class BaseController
             error_log('Impossible d\'initialiser Auth: ' . $e->getMessage());
         }
     }
-    
+
     /**
      * Render a view with data
      *
@@ -65,7 +65,7 @@ abstract class BaseController
     {
         // Utiliser notre classe Response
         $response = new Response();
-        
+
         // Ajouter automatiquement des données globales
         $globalData = [
             'flashes' => $this->session->getFlashes(),
@@ -75,23 +75,23 @@ abstract class BaseController
                 'version' => env('APP_VERSION', '1.0.0')
             ]
         ];
-        
+
         // Ajouter l'utilisateur authentifié si disponible
         if ($this->auth && $this->auth->check()) {
             $globalData['auth_user'] = $this->auth->user();
         }
-        
+
         // Fusionner avec les données fournies
         $data = array_merge($globalData, $data);
-        
+
         // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
         if (!str_ends_with($view, '.twig')) {
             $view .= '.twig';
         }
-        
+
         $content = $this->view->render($view, $data);
         $response->setContent($content);
-        
+
         // Configurer la mise en cache selon l'environnement
         if (env('APP_ENV') === 'production') {
             $response->setPublic();
@@ -101,10 +101,10 @@ abstract class BaseController
             $response->setPrivate();
             $response->headers->addCacheControlDirective('no-store', true);
         }
-        
+
         return $response;
     }
-    
+
     /**
      * Redirect to a route
      *
@@ -117,7 +117,7 @@ abstract class BaseController
         // Utiliser notre classe Response statique redirect
         return Response::redirect($url, $status);
     }
-    
+
     /**
      * Return a JSON response
      *
@@ -130,7 +130,7 @@ abstract class BaseController
         // Utiliser notre classe Response statique json
         return Response::json($data, $status);
     }
-    
+
     /**
      * Create a CSRF token for forms
      *
@@ -140,16 +140,16 @@ abstract class BaseController
     {
         // Assurer qu'un token est généré même si setCsrfToken n'en retourne pas
         $token = $this->session->setCsrfToken();
-        
+
         // Si setCsrfToken ne retourne pas de token, en générer un et le stocker
         if (empty($token)) {
             $token = bin2hex(random_bytes(32));
             $this->session->set('csrf_token', $token);
         }
-        
+
         return $token;
     }
-    
+
     /**
      * Validate CSRF token from Request
      *
@@ -158,15 +158,15 @@ abstract class BaseController
      */
     protected function validateCsrfRequestToken(Request $request): bool
     {
-        $token = $request->request->get('_csrf_token');
-        
+        $token = $request->request->get('csrf_token');
+
         if (!$token) {
             return false;
         }
-        
+
         return $this->validateCsrfToken($token);
     }
-    
+
     /**
      * Validate CSRF token from string
      * 
@@ -179,18 +179,18 @@ abstract class BaseController
             error_log('Token CSRF vide');
             return false;
         }
-        
+
         $storedToken = $this->session->get('csrf_token');
         if (empty($storedToken)) {
             error_log('Token CSRF non trouvé en session');
             return false;
         }
-        
+
         $result = hash_equals($storedToken, $token);
         error_log('Validation CSRF: ' . ($result ? 'succès' : 'échec') . ' (soumis: ' . substr($token, 0, 10) . '..., stocké: ' . substr($storedToken, 0, 10) . '...)');
         return $result;
     }
-    
+
     /**
      * Set a flash message
      *
@@ -202,7 +202,7 @@ abstract class BaseController
     {
         $this->session->flash($type, $message);
     }
-    
+
     /**
      * Validate request data
      *
@@ -214,19 +214,19 @@ abstract class BaseController
     protected function validate(array $data, array $rules): array
     {
         $validator = new Validator();
-        
+
         if (!$validator->validate($data, $rules)) {
             $this->session->flash('errors', $validator->getErrors());
             $this->session->flash('old', $data);
-            
+
             throw new ValidationException(
                 "Validation failed: " . json_encode($validator->getErrors())
             );
         }
-        
+
         return $data;
     }
-    
+
     /**
      * Check if user has permission
      *
@@ -239,7 +239,7 @@ abstract class BaseController
     {
         // Récupérer le service d'authentification via le conteneur
         $authService = Container::getInstance()->get(AuthService::class);
-        
+
         if (!$authService->can($ability, $model)) {
             throw new AuthorizationException("Action non autorisée");
         }

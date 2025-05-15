@@ -11,7 +11,7 @@ class CsrfMiddleware
     private Session $session;
 
     // Clé constante pour stocker le token CSRF dans la session
-    private const CSRF_KEY = '_csrf_token';
+    private const CSRF_KEY = 'csrf_token';
 
     public function __construct(Session $session)
     {

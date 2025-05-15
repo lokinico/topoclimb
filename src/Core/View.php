@@ -15,7 +15,7 @@ class View
      * @var Environment
      */
     private Environment $twig;
-    
+
     /**
      * @var array
      */
@@ -31,21 +31,21 @@ class View
     {
         $viewsPath = $viewsPath ?? BASE_PATH . '/resources/views';
         $cachePath = $cachePath ?? BASE_PATH . '/cache/views';
-        
+
         $loader = new FilesystemLoader($viewsPath);
         $debug = env('APP_ENV', 'production') === 'development';
-        
+
         $this->twig = new Environment($loader, [
             'cache' => $debug ? false : $cachePath,
             'debug' => $debug,
             'auto_reload' => $debug,
         ]);
-        
+
         // Add debug extension if in development
         if ($debug) {
             $this->twig->addExtension(new DebugExtension());
         }
-        
+
         // Register global functions and filters
         $this->registerFunctions();
         $this->registerFilters();
@@ -64,7 +64,7 @@ class View
             }
             return url($path);
         }));
-        
+
         // Component helper - seule déclaration
         $this->twig->addFunction(new TwigFunction('component', function (string $name, array $data = []) {
             // Échapper les données qui ne sont pas marquées comme 'raw'
@@ -75,34 +75,34 @@ class View
             }
             return $this->renderComponent($name, $data);
         }, ['is_safe' => ['html']]));
-        
+
         // Add asset() function for loading assets
         $this->twig->addFunction(new TwigFunction('asset', function (string $path) {
             // Retourne directement le chemin à partir de la racine
             return '/' . ltrim($path, '/');
         }));
-        
+
         // Add auth() function
         $this->twig->addFunction(new TwigFunction('auth', function () {
             // This would need to be implemented based on your auth system
             return isset($_SESSION['user_id']) ? true : false;
         }));
-        
+
         // Add is_active() function for navigation
         $this->twig->addFunction(new TwigFunction('is_active', function (string $path) {
             $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             return $currentPath === $path ? 'active' : '';
         }));
-        
+
         // Add csrf_token() function
         $this->twig->addFunction(new TwigFunction('csrf_token', function () {
             // This assumes you have a Session class that can generate CSRF tokens
-            if (!isset($_SESSION['_csrf_token'])) {
-                $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+            if (!isset($_SESSION['csrf_token'])) {
+                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             }
-            return $_SESSION['_csrf_token'];
+            return $_SESSION['csrf_token'];
         }));
-        
+
         // Add flash messages function
         $this->twig->addFunction(new TwigFunction('flash', function () {
             $messages = $_SESSION['_flashes'] ?? [];
@@ -110,7 +110,7 @@ class View
             return $messages;
         }));
     }
-    
+
     /**
      * Register Twig filters
      *
@@ -122,7 +122,7 @@ class View
         $this->twig->addFilter(new TwigFilter('e', function ($string) {
             return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
         }));
-        
+
         // Add 'format_date' filter
         $this->twig->addFilter(new TwigFilter('format_date', function ($date, $format = 'd/m/Y') {
             if ($date instanceof \DateTime) {
@@ -130,26 +130,26 @@ class View
             }
             return $date ? date($format, strtotime($date)) : '';
         }));
-        
+
         // Add 'format_difficulty' filter for climbing grades
         $this->twig->addFilter(new TwigFilter('format_difficulty', function ($difficulty) {
             // Simple implementation, could be expanded
             return $difficulty ?: 'Non spécifié';
         }));
-        
+
         // Add 'format_beauty' filter for star ratings
         $this->twig->addFilter(new TwigFilter('format_beauty', function ($beauty) {
             $beauty = (int) $beauty;
             return str_repeat('★', $beauty) . str_repeat('☆', 5 - $beauty);
         }));
-        
+
         // Add 'repeat' filter
         $this->twig->addFilter(new TwigFilter('repeat', function ($string, $times) {
             return str_repeat($string, $times);
         }));
     }
 
-    
+
     /**
      * Render a view
      *
@@ -166,10 +166,10 @@ class View
         if (!str_ends_with($view, '.twig')) {
             $view .= '.twig';
         }
-        
+
         // Combine global data with local data
         $data = array_merge($this->globalData, $data);
-        
+
         // Render the template
         return $this->twig->render($view, $data);
     }
@@ -199,7 +199,7 @@ class View
             $this->addGlobal($key, $value);
         }
     }
-    
+
     /**
      * Get the Twig environment
      *
@@ -209,7 +209,7 @@ class View
     {
         return $this->twig;
     }
-    
+
     /**
      * Render a component
      *
