@@ -10,6 +10,9 @@ class CsrfMiddleware
 {
     private Session $session;
 
+    // Clé constante pour stocker le token CSRF dans la session
+    private const CSRF_KEY = '_csrf_token';
+
     public function __construct(Session $session)
     {
         $this->session = $session;
@@ -17,48 +20,76 @@ class CsrfMiddleware
 
     public function handle(Request $request, callable $next): Response
     {
-        // Générer un token CSRF pour toutes les requêtes
-        if (!$this->session->has('_csrf_token')) {
-            $this->session->set('_csrf_token', bin2hex(random_bytes(32)));
-        }
+        // Assurons-nous qu'un token CSRF existe toujours
+        $this->ensureTokenExists();
 
         // Vérifie uniquement les méthodes non sécurisées (POST, PUT, DELETE, PATCH)
         $method = strtoupper($request->getMethod());
         if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'])) {
-            // Essayer les différentes formes possibles de token CSRF
-            $token = $request->request->get('_csrf_token');
+            // Vérifie le token CSRF
+            $valid = $this->validateRequest($request);
 
-            // Vérifier aussi le format legacy _csrf pour la compatibilité
-            if (!$token) {
-                $token = $request->request->get('_csrf');
-            }
-
-            // Si non trouvé, essayer les en-têtes
-            if (!$token) {
-                $token = $request->headers->get('X-CSRF-TOKEN');
-            }
-
-            // Vérification du token
-            $sessionToken = $this->session->get('_csrf_token');
-
-            if (!$token || !$sessionToken) {
-                error_log("CSRF Échec: Token manquant (reçu: " . ($token ? 'oui' : 'non') .
-                    ", session: " . ($sessionToken ? 'oui' : 'non') . ")");
+            if (!$valid) {
                 return $this->csrfFailureResponse($request);
             }
 
-            if (!hash_equals($sessionToken, $token)) {
-                error_log("CSRF Échec: Tokens ne correspondent pas");
-                return $this->csrfFailureResponse($request);
-            }
-
-            error_log("CSRF: Validation réussie");
-
-            // Régénérer un nouveau token après validation réussie
-            $this->session->set('_csrf_token', bin2hex(random_bytes(32)));
+            // Régénère un nouveau token UNIQUEMENT après une validation réussie
+            $newToken = $this->regenerateToken();
+            error_log("CSRF: Nouveau token généré après validation: " . substr($newToken, 0, 10) . "...");
         }
 
         return $next($request);
+    }
+
+    private function ensureTokenExists(): string
+    {
+        $token = $this->session->get(self::CSRF_KEY);
+
+        if (!$token) {
+            $token = bin2hex(random_bytes(32));
+            $this->session->set(self::CSRF_KEY, $token);
+            error_log("CSRF Token généré: " . substr($token, 0, 10) . "...");
+        }
+
+        return $token;
+    }
+
+    private function validateRequest(Request $request): bool
+    {
+        // Récupérer le token de la requête
+        $token = $request->request->get(self::CSRF_KEY) ??
+            $request->request->get('_csrf') ??
+            $request->headers->get('X-CSRF-TOKEN');
+
+        // Récupérer le token de la session
+        $sessionToken = $this->session->get(self::CSRF_KEY);
+
+        // Log pour le débogage
+        error_log("CSRF Check - Token reçu: " . ($token ? substr($token, 0, 10) . '...' : 'null'));
+        error_log("CSRF Check - Session token: " . ($sessionToken ? substr($sessionToken, 0, 10) . '...' : 'null'));
+
+        // Validation
+        if (!$token || !$sessionToken) {
+            error_log("CSRF Échec: Token manquant");
+            return false;
+        }
+
+        $valid = hash_equals($sessionToken, $token);
+
+        if ($valid) {
+            error_log("CSRF: Validation réussie");
+        } else {
+            error_log("CSRF Échec: Tokens ne correspondent pas");
+        }
+
+        return $valid;
+    }
+
+    private function regenerateToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->session->set(self::CSRF_KEY, $token);
+        return $token;
     }
 
     private function csrfFailureResponse(Request $request): Response
