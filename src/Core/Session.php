@@ -161,7 +161,19 @@ class Session
      */
     public function regenerate(bool $deleteOldSession = true): bool
     {
-        return session_regenerate_id($deleteOldSession);
+        // Sauvegarder le token CSRF avant la régénération
+        $csrfToken = $this->get('csrf_token');
+
+        // Régénérer l'ID de session
+        $result = session_regenerate_id($deleteOldSession);
+
+        // Restaurer le token CSRF après la régénération
+        if ($csrfToken) {
+            $this->set('csrf_token', $csrfToken);
+            error_log("CSRF token préservé après régénération de session: " . substr($csrfToken, 0, 10) . '...');
+        }
+
+        return $result;
     }
 
     /**
