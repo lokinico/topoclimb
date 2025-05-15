@@ -64,9 +64,19 @@ class CsrfMiddleware
         // Récupérer le token de la session
         $sessionToken = $this->session->get(self::CSRF_KEY);
 
-        // Log pour le débogage
-        error_log("CSRF Check - Token reçu: " . ($token ? substr($token, 0, 10) . '...' : 'null'));
-        error_log("CSRF Check - Session token: " . ($sessionToken ? substr($sessionToken, 0, 10) . '...' : 'null'));
+        // Log pour le débogage - uniquement en développement
+        if ($_ENV['APP_ENV'] === 'development') {
+            error_log("CSRF Check - Token reçu: " . ($token ? substr($token, 0, 10) . '...' : 'null'));
+            error_log("CSRF Check - Session token: " . ($sessionToken ? substr($sessionToken, 0, 10) . '...' : 'null'));
+        }
+        // Récupérer le token de la requête
+        $token = $request->request->get(self::CSRF_KEY) ??
+            $request->request->get('_csrf') ??
+            $request->headers->get('X-CSRF-TOKEN');
+
+        // Récupérer le token de la session
+        $sessionToken = $this->session->get(self::CSRF_KEY);
+
 
         // Validation
         if (!$token || !$sessionToken) {
