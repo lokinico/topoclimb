@@ -9,8 +9,11 @@ use TopoclimbCH\Core\Auth;
 
 class AscentController extends BaseController
 {
-    // Changez private en protected (ou public) selon la définition dans BaseController
-    protected $auth;
+    // Option 1: Déclarer avec le même type que dans BaseController
+    // protected ?Auth $auth;
+    
+    // Option 2 (recommandée): Ne pas redéclarer la propriété du tout
+    // et simplement utiliser celle héritée de BaseController
     
     public function __construct(View $view, Session $session, Auth $auth)
     {
