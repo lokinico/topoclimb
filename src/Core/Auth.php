@@ -27,26 +27,46 @@ class Auth
         $this->session = $session;
         $this->db = $db;
         $this->initialized = true;
+
+        // Log d'initialisation
+        error_log("Auth::initialize - Initialisation effectuée");
+
+        // Charger l'utilisateur depuis la session
         $this->checkSession();
     }
 
     public static function getInstance(?Session $session = null, ?Database $db = null): self
     {
-        if (self::$instance === null) {
-            self::$instance = new self($session, $db);
-        } elseif ($session !== null && $db !== null) {
-            // IMPORTANT: Réinitialiser l'instance avec les dépendances fraîches
-            // à chaque requête, même si l'instance existe déjà
-            self::$instance->initialize($session, $db);
-        }
+        try {
+            if (self::$instance === null) {
+                self::$instance = new self($session, $db);
+                error_log("Auth::getInstance - Nouvelle instance créée");
+            } elseif ($session !== null && $db !== null) {
+                // Réinitialiser l'instance avec les dépendances fraîches
+                self::$instance->initialize($session, $db);
+                error_log("Auth::getInstance - Instance existante réinitialisée");
+            }
 
-        // Vérifier que l'instance est initialisée
-        if (!self::$instance->initialized) {
-            error_log("Auth: L'instance n'est pas correctement initialisée");
-            throw new \RuntimeException("Container must be provided first time");
-        }
+            // Vérifier que l'instance est initialisée
+            if (!self::$instance->initialized && ($session === null || $db === null)) {
+                error_log("Auth::getInstance - L'instance n'est pas correctement initialisée");
+                throw new \RuntimeException("Container must be provided first time");
+            }
 
-        return self::$instance;
+            return self::$instance;
+        } catch (\Exception $e) {
+            error_log("Auth::getInstance - Exception: " . $e->getMessage());
+
+            // Si une exception est levée mais que session et db sont fournis,
+            // créer une nouvelle instance quand même
+            if ($session !== null && $db !== null) {
+                error_log("Auth::getInstance - Création d'une nouvelle instance après exception");
+                self::$instance = new self($session, $db);
+                return self::$instance;
+            }
+
+            throw $e;
+        }
     }
 
     /**
@@ -62,6 +82,11 @@ class Auth
      */
     public function check(): bool
     {
+        // Si pas initialisé ou pas d'utilisateur, recharger depuis la session
+        if ($this->initialized && $this->user === null && $this->session !== null) {
+            $this->checkSession();
+        }
+
         return $this->user !== null;
     }
 
@@ -70,6 +95,11 @@ class Auth
      */
     public function user(): ?User
     {
+        // Recharger l'utilisateur si nécessaire
+        if ($this->user === null && $this->initialized) {
+            $this->checkSession();
+        }
+
         return $this->user;
     }
 
@@ -78,7 +108,12 @@ class Auth
      */
     public function id(): ?int
     {
-        return $this->user ? $this->user->id : null;
+        // Recharger l'utilisateur si nécessaire
+        if ($this->user === null && $this->initialized) {
+            $this->checkSession();
+        }
+
+        return $this->user ? (int)$this->user->id : null;
     }
 
     /**
@@ -175,6 +210,8 @@ class Auth
                 // Créer un objet simple qui implémente les méthodes essentielles
                 $user = new class($result) {
                     private array $data;
+                    public int $id;
+                    public string $autorisation;
 
                     public function __construct(array $data)
                     {
@@ -207,12 +244,18 @@ class Auth
                     }
                 };
 
-                // Connexion manuelle
+                // Connexion manuelle SANS régénération de session
                 $this->user = $user;
-                $this->session->regenerate();
-                $this->session->set('auth_user_id', $result['id']);
+
+                // Stocker l'ID utilisateur en session - DIRECTEMENT dans $_SESSION aussi
+                $userId = (int)$user->id;
+                $this->session->set('auth_user_id', $userId);
+                $_SESSION['auth_user_id'] = $userId;
+                $_SESSION['is_authenticated'] = true;
 
                 error_log("Connexion alternative réussie pour: $username avec autorisation: " . $result['autorisation']);
+                error_log("ID utilisateur stocké en session: $userId");
+
                 return true;
             } catch (\Exception $fallbackError) {
                 error_log("Échec de la connexion alternative: " . $fallbackError->getMessage());
@@ -228,16 +271,27 @@ class Auth
     {
         $this->user = $user;
 
-        // Régénère l'ID de session pour éviter les attaques par fixation
-        $this->session->regenerate();
+        // IMPORTANT: NE PAS régénérer l'ID de session pour l'instant car cela cause des problèmes
+        // Commenter cette ligne pour éviter les pertes de session
+        // $this->session->regenerate();
 
-        // Stocke l'ID utilisateur en session
-        $this->session->set('auth_user_id', $user->id);
+        // Stocke l'ID utilisateur en session en tant qu'entier
+        $userId = (int)$user->id;
+
+        // Double stockage pour plus de sécurité
+        $this->session->set('auth_user_id', $userId);
+        $this->session->set('is_authenticated', true);
+
+        // Stockage direct dans $_SESSION pour garantir la disponibilité immédiate
+        $_SESSION['auth_user_id'] = $userId;
+        $_SESSION['is_authenticated'] = true;
+
+        error_log("Auth::login - ID utilisateur $userId stocké en session");
 
         // Gère la fonctionnalité "Se souvenir de moi"
         if ($remember) {
             $token = $this->generateRememberToken();
-            $this->storeRememberToken($user->id, $token);
+            $this->storeRememberToken($userId, $token);
 
             // Définit un cookie qui expire dans 30 jours
             setcookie(
@@ -249,6 +303,8 @@ class Auth
                 true,
                 true
             );
+
+            error_log("Auth::login - Cookie 'remember_token' défini (30 jours)");
         }
     }
 
@@ -259,11 +315,14 @@ class Auth
     {
         $this->user = null;
 
-        // Supprime les données de session
+        // Supprime les données de session - des deux façons
         $this->session->remove('auth_user_id');
+        $this->session->remove('is_authenticated');
+        unset($_SESSION['auth_user_id']);
+        unset($_SESSION['is_authenticated']);
 
-        // Régénère l'ID de session
-        $this->session->regenerate();
+        // IMPORTANT: NE PAS régénérer l'ID de session pour l'instant car cela cause des problèmes
+        // $this->session->regenerate();
 
         // Supprime le cookie "Se souvenir de moi"
         if (isset($_COOKIE['remember_token'])) {
@@ -272,7 +331,11 @@ class Auth
 
             // Expire le cookie
             setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+
+            error_log("Auth::logout - Cookie 'remember_token' supprimé");
         }
+
+        error_log("Auth::logout - Déconnexion effectuée");
     }
 
     /**
@@ -372,10 +435,13 @@ class Auth
      */
     private function checkSession(): void
     {
-        // Vérifie si un utilisateur est déjà en session
-        $userId = $this->session->get('auth_user_id');
+        // Vérifier directement dans $_SESSION pour plus de fiabilité
+        $sessionUserId = $_SESSION['auth_user_id'] ?? null;
+        $userId = $sessionUserId ?: $this->session->get('auth_user_id');
 
         if ($userId) {
+            error_log("Auth::checkSession - ID utilisateur trouvé en session: $userId");
+
             // Requête directe pour éviter les problèmes avec la classe Model
             $query = "SELECT * FROM users WHERE id = ? LIMIT 1";
             $result = $this->db->query($query, [$userId])->fetch();
@@ -383,30 +449,59 @@ class Auth
             if ($result) {
                 try {
                     $this->user = new User($result);
+                    error_log("Auth::checkSession - Objet User créé avec succès pour ID: $userId");
                 } catch (\Exception $e) {
-                    error_log("Erreur création User dans checkSession: " . $e->getMessage());
+                    error_log("Auth::checkSession - Erreur création User: " . $e->getMessage());
                     // Création manuelle de l'objet utilisateur si nécessaire
-                    $this->user = new class($result) extends User {
+                    $this->user = new class($result) {
+                        public int $id;
+                        private array $data;
+
                         public function __construct(array $data)
                         {
+                            $this->data = $data;
+                            $this->id = (int) $data['id'];
+
+                            // Copier toutes les propriétés dans l'objet
                             foreach ($data as $key => $value) {
                                 $this->$key = $value;
                             }
-                            $this->id = (int) $data['id'];
+                        }
+
+                        public function __get($name)
+                        {
+                            return $this->data[$name] ?? null;
+                        }
+
+                        public function isAdmin(): bool
+                        {
+                            return $this->autorisation === '0';
+                        }
+
+                        public function isModerator(): bool
+                        {
+                            return in_array($this->autorisation, ['0', '1']);
                         }
                     };
+                    error_log("Auth::checkSession - Objet User créé manuellement pour ID: $userId");
                 }
+            } else {
+                error_log("Auth::checkSession - Utilisateur non trouvé en base de données pour ID: $userId");
             }
-
             return;
+        } else {
+            error_log("Auth::checkSession - Aucun ID utilisateur trouvé en session");
         }
 
         // Vérifie le cookie "Se souvenir de moi"
         if (isset($_COOKIE['remember_token'])) {
             $token = $_COOKIE['remember_token'];
+            error_log("Auth::checkSession - Cookie 'remember_token' trouvé");
+
             $userId = $this->getUserIdFromRememberToken($token);
 
             if ($userId) {
+                error_log("Auth::checkSession - Utilisateur récupéré via token: $userId");
                 // Requête directe pour éviter les problèmes avec la classe Model
                 $query = "SELECT * FROM users WHERE id = ? LIMIT 1";
                 $result = $this->db->query($query, [$userId])->fetch();
@@ -414,22 +509,47 @@ class Auth
                 if ($result) {
                     try {
                         $user = new User($result);
+                        error_log("Auth::checkSession - Connexion auto via token pour utilisateur: $userId");
                         $this->login($user);
                     } catch (\Exception $e) {
-                        error_log("Erreur création User dans checkSession remember: " . $e->getMessage());
+                        error_log("Auth::checkSession - Erreur création User via token: " . $e->getMessage());
                         // Ici aussi, création manuelle si nécessaire
-                        $user = new class($result) extends User {
+                        $user = new class($result) {
+                            public int $id;
+                            private array $data;
+
                             public function __construct(array $data)
                             {
+                                $this->data = $data;
+                                $this->id = (int) $data['id'];
+
+                                // Copier toutes les propriétés dans l'objet
                                 foreach ($data as $key => $value) {
                                     $this->$key = $value;
                                 }
-                                $this->id = (int) $data['id'];
+                            }
+
+                            public function __get($name)
+                            {
+                                return $this->data[$name] ?? null;
+                            }
+
+                            public function isAdmin(): bool
+                            {
+                                return $this->autorisation === '0';
+                            }
+
+                            public function isModerator(): bool
+                            {
+                                return in_array($this->autorisation, ['0', '1']);
                             }
                         };
+                        error_log("Auth::checkSession - Connexion manuelle via token pour utilisateur: $userId");
                         $this->login($user);
                     }
                 }
+            } else {
+                error_log("Auth::checkSession - Token invalide ou expiré");
             }
         }
     }
