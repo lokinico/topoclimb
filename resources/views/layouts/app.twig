@@ -11,41 +11,7 @@
 </head>
 <body>
     <header>
-        <nav class="main-nav">
-            <div class="container">
-                <div class="logo">
-                    <a href="{{ url('/') }}">
-                        <h1>TopoclimbCH</h1>
-                    </a>
-                </div>
-                <button class="mobile-menu-toggle" aria-label="Menu">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <ul class="nav-links">
-                    <li><a href="{{ url('/') }}" class="{{ is_active('/') ? 'active' : '' }}">Accueil</a></li>
-                    <li><a href="{{ url('/regions') }}" class="{{ is_active('/regions') ? 'active' : '' }}">Régions</a></li>
-                    <li><a href="{{ url('/sites') }}" class="{{ is_active('/sites') ? 'active' : '' }}">Sites</a></li>
-                    <li><a href="{{ url('/sectors') }}" class="{{ is_active('/sectors') ? 'active' : '' }}">Secteurs</a></li>
-                    <li><a href="{{ url('/routes') }}" class="{{ is_active('/routes') ? 'active' : '' }}">Voies</a></li>
-                    
-                    {% if auth() %}
-                        <li class="dropdown">
-                            <a href="#">Mon compte</a>
-                            <ul class="dropdown-menu">
-                                <li><a href="{{ url('/profile') }}">Profil</a></li>
-                                <li><a href="{{ url('/ascents') }}">Mes ascensions</a></li>
-                                <li><a href="{{ url('/logout') }}">Déconnexion</a></li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li><a href="{{ url('/login') }}" class="{{ is_active('/login') ? 'active' : '' }}">Connexion</a></li>
-                        <li><a href="{{ url('/register') }}" class="{{ is_active('/register') ? 'active' : '' }}">Inscription</a></li>
-                    {% endif %}
-                </ul>
-            </div>
-        </nav>
+    {% include 'partials/navigation.twig' %}
     </header>
 
     <main>
