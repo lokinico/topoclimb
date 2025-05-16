@@ -271,22 +271,34 @@ class Auth
     {
         $this->user = $user;
 
-        // IMPORTANT: NE PAS régénérer l'ID de session pour l'instant car cela cause des problèmes
-        // Commenter cette ligne pour éviter les pertes de session
-        // $this->session->regenerate();
+        // PROBLÈME IDENTIFIÉ: Récupération correcte de l'ID utilisateur
+        $userId = $user->id;
 
-        // Stocke l'ID utilisateur en session en tant qu'entier
-        $userId = (int)$user->id;
+        // Debug détaillé sur l'ID utilisateur
+        error_log("Auth::login - DEBUG ID utilisateur: Type=" . gettype($userId) . ", Valeur=" . $userId);
 
-        // Double stockage pour plus de sécurité
+        // CORRECTION CRITIQUE: S'assurer que l'ID est un entier positif
+        if (is_numeric($userId)) {
+            $userId = (int)$userId;
+            if ($userId <= 0) {
+                error_log("ERREUR: ID utilisateur invalide après conversion: " . $userId);
+                throw new \RuntimeException("ID utilisateur doit être un entier positif");
+            }
+        } else {
+            error_log("ERREUR: ID utilisateur n'est pas numérique: " . $userId);
+            throw new \RuntimeException("ID utilisateur doit être numérique");
+        }
+
+        // Double stockage avec ID correct
         $this->session->set('auth_user_id', $userId);
         $this->session->set('is_authenticated', true);
-
-        // Stockage direct dans $_SESSION pour garantir la disponibilité immédiate
         $_SESSION['auth_user_id'] = $userId;
         $_SESSION['is_authenticated'] = true;
 
         error_log("Auth::login - ID utilisateur $userId stocké en session");
+
+        // Ne pas régénérer la session pour le moment
+        // $this->session->regenerate();
 
         // Gère la fonctionnalité "Se souvenir de moi"
         if ($remember) {
