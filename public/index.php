@@ -87,11 +87,12 @@ try {
     $session = $container->get(\TopoclimbCH\Core\Session::class);
     $db = $container->get(\TopoclimbCH\Core\Database::class);
 
-    // IMPORTANT: Initialiser Auth avant de traiter la requête si l'utilisateur est connecté
+    // Vérifier si l'utilisateur est authentifié
     if (isset($_SESSION['auth_user_id'])) {
         try {
-            $auth = \TopoclimbCH\Core\Auth::getInstance($session, $db);
-            $logger->info("Auth initialisé dans index.php pour l'utilisateur ID: " . $_SESSION['auth_user_id']);
+            // Laisser le container gérer l'initialisation d'Auth
+            $auth = $container->get(\TopoclimbCH\Core\Auth::class);
+            $logger->info("Auth initialisé via container pour l'utilisateur ID: " . $_SESSION['auth_user_id']);
 
             // Vérification critique que l'authentification est toujours valide
             if (!$auth->check()) {
@@ -103,11 +104,10 @@ try {
                 $session->flash('error', 'Votre session a expiré. Veuillez vous reconnecter.');
             }
         } catch (\Throwable $e) {
-            $logger->error("Échec d'initialisation d'Auth: " . $e->getMessage());
+            $logger->error("Échec d'initialisation d'Auth via container: " . $e->getMessage());
             // Nettoyage de session si l'authentification échoue
             unset($_SESSION['auth_user_id']);
             unset($_SESSION['is_authenticated']);
-            // Ne pas lancer d'exception ici, continuer le traitement
         }
     }
 

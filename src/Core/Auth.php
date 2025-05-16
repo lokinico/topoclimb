@@ -35,38 +35,27 @@ class Auth
         $this->checkSession();
     }
 
+    /**
+     * Récupère l'instance de Auth
+     * @param Session|null $session
+     * @param Database|null $db
+     * @return Auth
+     */
     public static function getInstance(?Session $session = null, ?Database $db = null): self
     {
-        try {
-            if (self::$instance === null) {
-                self::$instance = new self($session, $db);
-                error_log("Auth::getInstance - Nouvelle instance créée");
-            } elseif ($session !== null && $db !== null) {
-                // Réinitialiser l'instance avec les dépendances fraîches
-                self::$instance->initialize($session, $db);
-                error_log("Auth::getInstance - Instance existante réinitialisée");
-            }
-
-            // Vérifier que l'instance est initialisée
-            if (!self::$instance->initialized && ($session === null || $db === null)) {
-                error_log("Auth::getInstance - L'instance n'est pas correctement initialisée");
+        if (self::$instance === null) {
+            if ($session === null || $db === null) {
                 throw new \RuntimeException("Container must be provided first time");
             }
-
-            return self::$instance;
-        } catch (\Exception $e) {
-            error_log("Auth::getInstance - Exception: " . $e->getMessage());
-
-            // Si une exception est levée mais que session et db sont fournis,
-            // créer une nouvelle instance quand même
-            if ($session !== null && $db !== null) {
-                error_log("Auth::getInstance - Création d'une nouvelle instance après exception");
-                self::$instance = new self($session, $db);
-                return self::$instance;
-            }
-
-            throw $e;
+            self::$instance = new self($session, $db);
+            error_log("Auth::getInstance - Nouvelle instance créée");
+        } elseif ($session !== null && $db !== null && !self::$instance->initialized) {
+            // Initialiser uniquement si ce n'est pas déjà fait
+            self::$instance->initialize($session, $db);
+            error_log("Auth::getInstance - Instance existante initialisée");
         }
+
+        return self::$instance;
     }
 
     /**

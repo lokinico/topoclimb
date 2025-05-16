@@ -85,6 +85,7 @@ class ContainerBuilder
             ->setFactory([Auth::class, 'getInstance'])
             ->addArgument(new Reference(Session::class))
             ->addArgument(new Reference(Database::class));
+            ->setLazy(true);
 
         // View
         $container->register(View::class, View::class)
