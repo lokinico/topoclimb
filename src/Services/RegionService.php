@@ -15,23 +15,38 @@ class RegionService
         $this->db = $db;
     }
 
+    /**
+     * Récupère toutes les régions actives
+     */
     public function getAllRegions(): array
     {
-        return Region::where('active', 1)->all();
+        // Correction: Region::where() retourne déjà un tableau, pas besoin de all()
+        return Region::where(['active' => 1]);
     }
 
+    /**
+     * Récupère les régions par pays
+     */
     public function getRegionsByCountry(int $countryId): array
     {
-        return Region::where('country_id', $countryId)
-            ->where('active', 1)
-            ->all();
+        // Correction: utilisation de la syntaxe tableau pour les conditions
+        return Region::where([
+            'country_id' => $countryId,
+            'active' => 1
+        ]);
     }
 
+    /**
+     * Récupère une région par son ID
+     */
     public function getRegion(int $id): ?Region
     {
         return Region::find($id);
     }
 
+    /**
+     * Récupère une région avec ses relations
+     */
     public function getRegionWithRelations(int $id): ?Region
     {
         $region = $this->getRegion($id);
@@ -42,6 +57,9 @@ class RegionService
         return $region;
     }
 
+    /**
+     * Récupère les secteurs d'une région
+     */
     public function getRegionSectors(int $regionId): array
     {
         return $this->db->query(
@@ -53,6 +71,9 @@ class RegionService
         );
     }
 
+    /**
+     * Obtient des statistiques pour une région
+     */
     public function getRegionStatistics(int $regionId): array
     {
         $stats = [
@@ -89,6 +110,9 @@ class RegionService
         return $stats;
     }
 
+    /**
+     * Crée une nouvelle région
+     */
     public function createRegion(array $data): Region
     {
         $region = new Region();
@@ -97,6 +121,9 @@ class RegionService
         return $region;
     }
 
+    /**
+     * Met à jour une région existante
+     */
     public function updateRegion(Region $region, array $data): Region
     {
         $region->fill($data);
@@ -104,6 +131,9 @@ class RegionService
         return $region;
     }
 
+    /**
+     * Supprime une région
+     */
     public function deleteRegion(Region $region): bool
     {
         return $region->delete();
