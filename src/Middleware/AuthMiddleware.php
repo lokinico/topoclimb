@@ -2,6 +2,7 @@
 
 namespace TopoclimbCH\Middleware;
 
+use TopoclimbCH\Core\Container;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\Auth;
