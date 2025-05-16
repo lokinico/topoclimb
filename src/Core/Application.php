@@ -95,18 +95,16 @@ class Application
         error_log("Response object created: " . get_class($response));
         error_log("Response status code: " . $response->getStatusCode());
 
-        // Envoi de la réponse - AVEC NAMESPACE COMPLET
+        // Toute réponse devrait être une instance de Symfony\Component\HttpFoundation\Response
         if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
-            error_log("Sending Symfony response...");
+            error_log("Sending response...");
             $response->send();
-            error_log("Response sent");
-        } else if ($response instanceof \TopoclimbCH\Core\Response) {
-            // Au cas où vous auriez aussi une classe Response personnalisée
-            error_log("Sending custom response...");
-            $response->send();
-            error_log("Response sent");
         } else {
             error_log("WARNING: Unknown response type: " . get_class($response));
+            // Fallback - convertir en réponse
+            if (is_string($response)) {
+                (new Response($response))->send();
+            }
         }
     }
 
