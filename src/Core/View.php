@@ -82,10 +82,61 @@ class View
             return '/' . ltrim($path, '/');
         }));
 
-        // Add auth() function
+        // MODIFIÉ: Add auth() function correctement avec auth_user_id
         $this->twig->addFunction(new TwigFunction('auth', function () {
-            // This would need to be implemented based on your auth system
-            return isset($_SESSION['user_id']) ? true : false;
+            // Utiliser auth_user_id au lieu de user_id pour être cohérent
+            return isset($_SESSION['auth_user_id']) ? true : false;
+        }));
+
+        // AJOUTÉ: Add auth_user() function pour récupérer les données de l'utilisateur
+        $this->twig->addFunction(new TwigFunction('auth_user', function () {
+            if (!isset($_SESSION['auth_user_id'])) {
+                return null;
+            }
+
+            // Récupérer la base de données
+            global $db;
+
+            // Si $db n'est pas disponible, essayer de le récupérer via Container
+            if (!isset($db) || $db === null) {
+                try {
+                    $container = Container::getInstance();
+                    if ($container && $container->has(Database::class)) {
+                        $db = $container->get(Database::class);
+                    }
+                } catch (\Throwable $e) {
+                    error_log("View::auth_user - Erreur récupération DB: " . $e->getMessage());
+                    return null;
+                }
+            }
+
+            // Si toujours pas de base de données, retourner simplement un objet minimal
+            if (!isset($db) || $db === null) {
+                error_log("View::auth_user - Base de données non disponible, retour objet minimal");
+                return (object) [
+                    'id' => $_SESSION['auth_user_id'],
+                    'prenom' => 'Utilisateur',
+                    'nom' => 'Connecté'
+                ];
+            }
+
+            // Récupérer l'utilisateur depuis la base de données
+            try {
+                $userId = $_SESSION['auth_user_id'];
+                $query = "SELECT * FROM users WHERE id = ? LIMIT 1";
+                $result = $db->query($query, [$userId])->fetch();
+
+                if (!$result) {
+                    error_log("View::auth_user - Utilisateur non trouvé: " . $userId);
+                    return null;
+                }
+
+                // Retourner l'utilisateur comme objet
+                return (object) $result;
+            } catch (\Throwable $e) {
+                error_log("View::auth_user - Erreur récupération utilisateur: " . $e->getMessage());
+                return null;
+            }
         }));
 
         // Add is_active() function for navigation
