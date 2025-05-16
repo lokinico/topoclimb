@@ -15,7 +15,7 @@ class PreserveCsrfTokenMiddleware
         $this->session = $session;
     }
 
-    public function handle(Request $request, callable $next): Response
+    public function handle(Request $request, callable $next): \Symfony\Component\HttpFoundation\Response
     {
         // Sauvegarder le token CSRF avant tout traitement
         $originalToken = $this->session->get('csrf_token');
