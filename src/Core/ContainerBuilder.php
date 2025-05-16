@@ -120,6 +120,13 @@ class ContainerBuilder
             ],
             'TopoclimbCH\\Services\\MediaService' => [
                 Database::class
+            ],
+            // Ajoutez ces deux services
+            'TopoclimbCH\\Services\\RegionService' => [
+                Database::class
+            ],
+            'TopoclimbCH\\Services\\CountryService' => [
+                Database::class
             ]
         ];
 
@@ -163,7 +170,11 @@ class ContainerBuilder
             ],
             'TopoclimbCH\\Controllers\\RegionController' => [
                 View::class,
-                Session::class
+                Session::class,
+                'TopoclimbCH\\Services\\RegionService',
+                'TopoclimbCH\\Services\\CountryService',
+                'TopoclimbCH\\Services\\AuthService',
+                Database::class
             ],
             'TopoclimbCH\\Controllers\\SiteController' => [
                 View::class,
