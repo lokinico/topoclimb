@@ -66,13 +66,17 @@ class Application
     public function handle(): Response
     {
         try {
-            // Créer le middleware de préservation CSRF
+            // Vérifier s'il s'agit de la route /logout
+            if ($this->request->getPathInfo() === '/logout') {
+                // Bypass le middleware CSRF pour cette route
+                return $this->router->dispatch($this->request);
+            }
+
+            // Pour toutes les autres routes, appliquer le middleware CSRF
             $session = $this->container->get(Session::class);
             $preserveCsrfMiddleware = new PreserveCsrfTokenMiddleware($session);
 
-            // Exécuter le middleware qui préservera le token CSRF
             return $preserveCsrfMiddleware->handle($this->request, function ($request) {
-                // Dispatch de la requête enveloppé par le middleware
                 return $this->router->dispatch($request);
             });
         } catch (RouteNotFoundException $e) {
