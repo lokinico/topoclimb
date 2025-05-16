@@ -3,7 +3,7 @@
 namespace TopoclimbCH\Middleware;
 
 use Symfony\Component\HttpFoundation\Request;
-use TopoclimbCH\Core\Response;
+use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\Session;
 
 class PreserveCsrfTokenMiddleware
@@ -15,32 +15,33 @@ class PreserveCsrfTokenMiddleware
         $this->session = $session;
     }
 
-    public function handle(Request $request, callable $next): \Symfony\Component\HttpFoundation\Response
+    public function handle(Request $request, callable $next): Response
     {
         // Sauvegarder le token CSRF avant tout traitement
         $originalToken = $this->session->get('csrf_token');
-
-        // Un flag pour indiquer si on a sauvegardé un token
         $hasOriginalToken = !empty($originalToken);
 
         if ($hasOriginalToken) {
+            // Garder une copie sécurisée du token
             $this->session->set('_original_csrf_token', $originalToken);
             error_log("CSRF token sauvegardé: " . substr($originalToken, 0, 10) . "...");
         }
 
-        // Exécuter le reste du pipeline de middleware et le contrôleur
+        // Exécuter le pipeline de middleware
         $response = $next($request);
 
-        // Après tout traitement, restaurer le token original si nécessaire
+        // Restaurer le token si nécessaire
         if ($hasOriginalToken) {
             $currentToken = $this->session->get('csrf_token');
 
-            // Ne restaurer que si le token a changé
             if ($currentToken !== $originalToken) {
                 $this->session->set('csrf_token', $originalToken);
                 error_log("CSRF token restauré: " . substr($originalToken, 0, 10) . "...");
             }
         }
+
+        // S'assurer que les changements sont persistés
+        $this->session->persist();
 
         return $response;
     }
