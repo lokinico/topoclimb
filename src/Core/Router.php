@@ -17,12 +17,12 @@ class Router
      * @var array
      */
     private array $routes = [];
-    
+
     /**
      * @var LoggerInterface
      */
     private LoggerInterface $logger;
-    
+
     /**
      * @var ContainerInterface
      */
@@ -71,7 +71,7 @@ class Router
     {
         if (file_exists($file)) {
             $routes = require $file;
-            
+
             if (is_array($routes)) {
                 foreach ($routes as $route) {
                     $method = $route['method'] ?? 'GET';
@@ -79,7 +79,7 @@ class Router
                     $controller = $route['controller'] ?? '';
                     $action = $route['action'] ?? '';
                     $middlewares = $route['middlewares'] ?? [];
-                    
+
                     if ($controller && $action) {
                         $this->addRoute($method, $path, [
                             'controller' => $controller,
@@ -90,7 +90,7 @@ class Router
                 }
             }
         }
-        
+
         return $this;
     }
 
@@ -105,25 +105,25 @@ class Router
     public function addRoute(string $method, string $path, array|callable $handler): self
     {
         $method = strtoupper($method);
-        
+
         if (!isset($this->routes[$method])) {
             $this->routes[$method] = [];
         }
-        
+
         // Convert path to regex pattern
         $pattern = $this->pathToRegex($path);
-        
+
         // Ensure middlewares array is set if not provided
         if (is_array($handler) && !isset($handler['middlewares'])) {
             $handler['middlewares'] = [];
         }
-        
+
         // Register the route
         $this->routes[$method][$pattern] = [
             'path' => $path,
             'handler' => $handler
         ];
-        
+
         return $this;
     }
 
@@ -139,16 +139,16 @@ class Router
         if ($path === '/') {
             return '#^/$#';
         }
-        
+
         // Escape regex special chars
         $path = preg_quote($path, '#');
-        
+
         // Convert {param} to named capture groups
         $path = preg_replace('#\\\{([a-zA-Z0-9_]+)\\\}#', '(?P<$1>[^/]+)', $path);
-        
+
         // Convert {param?} to optional named capture groups
         $path = preg_replace('#\\\{([a-zA-Z0-9_]+)\\\?\\\}#', '(?P<$1>[^/]+)?', $path);
-        
+
         return '#^' . $path . '$#';
     }
 
@@ -166,15 +166,15 @@ class Router
         if (strlen($path) > 1 && substr($path, -1) === '/') {
             $path = rtrim($path, '/');
         }
-        
+
         // Get routes for the HTTP method
         $method = strtoupper($method);
         $routes = $this->routes[$method] ?? [];
-        
+
         if (empty($routes)) {
             throw new RouteNotFoundException("No routes defined for method: $method");
         }
-        
+
         // Find a matching route
         foreach ($routes as $pattern => $route) {
             if (preg_match($pattern, $path, $matches)) {
@@ -182,18 +182,18 @@ class Router
                 $params = array_filter($matches, function ($key) {
                     return !is_numeric($key);
                 }, ARRAY_FILTER_USE_KEY);
-                
+
                 return [
                     'handler' => $route['handler'],
                     'params' => $params
                 ];
             }
         }
-        
+
         // No route matches
         throw new RouteNotFoundException("Route not found for $method $path");
     }
-    
+
 
     /**
      * Dispatch the request to the appropriate route
@@ -208,23 +208,23 @@ class Router
         if (empty($path)) {
             $path = '/';
         }
-        
+
         // Resolve the route
         $route = $this->resolve($request->getMethod(), $path);
-        
+
         // Add URL parameters to the request
         foreach ($route['params'] as $key => $value) {
             $request->attributes->set($key, $value);
         }
-        
+
         // Get handler and middlewares
         $handler = $route['handler'];
         $middlewares = [];
-        
+
         if (is_array($handler) && isset($handler['middlewares'])) {
             $middlewares = $handler['middlewares'];
         }
-        
+
         // Execute the middleware stack and the route handler
         return $this->executeMiddlewareStack($middlewares, $handler, $request);
     }
@@ -243,17 +243,17 @@ class Router
         $stack = function (Request $request) use ($handler) {
             return $this->executeHandler($handler, $request);
         };
-        
+
         // Build the middleware stack in reverse order (last middleware executes first)
         foreach (array_reverse($middlewares) as $middleware) {
             $middlewareInstance = $this->container->get($middleware);
-            
+
             // Create a new stack that wraps the current stack with this middleware
             $stack = function (Request $request) use ($middlewareInstance, $stack) {
                 return $middlewareInstance->handle($request, $stack);
             };
         }
-        
+
         // Execute the complete middleware stack
         return $stack($request);
     }
@@ -268,56 +268,38 @@ class Router
      */
     private function executeHandler(mixed $handler, Request $request): Response
     {
-        // Support pour ['controller' => Class, 'action' => method] format
         if (is_array($handler) && isset($handler['controller']) && isset($handler['action'])) {
             $controllerClass = $handler['controller'];
             $action = $handler['action'];
-            
+
             try {
-                // Approche 1 : Vérification explicite de l'existence
+                // Approche simplifiée
                 if (!$this->container->has($controllerClass)) {
-                    throw new \Exception("Container does not have service: $controllerClass");
-                }
-                
-                // Approche 2 : Tester les alternatives de nommage
-                $controller = null;
-                $alternatives = [
-                    $controllerClass,                        // Nom complet (TopoclimbCH\Controllers\HomeController)
-                    basename(str_replace('\\', '/', $controllerClass)), // Nom court (HomeController)
-                    'TopoclimbCH\\Controllers\\' . basename(str_replace('\\', '/', $controllerClass)) // Reconstruction
-                ];
-                
-                foreach ($alternatives as $alternative) {
-                    if ($this->container->has($alternative)) {
-                        $controller = $this->container->get($alternative);
-                        break;
-                    }
-                }
-                
-                if ($controller === null) {
-                    // Fallback : Instanciation directe si la classe existe
-                    if (class_exists($controllerClass)) {
-                        $view = $this->container->get(View::class);
-                        $session = $this->container->get(Session::class);
-                        $controller = new $controllerClass($view, $session);
+                    // Essayer avec l'espace de noms complet
+                    $fullControllerClass = 'TopoclimbCH\\Controllers\\' .
+                        basename(str_replace('\\', '/', $controllerClass));
+
+                    if ($this->container->has($fullControllerClass)) {
+                        $controllerClass = $fullControllerClass;
                     } else {
-                        throw new \Exception("Controller class not found: $controllerClass");
+                        throw new \Exception("Controller not found: $controllerClass");
                     }
                 }
-                
+
+                $controller = $this->container->get($controllerClass);
+
                 if (!method_exists($controller, $action)) {
                     throw new \Exception("Action '$action' not found in controller '$controllerClass'");
                 }
-                
+
                 // Execute controller action
                 return $controller->$action($request);
             } catch (\Exception $e) {
-                // Log l'erreur pour le débogage
                 $this->logger->error("Controller error: " . $e->getMessage());
                 throw $e;
             }
         }
-        
+
         throw new \Exception("Invalid route handler.");
     }
 }
