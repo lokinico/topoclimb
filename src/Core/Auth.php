@@ -121,32 +121,58 @@ class Auth
             // Ajouter ce log pour voir les données exactes
             error_log("Données User complètes: " . json_encode($result));
 
-            $user = new User($result);
-
-            // Vérifier que l'objet User a bien été créé
-            if (!$user || !isset($user->id)) {
-                error_log("Échec de création de l'objet User pour: $username - Vérifier la classe User");
-                return false;
+            // SOLUTION: Mode sécurisé pour créer l'objet User
+            // Enlever le champ reset_token_expires_at s'il existe et n'est pas dans le schéma
+            if (isset($result['reset_token_expires_at'])) {
+                error_log("Suppression du champ reset_token_expires_at non conforme");
+                unset($result['reset_token_expires_at']);
             }
+
+            // Création de l'objet User avec les données filtrées
+            $user = new User($result);
 
             // Connecte l'utilisateur
             $this->login($user, $remember);
             error_log("Connexion réussie pour: $username");
             return true;
         } catch (\Exception $e) {
-            // Gestion alternative en cas d'erreur lors de la création de l'utilisateur
+            // Solution de secours: connexion directe sans classe User
             error_log("Exception lors de la création de l'utilisateur: " . $e->getMessage());
+            error_log("Tentative de connexion directe sans classe User");
 
             try {
-                // Création manuelle d'un objet User fonctionnel
-                $userData = $result;
-                $user = new class($userData) extends User {
+                // Créer un objet simple qui implémente les méthodes essentielles
+                $user = new class($result) {
+                    private array $data;
+
                     public function __construct(array $data)
                     {
-                        foreach ($data as $key => $value) {
-                            $this->$key = $value;
-                        }
+                        $this->data = $data;
                         $this->id = (int) $data['id'];
+                        $this->autorisation = $data['autorisation'];
+                    }
+
+                    public function __get($name)
+                    {
+                        return $this->data[$name] ?? null;
+                    }
+
+                    public function __isset($name)
+                    {
+                        return isset($this->data[$name]);
+                    }
+
+                    // Méthodes essentielles pour la compatibilité
+                    public function isAdmin(): bool
+                    {
+                        // CORRECTION pour reconnaître le niveau 0 comme admin
+                        return $this->autorisation === '0';
+                    }
+
+                    public function isModerator(): bool
+                    {
+                        // CORRECTION pour reconnaître les niveaux corrects
+                        return in_array($this->autorisation, ['0', '1']);
                     }
                 };
 
