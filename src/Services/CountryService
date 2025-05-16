@@ -1,0 +1,27 @@
+<?php
+// src/Services/CountryService.php
+
+namespace TopoclimbCH\Services;
+
+use TopoclimbCH\Core\Database;
+use TopoclimbCH\Models\Country;
+
+class CountryService
+{
+    protected Database $db;
+
+    public function __construct(Database $db)
+    {
+        $this->db = $db;
+    }
+
+    public function getAllCountries(): array
+    {
+        return Country::where('active', 1)->all();
+    }
+
+    public function getCountry(int $id): ?Country
+    {
+        return Country::find($id);
+    }
+}
