@@ -12,40 +12,53 @@ class AuthMiddleware
 {
     private Session $session;
     private Database $db;
-    private Auth $auth;
+    private ?Auth $auth = null;
 
     public function __construct(Session $session, Database $db)
     {
         $this->session = $session;
         $this->db = $db;
-        $this->auth = Auth::getInstance($session, $db);
+
+        // Initialiser Auth de manière sécurisée
+        try {
+            $this->auth = Auth::getInstance($session, $db);
+        } catch (\Exception $e) {
+            error_log("Erreur lors de l'initialisation d'Auth dans le middleware: " . $e->getMessage());
+            // Ne pas lancer d'exception - le middleware gérera lui-même l'absence d'authentification
+        }
     }
 
     public function handle(Request $request, callable $next): Response
     {
-        // Vérifier si l'utilisateur est connecté
-        if (!$this->auth->check()) {
-            // Sauvegarder l'URL pour redirection après login
+        // Fallback de sécurité si auth n'est pas initialisé mais qu'un ID est en session
+        if ($this->auth === null && $this->session->has('auth_user_id')) {
+            error_log("AuthMiddleware: Tentative de récupération d'auth via session");
+            try {
+                $this->auth = Auth::getInstance($this->session, $this->db);
+            } catch (\Exception $e) {
+                error_log("Échec de récupération d'auth: " . $e->getMessage());
+            }
+        }
+
+        // Vérifier l'authentification
+        $isAuthenticated = $this->auth !== null && $this->auth->check();
+
+        if (!$isAuthenticated) {
+            error_log("AuthMiddleware: Utilisateur non authentifié, redirection vers login");
+            // Stocker l'URL actuelle pour y revenir après login
             $this->session->set('intended_url', $request->getPathInfo());
             $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
 
-            // Important: persister la session avant redirection
+            // IMPORTANT: persister la session
             $this->session->persist();
 
-            return Response::redirect('/login');
+            // Redirection immédiate
+            $response = new Response('', 302);
+            $response->headers->set('Location', '/login');
+            return $response;
         }
 
-        // Vérifier si l'authentification est toujours valide
-        if (!$this->auth->validate()) {
-            $this->session->flash('error', 'Votre session a expiré. Veuillez vous reconnecter.');
-            $this->session->set('intended_url', $request->getPathInfo());
-
-            // Important: persister la session avant redirection
-            $this->session->persist();
-
-            return Response::redirect('/login');
-        }
-
+        // Utilisateur authentifié, continuer
         return $next($request);
     }
 }
