@@ -98,17 +98,21 @@ class Auth
      */
     public function id(): ?int
     {
-        // Recharger l'utilisateur si nécessaire
         if ($this->user === null && $this->initialized) {
             $this->checkSession();
         }
 
         if (!$this->user) {
+            error_log("Auth::id - Aucun utilisateur connecté.");
             return null;
         }
 
-        // NOUVELLE MÉTHODE: Extraire l'ID de manière fiable
-        return $this->extractUserId($this->user);
+        try {
+            return $this->extractUserId($this->user);
+        } catch (\Throwable $e) {
+            error_log("Auth::id - Exception lors de l'extraction de l'ID: " . $e->getMessage());
+            return null;
+        }
     }
 
     /**
