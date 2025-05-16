@@ -161,11 +161,25 @@ class AuthController extends BaseController
         return $this->redirect($intendedUrl);
     }
 
-    public function logout(): Response
+    /**
+     * Déconnexion de l'utilisateur
+     *
+     * @return void
+     */
+    public function logout(): void
     {
+        // Déconnecter l'utilisateur
         $this->auth->logout();
-        $this->flash('success', 'Vous avez été déconnecté');
-        return $this->redirect('/');
+
+        // Ajouter manuellement le message de succès dans la session (sera disponible à la prochaine requête)
+        $_SESSION['_flashes']['success'][] = 'Vous avez été déconnecté';
+
+        // Forcer l'écriture de la session
+        session_write_close();
+
+        // Redirection directe sans passer par le système Response
+        header('Location: /');
+        exit;
     }
 
     public function registerForm(): Response
