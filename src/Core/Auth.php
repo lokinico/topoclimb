@@ -271,22 +271,33 @@ class Auth
     {
         $this->user = $user;
 
-        // PROBLÈME IDENTIFIÉ: Récupération correcte de l'ID utilisateur
-        $userId = $user->id;
+        // CORRECTION CRITIQUE: Accéder correctement à l'ID utilisateur
+        // L'ID est dans $attributes['id'], pas directement dans $user->id
+        $userId = null;
 
-        // Debug détaillé sur l'ID utilisateur
-        error_log("Auth::login - DEBUG ID utilisateur: Type=" . gettype($userId) . ", Valeur=" . $userId);
-
-        // CORRECTION CRITIQUE: S'assurer que l'ID est un entier positif
-        if (is_numeric($userId)) {
-            $userId = (int)$userId;
-            if ($userId <= 0) {
-                error_log("ERREUR: ID utilisateur invalide après conversion: " . $userId);
-                throw new \RuntimeException("ID utilisateur doit être un entier positif");
-            }
+        // Tentative d'extraction correcte de l'ID (en respectant l'encapsulation)
+        if (isset($user->attributes) && isset($user->attributes['id'])) {
+            // Si les attributs sont accessibles directement
+            $userId = (int)$user->attributes['id'];
+            error_log("Auth::login - ID extrait depuis ->attributes['id']: $userId");
+        } else if (method_exists($user, 'getAttribute')) {
+            // Si la classe a une méthode d'accès aux attributs
+            $userId = (int)$user->getAttribute('id');
+            error_log("Auth::login - ID extrait depuis ->getAttribute('id'): $userId");
+        } else if (isset($user->id)) {
+            // Si l'ID est accessible via __get() magique
+            $userId = (int)$user->id;
+            error_log("Auth::login - ID extrait depuis ->id (magique): $userId");
         } else {
-            error_log("ERREUR: ID utilisateur n'est pas numérique: " . $userId);
-            throw new \RuntimeException("ID utilisateur doit être numérique");
+            // Dernier recours: dumping de l'objet pour diagnostic
+            error_log("Auth::login - Impossible d'extraire l'ID. Propriétés: " . json_encode(get_object_vars($user)));
+            throw new \RuntimeException("Impossible d'extraire l'ID utilisateur");
+        }
+
+        // Vérification de validité
+        if ($userId <= 0) {
+            error_log("Auth::login - ID utilisateur invalide: $userId");
+            throw new \RuntimeException("ID utilisateur invalide");
         }
 
         // Double stockage avec ID correct
