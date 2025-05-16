@@ -158,6 +158,9 @@ abstract class BaseController
      */
     protected function validateCsrfRequestToken(Request $request): bool
     {
+
+        error_log("Stack trace validateCsrfToken: " . json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5)));
+
         $token = $request->request->get('csrf_token');
 
         if (!$token) {

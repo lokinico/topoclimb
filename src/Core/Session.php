@@ -223,6 +223,8 @@ class Session
      */
     public function setCsrfToken(): string
     {
+        error_log("Stack trace setCsrfToken: " . json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5)));
+
         // Identifier qui appelle cette méthode
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
         $caller = isset($backtrace[1]) ?
