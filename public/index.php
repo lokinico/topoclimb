@@ -7,6 +7,12 @@
 // Définir le chemin de base de l'application
 define('BASE_PATH', dirname(__DIR__));
 
+// Optimisation critique des sessions avant tout
+ini_set('session.use_only_cookies', 1);
+ini_set('session.use_strict_mode', 1);
+ini_set('session.use_trans_sid', 0);
+ini_set('session.gc_maxlifetime', 86400); // 24h pour éviter expirations prématurées
+
 // Charger l'autoloader de Composer
 require BASE_PATH . '/vendor/autoload.php';
 
@@ -29,19 +35,37 @@ if ($environment === 'development') {
     $whoops->register();
 }
 
-// IMPORTANT: Démarrer la session au tout début de l'exécution
+// CRUCIAL: Session handling amélioré
 if (session_status() === PHP_SESSION_NONE) {
     // Paramètres de sécurité pour les cookies de session
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => 0, // Session fermée à la fermeture du navigateur
         'path' => '/',
+        'domain' => '', // Domaine automatique
         'secure' => $environment === 'production',
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
 
+    // IMPORTANT: Préserver l'ID de session s'il existe dans le cookie
+    if (isset($_COOKIE[session_name()])) {
+        $sessionId = $_COOKIE[session_name()];
+        // Valider le format de l'ID pour éviter les injections
+        if (preg_match('/^[a-zA-Z0-9,-]{22,128}$/', $sessionId)) {
+            session_id($sessionId);
+            error_log("Réutilisation de l'ID de session existant: " . substr($sessionId, 0, 8) . "...");
+        }
+    }
+
     session_start();
     error_log("Session démarrée dans index.php, ID: " . session_id());
+
+    // Diagnostic des données d'authentification
+    if (isset($_SESSION['auth_user_id'])) {
+        error_log("Session active avec auth_user_id: " . $_SESSION['auth_user_id']);
+    } else {
+        error_log("Session active mais sans auth_user_id");
+    }
 }
 
 // Variables pour les services principaux
@@ -49,6 +73,7 @@ $container = null;
 $session = null;
 $db = null;
 $auth = null;
+$logger = null;
 
 try {
     // Créer et configurer le conteneur
@@ -63,13 +88,25 @@ try {
     $db = $container->get(\TopoclimbCH\Core\Database::class);
 
     // IMPORTANT: Initialiser Auth avant de traiter la requête si l'utilisateur est connecté
-    // Cela garantit que Auth est disponible partout dans l'application
     if (isset($_SESSION['auth_user_id'])) {
         try {
             $auth = \TopoclimbCH\Core\Auth::getInstance($session, $db);
             $logger->info("Auth initialisé dans index.php pour l'utilisateur ID: " . $_SESSION['auth_user_id']);
+
+            // Vérification critique que l'authentification est toujours valide
+            if (!$auth->check()) {
+                $logger->warning("Utilisateur en session mais introuvable en base: " . $_SESSION['auth_user_id']);
+                unset($_SESSION['auth_user_id']);
+                unset($_SESSION['is_authenticated']);
+                $session->remove('auth_user_id');
+                $session->remove('is_authenticated');
+                $session->flash('error', 'Votre session a expiré. Veuillez vous reconnecter.');
+            }
         } catch (\Throwable $e) {
-            $logger->error("Échec d'initialisation d'Auth dans index.php: " . $e->getMessage());
+            $logger->error("Échec d'initialisation d'Auth: " . $e->getMessage());
+            // Nettoyage de session si l'authentification échoue
+            unset($_SESSION['auth_user_id']);
+            unset($_SESSION['is_authenticated']);
             // Ne pas lancer d'exception ici, continuer le traitement
         }
     }
@@ -89,6 +126,17 @@ try {
         exit;
     }
 
+    // Débogage de session (en développement uniquement)
+    if ($environment === 'development' && isset($_GET['debug_session'])) {
+        echo "<h2>Données de session:</h2><pre>";
+        var_dump($_SESSION);
+        echo "</pre>";
+        echo "<h2>Cookies:</h2><pre>";
+        var_dump($_COOKIE);
+        echo "</pre>";
+        exit;
+    }
+
     // Utiliser la classe Application pour gérer le cycle de requête/réponse
     $app = new \TopoclimbCH\Core\Application(
         $router,
@@ -98,7 +146,6 @@ try {
     );
 
     // Exécuter l'application qui gère tout le cycle requête/réponse
-    // incluant l'envoi automatique de la réponse
     $app->run();
 } catch (\Throwable $e) {
     // Log l'erreur
@@ -113,15 +160,33 @@ try {
         error_log("[ERREUR CRITIQUE] " . $e->getMessage() . "\n" . $e->getTraceAsString());
     }
 
-    // Si l'erreur est liée à Auth, essayer de nettoyer la session
-    if (strpos($e->getMessage(), 'Auth') !== false && isset($session)) {
-        error_log("Tentative de nettoyage de la session après erreur Auth");
-        $session->remove('auth_user_id');
-        $session->remove('user_authenticated');
-        $session->flash('error', 'Votre session a expiré. Veuillez vous reconnecter.');
-        $session->persist();
+    // Gestion spéciale des erreurs d'authentification
+    if ((strpos($e->getMessage(), 'Auth') !== false ||
+        strpos($e->getMessage(), 'auth') !== false ||
+        strpos($e->getFile(), 'Auth.php') !== false) && isset($session)) {
 
-        // Rediriger vers la page d'accueil
+        error_log("Tentative de nettoyage de la session après erreur Auth");
+
+        // Nettoyage complet des données d'authentification
+        unset($_SESSION['auth_user_id']);
+        unset($_SESSION['is_authenticated']);
+        $session->remove('auth_user_id');
+        $session->remove('is_authenticated');
+
+        // Sauvegarde URL courante pour y revenir après login
+        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+        if ($currentUrl !== '/login' && $currentUrl !== '/logout') {
+            $_SESSION['intended_url'] = $currentUrl;
+            $session->set('intended_url', $currentUrl);
+        }
+
+        $session->flash('error', 'Problème d\'authentification. Veuillez vous reconnecter.');
+
+        if (method_exists($session, 'persist')) {
+            $session->persist();
+        }
+
+        // Rediriger vers login
         header('Location: /login');
         exit;
     }
@@ -139,9 +204,17 @@ try {
         if (isset($_SESSION)) {
             echo "<h2>Informations de session</h2>";
             echo "<pre>";
-            print_r(array_map(function ($k, $v) {
-                return [$k => is_string($v) ? (strlen($v) > 100 ? substr($v, 0, 100) . '...' : $v) : gettype($v)];
-            }, array_keys($_SESSION), $_SESSION));
+            // Afficher de manière sécurisée les données sensibles
+            foreach ($_SESSION as $key => $value) {
+                if (is_string($value)) {
+                    $displayValue = (strlen($value) > 100 || strpos($key, 'token') !== false || strpos($key, 'password') !== false)
+                        ? substr($value, 0, 8) . '...'
+                        : $value;
+                } else {
+                    $displayValue = gettype($value);
+                }
+                echo htmlspecialchars($key) . ' => ' . htmlspecialchars(is_string($displayValue) ? $displayValue : json_encode($displayValue)) . "\n";
+            }
             echo "</pre>";
         }
     } else {
