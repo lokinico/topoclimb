@@ -14,17 +14,24 @@ class AuthMiddleware
     private Database $db;
     private ?Auth $auth = null;
 
+    /**
+     * AuthMiddleware constructor
+     *
+     * @param Session $session La session HTTP
+     * @param Database $db La base de données
+     */
     public function __construct(Session $session, Database $db)
     {
         $this->session = $session;
         $this->db = $db;
 
-        // Initialiser Auth de manière sécurisée
+        // Utiliser le conteneur pour obtenir Auth
         try {
-            $this->auth = Auth::getInstance($session, $db);
+            if (Container::getInstance() && Container::getInstance()->has(Auth::class)) {
+                $this->auth = Container::getInstance()->get(Auth::class);
+            }
         } catch (\Exception $e) {
             error_log("Erreur lors de l'initialisation d'Auth dans le middleware: " . $e->getMessage());
-            // Ne pas lancer d'exception - le middleware gérera lui-même l'absence d'authentification
         }
     }
 
