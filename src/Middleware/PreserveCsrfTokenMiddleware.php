@@ -17,8 +17,11 @@ class PreserveCsrfTokenMiddleware
 
     public function handle(Request $request, callable $next): Response
     {
+        error_log("PreserveCsrfTokenMiddleware: Handling request path = " . $request->getPathInfo());
+
         // Ignorer la route de déconnexion pour éviter les conflits
         if ($request->getPathInfo() === '/logout') {
+            error_log("PreserveCsrfTokenMiddleware: Bypassing for /logout");
             return $next($request);
         }
 
