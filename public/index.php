@@ -1,6 +1,16 @@
 <?php
 
 /**
+ * TopoclimbCH - Application de gestion de la communauté alpine
+ *
+ * @package TopoclimbCH
+ * @author  Topoclimb Team
+ * @license MIT
+ */
+
+use TopoclimbCH\Core\Container;
+
+/**
  * Point d'entrée principal de l'application TopoclimbCH
  */
 
