@@ -26,9 +26,9 @@
                         <li><a href="{{ url('/profile') }}" class="dropdown-item">Profil</a></li>
                         <li><a href="{{ url('/ascents') }}" class="dropdown-item">Mes ascensions</a></li>
                         <li>
-                            <form action="{{ url('/logout') }}" method="POST" style="display: inline;">
+                            <form action="{{ url('/logout') }}" method="POST">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                <button type="submit" class="dropdown-item btn-link">Déconnexion</button>
+                                <button type="submit" class="btn-link dropdown-item">Déconnexion</button>
                             </form>
                         </li>
                         <li><a href="{{ url('/settings') }}" class="dropdown-item">Paramètres</a></li>

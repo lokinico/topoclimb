@@ -4,6 +4,10 @@
 
 {% block content %}
 <div class="container py-4">
+    <div class="page-header">
+        <h1>Mon Profil</h1>
+    </div>
+    
     <div class="row">
         <div class="col-md-4">
             <div class="card">
@@ -12,15 +16,21 @@
                 </div>
                 <div class="card-body">
                     <div class="profile-image mb-3">
-                        <img src="{{ auth_user().image ?? asset('images/default-avatar.png') }}" alt="Photo de profil" class="img-fluid rounded-circle">
+                        <img src="{{ asset('images/default-avatar.png') }}" alt="Photo de profil" class="img-fluid rounded-circle">
                     </div>
+                    
                     <h3 class="h4">{{ auth_user().prenom }} {{ auth_user().nom }}</h3>
                     <p class="text-muted">@{{ auth_user().username }}</p>
-                    <p><i class="icon-map-marker"></i> {{ auth_user().ville }}</p>
                     
-                    <a href="{{ url('/profile/edit') }}" class="btn btn-primary btn-sm">
-                        <i class="icon-edit"></i> Modifier mon profil
-                    </a>
+                    {% if auth_user().ville %}
+                        <p><span class="icon-location"></span> {{ auth_user().ville }}</p>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{{ url('/settings') }}" class="btn btn-primary btn-sm">
+                            <span class="icon-edit"></span> Modifier mon profil
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -33,73 +43,62 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4">
-                            <div class="stat-card text-center">
+                            <div class="stat-card">
                                 <div class="stat-value">{{ total_ascents|default('0') }}</div>
                                 <div class="stat-label">Ascensions</div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="stat-card text-center">
+                            <div class="stat-card">
                                 <div class="stat-value">{{ climbing_days|default('0') }}</div>
                                 <div class="stat-label">Jours d'escalade</div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="stat-card text-center">
+                            <div class="stat-card">
                                 <div class="stat-value">{{ max_difficulty|default('-') }}</div>
                                 <div class="stat-label">Cotation max</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="mt-4">
-                        <h3 class="h6">Progression récente</h3>
-                        <div class="chart-container">
-                            <div id="progression-chart" style="height: 250px;">
-                                <!-- Le graphique de progression sera chargé ici via JS -->
+                    {% if recent_ascents is defined and recent_ascents|length > 0 %}
+                        <div class="mt-4">
+                            <h3 class="h6">Dernières ascensions</h3>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Voie</th>
+                                            <th>Difficulté</th>
+                                            <th>Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for ascent in recent_ascents %}
+                                            <tr>
+                                                <td>{{ ascent.ascent_date|date('d/m/Y') }}</td>
+                                                <td>
+                                                    <a href="{{ url('/routes/' ~ ascent.route_id) }}">
+                                                        {{ ascent.route_name }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ ascent.difficulty }}</td>
+                                                <td>{{ ascent.ascent_type }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-center mt-3">
+                                <a href="{{ url('/ascents') }}" class="btn btn-outline-primary btn-sm">Voir toutes mes ascensions</a>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card mt-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="h5 mb-0">Dernières ascensions</h2>
-                    <a href="{{ url('/ascents') }}" class="btn btn-sm btn-outline-primary">Voir toutes</a>
-                </div>
-                <div class="card-body">
-                    {% if recent_ascents is defined and recent_ascents|length > 0 %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Voie</th>
-                                        <th>Difficulté</th>
-                                        <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for ascent in recent_ascents %}
-                                        <tr>
-                                            <td>{{ ascent.ascent_date|date('d/m/Y') }}</td>
-                                            <td>
-                                                <a href="{{ url('/routes/' ~ ascent.route_id) }}">
-                                                    {{ ascent.route_name }}
-                                                </a>
-                                            </td>
-                                            <td>{{ ascent.difficulty }}</td>
-                                            <td>{{ ascent.ascent_type }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
                     {% else %}
-                        <div class="alert alert-info">
-                            Aucune ascension enregistrée pour le moment.
-                            <a href="{{ url('/routes') }}">Découvrez des voies</a> et enregistrez vos ascensions !
+                        <div class="alert alert-info mt-4">
+                            Vous n'avez pas encore enregistré d'ascension.
+                            <a href="{{ url('/routes') }}">Découvrez des voies d'escalade</a> et enregistrez vos ascensions !
                         </div>
                     {% endif %}
                 </div>
@@ -107,13 +106,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Ici vous pourriez ajouter du code pour initialiser un graphique
-        // avec une bibliothèque comme Chart.js
-    });
-</script>
 {% endblock %}
