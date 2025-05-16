@@ -119,11 +119,29 @@ class AuthController extends BaseController
         $loginSuccess = $this->auth->attempt($credentials['email'], $credentials['password'], $remember);
         error_log('Résultat de la tentative de connexion: ' . ($loginSuccess ? 'succès' : 'échec'));
 
-        if (!$loginSuccess) {
-            $this->flash('error', 'Identifiants invalides');
-            $this->session->flash('old', ['email' => $credentials['email'] ?? '']);
-            return $this->redirect('/login');
+        if ($loginSuccess) {
+            // Récupération de l'URL intentionnelle si disponible
+            $intendedUrl = $this->session->get('intended_url', '/');
+            $this->session->remove('intended_url');
+
+            $this->flash('success', 'Vous êtes maintenant connecté');
+
+            // Log de la redirection
+            error_log('Redirection après connexion vers: ' . $intendedUrl);
+
+            // SOLUTION: Forcer la redirection immédiatement
+            $response = Response::redirect($intendedUrl);
+            $response->send();
+            exit; // Important pour arrêter l'exécution après la redirection
+
+            // Cette ligne ne sera jamais atteinte
+            // return $this->redirect($intendedUrl);
         }
+
+        // Si échec de connexion
+        $this->flash('error', 'Identifiants invalides');
+        $this->session->flash('old', ['email' => $credentials['email'] ?? '']);
+        return $this->redirect('/login');
 
         // Récupération de l'URL intentionnelle si disponible
         $intendedUrl = $this->session->get('intended_url', '/');

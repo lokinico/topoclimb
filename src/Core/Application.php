@@ -82,6 +82,20 @@ class Application
         }
     }
 
+    /**
+     * Run the application
+     * 
+     * @return void
+     */
+    public function run(): void
+    {
+        $response = $this->handle();
+
+        // SOLUTION: Assurer que toutes les réponses sont envoyées
+        if ($response instanceof Response) {
+            $response->send();
+        }
+    }
 
     /**
      * Create a 404 response

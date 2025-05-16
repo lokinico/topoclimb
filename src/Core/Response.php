@@ -114,7 +114,7 @@ class Response extends SymfonyResponse
             $secure,
             $httpOnly
         );
-        
+
         $this->headers->setCookie($cookie);
         return $this;
     }
@@ -162,10 +162,10 @@ class Response extends SymfonyResponse
     public static function json(mixed $data, int $statusCode = 200): static
     {
         $content = json_encode($data);
-        
+
         $response = new static($content, $statusCode);
         $response->headers->set('Content-Type', 'application/json');
-        
+
         return $response;
     }
 
@@ -183,13 +183,30 @@ class Response extends SymfonyResponse
             // Si l'URL ne commence pas par http:// ou https:// et ne commence pas par /, ajouter /
             $url = '/' . $url;
         }
-        
+
+        // Ajouter un log pour déboguer les redirections
+        error_log('Redirection créée vers: ' . $url . ' avec statut ' . $statusCode);
+
         $response = new static('', $statusCode);
         $response->headers->set('Location', $url);
-        
+
         return $response;
     }
-    
+
+    /**
+     * Crée une réponse de redirection et l'envoie immédiatement
+     * 
+     * @param string $url URL de redirection
+     * @param int $statusCode Code de statut HTTP
+     * @return never
+     */
+    public static function redirectNow(string $url, int $statusCode = 302): never
+    {
+        $response = self::redirect($url, $statusCode);
+        $response->send();
+        exit;
+    }
+
     /**
      * Définit cette réponse comme publique
      * 
@@ -200,7 +217,7 @@ class Response extends SymfonyResponse
         parent::setPublic();
         return $this;
     }
-    
+
     /**
      * Définit cette réponse comme privée
      * 
@@ -211,7 +228,7 @@ class Response extends SymfonyResponse
         parent::setPrivate();
         return $this;
     }
-    
+
     /**
      * Définit le temps maximal de mise en cache
      * 
@@ -223,7 +240,7 @@ class Response extends SymfonyResponse
         parent::setMaxAge($seconds);
         return $this;
     }
-    
+
     /**
      * Définit le temps partagé maximal de mise en cache
      * 
