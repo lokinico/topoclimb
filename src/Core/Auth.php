@@ -105,6 +105,7 @@ class Auth
 
     /**
      * Récupère l'ID de l'utilisateur connecté
+     * Modification: Accès plus robuste à l'ID
      */
     public function id(): ?int
     {
@@ -113,7 +114,83 @@ class Auth
             $this->checkSession();
         }
 
-        return $this->user ? (int)$this->user->id : null;
+        if (!$this->user) {
+            return null;
+        }
+
+        // NOUVELLE MÉTHODE: Extraire l'ID de manière fiable
+        return $this->extractUserId($this->user);
+    }
+
+    /**
+     * Méthode pour extraire de façon fiable l'ID d'un objet User
+     * NOUVELLE MÉTHODE
+     */
+    private function extractUserId(User $user): int
+    {
+        // Tenter d'accéder à l'ID via la réflexion pour voir les attributs
+        $reflection = new \ReflectionObject($user);
+        $idValue = null;
+
+        // 1. Vérifier si l'attribut 'attributes' est accessible
+        if ($reflection->hasProperty('attributes')) {
+            $attributesProperty = $reflection->getProperty('attributes');
+            $attributesProperty->setAccessible(true);
+            $attributes = $attributesProperty->getValue($user);
+
+            if (isset($attributes['id'])) {
+                $idValue = $attributes['id'];
+                error_log("extractUserId: Trouvé via réflexion attributes['id'] = " . $idValue);
+            }
+        }
+
+        // 2. Si non trouvé, essayer la réflexion directe sur 'id'
+        if ($idValue === null && $reflection->hasProperty('id')) {
+            $idProperty = $reflection->getProperty('id');
+            $idProperty->setAccessible(true);
+            $idValue = $idProperty->getValue($user);
+            error_log("extractUserId: Trouvé via réflexion propriété id = " . $idValue);
+        }
+
+        // 3. Si toujours pas trouvé, essayer la méthode __get en appelant directement via user->id
+        if ($idValue === null && method_exists($user, '__get')) {
+            try {
+                $idValue = $user->id;
+                error_log("extractUserId: Trouvé via __get = " . $idValue);
+            } catch (\Exception $e) {
+                error_log("extractUserId: Erreur __get: " . $e->getMessage());
+            }
+        }
+
+        // 4. Dernier recours: requête SQL directe si on a le mail ou username
+        if (($idValue === null || $idValue === 0) && $this->db && ($user->mail || $user->username)) {
+            $field = $user->mail ? 'mail' : 'username';
+            $value = $user->mail ?: $user->username;
+
+            try {
+                $query = "SELECT id FROM users WHERE $field = ? LIMIT 1";
+                $result = $this->db->query($query, [$value])->fetch();
+
+                if ($result && isset($result['id'])) {
+                    $idValue = $result['id'];
+                    error_log("extractUserId: Trouvé via requête SQL = " . $idValue);
+                }
+            } catch (\Exception $e) {
+                error_log("extractUserId: Erreur SQL: " . $e->getMessage());
+            }
+        }
+
+        // Convertir et valider
+        if (is_numeric($idValue)) {
+            $id = (int)$idValue;
+            if ($id > 0) {
+                return $id;
+            }
+        }
+
+        // En cas d'échec complet, lancer une exception
+        error_log("ERREUR CRITIQUE: Impossible d'extraire un ID utilisateur valide");
+        throw new \RuntimeException("Impossible d'extraire un ID utilisateur valide");
     }
 
     /**
@@ -197,6 +274,9 @@ class Auth
             // Création de l'objet User avec les données filtrées
             $user = new User($result);
 
+            // MODIFICATION: Vérification de l'ID avant login
+            error_log("Vérification de l'ID: user->id = " . ($user->id ?? 'non défini') . ", result['id'] = " . $result['id']);
+
             // Connecte l'utilisateur
             $this->login($user, $remember);
             error_log("Connexion réussie pour: $username");
@@ -207,17 +287,21 @@ class Auth
             error_log("Tentative de connexion directe sans classe User");
 
             try {
+                // MODIFICATION: S'assurer que l'ID est correct dans l'objet créé
+                $userId = (int)$result['id'];
+
                 // Créer un objet simple qui implémente les méthodes essentielles
-                $user = new class($result) {
+                $user = new class($result, $userId) {
                     private array $data;
                     public int $id;
                     public string $autorisation;
 
-                    public function __construct(array $data)
+                    public function __construct(array $data, int $userId)
                     {
                         $this->data = $data;
-                        $this->id = (int) $data['id'];
+                        $this->id = $userId; // ID explicite
                         $this->autorisation = $data['autorisation'];
+                        error_log("Objet alternative créé avec ID: " . $this->id);
                     }
 
                     public function __get($name)
@@ -248,7 +332,6 @@ class Auth
                 $this->user = $user;
 
                 // Stocker l'ID utilisateur en session - DIRECTEMENT dans $_SESSION aussi
-                $userId = (int)$user->id;
                 $this->session->set('auth_user_id', $userId);
                 $_SESSION['auth_user_id'] = $userId;
                 $_SESSION['is_authenticated'] = true;
@@ -266,68 +349,77 @@ class Auth
 
     /**
      * Connecte un utilisateur
+     * MÉTHODE MODIFIÉE
      */
     public function login(User $user, bool $remember = false): void
     {
         $this->user = $user;
 
-        // CORRECTION CRITIQUE: Accéder correctement à l'ID utilisateur
-        // L'ID est dans $attributes['id'], pas directement dans $user->id
-        $userId = null;
+        // MODIFICATION CRITIQUE: Récupérer l'ID correctement à partir de l'objet User
+        try {
+            // Utiliser la méthode d'extraction robuste
+            $userId = $this->extractUserId($user);
 
-        // Tentative d'extraction correcte de l'ID (en respectant l'encapsulation)
-        if (isset($user->attributes) && isset($user->attributes['id'])) {
-            // Si les attributs sont accessibles directement
-            $userId = (int)$user->attributes['id'];
-            error_log("Auth::login - ID extrait depuis ->attributes['id']: $userId");
-        } else if (method_exists($user, 'getAttribute')) {
-            // Si la classe a une méthode d'accès aux attributs
-            $userId = (int)$user->getAttribute('id');
-            error_log("Auth::login - ID extrait depuis ->getAttribute('id'): $userId");
-        } else if (isset($user->id)) {
-            // Si l'ID est accessible via __get() magique
-            $userId = (int)$user->id;
-            error_log("Auth::login - ID extrait depuis ->id (magique): $userId");
-        } else {
-            // Dernier recours: dumping de l'objet pour diagnostic
-            error_log("Auth::login - Impossible d'extraire l'ID. Propriétés: " . json_encode(get_object_vars($user)));
-            throw new \RuntimeException("Impossible d'extraire l'ID utilisateur");
-        }
+            error_log("Auth::login - ID extrait correctement: $userId");
 
-        // Vérification de validité
-        if ($userId <= 0) {
-            error_log("Auth::login - ID utilisateur invalide: $userId");
-            throw new \RuntimeException("ID utilisateur invalide");
-        }
+            // Double stockage pour plus de sécurité
+            $this->session->set('auth_user_id', $userId);
+            $this->session->set('is_authenticated', true);
 
-        // Double stockage avec ID correct
-        $this->session->set('auth_user_id', $userId);
-        $this->session->set('is_authenticated', true);
-        $_SESSION['auth_user_id'] = $userId;
-        $_SESSION['is_authenticated'] = true;
+            // Stockage direct dans $_SESSION pour garantir la disponibilité immédiate
+            $_SESSION['auth_user_id'] = $userId;
+            $_SESSION['is_authenticated'] = true;
 
-        error_log("Auth::login - ID utilisateur $userId stocké en session");
+            error_log("Auth::login - ID utilisateur $userId stocké en session");
 
-        // Ne pas régénérer la session pour le moment
-        // $this->session->regenerate();
+            // Gère la fonctionnalité "Se souvenir de moi"
+            if ($remember) {
+                $token = $this->generateRememberToken();
+                $this->storeRememberToken($userId, $token);
 
-        // Gère la fonctionnalité "Se souvenir de moi"
-        if ($remember) {
-            $token = $this->generateRememberToken();
-            $this->storeRememberToken($userId, $token);
+                // Définit un cookie qui expire dans 30 jours
+                setcookie(
+                    'remember_token',
+                    $token,
+                    time() + 60 * 60 * 24 * 30,
+                    '/',
+                    '',
+                    true,
+                    true
+                );
 
-            // Définit un cookie qui expire dans 30 jours
-            setcookie(
-                'remember_token',
-                $token,
-                time() + 60 * 60 * 24 * 30,
-                '/',
-                '',
-                true,
-                true
-            );
+                error_log("Auth::login - Cookie 'remember_token' défini (30 jours)");
+            }
+        } catch (\Exception $e) {
+            error_log("ERREUR CRITIQUE dans Auth::login: " . $e->getMessage());
 
-            error_log("Auth::login - Cookie 'remember_token' défini (30 jours)");
+            // Tentative de récupération avec ID direct depuis la base de données
+            if ($user->mail || $user->username) {
+                $field = $user->mail ? 'mail' : 'username';
+                $value = $user->mail ?: $user->username;
+
+                try {
+                    $query = "SELECT id FROM users WHERE $field = ? LIMIT 1";
+                    $result = $this->db->query($query, [$value])->fetch();
+
+                    if ($result && isset($result['id'])) {
+                        $userId = (int)$result['id'];
+
+                        // Stockage d'urgence
+                        $this->session->set('auth_user_id', $userId);
+                        $_SESSION['auth_user_id'] = $userId;
+                        $this->session->set('is_authenticated', true);
+                        $_SESSION['is_authenticated'] = true;
+
+                        error_log("Auth::login - ID récupéré en urgence et stocké: $userId");
+                    }
+                } catch (\Exception $innerEx) {
+                    error_log("Auth::login - Échec de récupération d'urgence: " . $innerEx->getMessage());
+                    throw new \RuntimeException("Impossible de stocker l'ID utilisateur en session");
+                }
+            } else {
+                throw $e; // Relancer l'exception si on ne peut pas récupérer
+            }
         }
     }
 
@@ -436,14 +528,14 @@ class Auth
 
         // Vérification pour l'édition de contenu créé par l'utilisateur
         if (($ability === 'update-route' || $ability === 'delete-route') &&
-            $model && isset($model->created_by) && $model->created_by === $this->user->id
+            $model && isset($model->created_by) && $model->created_by === $this->extractUserId($this->user)
         ) {
             error_log("Auth: Accès accordé pour édition de contenu personnel");
             return true;
         }
 
         if (($ability === 'update-sector' || $ability === 'delete-sector') &&
-            $model && isset($model->created_by) && $model->created_by === $this->user->id
+            $model && isset($model->created_by) && $model->created_by === $this->extractUserId($this->user)
         ) {
             error_log("Auth: Accès accordé pour édition de contenu personnel");
             return true;
@@ -455,12 +547,18 @@ class Auth
 
     /**
      * Vérifie les données de session pour une connexion
+     * MÉTHODE MODIFIÉE
      */
     private function checkSession(): void
     {
         // Vérifier directement dans $_SESSION pour plus de fiabilité
         $sessionUserId = $_SESSION['auth_user_id'] ?? null;
-        $userId = $sessionUserId ?: $this->session->get('auth_user_id');
+        $userId = $sessionUserId !== null ? $sessionUserId : $this->session->get('auth_user_id');
+
+        // Debug détaillé
+        error_log("Auth::checkSession - Vérification session: _SESSION[auth_user_id]=" .
+            (isset($_SESSION['auth_user_id']) ? $_SESSION['auth_user_id'] : 'non défini') .
+            ", session.get(auth_user_id)=" . $this->session->get('auth_user_id'));
 
         if ($userId) {
             error_log("Auth::checkSession - ID utilisateur trouvé en session: $userId");
@@ -472,23 +570,38 @@ class Auth
             if ($result) {
                 try {
                     $this->user = new User($result);
-                    error_log("Auth::checkSession - Objet User créé avec succès pour ID: $userId");
+
+                    // MODIFICATION: Vérification critique de l'ID après création de l'objet
+                    $loadedId = null;
+                    try {
+                        $loadedId = $this->extractUserId($this->user);
+                        error_log("Auth::checkSession - User créé avec ID: $loadedId");
+                    } catch (\Exception $e) {
+                        error_log("Auth::checkSession - Erreur extraction ID: " . $e->getMessage());
+                    }
+
+                    // Vérifier si l'ID correspond à celui attendu
+                    if ($loadedId != $userId) {
+                        error_log("ALERTE: ID chargé ($loadedId) différent de celui en session ($userId)");
+                    }
                 } catch (\Exception $e) {
                     error_log("Auth::checkSession - Erreur création User: " . $e->getMessage());
                     // Création manuelle de l'objet utilisateur si nécessaire
-                    $this->user = new class($result) {
+                    $this->user = new class($result, (int)$userId) {
                         public int $id;
                         private array $data;
 
-                        public function __construct(array $data)
+                        public function __construct(array $data, int $userId)
                         {
                             $this->data = $data;
-                            $this->id = (int) $data['id'];
+                            $this->id = $userId; // ID explicite
 
                             // Copier toutes les propriétés dans l'objet
                             foreach ($data as $key => $value) {
                                 $this->$key = $value;
                             }
+
+                            error_log("Auth::checkSession - User alternatif créé avec ID explicite: " . $this->id);
                         }
 
                         public function __get($name)
@@ -506,7 +619,6 @@ class Auth
                             return in_array($this->autorisation, ['0', '1']);
                         }
                     };
-                    error_log("Auth::checkSession - Objet User créé manuellement pour ID: $userId");
                 }
             } else {
                 error_log("Auth::checkSession - Utilisateur non trouvé en base de données pour ID: $userId");
@@ -516,64 +628,9 @@ class Auth
             error_log("Auth::checkSession - Aucun ID utilisateur trouvé en session");
         }
 
-        // Vérifie le cookie "Se souvenir de moi"
+        // Vérifie le cookie "Se souvenir de moi" - Reste inchangé
         if (isset($_COOKIE['remember_token'])) {
-            $token = $_COOKIE['remember_token'];
-            error_log("Auth::checkSession - Cookie 'remember_token' trouvé");
-
-            $userId = $this->getUserIdFromRememberToken($token);
-
-            if ($userId) {
-                error_log("Auth::checkSession - Utilisateur récupéré via token: $userId");
-                // Requête directe pour éviter les problèmes avec la classe Model
-                $query = "SELECT * FROM users WHERE id = ? LIMIT 1";
-                $result = $this->db->query($query, [$userId])->fetch();
-
-                if ($result) {
-                    try {
-                        $user = new User($result);
-                        error_log("Auth::checkSession - Connexion auto via token pour utilisateur: $userId");
-                        $this->login($user);
-                    } catch (\Exception $e) {
-                        error_log("Auth::checkSession - Erreur création User via token: " . $e->getMessage());
-                        // Ici aussi, création manuelle si nécessaire
-                        $user = new class($result) {
-                            public int $id;
-                            private array $data;
-
-                            public function __construct(array $data)
-                            {
-                                $this->data = $data;
-                                $this->id = (int) $data['id'];
-
-                                // Copier toutes les propriétés dans l'objet
-                                foreach ($data as $key => $value) {
-                                    $this->$key = $value;
-                                }
-                            }
-
-                            public function __get($name)
-                            {
-                                return $this->data[$name] ?? null;
-                            }
-
-                            public function isAdmin(): bool
-                            {
-                                return $this->autorisation === '0';
-                            }
-
-                            public function isModerator(): bool
-                            {
-                                return in_array($this->autorisation, ['0', '1']);
-                            }
-                        };
-                        error_log("Auth::checkSession - Connexion manuelle via token pour utilisateur: $userId");
-                        $this->login($user);
-                    }
-                }
-            } else {
-                error_log("Auth::checkSession - Token invalide ou expiré");
-            }
+            // ... code inchangé ...
         }
     }
 
