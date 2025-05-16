@@ -258,4 +258,33 @@ class Session
 
         return $result;
     }
+    /**
+     * Persiste explicitement les données de session
+     * à appeler avant les redirections pour s'assurer que 
+     * les données sont écrites sur le disque
+     * 
+     * @return void
+     */
+    public function persist(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            // Sauvegarde actuelle des valeurs importantes
+            $data = $_SESSION;
+
+            // Force l'écriture des données sur le disque
+            session_write_close();
+
+            // Redémarre la session pour pouvoir continuer à l'utiliser
+            session_start();
+
+            // Le redémarrage peut parfois causer des problèmes, assurons-nous que 
+            // toutes les données sont préservées
+            $_SESSION = $data;
+
+            // Mise à jour du statut
+            $this->started = true;
+
+            error_log("Session persistée avec succès avant redirection");
+        }
+    }
 }
