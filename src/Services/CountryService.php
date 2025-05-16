@@ -24,4 +24,17 @@ class CountryService
     {
         return Country::find($id);
     }
+
+    public function getCountryWithStats(int $id): ?array
+    {
+        $country = $this->getCountry($id);
+        if (!$country) {
+            return null;
+        }
+
+        return [
+            'country' => $country,
+            'stats' => $country->getStatistics()
+        ];
+    }
 }
