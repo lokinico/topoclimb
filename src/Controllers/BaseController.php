@@ -241,9 +241,13 @@ abstract class BaseController
      */
     protected function authorize(string $ability, $model = null): void
     {
-        // Récupérer le service d'authentification via le conteneur
-        $authService = Container::getInstance()->get(AuthService::class);
+        // Vérifier que le conteneur est disponible
+        $container = Container::getInstance();
+        if (!$container || !$container->has(AuthService::class)) {
+            throw new AuthorizationException("Service d'authentification non disponible");
+        }
 
+        $authService = $container->get(AuthService::class);
         if (!$authService->can($ability, $model)) {
             throw new AuthorizationException("Action non autorisée");
         }
