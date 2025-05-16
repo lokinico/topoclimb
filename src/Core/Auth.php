@@ -12,32 +12,38 @@ class Auth
     private ?Database $db = null;
     private bool $initialized = false;
 
-    /**
-     * Constructeur privé pour le singleton
-     */
     private function __construct(?Session $session = null, ?Database $db = null)
     {
         if ($session !== null && $db !== null) {
-            $this->session = $session;
-            $this->db = $db;
-            $this->initialized = true;
-            $this->checkSession();
+            $this->initialize($session, $db);
         }
     }
 
     /**
-     * Récupère l'instance unique de la classe Auth
+     * Initialise ou réinitialise l'instance avec les dépendances
      */
+    private function initialize(Session $session, Database $db): void
+    {
+        $this->session = $session;
+        $this->db = $db;
+        $this->initialized = true;
+        $this->checkSession();
+    }
+
     public static function getInstance(?Session $session = null, ?Database $db = null): self
     {
         if (self::$instance === null) {
             self::$instance = new self($session, $db);
-        } else if ($session !== null && $db !== null && !self::$instance->initialized) {
-            // Réinitialiser l'instance si elle existe mais n'est pas initialisée
-            self::$instance->session = $session;
-            self::$instance->db = $db;
-            self::$instance->initialized = true;
-            self::$instance->checkSession();
+        } elseif ($session !== null && $db !== null) {
+            // IMPORTANT: Réinitialiser l'instance avec les dépendances fraîches
+            // à chaque requête, même si l'instance existe déjà
+            self::$instance->initialize($session, $db);
+        }
+
+        // Vérifier que l'instance est initialisée
+        if (!self::$instance->initialized) {
+            error_log("Auth: L'instance n'est pas correctement initialisée");
+            throw new \RuntimeException("Container must be provided first time");
         }
 
         return self::$instance;
