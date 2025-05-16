@@ -103,23 +103,6 @@ set_exception_handler(function (\Throwable $e) use ($requestInfo) {
     // Redirection avec le traitement d'erreur normal du script
     // Ne pas appeler exit pour que le gestionnaire d'erreurs standard fonctionne aussi
 });
-
-// Détecter spécifiquement les requêtes de déconnexion pour un logging détaillé
-if ($_SERVER['REQUEST_URI'] === '/logout') {
-    error_log("******** REQUÊTE DE DÉCONNEXION DÉTECTÉE ********");
-    error_log("État de la session avant déconnexion:");
-    error_log("ID de session: " . session_id());
-    error_log("auth_user_id en session: " . ($_SESSION['auth_user_id'] ?? 'non défini'));
-    error_log("is_authenticated en session: " . ($_SESSION['is_authenticated'] ?? 'non défini'));
-
-    // Log des callstack pour savoir d'où vient la requête
-    $backtrace = debug_backtrace();
-    error_log("Callstack de la requête /logout:");
-    foreach ($backtrace as $index => $frame) {
-        error_log("#$index: " . ($frame['file'] ?? '?') . ":" . ($frame['line'] ?? '?') . " - " .
-            (isset($frame['class']) ? $frame['class'] . $frame['type'] : '') . $frame['function']);
-    }
-}
 // ============= FIN CONFIGURATION DE LOGS AMÉLIORÉE =============
 
 // Optimisation critique des sessions avant tout
@@ -182,62 +165,6 @@ if (session_status() === PHP_SESSION_NONE) {
         error_log("Session active mais sans auth_user_id");
     }
 }
-
-// ============= DÉBUT DEBUGGING SPÉCIFIQUE LOGOUT =============
-// Solution de diagnostic pour la route /logout, sans remplacer la solution d'urgence
-if ($_SERVER['REQUEST_URI'] === '/logout') {
-    try {
-        error_log("===== NOUVEAU DÉBOGAGE DÉTAILLÉ DE /logout =====");
-        error_log("État initial de la session:");
-        error_log("ID Session: " . session_id());
-        error_log("auth_user_id: " . ($_SESSION['auth_user_id'] ?? 'non défini'));
-        error_log("is_authenticated: " . ($_SESSION['is_authenticated'] ?? 'non défini'));
-
-        // On va tracer (sans l'exécuter) le chemin de code qui serait normalement emprunté
-        $routeControllerMapping = "Route '/logout' mappée vers \TopoclimbCH\Controllers\AuthController::logout";
-        error_log("Mapping théorique: " . $routeControllerMapping);
-
-        // Collecte d'informations sur la classe et méthode cible
-        if (class_exists('\TopoclimbCH\Controllers\AuthController')) {
-            error_log("La classe AuthController existe");
-
-            $reflection = new \ReflectionClass('\TopoclimbCH\Controllers\AuthController');
-
-            if ($reflection->hasMethod('logout')) {
-                $method = $reflection->getMethod('logout');
-                $returnType = $method->getReturnType();
-                $returnTypeStr = $returnType ? $returnType->getName() : 'non spécifié';
-
-                error_log("Méthode logout() existe avec type de retour: " . $returnTypeStr);
-                error_log("Est-elle publique: " . ($method->isPublic() ? 'oui' : 'non'));
-
-                // Si le return type est Response mais la méthode a un exit ou retourne void,
-                // c'est une source potentielle du problème
-                if ($returnTypeStr === 'TopoclimbCH\Core\Response') {
-                    error_log("ATTENTION: La méthode logout() déclare retourner Response!");
-                    $logoutCode = file_get_contents($method->getFileName());
-                    $logoutCode = substr($logoutCode, $method->getStartLine() - 1, $method->getEndLine() - $method->getStartLine() + 1);
-
-                    if (strpos($logoutCode, 'exit') !== false) {
-                        error_log("PROBLÈME POTENTIEL: La méthode logout() contient un exit alors qu'elle devrait retourner Response");
-                    }
-
-                    if (strpos($logoutCode, 'return') === false) {
-                        error_log("PROBLÈME POTENTIEL: La méthode logout() ne contient pas de return alors qu'elle devrait retourner Response");
-                    }
-                }
-            } else {
-                error_log("La méthode logout() n'existe pas dans AuthController");
-            }
-        } else {
-            error_log("La classe AuthController n'existe pas");
-        }
-    } catch (\Throwable $e) {
-        error_log("Exception lors du débogage de /logout: " . $e->getMessage());
-        error_log($e->getTraceAsString());
-    }
-}
-// ============= FIN DEBUGGING SPÉCIFIQUE LOGOUT =============
 
 // Variables pour les services principaux
 $container = null;
@@ -308,40 +235,6 @@ try {
         echo "</pre>";
         exit;
     }
-
-    // ============= DÉBUT LOGGING POUR REQUÊTES LOGOUT/LOGIN =============
-    // Traçage de chaque requête critique d'authentification
-    if (in_array($_SERVER['REQUEST_URI'], ['/login', '/logout'])) {
-        error_log("++++ ROUTE CRITIQUE: " . $_SERVER['REQUEST_URI'] . " ++++");
-        error_log("Container initialisé: " . ($container ? 'oui' : 'non'));
-        error_log("Auth disponible: " . ($auth ? 'oui' : 'non'));
-        error_log("Session disponible: " . ($session ? 'oui' : 'non'));
-        error_log("Router disponible: " . (isset($router) ? 'oui' : 'non'));
-
-        if (isset($router)) {
-            try {
-                // Récupérer le mapping de la route pour voir comment elle est configurée
-                $routes = $router->getRoutes();
-                foreach ($routes as $route) {
-                    if ($route['path'] === $_SERVER['REQUEST_URI'] && $route['method'] === $_SERVER['REQUEST_METHOD']) {
-                        error_log("Route trouvée: " . $_SERVER['REQUEST_METHOD'] . " " . $route['path']);
-                        error_log("Contrôleur: " . $route['controller'] . "::" . $route['action']);
-
-                        if (isset($route['middlewares'])) {
-                            error_log("Middlewares: " . implode(", ", $route['middlewares']));
-                        } else {
-                            error_log("Aucun middleware");
-                        }
-
-                        break;
-                    }
-                }
-            } catch (\Throwable $e) {
-                error_log("Erreur lors de l'inspection des routes: " . $e->getMessage());
-            }
-        }
-    }
-    // ============= FIN LOGGING POUR REQUÊTES LOGOUT/LOGIN =============
 
     // Utiliser la classe Application pour gérer le cycle de requête/réponse
     $app = new \TopoclimbCH\Core\Application(
