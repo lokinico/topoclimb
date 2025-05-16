@@ -6,24 +6,49 @@ use TopoclimbCH\Models\User;
 
 class Auth
 {
-    private static $instance;
+    private static ?Auth $instance = null;
     private ?User $user = null;
-    private Session $session;
-    private Database $db;
+    private ?Session $session = null;
+    private ?Database $db = null;
+    private bool $initialized = false;
 
-    private function __construct(Session $session, Database $db)
+    /**
+     * Constructeur privé pour le singleton
+     */
+    private function __construct(?Session $session = null, ?Database $db = null)
     {
-        $this->session = $session;
-        $this->db = $db;
-        $this->checkSession();
+        if ($session !== null && $db !== null) {
+            $this->session = $session;
+            $this->db = $db;
+            $this->initialized = true;
+            $this->checkSession();
+        }
     }
 
-    public static function getInstance(Session $session, Database $db): self
+    /**
+     * Récupère l'instance unique de la classe Auth
+     */
+    public static function getInstance(?Session $session = null, ?Database $db = null): self
     {
-        if (!self::$instance) {
+        if (self::$instance === null) {
             self::$instance = new self($session, $db);
+        } else if ($session !== null && $db !== null && !self::$instance->initialized) {
+            // Réinitialiser l'instance si elle existe mais n'est pas initialisée
+            self::$instance->session = $session;
+            self::$instance->db = $db;
+            self::$instance->initialized = true;
+            self::$instance->checkSession();
         }
+
         return self::$instance;
+    }
+
+    /**
+     * Vérifie si l'instance est initialisée
+     */
+    public function validate(): bool
+    {
+        return $this->initialized && $this->user !== null;
     }
 
     /**
