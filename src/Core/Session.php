@@ -265,36 +265,27 @@ class Session
     public function persist(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
-            // Sauvegarde des données critiques
-            $sessionData = $_SESSION;
-            $authUserId = $this->get('auth_user_id');
-            $csrfToken = $this->get('csrf_token');
-            $authenticated = $this->get('user_authenticated');
+            // Sauvegarde explicite de l'ID de session actuel
+            $currentSessionId = session_id();
+            error_log("Persistance session: ID avant = $currentSessionId");
 
-            // Force l'écriture des données
+            // Capture de toutes les données importantes
+            $allSessionData = $_SESSION;
+
+            // Force l'écriture
             session_write_close();
 
-            // Redémarrer immédiatement la session
+            // Redémarrer LA MÊME session (avec le même ID)
+            session_id($currentSessionId);
             session_start();
 
-            // Restaurer les données critiques
-            $_SESSION = $sessionData;
+            // Restaurer toutes les données
+            $_SESSION = $allSessionData;
 
-            // Double vérification des données sensibles
-            if ($authUserId && !isset($_SESSION['auth_user_id'])) {
-                $_SESSION['auth_user_id'] = $authUserId;
-            }
-
-            if ($csrfToken && !isset($_SESSION['csrf_token'])) {
-                $_SESSION['csrf_token'] = $csrfToken;
-            }
-
-            if ($authenticated && !isset($_SESSION['user_authenticated'])) {
-                $_SESSION['user_authenticated'] = $authenticated;
-            }
+            error_log("Persistance session: ID après = " . session_id());
+            error_log("Persistance session: auth_user_id = " . ($_SESSION['auth_user_id'] ?? 'non défini'));
 
             $this->started = true;
-
             error_log("Session persistée avec succès avant redirection");
         }
     }
