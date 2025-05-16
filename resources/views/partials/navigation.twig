@@ -18,7 +18,13 @@
                     <ul class="dropdown-menu">
                         <li><a href="{{ url('/profile') }}">Profil</a></li>
                         <li><a href="{{ url('/ascents') }}">Mes ascensions</a></li>
-                        <li><a href="{{ url('/logout') }}">Déconnexion</a></li>
+                        <li>
+                            <form action="{{ url('/logout') }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn-link">Déconnexion</button>
+                            </form>
+                        </li>
+                        <li><a href="{{ url('/settings') }}">Paramètres</a></li>
                     </ul>
                 </li>
             {% else %}
