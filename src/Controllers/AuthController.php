@@ -163,82 +163,73 @@ class AuthController extends BaseController
 
 
     /**
-     * Déconnexion de l'utilisateur
+     * Déconnexion de l'utilisateur avec une approche ultra-minimaliste
+     * pour garantir le fonctionnement
      *
-     * @return Response
+     * @return never
      */
-    public function logout(): Response
+    public function logout()
     {
+        // Journalisation simple
+        error_log("AuthController::logout - Démarrage de la déconnexion minimaliste");
+
+        // 1. Capturer les informations de session utiles
+        $originalUserId = $_SESSION['auth_user_id'] ?? null;
+
+        // 2. Nettoyer la session de manière directe et complète
+        $_SESSION = [];
+
+        // 3. Supprimer le cookie de session
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
+            );
+        }
+
+        // 4. Détruire la session
         try {
-            // 1. Capturer auth_user_id avant déconnexion pour le logging
-            $userId = $_SESSION['auth_user_id'] ?? null;
-
-            // 2. Nettoyer la session - AVANT de déconnecter via Auth
-            // (au cas où Auth::logout() échouerait, nous assurons un nettoyage)
-            unset($_SESSION['auth_user_id']);
-            unset($_SESSION['is_authenticated']);
-            unset($_SESSION['user_authenticated']);
-
-            // 3. Essayer de déconnecter via Auth, mais ne pas échouer si cela ne marche pas
-            try {
-                $this->auth->logout();
-                error_log("Utilisateur ID $userId déconnecté via Auth::logout()");
-            } catch (\Throwable $e) {
-                error_log("Erreur ignorée dans Auth::logout(): " . $e->getMessage());
-                // Continuer malgré l'erreur
-            }
-
-            // 4. Préparer le message de succès
-            $flashMessage = 'Vous avez été déconnecté avec succès';
-
-            // 5. Arrêter et redémarrer la session de manière sûre
-            // Détruire complètement l'ancienne session
-            $oldSessionData = $_SESSION; // Sauvegarder les données dont nous pourrions avoir besoin
-            $_SESSION = []; // Vider la session
-
-            if (ini_get("session.use_cookies")) {
-                $params = session_get_cookie_params();
-                setcookie(
-                    session_name(),
-                    '',
-                    time() - 42000,
-                    $params["path"],
-                    $params["domain"],
-                    $params["secure"],
-                    $params["httponly"]
-                );
-            }
-
-            // Fermer et détruire l'ancienne session
             session_destroy();
+            error_log("AuthController::logout - Session détruite");
+        } catch (\Throwable $e) {
+            error_log("AuthController::logout - Erreur session_destroy(): " . $e->getMessage());
+            // Continuer même en cas d'erreur
+        }
 
-            // Démarrer une nouvelle session pour le message flash
+        // 5. Démarrer une nouvelle session juste pour le message flash
+        try {
             session_start();
+            error_log("AuthController::logout - Nouvelle session démarrée");
 
-            // Insérer le message flash dans la nouvelle session
-            $_SESSION['_flashes']['success'][] = $flashMessage;
+            // Ajouter le message flash
+            $_SESSION['_flashes']['success'][] = 'Vous avez été déconnecté avec succès';
 
             // Forcer l'écriture de la session
             session_write_close();
-
-            // 6. Créer une réponse de redirection qui passe par le système Response
-            error_log("Redirection vers la page d'accueil après déconnexion");
-            return $this->redirect('/');
+            error_log("AuthController::logout - Message flash stocké");
         } catch (\Throwable $e) {
-            // Gérer toute exception non capturée
-            error_log("ERREUR CRITIQUE dans AuthController::logout: " . $e->getMessage());
-
-            // Solution d'urgence - nettoyer la session de toute façon
-            $_SESSION = [];
-            session_destroy();
-            session_start();
-
-            // Ajouter un message d'erreur
-            $_SESSION['_flashes']['error'][] = 'Une erreur est survenue lors de la déconnexion';
-
-            // Rediriger vers la page d'accueil
-            return $this->redirect('/?error=1');
+            error_log("AuthController::logout - Erreur flash message: " . $e->getMessage());
+            // Continuer même en cas d'erreur
         }
+
+        // 6. Nettoyer également le cookie "remember_me" s'il existe
+        if (isset($_COOKIE['remember_token'])) {
+            setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+            error_log("AuthController::logout - Cookie remember_token supprimé");
+        }
+
+        // 7. Journaliser le résultat
+        error_log("AuthController::logout - Utilisateur $originalUserId déconnecté avec succès");
+
+        // 8. Redirection directe à l'ancienne (évite les problèmes avec Response)
+        header('Location: /');
+        exit; // Terminer le script immédiatement
     }
 
     public function registerForm(): Response
