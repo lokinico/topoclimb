@@ -10,7 +10,6 @@ use Twig\TwigFilter;
 use Twig\Extension\DebugExtension;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\Container;
 
 
 
@@ -159,17 +158,28 @@ class View
             return $_SESSION['csrf_token'];
         }));
 
-        $this->twig->addFunction(new TwigFunction('flash', function () use ($container) {
-            if ($container && $container->has(Session::class)) {
-                // Utiliser la méthode getFlashes de la classe Session
-                $session = $container->get(Session::class);
-                return $session->getFlashes();
-            }
-
-            // Fallback si la classe Session n'est pas disponible
+        $this->twig->addFunction(new TwigFunction('flash', function () {
+            // Ne pas changer cette logique, mais assurez-vous qu'elle fonctionne
             $messages = $_SESSION['_flashes'] ?? [];
-            unset($_SESSION['_flashes']);
+
+            // IMPORTANT: Ne supprimez pas les messages ici pour permettre leur affichage
+            // à divers endroits du template - nous les supprimerons plus tard
+            // unset($_SESSION['_flashes']);
+
             return $messages;
+        }));
+
+        // Ajoutez cette nouvelle fonction pour nettoyer les messages après l'affichage
+        $this->twig->addFunction(new TwigFunction('clear_flash', function () {
+            // N'effacer les messages que lorsqu'on appelle explicitement cette fonction
+            unset($_SESSION['_flashes']);
+            return true;
+        }));
+
+        // Add route() function for generating URLs
+        $this->twig->addFunction(new TwigFunction('route', function (string $name, array $params = []) {
+            // Assuming you have a Router class that can generate URLs
+            return Router::generateUrl($name, $params);
         }));
     }
 
