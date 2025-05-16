@@ -417,33 +417,57 @@ class Auth
     }
 
     /**
-     * Déconnecte l'utilisateur
+     * Déconnecte l'utilisateur avec gestion d'erreurs
+     * 
+     * @return bool
      */
-    public function logout(): void
+    public function logout(): bool
     {
-        $this->user = null;
+        try {
+            // Capturer l'ID utilisateur avant nettoyage
+            $userId = null;
+            if ($this->user) {
+                try {
+                    $userId = $this->extractUserId($this->user);
+                    error_log("Auth::logout - Déconnexion de l'utilisateur: " . $userId);
+                } catch (\Throwable $e) {
+                    error_log("Auth::logout - Impossible d'extraire l'ID: " . $e->getMessage());
+                }
+            }
 
-        // Supprime les données de session - des deux façons
-        $this->session->remove('auth_user_id');
-        $this->session->remove('is_authenticated');
-        unset($_SESSION['auth_user_id']);
-        unset($_SESSION['is_authenticated']);
+            // Nettoyer l'objet utilisateur
+            $this->user = null;
 
-        // IMPORTANT: NE PAS régénérer l'ID de session pour l'instant car cela cause des problèmes
-        // $this->session->regenerate();
+            // Nettoyer les données de session liées à l'auth
+            unset($_SESSION['auth_user_id']);
+            unset($_SESSION['is_authenticated']);
+            unset($_SESSION['user_authenticated']);
 
-        // Supprime le cookie "Se souvenir de moi"
-        if (isset($_COOKIE['remember_token'])) {
-            // Supprime le token de la base de données
-            $this->removeRememberToken($_COOKIE['remember_token']);
+            if ($this->session) {
+                $this->session->remove('auth_user_id');
+                $this->session->remove('is_authenticated');
+                $this->session->remove('user_authenticated');
+            }
 
-            // Expire le cookie
-            setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+            // Supprimer le cookie "Se souvenir de moi"
+            if (isset($_COOKIE['remember_token'])) {
+                try {
+                    $this->removeRememberToken($_COOKIE['remember_token']);
+                    setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+                    error_log("Auth::logout - Cookie 'remember_token' supprimé");
+                } catch (\Throwable $e) {
+                    error_log("Auth::logout - Erreur suppression remember_token: " . $e->getMessage());
+                }
+            }
 
-            error_log("Auth::logout - Cookie 'remember_token' supprimé");
+            error_log("Auth::logout - Données d'authentification nettoyées");
+            return true;
+        } catch (\Throwable $e) {
+            error_log("Auth::logout - Exception: " . $e->getMessage());
+            // Nettoyage minimum en cas d'erreur
+            $this->user = null;
+            return false;
         }
-
-        error_log("Auth::logout - Déconnexion effectuée");
     }
 
     /**
