@@ -162,7 +162,7 @@ class AuthController extends BaseController
     }
 
     /**
-     * Déconnexion de l'utilisateur avec gestion robuste des sessions
+     * Déconnexion de l'utilisateur avec gestion robuste des erreurs
      *
      * @return Response
      */
@@ -171,98 +171,90 @@ class AuthController extends BaseController
         error_log("AuthController::logout - Début du processus de déconnexion");
 
         try {
-            // 1. Vérifier si l'utilisateur est connecté
-            if (!$this->auth->check()) {
-                error_log("AuthController::logout - Utilisateur non connecté");
-                return $this->redirect('/');
-            }
-
-            // 2. Obtenir l'ID utilisateur pour le logging
+            // Capturer l'ID utilisateur avant déconnexion pour le logging
             $userId = null;
             try {
-                $userId = $this->auth->id();
-                error_log("AuthController::logout - ID utilisateur: " . $userId);
-            } catch (\Throwable $e) {
-                error_log("AuthController::logout - Erreur récupération ID: " . $e->getMessage());
-            }
-
-            // 3. Déconnecter l'utilisateur via Auth
-            $logoutSuccess = $this->auth->logout();
-            error_log("AuthController::logout - Auth::logout(): " . ($logoutSuccess ? "succès" : "échec"));
-
-            // 4. Stocker temporairement le message
-            $successMessage = 'Vous avez été déconnecté avec succès';
-
-            // 5. Détruire complètement la session actuelle
-            $sessionDestroyed = $this->session->destroy();
-            error_log("AuthController::logout - Session::destroy(): " . ($sessionDestroyed ? "succès" : "échec"));
-
-            // 6. Démarrer une nouvelle session pour les messages flash
-            $sessionRestarted = $this->session->restart();
-            error_log("AuthController::logout - Session::restart(): " . ($sessionRestarted ? "succès" : "échec"));
-
-            // 7. Définir le message flash dans la nouvelle session
-            if ($sessionRestarted) {
-                $this->session->flash('success', $successMessage);
-                error_log("AuthController::logout - Message flash défini");
-            } else {
-                // Solution de secours si la session n'a pas pu être redémarrée
-                $_SESSION['_flashes']['success'][] = $successMessage;
-                error_log("AuthController::logout - Message flash défini manuellement");
-            }
-
-            // 8. Persister explicitement la session avant la redirection
-            try {
-                if ($sessionRestarted) {
-                    $this->session->persist();
-                    error_log("AuthController::logout - Session persistée");
+                if ($this->auth->check()) {
+                    $userId = $this->auth->id();
+                    error_log("AuthController::logout - Déconnexion utilisateur ID: " . $userId);
                 } else {
-                    session_write_close();
-                    error_log("AuthController::logout - Session fermée manuellement");
+                    error_log("AuthController::logout - Aucun utilisateur connecté");
                 }
             } catch (\Throwable $e) {
-                error_log("AuthController::logout - Erreur persistence: " . $e->getMessage());
+                error_log("AuthController::logout - Erreur lors de la vérification de l'utilisateur: " . $e->getMessage());
             }
 
-            // 9. Créer et retourner la réponse
+            // Déconnecter l'utilisateur via Auth
+            try {
+                $this->auth->logout();
+                error_log("AuthController::logout - Auth::logout() exécuté");
+            } catch (\Throwable $e) {
+                error_log("AuthController::logout - Exception dans Auth::logout(): " . $e->getMessage());
+                // Continuer malgré l'erreur
+            }
+
+            // Nettoyer manuellement la session en cas d'échec de Auth::logout()
+            unset($_SESSION['auth_user_id']);
+            unset($_SESSION['is_authenticated']);
+            unset($_SESSION['user_authenticated']);
+            error_log("AuthController::logout - Variables de session nettoyées manuellement");
+
+            // Préparer le message flash avant de détruire la session
+            $successMessage = 'Vous avez été déconnecté avec succès';
+
+            // Solution à deux étapes pour le message flash
+
+            // 1. Essayer de détruire et recréer la session pour les messages flash
+            try {
+                // Ajouter manuellement le message flash dans la session
+                $_SESSION['_flashes']['success'][] = $successMessage;
+
+                // Forcer l'écriture de la session existante
+                session_write_close();
+                error_log("AuthController::logout - Session fermée");
+
+                // Démarrer une nouvelle session
+                session_start();
+                error_log("AuthController::logout - Nouvelle session démarrée: " . session_id());
+            } catch (\Throwable $e) {
+                error_log("AuthController::logout - Erreur lors de la manipulation de session: " . $e->getMessage());
+                // La destruction et recréation ont échoué - on utilise un cookie flash personnalisé
+                setcookie('flash_success', $successMessage, time() + 30, '/', '', false, false);
+                error_log("AuthController::logout - Cookie flash défini en secours");
+            }
+
+            // Créer la réponse de redirection
             error_log("AuthController::logout - Redirection vers la page d'accueil");
             return $this->redirect('/');
         } catch (\Throwable $e) {
-            // Gérer toute exception non capturée
-            error_log("AuthController::logout - Exception critique: " . $e->getMessage());
+            // Intercepter toute exception non gérée
+            error_log("ERREUR CRITIQUE dans AuthController::logout: " . $e->getMessage());
             error_log($e->getTraceAsString());
 
-            // Solution de dernière chance
-            try {
-                // Nettoyer la session
-                $_SESSION = [];
+            // Même en cas d'erreur catastrophique, assurer un minimum de nettoyage
+            $_SESSION = [];
 
-                // Supprimer le cookie de session
-                if (ini_get("session.use_cookies")) {
-                    $params = session_get_cookie_params();
-                    setcookie(
-                        session_name(),
-                        '',
-                        time() - 42000,
-                        $params["path"],
-                        $params["domain"],
-                        $params["secure"],
-                        $params["httponly"]
-                    );
-                }
-
-                // Détruire et redémarrer
-                session_destroy();
-                session_start();
-
-                // Message d'erreur en session
-                $_SESSION['_flashes']['error'][] = 'Erreur lors de la déconnexion';
-            } catch (\Throwable $innerException) {
-                error_log("AuthController::logout - Échec solution de secours: " . $innerException->getMessage());
+            if (ini_get("session.use_cookies")) {
+                $params = session_get_cookie_params();
+                setcookie(
+                    session_name(),
+                    '',
+                    time() - 42000,
+                    $params["path"],
+                    $params["domain"],
+                    $params["secure"],
+                    $params["httponly"]
+                );
             }
 
-            // Rediriger avec indicateur d'erreur
-            return $this->redirect('/?logout_error=1');
+            session_destroy();
+
+            // Créer une nouvelle session avec un message d'erreur
+            session_start();
+            $_SESSION['_flashes']['error'][] = 'Une erreur est survenue pendant la déconnexion';
+
+            // Rediriger l'utilisateur
+            return $this->redirect('/?error=logout_failed');
         }
     }
 
