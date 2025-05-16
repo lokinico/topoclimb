@@ -186,34 +186,101 @@ class Session
         return $result;
     }
 
+
     /**
-     * Détruit la session
-     *
-     * @return bool
+     * Amélioration de la méthode destroy() existante
+     * pour être plus robuste et mieux gérer les erreurs
      */
     public function destroy(): bool
     {
-        if ($this->started) {
-            $this->started = false;
+        try {
+            // Session déjà inactive
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                error_log("Session::destroy - La session était déjà inactive");
+                $this->started = false;
+                return true;
+            }
+
+            // Sauvegarder l'ID de session pour le logging
+            $sessionId = session_id();
+            error_log("Session::destroy - Destruction de la session: " . $sessionId);
+
+            // Effacer toutes les données de session
             $_SESSION = [];
 
+            // Supprimer le cookie de session
             if (ini_get("session.use_cookies")) {
                 $params = session_get_cookie_params();
                 setcookie(
                     session_name(),
                     '',
-                    time() - 42000,
-                    $params["path"],
-                    $params["domain"],
-                    $params["secure"],
-                    $params["httponly"]
+                    [
+                        'expires' => time() - 42000,
+                        'path' => $params["path"],
+                        'domain' => $params["domain"],
+                        'secure' => $params["secure"],
+                        'httponly' => $params["httponly"],
+                        'samesite' => 'Lax'
+                    ]
                 );
+                error_log("Session::destroy - Cookie de session supprimé");
             }
 
-            return session_destroy();
-        }
+            // Détruire la session
+            $result = session_destroy();
+            $this->started = false;
 
-        return true;
+            if ($result) {
+                error_log("Session::destroy - Session détruite avec succès");
+            } else {
+                error_log("Session::destroy - Échec de destruction de la session");
+            }
+
+            return $result;
+        } catch (\Throwable $e) {
+            error_log("Session::destroy - Exception: " . $e->getMessage());
+            // Essayer quand même de nettoyer
+            $_SESSION = [];
+            $this->started = false;
+            return false;
+        }
+    }
+
+    /**
+     * Démarre une nouvelle session après destruction de l'ancienne
+     */
+    public function restart(): bool
+    {
+        try {
+            // S'assurer que la session est détruite
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                $this->destroy();
+            }
+
+            // Configurer et démarrer une nouvelle session
+            session_set_cookie_params([
+                'lifetime' => 0,
+                'path' => '/',
+                'domain' => '',
+                'secure' => ($_ENV['APP_ENV'] ?? 'production') === 'production',
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+
+            $result = session_start();
+            $this->started = $result;
+
+            if ($result) {
+                error_log("Session::restart - Nouvelle session démarrée: " . session_id());
+            } else {
+                error_log("Session::restart - Échec du démarrage d'une nouvelle session");
+            }
+
+            return $result;
+        } catch (\Throwable $e) {
+            error_log("Session::restart - Exception: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -259,34 +326,45 @@ class Session
         return $result;
     }
     /**
-     * Persiste explicitement les données de session
-     * à appeler avant les redirections
+     * Amélioration de la méthode persist() existante
+     * pour mieux gérer les erreurs et cas particuliers
      */
-    public function persist(): void
+    public function persist(): bool
     {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            // Sauvegarde explicite de l'ID de session actuel
-            $currentSessionId = session_id();
-            error_log("Persistance session: ID avant = $currentSessionId");
+        try {
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                error_log("Session::persist - Tentative de persistance d'une session inactive");
+                return false;
+            }
 
-            // Capture de toutes les données importantes
+            // Sauvegarder l'ID de session actuel et les données
+            $currentSessionId = session_id();
             $allSessionData = $_SESSION;
+
+            error_log("Session::persist - Persistance session: ID=" . $currentSessionId);
 
             // Force l'écriture
             session_write_close();
+            $this->started = false;
 
-            // Redémarrer LA MÊME session (avec le même ID)
+            // Redémarrer LA MÊME session avec les mêmes données
             session_id($currentSessionId);
-            session_start();
+            $startResult = session_start();
 
-            // Restaurer toutes les données
-            $_SESSION = $allSessionData;
+            if ($startResult) {
+                // Restaurer les données
+                $_SESSION = $allSessionData;
+                $this->started = true;
 
-            error_log("Persistance session: ID après = " . session_id());
-            error_log("Persistance session: auth_user_id = " . ($_SESSION['auth_user_id'] ?? 'non défini'));
-
-            $this->started = true;
-            error_log("Session persistée avec succès avant redirection");
+                error_log("Session::persist - Session persistée avec succès");
+                return true;
+            } else {
+                error_log("Session::persist - Échec du redémarrage de session après écriture");
+                return false;
+            }
+        } catch (\Throwable $e) {
+            error_log("Session::persist - Exception: " . $e->getMessage());
+            return false;
         }
     }
 }
