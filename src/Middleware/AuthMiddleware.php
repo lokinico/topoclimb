@@ -28,37 +28,59 @@ class AuthMiddleware
         }
     }
 
+    /**
+     * Gère la requête et vérifie l'authentification
+     *
+     * @param Request $request La requête HTTP
+     * @param callable $next La fonction de rappel pour passer au middleware suivant
+     * @return Response La réponse HTTP
+     */
     public function handle(Request $request, callable $next): Response
     {
-        // Fallback de sécurité si auth n'est pas initialisé mais qu'un ID est en session
-        if ($this->auth === null && $this->session->has('auth_user_id')) {
-            error_log("AuthMiddleware: Tentative de récupération d'auth via session");
+        // Vérifier explicitement la présence des données d'authentification en session
+        $hasAuthUserId = isset($_SESSION['auth_user_id']) && $_SESSION['auth_user_id'];
+        $isAuthenticated = isset($_SESSION['is_authenticated']) && $_SESSION['is_authenticated'];
+
+        error_log("AuthMiddleware: Vérification auth - ID=" . ($hasAuthUserId ? $_SESSION['auth_user_id'] : 'non défini') .
+            ", Authentifié=" . ($isAuthenticated ? 'oui' : 'non'));
+
+        // Si l'authentification est présente en session, essayer d'initialiser Auth
+        if ($hasAuthUserId && $isAuthenticated) {
             try {
-                $this->auth = Auth::getInstance($this->session, $this->db);
+                // Initialiser Auth avec les dépendances
+                if ($this->auth === null) {
+                    $this->auth = Auth::getInstance($this->session, $this->db);
+                }
+
+                // Si Auth confirme l'authentification, continuer
+                if ($this->auth->check()) {
+                    return $next($request);
+                }
+
+                error_log("AuthMiddleware: Auth initialisé mais aucun utilisateur trouvé");
             } catch (\Exception $e) {
-                error_log("Échec de récupération d'auth: " . $e->getMessage());
+                error_log("AuthMiddleware: Erreur lors de l'initialisation d'Auth: " . $e->getMessage());
+                // Continuer à la logique de redirection
             }
         }
 
-        // Vérifier l'authentification
-        $isAuthenticated = $this->auth !== null && $this->auth->check();
+        // Si on arrive ici, l'utilisateur n'est pas authentifié ou Auth a échoué
+        $currentPath = $request->getPathInfo();
 
-        if (!$isAuthenticated) {
-            error_log("AuthMiddleware: Utilisateur non authentifié, redirection vers login");
-            // Stocker l'URL actuelle pour y revenir après login
-            $this->session->set('intended_url', $request->getPathInfo());
-            $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
-
-            // IMPORTANT: persister la session
-            $this->session->persist();
-
-            // Redirection immédiate
-            $response = new Response('', 302);
-            $response->headers->set('Location', '/login');
-            return $response;
+        // Éviter les boucles de redirection
+        if ($currentPath === '/login') {
+            return $next($request);
         }
 
-        // Utilisateur authentifié, continuer
-        return $next($request);
+        // Stocker l'URL actuelle pour y revenir après login
+        $this->session->set('intended_url', $currentPath);
+        $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
+
+        // IMPORTANT: persister la session
+        $this->session->persist();
+
+        // Redirection vers login
+        header("Location: /login", true, 302);
+        exit;
     }
 }
