@@ -161,78 +161,40 @@ class AuthController extends BaseController
         return $this->redirect($intendedUrl);
     }
 
+
     /**
-     * Déconnexion de l'utilisateur avec gestion robuste des erreurs
+     * Déconnexion de l'utilisateur
      *
      * @return Response
      */
     public function logout(): Response
     {
-        error_log("AuthController::logout - Début du processus de déconnexion");
-
         try {
-            // Capturer l'ID utilisateur avant déconnexion pour le logging
-            $userId = null;
-            try {
-                if ($this->auth->check()) {
-                    $userId = $this->auth->id();
-                    error_log("AuthController::logout - Déconnexion utilisateur ID: " . $userId);
-                } else {
-                    error_log("AuthController::logout - Aucun utilisateur connecté");
-                }
-            } catch (\Throwable $e) {
-                error_log("AuthController::logout - Erreur lors de la vérification de l'utilisateur: " . $e->getMessage());
-            }
+            // 1. Capturer auth_user_id avant déconnexion pour le logging
+            $userId = $_SESSION['auth_user_id'] ?? null;
 
-            // Déconnecter l'utilisateur via Auth
-            try {
-                $this->auth->logout();
-                error_log("AuthController::logout - Auth::logout() exécuté");
-            } catch (\Throwable $e) {
-                error_log("AuthController::logout - Exception dans Auth::logout(): " . $e->getMessage());
-                // Continuer malgré l'erreur
-            }
-
-            // Nettoyer manuellement la session en cas d'échec de Auth::logout()
+            // 2. Nettoyer la session - AVANT de déconnecter via Auth
+            // (au cas où Auth::logout() échouerait, nous assurons un nettoyage)
             unset($_SESSION['auth_user_id']);
             unset($_SESSION['is_authenticated']);
             unset($_SESSION['user_authenticated']);
-            error_log("AuthController::logout - Variables de session nettoyées manuellement");
 
-            // Préparer le message flash avant de détruire la session
-            $successMessage = 'Vous avez été déconnecté avec succès';
-
-            // Solution à deux étapes pour le message flash
-
-            // 1. Essayer de détruire et recréer la session pour les messages flash
+            // 3. Essayer de déconnecter via Auth, mais ne pas échouer si cela ne marche pas
             try {
-                // Ajouter manuellement le message flash dans la session
-                $_SESSION['_flashes']['success'][] = $successMessage;
-
-                // Forcer l'écriture de la session existante
-                session_write_close();
-                error_log("AuthController::logout - Session fermée");
-
-                // Démarrer une nouvelle session
-                session_start();
-                error_log("AuthController::logout - Nouvelle session démarrée: " . session_id());
+                $this->auth->logout();
+                error_log("Utilisateur ID $userId déconnecté via Auth::logout()");
             } catch (\Throwable $e) {
-                error_log("AuthController::logout - Erreur lors de la manipulation de session: " . $e->getMessage());
-                // La destruction et recréation ont échoué - on utilise un cookie flash personnalisé
-                setcookie('flash_success', $successMessage, time() + 30, '/', '', false, false);
-                error_log("AuthController::logout - Cookie flash défini en secours");
+                error_log("Erreur ignorée dans Auth::logout(): " . $e->getMessage());
+                // Continuer malgré l'erreur
             }
 
-            // Créer la réponse de redirection
-            error_log("AuthController::logout - Redirection vers la page d'accueil");
-            return $this->redirect('/');
-        } catch (\Throwable $e) {
-            // Intercepter toute exception non gérée
-            error_log("ERREUR CRITIQUE dans AuthController::logout: " . $e->getMessage());
-            error_log($e->getTraceAsString());
+            // 4. Préparer le message de succès
+            $flashMessage = 'Vous avez été déconnecté avec succès';
 
-            // Même en cas d'erreur catastrophique, assurer un minimum de nettoyage
-            $_SESSION = [];
+            // 5. Arrêter et redémarrer la session de manière sûre
+            // Détruire complètement l'ancienne session
+            $oldSessionData = $_SESSION; // Sauvegarder les données dont nous pourrions avoir besoin
+            $_SESSION = []; // Vider la session
 
             if (ini_get("session.use_cookies")) {
                 $params = session_get_cookie_params();
@@ -247,14 +209,35 @@ class AuthController extends BaseController
                 );
             }
 
+            // Fermer et détruire l'ancienne session
             session_destroy();
 
-            // Créer une nouvelle session avec un message d'erreur
+            // Démarrer une nouvelle session pour le message flash
             session_start();
-            $_SESSION['_flashes']['error'][] = 'Une erreur est survenue pendant la déconnexion';
 
-            // Rediriger l'utilisateur
-            return $this->redirect('/?error=logout_failed');
+            // Insérer le message flash dans la nouvelle session
+            $_SESSION['_flashes']['success'][] = $flashMessage;
+
+            // Forcer l'écriture de la session
+            session_write_close();
+
+            // 6. Créer une réponse de redirection qui passe par le système Response
+            error_log("Redirection vers la page d'accueil après déconnexion");
+            return $this->redirect('/');
+        } catch (\Throwable $e) {
+            // Gérer toute exception non capturée
+            error_log("ERREUR CRITIQUE dans AuthController::logout: " . $e->getMessage());
+
+            // Solution d'urgence - nettoyer la session de toute façon
+            $_SESSION = [];
+            session_destroy();
+            session_start();
+
+            // Ajouter un message d'erreur
+            $_SESSION['_flashes']['error'][] = 'Une erreur est survenue lors de la déconnexion';
+
+            // Rediriger vers la page d'accueil
+            return $this->redirect('/?error=1');
         }
     }
 
