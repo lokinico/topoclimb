@@ -154,8 +154,14 @@ class View
             return $_SESSION['csrf_token'];
         }));
 
-        // Add flash messages function
-        $this->twig->addFunction(new TwigFunction('flash', function () {
+        $this->twig->addFunction(new TwigFunction('flash', function () use ($container) {
+            if ($container && $container->has(Session::class)) {
+                // Utiliser la méthode getFlashes de la classe Session
+                $session = $container->get(Session::class);
+                return $session->getFlashes();
+            }
+
+            // Fallback si la classe Session n'est pas disponible
             $messages = $_SESSION['_flashes'] ?? [];
             unset($_SESSION['_flashes']);
             return $messages;
