@@ -78,47 +78,6 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 }
 
-// ===================== DEBUT SOLUTION D'URGENCE =====================
-// SOLUTION D'URGENCE: Intercepter la requête /logout
-if ($_SERVER['REQUEST_URI'] === '/logout' && isset($_SESSION['auth_user_id'])) {
-    // Enregistrer l'ID utilisateur pour le log (avant de vider la session)
-    $userId = $_SESSION['auth_user_id'];
-
-    // Vider complètement la session
-    $_SESSION = [];
-
-    // Supprimer aussi le cookie de session si nécessaire
-    if (ini_get("session.use_cookies")) {
-        $params = session_get_cookie_params();
-        setcookie(
-            session_name(),
-            '',
-            time() - 42000,
-            $params["path"],
-            $params["domain"],
-            $params["secure"],
-            $params["httponly"]
-        );
-    }
-
-    // Détruire la session
-    session_destroy();
-
-    // Démarrer une nouvelle session pour le message flash
-    session_start();
-
-    // Ajouter un message flash pour la confirmation
-    $_SESSION['_flashes']['success'][] = 'Vous avez été déconnecté avec succès.';
-
-    // Log de déconnexion
-    error_log("Déconnexion directe effectuée pour l'utilisateur ID: " . $userId);
-
-    // Redirection vers la page d'accueil
-    header('Location: /');
-    exit;
-}
-// ===================== FIN SOLUTION D'URGENCE =====================
-
 // Variables pour les services principaux
 $container = null;
 $session = null;
