@@ -91,8 +91,10 @@ class Application
     {
         $response = $this->handle();
 
-        // SOLUTION: Assurer que toutes les réponses sont envoyées
-        if ($response instanceof Response) {
+        // Assurer que toutes les réponses sont envoyées correctement
+        if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
+            $response->send();
+        } elseif ($response instanceof \TopoclimbCH\Core\Response) {
             $response->send();
         }
     }
