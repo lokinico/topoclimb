@@ -84,7 +84,7 @@ class ContainerBuilder
             ->setPublic(true)
             ->setFactory([Auth::class, 'getInstance'])
             ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class));
+            ->addArgument(new Reference(Database::class))
             ->setLazy(true);
 
         // View
