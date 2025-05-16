@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Point d'entrée principal de l'application TopoclimbCH
  */
@@ -21,7 +22,7 @@ if ($environment === 'development') {
     // Afficher toutes les erreurs en développement
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
-    
+
     // Utiliser Whoops pour un affichage plus joli des erreurs
     $whoops = new \Whoops\Run;
     $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
@@ -38,7 +39,7 @@ if (session_status() === PHP_SESSION_NONE) {
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
-    
+
     session_start();
 }
 
@@ -46,30 +47,16 @@ try {
     // Créer et configurer le conteneur
     $containerBuilder = new \TopoclimbCH\Core\ContainerBuilder();
     $container = $containerBuilder->build();
-    
-    // Vérifier si le service existe pour le déboggage
-    $exists = $container->has('TopoclimbCH\Controllers\HomeController');
-    error_log("HomeController exists in container: " . ($exists ? "YES" : "NO"));
 
-    // Initialiser le routeur
+    // Initialiser le logger
     $logger = $container->get(Psr\Log\LoggerInterface::class);
-    $router = new \TopoclimbCH\Core\Router($logger, $container);
 
-    // Initialiser Container.php avec le conteneur Symfony
-    $appContainer = \TopoclimbCH\Core\Container::getInstance($container);
-    
-    // Créer un logger
-    $logger = $container->get(\Psr\Log\LoggerInterface::class);
-    
     // Initialiser le routeur
-    $router = new \TopoclimbCH\Core\Router($logger, $container);
-    
+    $router = $container->get(\TopoclimbCH\Core\Router::class);
+
     // Charger les routes
     $router->loadRoutes(BASE_PATH . '/config/routes.php');
-    
-    // Traiter la requête
-    $request = \Symfony\Component\HttpFoundation\Request::createFromGlobals();
-    
+
     // Pour du débogage, on peut afficher les services enregistrés
     if ($environment === 'development' && isset($_GET['debug_container'])) {
         echo "<h2>Services disponibles:</h2><pre>";
@@ -77,13 +64,18 @@ try {
         echo "</pre>";
         exit;
     }
-    
-    // Dispatcher la requête
-    $response = $router->dispatch($request);
-    
-    // Envoyer la réponse
-    $response->send();
-    
+
+    // SOLUTION: Utiliser la classe Application pour gérer le cycle de requête/réponse
+    $app = new \TopoclimbCH\Core\Application(
+        $router,
+        $logger,
+        $container,
+        $environment
+    );
+
+    // Exécuter l'application qui gère tout le cycle requête/réponse
+    // incluant l'envoi automatique de la réponse
+    $app->run();
 } catch (\Throwable $e) {
     // Log l'erreur
     if (isset($logger)) {
@@ -91,7 +83,7 @@ try {
     } else {
         error_log($e->getMessage() . "\n" . $e->getTraceAsString());
     }
-    
+
     // Afficher une erreur basique en cas de problème
     http_response_code(500);
     if ($environment === 'development') {
