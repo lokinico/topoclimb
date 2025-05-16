@@ -57,15 +57,6 @@ class ContainerBuilder
      */
     private function registerCoreServices(SymfonyContainerBuilder $container): void
     {
-        // Router
-        $container->register(Router::class, Router::class)
-            ->setPublic(true)
-            ->addArgument(new Reference(LoggerInterface::class))
-            ->addArgument(new Reference('service_container'));
-
-
-        $container->setAlias('router', Router::class)->setPublic(true);
-
         // Logger
         $container->register(LoggerInterface::class, Logger::class)
             ->setPublic(true)
@@ -100,6 +91,15 @@ class ContainerBuilder
             ->setPublic(true)
             ->addArgument('%views_path%')
             ->addArgument('%cache_path%');
+
+        // Router
+        $container->register(Router::class, Router::class)
+            ->setPublic(true)
+            ->addArgument(new Reference(LoggerInterface::class))
+            ->addArgument(new Reference('service_container'));
+
+
+        $container->setAlias('router', Router::class)->setPublic(true);
     }
 
     private function registerBusinessServices(SymfonyContainerBuilder $container): void
