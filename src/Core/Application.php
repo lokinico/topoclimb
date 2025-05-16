@@ -89,13 +89,24 @@ class Application
      */
     public function run(): void
     {
+        error_log("Application::run() started");
         $response = $this->handle();
 
-        // Assurer que toutes les réponses sont envoyées correctement
+        error_log("Response object created: " . get_class($response));
+        error_log("Response status code: " . $response->getStatusCode());
+
+        // Envoi de la réponse - AVEC NAMESPACE COMPLET
         if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
+            error_log("Sending Symfony response...");
             $response->send();
-        } elseif ($response instanceof \TopoclimbCH\Core\Response) {
+            error_log("Response sent");
+        } else if ($response instanceof \TopoclimbCH\Core\Response) {
+            // Au cas où vous auriez aussi une classe Response personnalisée
+            error_log("Sending custom response...");
             $response->send();
+            error_log("Response sent");
+        } else {
+            error_log("WARNING: Unknown response type: " . get_class($response));
         }
     }
 

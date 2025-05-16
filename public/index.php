@@ -53,6 +53,7 @@ try {
 
     // Initialiser le routeur
     $router = $container->get(\TopoclimbCH\Core\Router::class);
+    error_log("Router successfully retrieved from container");
 
     // Charger les routes
     $router->loadRoutes(BASE_PATH . '/config/routes.php');
