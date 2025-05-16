@@ -120,22 +120,21 @@ class AuthController extends BaseController
         error_log('Résultat de la tentative de connexion: ' . ($loginSuccess ? 'succès' : 'échec'));
 
         if ($loginSuccess) {
-            // Récupération de l'URL intentionnelle si disponible
+            // Récupération de l'URL intentionnelle
             $intendedUrl = $this->session->get('intended_url', '/');
             $this->session->remove('intended_url');
 
             $this->flash('success', 'Vous êtes maintenant connecté');
 
-            // Log de la redirection
+            // IMPORTANT: Persister la session avant la redirection
+            $this->session->persist();
+
             error_log('Redirection après connexion vers: ' . $intendedUrl);
 
-            // SOLUTION: Forcer la redirection immédiatement
+            // Utiliser la redirection immédiate
             $response = Response::redirect($intendedUrl);
             $response->send();
-            exit; // Important pour arrêter l'exécution après la redirection
-
-            // Cette ligne ne sera jamais atteinte
-            // return $this->redirect($intendedUrl);
+            exit; // Arrêter l'exécution du script pour s'assurer que la redirection est effectuée
         }
 
         // Si échec de connexion
