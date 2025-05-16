@@ -3,12 +3,18 @@
 
 namespace TopoclimbCH\Core;
 
-use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
 use Psr\Log\LoggerInterface;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\HttpFoundation\Response;
+use TopoclimbCH\Controllers\HomeController;
+use TopoclimbCH\Controllers\ErrorController;
+use TopoclimbCH\Controllers\SectorController;
+use TopoclimbCH\Controllers\RouteController;
+use TopoclimbCH\Controllers\AuthController;
+use TopoclimbCH\Middleware\PreserveCsrfTokenMiddleware;
+use TopoclimbCH\Core\Router;
 
 class ContainerBuilder
 {
@@ -46,8 +52,20 @@ class ContainerBuilder
         return $container;
     }
 
+    /**
+     * Register core services in the container.
+     */
     private function registerCoreServices(SymfonyContainerBuilder $container): void
     {
+        // Router
+        $container->register(Router::class, Router::class)
+            ->setPublic(true)
+            ->addArgument(new Reference(LoggerInterface::class))
+            ->addArgument(new Reference('service_container'));
+
+
+        $container->setAlias('router', Router::class)->setPublic(true);
+
         // Logger
         $container->register(LoggerInterface::class, Logger::class)
             ->setPublic(true)
