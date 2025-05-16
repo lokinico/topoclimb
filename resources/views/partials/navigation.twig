@@ -12,9 +12,9 @@
             <li><a href="{{ url('/sectors') }}" class="{{ is_active('/sectors') }}">Secteurs</a></li>
             <li><a href="{{ url('/routes') }}" class="{{ is_active('/routes') }}">Voies</a></li>
             
-            {% if auth() %}
+            {% if auth_user %}
                 <li class="dropdown">
-                    <a href="#">Mon compte</a>
+                    <a href="#">{{ auth_user.prenom }} {{ auth_user.nom }}</a>
                     <ul class="dropdown-menu">
                         <li><a href="{{ url('/profile') }}">Profil</a></li>
                         <li><a href="{{ url('/ascents') }}">Mes ascensions</a></li>
