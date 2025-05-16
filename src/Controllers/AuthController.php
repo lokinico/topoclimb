@@ -124,17 +124,24 @@ class AuthController extends BaseController
             $intendedUrl = $this->session->get('intended_url', '/');
             $this->session->remove('intended_url');
 
+            // Conserver les données critiques en session
+            $this->session->set('auth_user_id', $this->auth->id());
+            $this->session->set('user_authenticated', true);
+
+            // Message de succès
             $this->flash('success', 'Vous êtes maintenant connecté');
 
-            // IMPORTANT: Persister la session avant la redirection
+            // CRUCIAL: Persister la session
             $this->session->persist();
 
+            // Log pour déboguer
+            error_log('Authentification réussie. User ID en session: ' . $this->session->get('auth_user_id'));
             error_log('Redirection après connexion vers: ' . $intendedUrl);
 
-            // Utiliser la redirection immédiate
+            // Redirection avec envoi immédiat
             $response = Response::redirect($intendedUrl);
             $response->send();
-            exit; // Arrêter l'exécution du script pour s'assurer que la redirection est effectuée
+            exit;
         }
 
         // Si échec de connexion
