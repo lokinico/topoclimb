@@ -25,6 +25,26 @@ class CountryService
         return Country::find($id);
     }
 
+    public function createCountry(array $data): Country
+    {
+        $country = new Country();
+        $country->fill($data);
+        $country->save();
+        return $country;
+    }
+
+    public function updateCountry(Country $country, array $data): Country
+    {
+        $country->fill($data);
+        $country->save();
+        return $country;
+    }
+
+    public function deleteCountry(Country $country): bool
+    {
+        return $country->delete();
+    }
+
     public function getCountryWithStats(int $id): ?array
     {
         $country = $this->getCountry($id);

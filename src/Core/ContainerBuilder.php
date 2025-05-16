@@ -103,6 +103,9 @@ class ContainerBuilder
         $container->setAlias('router', Router::class)->setPublic(true);
     }
 
+    /**
+     * Register business services in the container.
+     */
     private function registerBusinessServices(SymfonyContainerBuilder $container): void
     {
         // Services métier
@@ -121,16 +124,25 @@ class ContainerBuilder
             'TopoclimbCH\\Services\\MediaService' => [
                 Database::class
             ],
-            // Ajoutez ces deux services
+            // Ajout des services manquants
             'TopoclimbCH\\Services\\RegionService' => [
                 Database::class
             ],
             'TopoclimbCH\\Services\\CountryService' => [
                 Database::class
+            ],
+            'TopoclimbCH\\Services\\ValidationService' => [
+                Database::class
             ]
         ];
 
         foreach ($services as $id => $dependencies) {
+            // Ajouter une vérification d'existence
+            if (!class_exists($id)) {
+                error_log("Warning: Service class $id does not exist");
+                continue;
+            }
+
             $definition = $container->register($id, $id);
             $definition->setPublic(true);
 
@@ -140,6 +152,9 @@ class ContainerBuilder
         }
     }
 
+    /**
+     * Register controllers in the container.
+     */
     private function registerControllers(SymfonyContainerBuilder $container): void
     {
         // Définition des contrôleurs et leurs dépendances
@@ -151,6 +166,7 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\AuthController' => [
                 View::class,
                 Session::class,
+                'TopoclimbCH\\Services\\AuthService',
                 Database::class
             ],
             'TopoclimbCH\\Controllers\\SectorController' => [
@@ -178,7 +194,10 @@ class ContainerBuilder
             ],
             'TopoclimbCH\\Controllers\\SiteController' => [
                 View::class,
-                Session::class
+                Session::class,
+                'TopoclimbCH\\Services\\MediaService',
+                'TopoclimbCH\\Services\\RegionService',
+                Database::class
             ],
             'TopoclimbCH\\Controllers\\ErrorController' => [
                 View::class,
@@ -187,23 +206,63 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\UserController' => [
                 View::class,
                 Session::class,
-                Auth::class
+                Auth::class,
+                'TopoclimbCH\\Services\\AuthService',
+                Database::class
             ],
             'TopoclimbCH\\Controllers\\AdminController' => [
                 View::class,
                 Session::class,
-                Auth::class
+                Auth::class,
+                Database::class
             ],
             'TopoclimbCH\\Controllers\\AscentController' => [
                 View::class,
                 Session::class,
-                Auth::class
+                Auth::class,
+                'TopoclimbCH\\Services\\RouteService',
+                Database::class
+            ],
+            // Ajout des contrôleurs manquants
+            'TopoclimbCH\\Controllers\\UserAscentController' => [
+                View::class,
+                Session::class,
+                Auth::class,
+                'TopoclimbCH\\Services\\RouteService',
+                Database::class
+            ],
+            'TopoclimbCH\\Controllers\\ClimbingDataController' => [
+                View::class,
+                Session::class,
+                Database::class
+            ],
+            'TopoclimbCH\\Controllers\\CountryController' => [
+                View::class,
+                Session::class,
+                'TopoclimbCH\\Services\\CountryService',
+                Database::class
+            ],
+            'TopoclimbCH\\Controllers\\DifficultyGradeController' => [
+                View::class,
+                Session::class,
+                Database::class
+            ],
+            'TopoclimbCH\\Controllers\\DifficultySystemController' => [
+                View::class,
+                Session::class,
+                Database::class
             ]
         ];
 
         foreach ($controllers as $id => $dependencies) {
             if ($_ENV['APP_ENV'] === 'development') {
                 error_log("HomeController exists in container: " . ($container->has('TopoclimbCH\\Controllers\\HomeController') ? 'YES' : 'NO'));
+            }
+
+            // Ajouter une vérification d'existence
+            if (!class_exists($id)) {
+                error_log("Warning: Controller class $id does not exist");
+                continue;
             }
 
             $definition = $container->register($id, $id);
@@ -215,6 +274,9 @@ class ContainerBuilder
         }
     }
 
+    /**
+     * Register middlewares in the container.
+     */
     private function registerMiddlewares(SymfonyContainerBuilder $container): void
     {
         // Définition des middlewares et leurs dépendances
@@ -232,6 +294,10 @@ class ContainerBuilder
                 Database::class
             ],
             'TopoclimbCH\\Middleware\\CsrfMiddleware' => [
+                Session::class
+            ],
+            // Ajout du middleware manquant
+            'TopoclimbCH\\Middleware\\PreserveCsrfTokenMiddleware' => [
                 Session::class
             ]
         ];
