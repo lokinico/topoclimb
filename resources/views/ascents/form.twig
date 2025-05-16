@@ -1,0 +1,173 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Enregistrer une ascension - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header mb-4">
+        <div class="breadcrumbs mb-2">
+            <a href="{{ url('/') }}">Accueil</a> &raquo;
+            <a href="{{ url('/routes/' ~ route.id) }}">{{ route.name }}</a> &raquo;
+            <span>Enregistrer une ascension</span>
+        </div>
+        
+        <h1>Enregistrer une ascension</h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Ascension de {{ route.name }} ({{ route.difficulty }})</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url('/ascent/add') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="route_id" value="{{ route.id }}">
+                        
+                        <div class="mb-3">
+                            <label for="ascent_date" class="form-label">Date d'ascension</label>
+                            <input type="date" class="form-control" id="ascent_date" name="ascent_date" value="{{ "now"|date('Y-m-d') }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="ascent_type" class="form-label">Type d'ascension</label>
+                            <select class="form-select" id="ascent_type" name="ascent_type" required>
+                                <option value="">-- Sélectionner --</option>
+                                <option value="onsight">À vue (Onsight)</option>
+                                <option value="flash">Flash</option>
+                                <option value="redpoint">Après travail (Redpoint)</option>
+                                <option value="attempt">Tentative (non réussie)</option>
+                                <option value="toprope">Moulinette</option>
+                                <option value="repeat">Répétition</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="climbing_type" class="form-label">Type d'escalade</label>
+                            <select class="form-select" id="climbing_type" name="climbing_type">
+                                <option value="">-- Sélectionner --</option>
+                                <option value="lead">En tête</option>
+                                <option value="toprope">Moulinette</option>
+                                <option value="boulder">Bloc</option>
+                                <option value="multipitch">Grande voie</option>
+                                <option value="trad">Trad</option>
+                                <option value="aid">Artificiel</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="attempts" class="form-label">Nombre de tentatives</label>
+                            <input type="number" class="form-control" id="attempts" name="attempts" value="1" min="1">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="difficulty_comment" class="form-label">Commentaire sur la difficulté</label>
+                            <select class="form-select" id="difficulty_comment" name="difficulty_comment">
+                                <option value="">-- Sélectionner --</option>
+                                <option value="soft">Sous-cotée</option>
+                                <option value="accurate">Cotation juste</option>
+                                <option value="hard">Sur-cotée</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="quality_rating" class="form-label">Qualité</label>
+                            <div class="rating-stars">
+                                {% for i in 1..5 %}
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="quality_rating" id="star{{ i }}" value="{{ i }}">
+                                        <label class="form-check-label" for="star{{ i }}">{{ i }}</label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="with_user" class="form-label">Avec qui ?</label>
+                            <input type="text" class="form-control" id="with_user" name="with_user" placeholder="Nom(s) du/des partenaire(s)">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Commentaire</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="4" placeholder="Vos impressions, conditions, etc."></textarea>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="favorite" name="favorite" value="1">
+                            <label class="form-check-label" for="favorite">Ajouter aux favoris</label>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-outline-secondary">Annuler</a>
+                            <button type="submit" class="btn btn-primary">Enregistrer l'ascension</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Détails de la voie</h2>
+                </div>
+                <div class="card-body">
+                    <div class="route-details">
+                        <p><strong>Nom:</strong> {{ route.name }}</p>
+                        <p><strong>Difficulté:</strong> {{ route.difficulty }}</p>
+                        <p><strong>Secteur:</strong> {{ route.sector.name }}</p>
+                        {% if route.style %}
+                            <p><strong>Style:</strong> {{ route.styleFormatted }}</p>
+                        {% endif %}
+                        {% if route.length %}
+                            <p><strong>Longueur:</strong> {{ route.length }} m</p>
+                        {% endif %}
+                        {% if route.equipment %}
+                            <p><strong>Équipement:</strong> {{ route.equipmentFormatted }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Types d'ascension</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>À vue (Onsight):</strong> Réussite sans chute et sans information préalable.</li>
+                        <li><strong>Flash:</strong> Réussite sans chute mais avec des informations préalables.</li>
+                        <li><strong>Après travail (Redpoint):</strong> Réussite après plusieurs tentatives.</li>
+                        <li><strong>Tentative:</strong> Essai non abouti.</li>
+                        <li><strong>Moulinette:</strong> Escalade avec corde du haut.</li>
+                        <li><strong>Répétition:</strong> Voie déjà réussie précédemment.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Javascript pour gérer l'affichage des étoiles
+        const stars = document.querySelectorAll('.rating-stars input');
+        stars.forEach(star => {
+            star.addEventListener('change', function() {
+                const value = this.value;
+                stars.forEach((s, index) => {
+                    const label = s.nextElementSibling;
+                    if (index < value) {
+                        label.classList.add('text-warning');
+                    } else {
+                        label.classList.remove('text-warning');
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

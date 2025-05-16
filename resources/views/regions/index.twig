@@ -1,0 +1,48 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Régions d'escalade - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h1>Régions d'escalade en Suisse</h1>
+    </div>
+    
+    <div class="row g-4">
+        {% if regions is defined and regions|length > 0 %}
+            {% for region in regions %}
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        {% if region.image %}
+                            <img src="{{ region.image }}" class="card-img-top" alt="{{ region.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 140px;">
+                                <i class="icon-mountain" style="font-size: 48px;"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h2 class="card-title h5">{{ region.name }}</h2>
+                            {% if region.description %}
+                                <p class="card-text">{{ region.description|slice(0, 120) ~ (region.description|length > 120 ? '...' : '') }}</p>
+                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">{{ region.sector_count ?? 0 }} secteurs</span>
+                                <a href="{{ url('/sites?region_id=' ~ region.id) }}" class="btn btn-outline-primary">Voir les sites</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    Aucune région n'a été trouvée. 
+                    {% if auth() %}
+                        <a href="{{ url('/admin/regions/create') }}">Ajouter une région</a>.
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,208 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}
+    {% if route.id %}
+        Modifier la voie {{ route.name }}
+    {% else %}
+        Ajouter une voie
+    {% endif %}
+    - TopoclimbCH
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header mb-4">
+        <div class="breadcrumbs mb-2">
+            <a href="{{ url('/') }}">Accueil</a> &raquo;
+            <a href="{{ url('/sectors') }}">Secteurs</a> &raquo;
+            {% if sector %}
+                <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a> &raquo;
+            {% endif %}
+            <span>
+                {% if route.id %}
+                    Modifier {{ route.name }}
+                {% else %}
+                    Nouvelle voie
+                {% endif %}
+            </span>
+        </div>
+        
+        <h1>
+            {% if route.id %}
+                Modifier la voie "{{ route.name }}"
+            {% else %}
+                Ajouter une nouvelle voie
+            {% endif %}
+        </h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" action="{{ route.id ? url('/routes/' ~ route.id ~ '/edit') : url('/routes/create') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        {% if not sector %}
+                            <div class="mb-3">
+                                <label for="sector_id" class="form-label">Secteur</label>
+                                <select class="form-select" id="sector_id" name="sector_id" required>
+                                    <option value="">Sélectionnez un secteur</option>
+                                    {% if sectors is defined %}
+                                        {% for sector_item in sectors %}
+                                            <option value="{{ sector_item.id }}" {% if route.sector_id == sector_item.id %}selected{% endif %}>
+                                                {{ sector_item.name }}
+                                            </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                        {% else %}
+                            <input type="hidden" name="sector_id" value="{{ sector.id }}">
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nom de la voie</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ route.name }}" required>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="difficulty" class="form-label">Difficulté</label>
+                                <input type="text" class="form-control" id="difficulty" name="difficulty" value="{{ route.difficulty }}">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="difficulty_system_id" class="form-label">Système</label>
+                                <select class="form-select" id="difficulty_system_id" name="difficulty_system_id">
+                                    <option value="">Choisir un système</option>
+                                    {% if difficulty_systems is defined %}
+                                        {% for system in difficulty_systems %}
+                                            <option value="{{ system.id }}" {% if route.difficulty_system_id == system.id %}selected{% endif %}>
+                                                {{ system.name }}
+                                            </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="style" class="form-label">Style</label>
+                                <select class="form-select" id="style" name="style">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="sport" {% if route.style == 'sport' %}selected{% endif %}>Sportif</option>
+                                    <option value="trad" {% if route.style == 'trad' %}selected{% endif %}>Traditionnel</option>
+                                    <option value="mix" {% if route.style == 'mix' %}selected{% endif %}>Mixte</option>
+                                    <option value="boulder" {% if route.style == 'boulder' %}selected{% endif %}>Bloc</option>
+                                    <option value="aid" {% if route.style == 'aid' %}selected{% endif %}>Artificiel</option>
+                                    <option value="ice" {% if route.style == 'ice' %}selected{% endif %}>Glace</option>
+                                    <option value="other" {% if route.style == 'other' %}selected{% endif %}>Autre</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="beauty" class="form-label">Beauté</label>
+                                <select class="form-select" id="beauty" name="beauty">
+                                    <option value="0" {% if route.beauty == '0' %}selected{% endif %}>Non évalué</option>
+                                    <option value="1" {% if route.beauty == '1' %}selected{% endif %}>★☆☆☆☆</option>
+                                    <option value="2" {% if route.beauty == '2' %}selected{% endif %}>★★☆☆☆</option>
+                                    <option value="3" {% if route.beauty == '3' %}selected{% endif %}>★★★☆☆</option>
+                                    <option value="4" {% if route.beauty == '4' %}selected{% endif %}>★★★★☆</option>
+                                    <option value="5" {% if route.beauty == '5' %}selected{% endif %}>★★★★★</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="length" class="form-label">Longueur (m)</label>
+                                <input type="number" class="form-control" id="length" name="length" value="{{ route.length }}" step="0.1" min="0">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="equipment" class="form-label">Équipement</label>
+                                <select class="form-select" id="equipment" name="equipment">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="poor" {% if route.equipment == 'poor' %}selected{% endif %}>Mauvais</option>
+                                    <option value="adequate" {% if route.equipment == 'adequate' %}selected{% endif %}>Adéquat</option>
+                                    <option value="good" {% if route.equipment == 'good' %}selected{% endif %}>Bon</option>
+                                    <option value="excellent" {% if route.equipment == 'excellent' %}selected{% endif %}>Excellent</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="rappel" class="form-label">Rappel</label>
+                            <input type="text" class="form-control" id="rappel" name="rappel" value="{{ route.rappel }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Commentaire</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="4">{{ route.comment }}</textarea>
+                        </div>
+                        
+                        {% if route.id %}
+                            <div class="mb-3">
+                                <label for="number" class="form-label">Numéro de voie</label>
+                                <input type="number" class="form-control" id="number" name="number" value="{{ route.number }}" min="1">
+                                <div class="form-text">Le numéro détermine l'ordre d'affichage dans le secteur.</div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="image" class="form-label">Image principale</label>
+                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="active" class="form-label">Statut</label>
+                            <select class="form-select" id="active" name="active">
+                                <option value="1" {% if route.active != 0 %}selected{% endif %}>Active</option>
+                                <option value="0" {% if route.active == 0 %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ sector ? url('/sectors/' ~ sector.id) : url('/routes') }}" class="btn btn-outline-secondary">
+                                Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if route.id %}
+                                    Mettre à jour
+                                {% else %}
+                                    Créer
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Conseils</h2>
+                </div>
+                <div class="card-body">
+                    <h3 class="h6">Difficulté</h3>
+                    <p>Utilisez le format adapté au système choisi. Exemple: "6a+" pour la cotation française.</p>
+                    
+                    <h3 class="h6">Équipement</h3>
+                    <ul>
+                        <li><strong>Excellent</strong>: Très bien équipé, tous les 2-3m</li>
+                        <li><strong>Bon</strong>: Bien équipé, tous les 3-4m</li>
+                        <li><strong>Adéquat</strong>: Engagé</li>
+                        <li><strong>Mauvais</strong>: Équipement vétuste ou insuffisant</li>
+                    </ul>
+                    
+                    <h3 class="h6">Beauté</h3>
+                    <p>Évaluez la qualité esthétique de la voie, de 1 à 5 étoiles.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

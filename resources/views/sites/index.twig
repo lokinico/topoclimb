@@ -1,0 +1,113 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Sites d'escalade - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h1>Sites d'escalade</h1>
+        
+        <div class="actions">
+            {% if auth() and is_moderator is defined and is_moderator %}
+                <a href="{{ url('/sites/create') }}" class="btn btn-primary">
+                    <i class="icon-plus"></i> Ajouter un site
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h5 mb-0">Filtrer les sites</h2>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ url('/sites') }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="region_id" class="form-label">Région</label>
+                        <select class="form-select" id="region_id" name="region_id">
+                            <option value="">Toutes les régions</option>
+                            {% if regions is defined %}
+                                {% for region in regions %}
+                                    <option value="{{ region.id }}" {% if request.region_id == region.id %}selected{% endif %}>
+                                        {{ region.name }}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Recherche</label>
+                        <input type="text" class="form-control" id="search" name="search" value="{{ request.search }}" placeholder="Nom du site...">
+                    </div>
+                    
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Filtrer</button>
+                        <a href="{{ url('/sites') }}" class="btn btn-outline-secondary ms-2">Réinitialiser</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Liste des sites -->
+    <div class="row g-4">
+        {% if sites is defined and sites|length > 0 %}
+            {% for site in sites %}
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        {% if site.image %}
+                            <img src="{{ site.image }}" class="card-img-top" alt="{{ site.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 140px;">
+                                <i class="icon-book" style="font-size: 48px;"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h2 class="card-title h5">{{ site.name }}</h2>
+                            {% if site.description %}
+                                <p class="card-text">{{ site.description|slice(0, 120) ~ (site.description|length > 120 ? '...' : '') }}</p>
+                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="text-muted">
+                                    {% if site.year %}Publié: {{ site.year }}{% endif %}
+                                    {% if site.publisher %}par {{ site.publisher }}{% endif %}
+                                </span>
+                                <a href="{{ url('/sectors?site_id=' ~ site.id) }}" class="btn btn-outline-primary">Voir les secteurs</a>
+                            </div>
+                        </div>
+                        {% if site.updated_at %}
+                            <div class="card-footer text-muted">
+                                Mis à jour: {{ site.updated_at|date('d/m/Y') }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    Aucun site n'a été trouvé avec les critères actuels.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if sites.lastPage > 1 %}
+        <div class="d-flex justify-content-center mt-4">
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination">
+                    {% for i in 1..sites.lastPage %}
+                        <li class="page-item {{ sites.currentPage == i ? 'active' : '' }}">
+                            <a class="page-link" href="{{ url('/sites?page=' ~ i ~ '&' ~ query_string) }}">{{ i }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
