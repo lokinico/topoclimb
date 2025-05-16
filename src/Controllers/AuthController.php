@@ -54,26 +54,44 @@ class AuthController extends BaseController
         $this->validationService = new ValidationService();
     }
 
-
+    /**
+     * Affiche le formulaire de connexion
+     *
+     * @return Response
+     */
     public function loginForm(): Response
     {
         if ($this->auth->check()) {
             return $this->redirect('/');
         }
 
-        // Générer et passer le token CSRF à la vue
-        $csrfToken = $this->createCsrfToken();
+        // Utiliser le token existant si on est en train de préserver le token
+        if ($this->session->has('_preserve_csrf')) {
+            $csrfToken = $this->session->get('csrf_token');
+            $this->session->remove('_preserve_csrf'); // Nettoyage
+        } else {
+            // Sinon, générer un nouveau token
+            $csrfToken = $this->createCsrfToken();
+        }
 
         return $this->render('auth/login', [
             'csrf_token' => $csrfToken
         ]);
     }
-
     public function login(Request $request): Response
     {
-        // Vérification du token CSRF de manière sécurisée
+
+        // Vérification du token CSRF
         $submittedToken = $request->request->get('csrf_token');
-        $storedToken = $this->session->get('csrf_token');
+
+        // Ne génère pas un nouveau token à chaque tentative d'authentification
+        if (!$this->validateCsrfToken($submittedToken)) {
+            $this->flash('error', 'Token CSRF invalide. Veuillez réessayer.');
+            // IMPORTANT: stockez un indicateur pour éviter la génération d'un nouveau token
+            $this->session->set('_preserve_csrf', true);
+            return $this->redirect('/login');
+        }
+
 
         // Comparaison directe, sans appeler de méthode qui pourrait changer le token
         $tokenValid = !empty($submittedToken) && !empty($storedToken) && hash_equals($storedToken, $submittedToken);
@@ -119,6 +137,8 @@ class AuthController extends BaseController
         if (!$loginSuccess) {
             $this->flash('error', 'Identifiants invalides');
             $this->session->flash('old', ['email' => $credentials['email'] ?? '']);
+            // IMPORTANT: stockez un indicateur pour éviter la génération d'un nouveau token
+            $this->session->set('_preserve_csrf', true);
             return $this->redirect('/login');
         }
 
