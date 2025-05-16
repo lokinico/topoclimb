@@ -8,6 +8,11 @@ use Twig\Loader\FilesystemLoader;
 use Twig\TwigFunction;
 use Twig\TwigFilter;
 use Twig\Extension\DebugExtension;
+use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\Container;
+
+
 
 class View
 {
