@@ -22,11 +22,13 @@ class Container
     /**
      * Récupère l'instance unique
      */
-    public static function getInstance(SymfonyContainerBuilder $container = null): self
+    public static function getInstance(SymfonyContainerBuilder $container = null): ?self
     {
         if (self::$instance === null) {
             if ($container === null) {
-                throw new \InvalidArgumentException('Container must be provided first time');
+                // Au lieu de lever une exception, retourner null
+                error_log('Container::getInstance appelé avant initialisation');
+                return null;
             }
             self::$instance = new self($container);
         }
@@ -49,7 +51,7 @@ class Container
                     return $this->container->get($fullId);
                 }
             }
-            
+
             throw new \InvalidArgumentException("Service $id not found", 0, $e);
         }
     }
@@ -66,7 +68,7 @@ class Container
                 return true;
             }
         }
-        
+
         return $this->container->has($id);
     }
 }
