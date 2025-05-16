@@ -1,4 +1,3 @@
-<!-- Debug: {{ auth_user ? 'User found' : 'User not found' }} -->
 <nav class="main-nav">
     <div class="container">
         <div class="logo">
@@ -20,17 +19,19 @@
             
             {% if auth() %}
                 <li class="dropdown">
-                    <a href="#">{{ auth_user().prenom }} {{ auth_user().nom }}</a>
+                    <a href="#" class="dropdown-toggle">
+                        {{ auth_user().prenom }} {{ auth_user().nom }}
+                    </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{{ url('/profile') }}">Profil</a></li>
-                        <li><a href="{{ url('/ascents') }}">Mes ascensions</a></li>
+                        <li><a href="{{ url('/profile') }}" class="dropdown-item">Profil</a></li>
+                        <li><a href="{{ url('/ascents') }}" class="dropdown-item">Mes ascensions</a></li>
                         <li>
                             <form action="{{ url('/logout') }}" method="POST" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                <button type="submit" class="btn-link">Déconnexion</button>
+                                <button type="submit" class="dropdown-item btn-link">Déconnexion</button>
                             </form>
                         </li>
-                        <li><a href="{{ url('/settings') }}">Paramètres</a></li>
+                        <li><a href="{{ url('/settings') }}" class="dropdown-item">Paramètres</a></li>
                     </ul>
                 </li>
             {% else %}
