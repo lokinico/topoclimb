@@ -134,10 +134,33 @@ class Auth
             error_log("Connexion réussie pour: $username");
             return true;
         } catch (\Exception $e) {
-            // Améliorer le log d'erreur
+            // Gestion alternative en cas d'erreur lors de la création de l'utilisateur
             error_log("Exception lors de la création de l'utilisateur: " . $e->getMessage());
-            error_log("Trace: " . $e->getTraceAsString());
-            return false;
+
+            try {
+                // Création manuelle d'un objet User fonctionnel
+                $userData = $result;
+                $user = new class($userData) extends User {
+                    public function __construct(array $data)
+                    {
+                        foreach ($data as $key => $value) {
+                            $this->$key = $value;
+                        }
+                        $this->id = (int) $data['id'];
+                    }
+                };
+
+                // Connexion manuelle
+                $this->user = $user;
+                $this->session->regenerate();
+                $this->session->set('auth_user_id', $result['id']);
+
+                error_log("Connexion alternative réussie pour: $username avec autorisation: " . $result['autorisation']);
+                return true;
+            } catch (\Exception $fallbackError) {
+                error_log("Échec de la connexion alternative: " . $fallbackError->getMessage());
+                return false;
+            }
         }
     }
 
@@ -204,7 +227,7 @@ class Auth
             return false;
         }
 
-        // Implémentation simple des permissions basée sur le niveau d'autorisation
+        // Définition des capacités par niveau
         $adminAbilities = [
             'create-sector',
             'update-sector',
@@ -216,32 +239,74 @@ class Auth
             'manage-site'
         ];
 
-        $moderatorAbilities = [
+        $redactorAbilities = [
             'create-sector',
             'update-sector',
             'create-route',
             'update-route'
         ];
 
-        // L'admin (autorisation = 1) peut tout faire
-        if ($this->user->autorisation == '1') {
+        $viewerAbilities = [
+            'view-sector',
+            'view-route',
+            'view-profile',
+            'create-comment',
+            'view-details'
+        ];
+
+        $restrictedAbilities = [
+            'view-sample-sector',
+            'view-sample-route',
+            'view-public-content'
+        ];
+
+        // L'admin (autorisation = 0) peut tout faire
+        if ($this->user->autorisation == '0') {
+            error_log("Auth: Accès admin accordé pour: " . $ability);
             return true;
         }
 
-        // Le modérateur (autorisation = 2) peut faire certaines actions
-        if ($this->user->autorisation == '2' && in_array($ability, $moderatorAbilities)) {
+        // Le rédacteur (autorisation = 1) peut faire les actions de rédaction et consultation
+        if ($this->user->autorisation == '1' && (
+            in_array($ability, $redactorAbilities) ||
+            in_array($ability, $viewerAbilities) ||
+            in_array($ability, $restrictedAbilities)
+        )) {
+            error_log("Auth: Accès rédacteur accordé pour: " . $ability);
             return true;
         }
 
-        // Vérification spécifique pour la mise à jour d'une voie ou d'un secteur par son créateur
-        if (($ability === 'update-route' || $ability === 'delete-route') && $model && $model->created_by === $this->user->id) {
+        // Le viewer (autorisation = 2) peut consulter tout le contenu
+        if ($this->user->autorisation == '2' && (
+            in_array($ability, $viewerAbilities) ||
+            in_array($ability, $restrictedAbilities)
+        )) {
+            error_log("Auth: Accès viewer accordé pour: " . $ability);
             return true;
         }
 
-        if (($ability === 'update-sector' || $ability === 'delete-sector') && $model && $model->created_by === $this->user->id) {
+        // Accès restreint (autorisation = 3) - compte d'essai
+        if ($this->user->autorisation == '3' && in_array($ability, $restrictedAbilities)) {
+            error_log("Auth: Accès restreint accordé pour: " . $ability);
             return true;
         }
 
+        // Vérification pour l'édition de contenu créé par l'utilisateur
+        if (($ability === 'update-route' || $ability === 'delete-route') &&
+            $model && isset($model->created_by) && $model->created_by === $this->user->id
+        ) {
+            error_log("Auth: Accès accordé pour édition de contenu personnel");
+            return true;
+        }
+
+        if (($ability === 'update-sector' || $ability === 'delete-sector') &&
+            $model && isset($model->created_by) && $model->created_by === $this->user->id
+        ) {
+            error_log("Auth: Accès accordé pour édition de contenu personnel");
+            return true;
+        }
+
+        error_log("Auth: Accès refusé pour: " . $ability . " (niveau: " . $this->user->autorisation . ")");
         return false;
     }
 
@@ -259,7 +324,21 @@ class Auth
             $result = $this->db->query($query, [$userId])->fetch();
 
             if ($result) {
-                $this->user = new User($result);
+                try {
+                    $this->user = new User($result);
+                } catch (\Exception $e) {
+                    error_log("Erreur création User dans checkSession: " . $e->getMessage());
+                    // Création manuelle de l'objet utilisateur si nécessaire
+                    $this->user = new class($result) extends User {
+                        public function __construct(array $data)
+                        {
+                            foreach ($data as $key => $value) {
+                                $this->$key = $value;
+                            }
+                            $this->id = (int) $data['id'];
+                        }
+                    };
+                }
             }
 
             return;
@@ -276,8 +355,23 @@ class Auth
                 $result = $this->db->query($query, [$userId])->fetch();
 
                 if ($result) {
-                    $user = new User($result);
-                    $this->login($user);
+                    try {
+                        $user = new User($result);
+                        $this->login($user);
+                    } catch (\Exception $e) {
+                        error_log("Erreur création User dans checkSession remember: " . $e->getMessage());
+                        // Ici aussi, création manuelle si nécessaire
+                        $user = new class($result) extends User {
+                            public function __construct(array $data)
+                            {
+                                foreach ($data as $key => $value) {
+                                    $this->$key = $value;
+                                }
+                                $this->id = (int) $data['id'];
+                            }
+                        };
+                        $this->login($user);
+                    }
                 }
             }
         }
