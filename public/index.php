@@ -29,7 +29,7 @@ if ($environment === 'development') {
     $whoops->register();
 }
 
-// Démarrer la session
+// IMPORTANT: Démarrer la session au tout début de l'exécution
 if (session_status() === PHP_SESSION_NONE) {
     // Paramètres de sécurité pour les cookies de session
     session_set_cookie_params([
@@ -41,7 +41,14 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
 
     session_start();
+    error_log("Session démarrée dans index.php, ID: " . session_id());
 }
+
+// Variables pour les services principaux
+$container = null;
+$session = null;
+$db = null;
+$auth = null;
 
 try {
     // Créer et configurer le conteneur
@@ -51,9 +58,25 @@ try {
     // Initialiser le logger
     $logger = $container->get(Psr\Log\LoggerInterface::class);
 
+    // Récupérer la session et la base de données
+    $session = $container->get(\TopoclimbCH\Core\Session::class);
+    $db = $container->get(\TopoclimbCH\Core\Database::class);
+
+    // IMPORTANT: Initialiser Auth avant de traiter la requête si l'utilisateur est connecté
+    // Cela garantit que Auth est disponible partout dans l'application
+    if (isset($_SESSION['auth_user_id'])) {
+        try {
+            $auth = \TopoclimbCH\Core\Auth::getInstance($session, $db);
+            $logger->info("Auth initialisé dans index.php pour l'utilisateur ID: " . $_SESSION['auth_user_id']);
+        } catch (\Throwable $e) {
+            $logger->error("Échec d'initialisation d'Auth dans index.php: " . $e->getMessage());
+            // Ne pas lancer d'exception ici, continuer le traitement
+        }
+    }
+
     // Initialiser le routeur
     $router = $container->get(\TopoclimbCH\Core\Router::class);
-    error_log("Router successfully retrieved from container");
+    $logger->info("Router successfully retrieved from container");
 
     // Charger les routes
     $router->loadRoutes(BASE_PATH . '/config/routes.php');
@@ -66,7 +89,7 @@ try {
         exit;
     }
 
-    // SOLUTION: Utiliser la classe Application pour gérer le cycle de requête/réponse
+    // Utiliser la classe Application pour gérer le cycle de requête/réponse
     $app = new \TopoclimbCH\Core\Application(
         $router,
         $logger,
@@ -80,9 +103,27 @@ try {
 } catch (\Throwable $e) {
     // Log l'erreur
     if (isset($logger)) {
-        $logger->error($e->getMessage(), ['exception' => $e]);
+        $logger->error($e->getMessage(), [
+            'exception' => $e,
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
     } else {
-        error_log($e->getMessage() . "\n" . $e->getTraceAsString());
+        error_log("[ERREUR CRITIQUE] " . $e->getMessage() . "\n" . $e->getTraceAsString());
+    }
+
+    // Si l'erreur est liée à Auth, essayer de nettoyer la session
+    if (strpos($e->getMessage(), 'Auth') !== false && isset($session)) {
+        error_log("Tentative de nettoyage de la session après erreur Auth");
+        $session->remove('auth_user_id');
+        $session->remove('user_authenticated');
+        $session->flash('error', 'Votre session a expiré. Veuillez vous reconnecter.');
+        $session->persist();
+
+        // Rediriger vers la page d'accueil
+        header('Location: /login');
+        exit;
     }
 
     // Afficher une erreur basique en cas de problème
@@ -93,6 +134,16 @@ try {
         echo "<p><strong>Fichier:</strong> " . htmlspecialchars($e->getFile()) . " (ligne " . $e->getLine() . ")</p>";
         echo "<h2>Trace</h2>";
         echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+
+        // Afficher les informations de session qui pourraient être utiles
+        if (isset($_SESSION)) {
+            echo "<h2>Informations de session</h2>";
+            echo "<pre>";
+            print_r(array_map(function ($k, $v) {
+                return [$k => is_string($v) ? (strlen($v) > 100 ? substr($v, 0, 100) . '...' : $v) : gettype($v)];
+            }, array_keys($_SESSION), $_SESSION));
+            echo "</pre>";
+        }
     } else {
         include BASE_PATH . '/resources/views/errors/500.php';
     }
