@@ -79,6 +79,7 @@ try {
     // Créer et configurer le conteneur
     $containerBuilder = new \TopoclimbCH\Core\ContainerBuilder();
     $container = $containerBuilder->build();
+    Container::getInstance($container);
 
     // Initialiser le logger
     $logger = $container->get(Psr\Log\LoggerInterface::class);
