@@ -54,6 +54,10 @@
     },
     "scripts": {
         "test": "phpunit",
+        "test:unit": "phpunit --testsuite=Unit",
+        "test:integration": "phpunit --testsuite=Integration",
+        "test:functional": "phpunit --testsuite=Functional",
+        "test:coverage": "phpunit --coverage-html tests/coverage",
         "cs": "phpcs --standard=PSR12 src tests",
         "stan": "phpstan analyse src --level=5",
         "post-autoload-dump": [
