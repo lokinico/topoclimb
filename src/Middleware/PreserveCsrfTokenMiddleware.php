@@ -17,6 +17,11 @@ class PreserveCsrfTokenMiddleware
 
     public function handle(Request $request, callable $next): Response
     {
+        // Ignorer la route de déconnexion pour éviter les conflits
+        if ($request->getPathInfo() === '/logout') {
+            return $next($request);
+        }
+
         // Sauvegarder le token CSRF avant tout traitement
         $originalToken = $this->session->get('csrf_token');
         $hasOriginalToken = !empty($originalToken);
