@@ -115,6 +115,7 @@ class ContainerBuilder
                 Session::class,
                 Database::class
             ],
+
             'TopoclimbCH\\Services\\SectorService' => [
                 Database::class
             ],
@@ -124,7 +125,7 @@ class ContainerBuilder
             'TopoclimbCH\\Services\\MediaService' => [
                 Database::class
             ],
-            // Ajout des services manquants
+
             'TopoclimbCH\\Services\\RegionService' => [
                 Database::class
             ],
@@ -132,6 +133,9 @@ class ContainerBuilder
                 Database::class
             ],
             'TopoclimbCH\\Services\\ValidationService' => [
+                Database::class
+            ],
+            'TopoclimbCH\\Services\\UserService' => [
                 Database::class
             ]
         ];
@@ -223,7 +227,7 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\RouteService',
                 Database::class
             ],
-            // Ajout des contrôleurs manquants
+
             'TopoclimbCH\\Controllers\\UserAscentController' => [
                 View::class,
                 Session::class,
@@ -250,6 +254,13 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\DifficultySystemController' => [
                 View::class,
                 Session::class,
+                Database::class
+            ],
+            'TopoclimbCH\\Controllers\\UserController' => [
+                View::class,
+                Session::class,
+                'TopoclimbCH\\Services\\UserService',  // Remplacer Auth::class par UserService
+                'TopoclimbCH\\Services\\AuthService',
                 Database::class
             ]
         ];
