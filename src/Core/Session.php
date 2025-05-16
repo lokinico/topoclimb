@@ -260,28 +260,39 @@ class Session
     }
     /**
      * Persiste explicitement les données de session
-     * à appeler avant les redirections pour s'assurer que 
-     * les données sont écrites sur le disque
-     * 
-     * @return void
+     * à appeler avant les redirections
      */
     public function persist(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
-            // Sauvegarde actuelle des valeurs importantes
-            $data = $_SESSION;
+            // Sauvegarde des données critiques
+            $sessionData = $_SESSION;
+            $authUserId = $this->get('auth_user_id');
+            $csrfToken = $this->get('csrf_token');
+            $authenticated = $this->get('user_authenticated');
 
-            // Force l'écriture des données sur le disque
+            // Force l'écriture des données
             session_write_close();
 
-            // Redémarre la session pour pouvoir continuer à l'utiliser
+            // Redémarrer immédiatement la session
             session_start();
 
-            // Le redémarrage peut parfois causer des problèmes, assurons-nous que 
-            // toutes les données sont préservées
-            $_SESSION = $data;
+            // Restaurer les données critiques
+            $_SESSION = $sessionData;
 
-            // Mise à jour du statut
+            // Double vérification des données sensibles
+            if ($authUserId && !isset($_SESSION['auth_user_id'])) {
+                $_SESSION['auth_user_id'] = $authUserId;
+            }
+
+            if ($csrfToken && !isset($_SESSION['csrf_token'])) {
+                $_SESSION['csrf_token'] = $csrfToken;
+            }
+
+            if ($authenticated && !isset($_SESSION['user_authenticated'])) {
+                $_SESSION['user_authenticated'] = $authenticated;
+            }
+
             $this->started = true;
 
             error_log("Session persistée avec succès avant redirection");
