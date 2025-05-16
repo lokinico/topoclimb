@@ -44,13 +44,14 @@ abstract class BaseController
         $this->view = $view;
         $this->session = $session;
 
-        // Initialiser Auth si Database est disponible
+        // Ne pas initialiser Auth directement, le récupérer du conteneur si disponible
         try {
-            $db = Container::getInstance()->get(Database::class);
-            $this->auth = Auth::getInstance($session, $db);
+            if (Container::getInstance() && Container::getInstance()->has(Auth::class)) {
+                $this->auth = Container::getInstance()->get(Auth::class);
+            }
         } catch (\Exception $e) {
             // Auth ne sera pas disponible mais ce n'est pas critique
-            error_log('Impossible d\'initialiser Auth: ' . $e->getMessage());
+            error_log('Auth non initialisé dans BaseController: ' . $e->getMessage());
         }
     }
 
