@@ -13,57 +13,62 @@ class PreserveCsrfTokenMiddleware
     public function __construct(Session $session)
     {
         $this->session = $session;
-        error_log("PreserveCsrfTokenMiddleware: Classe initialisée le " . date('Y-m-d H:i:s'));
     }
 
     public function handle(Request $request, callable $next): Response
     {
-        error_log("PreserveCsrfTokenMiddleware: Traitement de la requête pour URL = " . $request->getPathInfo());
-        error_log("PreserveCsrfTokenMiddleware: Méthode HTTP = " . $request->getMethod());
-
-        // Exceptions pour certaines routes
-        if ($request->getPathInfo() === '/logout' || $this->isStaticAssetPath($request->getPathInfo())) {
+        // Ignorer les requêtes pour les ressources statiques
+        if ($this->isStaticAssetPath($request->getPathInfo()) || $request->getPathInfo() === '/logout') {
             return $next($request);
         }
 
-        // 1. IMPORTANT: Sauvegarder le token CSRF actuel
-        $originalToken = $this->session->get('csrf_token');
-
-        // 2. POUR LES REQUÊTES POST/PUT/DELETE: Valider le token avant de continuer
+        // Pour les requêtes POST/PUT/DELETE, effectuer une validation CSRF complète
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE'])) {
             $submittedToken = $request->request->get('_csrf_token');
+            $storedToken = $this->session->get('csrf_token');
 
-            // Vérifier si le token soumis correspond au token en session
-            if (!$submittedToken || $submittedToken !== $originalToken) {
-                error_log("CSRF: Validation échouée - tokens différents");
+            // Sauvegarder le token original pour référence
+            $this->session->set('_original_csrf_token', $storedToken);
 
-                // Enregistrer un message flash pour informer l'utilisateur
+            // Indiquer qu'une validation est en cours pour éviter les doubles validations
+            $this->session->set('csrf_validation_in_progress', true);
+
+            // Vérifier le token (validation principale)
+            if (!$submittedToken || !$storedToken || !hash_equals($storedToken, $submittedToken)) {
+                $this->session->remove('csrf_validation_in_progress');
                 $this->session->flash('error', 'Session expirée ou invalidée. Veuillez réessayer.');
-
-                // Rediriger vers la page précédente
                 return new Response('', 302, ['Location' => $request->headers->get('referer') ?: '/']);
             }
-
-            error_log("CSRF: Validation réussie");
         }
 
-        // 3. Exécuter le pipeline de middleware SANS générer de nouveau token
         try {
+            // Exécuter le pipeline de middleware
             $response = $next($request);
+
+            // Nettoyer les drapeaux de validation
+            $this->session->remove('csrf_validation_in_progress');
+
+            // Si la requête est réussie et n'est pas une redirection, générer un nouveau token pour la prochaine requête
+            if ($response->isSuccessful() && !$this->isRedirect($response)) {
+                $this->generateNewToken();
+            } else {
+                // Sinon, synchroniser les tokens pour s'assurer que nous avons le bon
+                $this->session->synchronizeTokens();
+            }
+
+            return $response;
         } catch (\Throwable $e) {
-            error_log("PreserveCsrfTokenMiddleware: ERREUR - " . $e->getMessage());
+            // Nettoyer en cas d'erreur
+            $this->session->remove('csrf_validation_in_progress');
             throw $e;
         }
+    }
 
-        // 4. UNIQUEMENT APRÈS le traitement réussi, générer un nouveau token
-        // pour la prochaine requête (mais pas pour les Ajax)
-        if (!$request->isXmlHttpRequest() && $response->isSuccessful() && !$this->isRedirect($response)) {
-            $newToken = bin2hex(random_bytes(32));
-            $this->session->set('csrf_token', $newToken);
-            error_log("CSRF: Nouveau token généré après traitement réussi: " . substr($newToken, 0, 10) . "...");
-        }
-
-        return $response;
+    private function generateNewToken(): void
+    {
+        $newToken = bin2hex(random_bytes(32));
+        $this->session->set('csrf_token', $newToken);
+        error_log("CSRF: Nouveau token généré: " . substr($newToken, 0, 10) . "...");
     }
 
     private function isStaticAssetPath(string $path): bool

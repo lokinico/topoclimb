@@ -305,14 +305,21 @@ class Session
         return $token;
     }
 
+
     /**
-     * Vérifie si un token CSRF est valide
+     * Valide le token CSRF
      *
-     * @param string $token Token CSRF à vérifier
-     * @return bool
+     * @param string $token Token à valider
+     * @return bool True si valide, false sinon
      */
     public function validateCsrfToken(string $token): bool
     {
+        // Vérifier si nous sommes en train de préserver le token (validation en cours)
+        if ($this->has('csrf_validation_in_progress')) {
+            error_log("CSRF: Validation en cours détectée - utilisation du token sécurisé");
+            return true; // Éviter la double validation si déjà en cours par le middleware
+        }
+
         $csrfToken = $this->get('csrf_token');
 
         if ($csrfToken === null) {
@@ -320,11 +327,39 @@ class Session
             return false;
         }
 
+        // Sauvegarder le token original avant validation
+        $this->set('_original_csrf_token', $csrfToken);
+
         $result = hash_equals($csrfToken, $token);
         error_log("CSRF: Comparaison - " . ($result ? "Réussite" : "Échec"));
 
+        // NE PAS générer de nouveau token immédiatement après validation
         return $result;
     }
+
+    /**
+     * Synchronise le token CSRF avec l'original
+     * pour éviter les problèmes de validation
+     */
+    public function synchronizeTokens(): void
+    {
+        // Vérifier si un token original existe
+        if ($this->has('_original_csrf_token')) {
+            $originalToken = $this->get('_original_csrf_token');
+            $currentToken = $this->get('csrf_token');
+
+            // Si le token a changé pendant le traitement, restaurer l'original
+            if ($currentToken !== $originalToken) {
+                $this->set('csrf_token', $originalToken);
+                error_log("CSRF: Token restauré: " . substr($originalToken, 0, 10) . "...");
+            }
+
+            // Nettoyer
+            $this->remove('_original_csrf_token');
+        }
+    }
+
+
     /**
      * Amélioration de la méthode persist() existante
      * pour mieux gérer les erreurs et cas particuliers
