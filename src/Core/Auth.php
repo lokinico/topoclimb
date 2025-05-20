@@ -161,12 +161,8 @@ class Auth
             $value = $user->mail ?: $user->username;
 
             try {
-                // Obtenir une connexion PDO directe et exécuter la requête sans dépendre d'une transaction existante
-                $pdo = $this->db->getConnection();
                 $query = "SELECT id FROM users WHERE $field = ? LIMIT 1";
-                $stmt = $pdo->prepare($query);
-                $stmt->execute([$value]);
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $result = $this->db->query($query, [$value])->fetch();
 
                 if ($result && isset($result['id'])) {
                     $idValue = $result['id'];
