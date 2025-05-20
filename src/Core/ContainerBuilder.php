@@ -173,8 +173,8 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\AuthController' => [
                 View::class,
                 Session::class,
-                'TopoclimbCH\\Services\\AuthService',
-                Database::class
+                Database::class,
+                'TopoclimbCH\\Services\\AuthService'
             ],
             'TopoclimbCH\\Controllers\\SectorController' => [
                 View::class,
