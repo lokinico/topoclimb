@@ -13,80 +13,72 @@ class PreserveCsrfTokenMiddleware
     public function __construct(Session $session)
     {
         $this->session = $session;
-        // Log d'initialisation pour confirmer le chargement de la classe modifiée
         error_log("PreserveCsrfTokenMiddleware: Classe initialisée le " . date('Y-m-d H:i:s'));
     }
 
     public function handle(Request $request, callable $next): Response
     {
-        // Logs détaillés pour le diagnostic
         error_log("PreserveCsrfTokenMiddleware: Traitement de la requête pour URL = " . $request->getPathInfo());
         error_log("PreserveCsrfTokenMiddleware: Méthode HTTP = " . $request->getMethod());
 
-        // Ignorer la route de déconnexion pour éviter les conflits
-        if ($request->getPathInfo() === '/logout') {
-            error_log("PreserveCsrfTokenMiddleware: Contournement pour /logout ACTIVÉ - passage direct au contrôleur");
+        // Exceptions pour certaines routes
+        if ($request->getPathInfo() === '/logout' || $this->isStaticAssetPath($request->getPathInfo())) {
             return $next($request);
         }
 
-        // Vérification plus large (si la condition exacte ne fonctionne pas)
-        if (strpos($request->getPathInfo(), 'logout') !== false) {
-            error_log("PreserveCsrfTokenMiddleware: Contournement pour chemin contenant 'logout' - passage direct au contrôleur");
-            return $next($request);
-        }
-
-        // Sauvegarder le token CSRF avant tout traitement
+        // 1. IMPORTANT: Sauvegarder le token CSRF actuel
         $originalToken = $this->session->get('csrf_token');
-        $hasOriginalToken = !empty($originalToken);
 
-        if ($hasOriginalToken) {
-            // Garder une copie sécurisée du token
-            $this->session->set('_original_csrf_token', $originalToken);
-            error_log("PreserveCsrfTokenMiddleware: CSRF token sauvegardé: " . substr($originalToken, 0, 10) . "...");
-        } else {
-            error_log("PreserveCsrfTokenMiddleware: Aucun token CSRF trouvé en session");
+        // 2. POUR LES REQUÊTES POST/PUT/DELETE: Valider le token avant de continuer
+        if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE'])) {
+            $submittedToken = $request->request->get('_csrf_token');
+
+            // Vérifier si le token soumis correspond au token en session
+            if (!$submittedToken || $submittedToken !== $originalToken) {
+                error_log("CSRF: Validation échouée - tokens différents");
+
+                // Enregistrer un message flash pour informer l'utilisateur
+                $this->session->flash('error', 'Session expirée ou invalidée. Veuillez réessayer.');
+
+                // Rediriger vers la page précédente
+                return new Response('', 302, ['Location' => $request->headers->get('referer') ?: '/']);
+            }
+
+            error_log("CSRF: Validation réussie");
         }
 
+        // 3. Exécuter le pipeline de middleware SANS générer de nouveau token
         try {
-            // Exécuter le pipeline de middleware avec gestion d'erreurs
-            error_log("PreserveCsrfTokenMiddleware: Exécution du pipeline de middleware");
             $response = $next($request);
-            error_log("PreserveCsrfTokenMiddleware: Pipeline exécuté avec succès");
         } catch (\Throwable $e) {
-            error_log("PreserveCsrfTokenMiddleware: ERREUR dans l'exécution du pipeline: " . $e->getMessage());
+            error_log("PreserveCsrfTokenMiddleware: ERREUR - " . $e->getMessage());
             throw $e;
         }
 
-        // Restaurer le token si nécessaire
-        if ($hasOriginalToken) {
-            try {
-                $currentToken = $this->session->get('csrf_token');
-                error_log("PreserveCsrfTokenMiddleware: Vérification du token actuel: " .
-                    ($currentToken ? substr($currentToken, 0, 10) . "..." : "non défini"));
+        // 4. UNIQUEMENT APRÈS le traitement réussi, générer un nouveau token
+        // pour la prochaine requête (mais pas pour les Ajax)
+        if (!$request->isXmlHttpRequest() && $response->isSuccessful() && !$this->isRedirect($response)) {
+            $newToken = bin2hex(random_bytes(32));
+            $this->session->set('csrf_token', $newToken);
+            error_log("CSRF: Nouveau token généré après traitement réussi: " . substr($newToken, 0, 10) . "...");
+        }
 
-                if ($currentToken !== $originalToken) {
-                    $this->session->set('csrf_token', $originalToken);
-                    error_log("PreserveCsrfTokenMiddleware: CSRF token restauré: " . substr($originalToken, 0, 10) . "...");
-                } else {
-                    error_log("PreserveCsrfTokenMiddleware: CSRF token inchangé, pas besoin de restauration");
-                }
-            } catch (\Throwable $e) {
-                error_log("PreserveCsrfTokenMiddleware: ERREUR lors de la restauration du token: " . $e->getMessage());
-                // Ne pas relancer l'exception pour éviter les erreurs 500
+        return $response;
+    }
+
+    private function isStaticAssetPath(string $path): bool
+    {
+        $staticExtensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.woff', '.ttf'];
+        foreach ($staticExtensions as $ext) {
+            if (str_ends_with($path, $ext)) {
+                return true;
             }
         }
+        return false;
+    }
 
-        // S'assurer que les changements sont persistés
-        try {
-            error_log("PreserveCsrfTokenMiddleware: Tentative de persistance de la session");
-            $this->session->persist();
-            error_log("PreserveCsrfTokenMiddleware: Session persistée avec succès");
-        } catch (\Throwable $e) {
-            error_log("PreserveCsrfTokenMiddleware: ERREUR lors de la persistance de la session: " . $e->getMessage());
-            // Ne pas relancer l'exception pour éviter les erreurs 500
-        }
-
-        error_log("PreserveCsrfTokenMiddleware: Traitement terminé pour " . $request->getPathInfo());
-        return $response;
+    private function isRedirect(Response $response): bool
+    {
+        return $response->getStatusCode() >= 300 && $response->getStatusCode() < 400;
     }
 }
