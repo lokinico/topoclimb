@@ -63,22 +63,23 @@ class Application
      *
      * @return Response
      */
+
     public function handle(): Response
     {
         try {
-            // Vérifier s'il s'agit de la route /logout
-            if ($this->request->getPathInfo() === '/logout') {
-                // Bypass le middleware CSRF pour cette route
-                return $this->router->dispatch($this->request);
-            }
+            // Retirer le middleware global CSRF
+            return $this->router->dispatch($this->request);
 
-            // Pour toutes les autres routes, appliquer le middleware CSRF
-            $session = $this->container->get(Session::class);
-            $preserveCsrfMiddleware = new PreserveCsrfTokenMiddleware($session);
+            // Commentez ou supprimez ce bloc
+            /*
+        // Pour toutes les autres routes, appliquer le middleware CSRF
+        $session = $this->container->get(Session::class);
+        $preserveCsrfMiddleware = new PreserveCsrfTokenMiddleware($session);
 
-            return $preserveCsrfMiddleware->handle($this->request, function ($request) {
-                return $this->router->dispatch($request);
-            });
+        return $preserveCsrfMiddleware->handle($this->request, function ($request) {
+            return $this->router->dispatch($request);
+        });
+        */
         } catch (RouteNotFoundException $e) {
             return $this->createNotFoundResponse($e);
         } catch (\Throwable $e) {

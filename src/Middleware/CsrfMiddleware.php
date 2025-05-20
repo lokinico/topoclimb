@@ -9,9 +9,9 @@ use TopoclimbCH\Core\Session;
 class CsrfMiddleware
 {
     private Session $session;
-
-    // Clé constante pour stocker le token CSRF dans la session
     private const CSRF_KEY = 'csrf_token';
+    // Champs où chercher le token
+    private const TOKEN_FIELD_NAMES = ['_csrf_token', 'csrf_token'];
 
     public function __construct(Session $session)
     {
@@ -20,97 +20,90 @@ class CsrfMiddleware
 
     public function handle(Request $request, callable $next): Response
     {
-        // Assurons-nous qu'un token CSRF existe toujours
-        $this->ensureTokenExists();
+        error_log("CsrfMiddleware: Traitement " . $request->getMethod() . " " . $request->getPathInfo());
 
-        // Vérifie uniquement les méthodes non sécurisées (POST, PUT, DELETE, PATCH)
-        $method = strtoupper($request->getMethod());
-        if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'])) {
-            // Vérifie le token CSRF
-            $valid = $this->validateRequest($request);
+        // Assurons-nous qu'un token CSRF existe
+        $sessionToken = $this->ensureTokenExists();
 
-            if (!$valid) {
-                return $this->csrfFailureResponse($request);
+        // Uniquement vérifier pour les méthodes non sûres
+        if (!in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'])) {
+            $submittedToken = $this->getSubmittedToken($request);
+
+            error_log("CSRF: Validation - Token soumis: " .
+                (isset($submittedToken) ? substr($submittedToken, 0, 10) . '...' : 'non trouvé') .
+                " vs Token session: " . substr($sessionToken, 0, 10) . '...');
+
+            if (empty($submittedToken) || !hash_equals($sessionToken, $submittedToken)) {
+                error_log("CSRF: Validation échouée, redirection");
+                $this->session->flash('error', 'Session expirée ou formulaire invalide. Veuillez réessayer.');
+                return Response::redirect($request->headers->get('referer') ?: '/');
             }
 
-            // Régénère un nouveau token UNIQUEMENT après une validation réussie
-            $newToken = $this->regenerateToken();
-            error_log("CSRF: Nouveau token généré après validation: " . substr($newToken, 0, 10) . "...");
+            error_log("CSRF: Validation réussie");
+            // Stocker le token original pour pouvoir le récupérer si nécessaire
+            $this->session->set('_original_csrf_token', $sessionToken);
+
+            // Exécuter le pipeline
+            $response = $next($request);
+
+            // Après réussite, générer un nouveau token pour prévenir les attaques de replay
+            if (!$this->isRedirect($response)) {
+                $newToken = $this->generateToken();
+                $this->session->set(self::CSRF_KEY, $newToken);
+                error_log("CSRF: Nouveau token généré: " . substr($newToken, 0, 10) . '...');
+            } else {
+                // Pour les redirections, restaurer le token original si nécessaire
+                $originalToken = $this->session->get('_original_csrf_token');
+                if ($originalToken && $originalToken !== $this->session->get(self::CSRF_KEY)) {
+                    $this->session->set(self::CSRF_KEY, $originalToken);
+                    error_log("CSRF: Token restauré suite à redirection: " . substr($originalToken, 0, 10) . '...');
+                }
+            }
+
+            // Nettoyage
+            $this->session->remove('_original_csrf_token');
+            return $response;
         }
 
+        // Pour GET/HEAD, simplement continuer
         return $next($request);
+    }
+
+    private function getSubmittedToken(Request $request): ?string
+    {
+        // Chercher dans les différents noms de champs possibles
+        foreach (self::TOKEN_FIELD_NAMES as $fieldName) {
+            $token = $request->request->get($fieldName);
+            if (!empty($token)) {
+                return $token;
+            }
+        }
+
+        // Chercher dans les headers (pour API)
+        return $request->headers->get('X-CSRF-TOKEN');
+    }
+
+    private function isRedirect(Response $response): bool
+    {
+        $code = $response->getStatusCode();
+        return $code >= 300 && $code < 400;
     }
 
     private function ensureTokenExists(): string
     {
         $token = $this->session->get(self::CSRF_KEY);
 
-        if (!$token) {
-            $token = bin2hex(random_bytes(32));
+        if (empty($token)) {
+            $token = $this->generateToken();
             $this->session->set(self::CSRF_KEY, $token);
-            error_log("CSRF Token généré: " . substr($token, 0, 10) . "...");
+            error_log("CSRF: Nouveau token créé: " . substr($token, 0, 10) . '...');
         }
 
         return $token;
     }
 
-    private function validateRequest(Request $request): bool
+    private function generateToken(): string
     {
-        // Récupérer le token de la requête
-        $token = $request->request->get(self::CSRF_KEY) ??
-            $request->request->get('_csrf') ??
-            $request->headers->get('X-CSRF-TOKEN');
-
-        // Récupérer le token de la session
-        $sessionToken = $this->session->get(self::CSRF_KEY);
-
-        // Log pour le débogage - uniquement en développement
-        if ($_ENV['APP_ENV'] === 'development') {
-            error_log("CSRF Check - Token reçu: " . ($token ? substr($token, 0, 10) . '...' : 'null'));
-            error_log("CSRF Check - Session token: " . ($sessionToken ? substr($sessionToken, 0, 10) . '...' : 'null'));
-        }
-        // Récupérer le token de la requête
-        $token = $request->request->get(self::CSRF_KEY) ??
-            $request->request->get('_csrf') ??
-            $request->headers->get('X-CSRF-TOKEN');
-
-        // Récupérer le token de la session
-        $sessionToken = $this->session->get(self::CSRF_KEY);
-
-
-        // Validation
-        if (!$token || !$sessionToken) {
-            error_log("CSRF Échec: Token manquant");
-            return false;
-        }
-
-        $valid = hash_equals($sessionToken, $token);
-
-        if ($valid) {
-            error_log("CSRF: Validation réussie");
-        } else {
-            error_log("CSRF Échec: Tokens ne correspondent pas");
-        }
-
-        return $valid;
-    }
-
-    private function regenerateToken(): string
-    {
-        $token = bin2hex(random_bytes(32));
-        $this->session->set(self::CSRF_KEY, $token);
-        return $token;
-    }
-
-    private function csrfFailureResponse(Request $request): Response
-    {
-        // Réponse personnalisée en cas d'échec CSRF
-        $response = new Response('Token CSRF invalide', 403);
-        $response->headers->set('Content-Type', 'text/html');
-        $content = '<h1>Erreur de sécurité</h1>';
-        $content .= '<p>Le jeton de sécurité est invalide ou a expiré.</p>';
-        $content .= '<p><a href="' . $request->getPathInfo() . '">Retour au formulaire</a></p>';
-        $response->setContent($content);
-        return $response;
+        return bin2hex(random_bytes(32));
     }
 }

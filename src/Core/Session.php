@@ -338,6 +338,21 @@ class Session
     }
 
     /**
+     * Récupère le token CSRF actuel ou en génère un si nécessaire
+     */
+    public function getCsrfToken(): string
+    {
+        $token = $this->get('csrf_token');
+
+        if (empty($token)) {
+            $token = bin2hex(random_bytes(32));
+            $this->set('csrf_token', $token);
+        }
+
+        return $token;
+    }
+
+    /**
      * Synchronise le token CSRF avec l'original
      * pour éviter les problèmes de validation
      */
