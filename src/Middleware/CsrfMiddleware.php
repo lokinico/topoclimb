@@ -40,6 +40,11 @@ class CsrfMiddleware
             }
 
             error_log("CSRF: Validation réussie");
+
+            // === AJOUT CETTE LIGNE CI-DESSOUS ===
+            $this->session->set('_csrf_middleware_validated', true);
+            // === FIN DE L'AJOUT ===
+
             // Stocker le token original pour pouvoir le récupérer si nécessaire
             $this->session->set('_original_csrf_token', $sessionToken);
 
