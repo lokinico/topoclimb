@@ -169,25 +169,36 @@ class AuthController extends BaseController
      * @return never
      */
     // Dans AuthController.php
-    public function logout(Request $request): Response
+    public function logout(): void
     {
-        // Loguer le début de l'opération
-        error_log("Déconnexion initiée");
+        // Nettoyer la session
+        $_SESSION = [];
 
-        // Récupérer l'ID de l'utilisateur pour le log
-        $userId = $this->auth->id();
+        // Supprimer le cookie de session
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
+            );
+        }
 
-        // Utiliser la classe Auth pour une déconnexion propre
-        $this->auth->logout();
+        // Détruire la session
+        session_destroy();
 
-        // Message flash pour l'utilisateur
-        $this->flash('success', 'Vous avez été déconnecté avec succès');
+        // Message de confirmation et redirection
+        session_start();
+        $_SESSION['_flashes']['success'][] = 'Vous avez été déconnecté avec succès';
+        session_write_close();
 
-        // Loguer le succès
-        error_log("Utilisateur $userId déconnecté avec succès");
-
-        // Redirection via le système standard
-        return $this->redirect('/');
+        // Redirection directe
+        header('Location: /');
+        exit;
     }
 
     public function registerForm(): Response

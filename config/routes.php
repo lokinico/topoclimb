@@ -27,7 +27,6 @@ return [
         'action' => 'login',
         'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
     ],
-
     [
         'method' => 'GET',
         'path' => '/logout',
