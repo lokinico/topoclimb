@@ -421,6 +421,14 @@ class SectorController extends BaseController
                     'height' => !empty($data['height']) ? (float)$data['height'] : null,
                     'parking_info' => $data['parking_info'] ?? null,
                     'active' => isset($data['active']) ? 1 : 0,
+
+                    'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
+                    'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+
+                    'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
+                    'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
+
+                    'active' => isset($data['active']) ? 1 : 0,
                     'updated_at' => date('Y-m-d H:i:s'),
                     'updated_by' => $data['updated_by']
                 ];
