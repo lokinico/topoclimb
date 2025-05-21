@@ -337,65 +337,7 @@
             </div>
         </form>
     </div>
-    
-    {# Modal pour modifier les médias #}
-    <div class="modal fade" id="editMediaModal" tabindex="-1" role="dialog" aria-labelledby="editMediaModalTitle" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editMediaModalTitle">Modifier l'image</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                
-                <form id="editMediaForm" method="post" enctype="multipart/form-data">
-                    <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        <input type="hidden" name="media_id" id="edit_media_id">
-                        
-                        <div class="form-group">
-                            <label for="edit_media_title">Titre</label>
-                            <input type="text" name="title" id="edit_media_title" class="form-control">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Type d'image</label>
-                            <div class="custom-control custom-radio">
-                                <input type="radio" id="edit_media_type_main" name="relationship_type" 
-                                       value="main" class="custom-control-input">
-                                <label class="custom-control-label" for="edit_media_type_main">Image principale</label>
-                            </div>
-                            <div class="custom-control custom-radio">
-                                <input type="radio" id="edit_media_type_gallery" name="relationship_type" 
-                                       value="gallery" class="custom-control-input">
-                                <label class="custom-control-label" for="edit_media_type_gallery">Galerie</label>
-                            </div>
-                            <div class="custom-control custom-radio">
-                                <input type="radio" id="edit_media_type_topo" name="relationship_type" 
-                                       value="topo" class="custom-control-input">
-                                <label class="custom-control-label" for="edit_media_type_topo">Topo</label>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="edit_media_file">Remplacer l'image</label>
-                            <div class="custom-file">
-                                <input type="file" name="media_file" id="edit_media_file" class="custom-file-input" accept="image/*">
-                                <label class="custom-file-label" for="edit_media_file">Choisir un fichier</label>
-                            </div>
-                            <small class="form-text text-muted">Laissez vide pour conserver l'image actuelle</small>
-                        </div>
-                    </div>
-                    
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">Enregistrer</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -458,63 +400,6 @@
                 } else {
                     alert("La géolocalisation n'est pas prise en charge par votre navigateur");
                 }
-            });
-            
-            // Afficher le nom du fichier sélectionné
-            document.getElementById('media_file').addEventListener('change', function(e) {
-                const fileName = e.target.files[0]?.name || 'Choisir un fichier';
-                const label = e.target.nextElementSibling;
-                label.textContent = fileName;
-            });
-            
-            document.getElementById('edit_media_file').addEventListener('change', function(e) {
-                const fileName = e.target.files[0]?.name || 'Choisir un fichier';
-                const label = e.target.nextElementSibling;
-                label.textContent = fileName;
-            });
-            
-            // Initialiser la modal d'édition
-            $('#editMediaModal').on('show.bs.modal', function (event) {
-                const button = $(event.relatedTarget);
-                const mediaId = button.data('media-id');
-                const mediaTitle = button.data('media-title');
-                const relationshipType = button.data('relationship-type');
-                
-                const modal = $(this);
-                modal.find('#edit_media_id').val(mediaId);
-                modal.find('#edit_media_title').val(mediaTitle);
-                
-                // Sélectionner le type approprié
-                modal.find(`#edit_media_type_${relationshipType}`).prop('checked', true);
-                
-                // Définir l'action du formulaire
-                const formAction = `/media/${mediaId}/update`;
-                modal.find('#editMediaForm').attr('action', formAction);
-            });
-            
-            // Gestion de la suppression des médias
-            document.querySelectorAll('.media-delete-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
-                        const mediaId = this.dataset.mediaId;
-                        const csrfToken = this.dataset.csrfToken;
-                        
-                        // Créer un formulaire pour la requête POST de suppression
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = `/media/${mediaId}/delete`;
-                        form.style.display = 'none';
-                        
-                        const csrfInput = document.createElement('input');
-                        csrfInput.type = 'hidden';
-                        csrfInput.name = 'csrf_token';
-                        csrfInput.value = csrfToken;
-                        form.appendChild(csrfInput);
-                        
-                        document.body.appendChild(form);
-                        form.submit();
-                    }
-                });
             });
         });
     </script>
