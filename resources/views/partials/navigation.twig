@@ -27,10 +27,8 @@
                         <li><a href="{{ url('/ascents') }}" class="dropdown-item">Mes ascensions</a></li>
                         <li><a href="{{ url('/settings') }}" class="dropdown-item">Paramètres</a></li>
                         <li>
-                            <form action="{{ url('/logout') }}" method="POST">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                <button type="submit" class="btn-link dropdown-item">Déconnexion</button>
-                            </form>
+                            <!-- Remplacer le formulaire par un simple lien -->
+                            <a href="{{ url('/logout') }}" class="dropdown-item">Déconnexion</a>
                         </li>
                     </ul>
                 </li>
