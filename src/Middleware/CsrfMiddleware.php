@@ -25,6 +25,12 @@ class CsrfMiddleware
         // Assurons-nous qu'un token CSRF existe
         $sessionToken = $this->ensureTokenExists();
 
+        // Vérifier si cette route est exemptée
+        if ($this->isExempted($request)) {
+            error_log("CSRF: Route exemptée: " . $request->getPathInfo());
+            return $next($request);
+        }
+
         // Uniquement vérifier pour les méthodes non sûres
         if (!in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'])) {
             $submittedToken = $this->getSubmittedToken($request);
@@ -72,6 +78,20 @@ class CsrfMiddleware
 
         // Pour GET/HEAD, simplement continuer
         return $next($request);
+    }
+
+    /**
+     * Vérifie si la requête peut être exemptée de vérification CSRF
+     * Utile pour certaines routes comme /logout
+     */
+    private function isExempted(Request $request): bool
+    {
+        // Routes exemptées de vérification CSRF
+        $exemptedRoutes = [
+            '/logout'
+        ];
+
+        return in_array($request->getPathInfo(), $exemptedRoutes);
     }
 
     private function getSubmittedToken(Request $request): ?string

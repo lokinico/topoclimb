@@ -27,22 +27,13 @@ return [
         'action' => 'login',
         'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
     ],
+
     [
         'method' => 'GET',
         'path' => '/logout',
         'controller' => \TopoclimbCH\Controllers\AuthController::class,
         'action' => 'logout',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/logout',
-        'controller' => \TopoclimbCH\Controllers\AuthController::class,
-        'action' => 'logout',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
     ],
     [
         'method' => 'GET',
