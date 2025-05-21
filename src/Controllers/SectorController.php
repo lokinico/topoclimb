@@ -441,7 +441,6 @@ class SectorController extends BaseController
             return $this->redirect('/sectors');
         }
     }
-
     /**
      * Update a sector
      *
@@ -543,63 +542,48 @@ class SectorController extends BaseController
                 }
             }
 
-            // Traiter le média si présent (nouvelle approche unifiée)
-            $mediaFile = $_FILES['media_file'] ?? null;
-            if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name'])) {
-                // Récupérer les informations sur le média
-                $mediaTitle = $data['media_title'] ?? null;
-                $relationshipType = $data['media_relationship_type'] ?? 'gallery';
+            // MODIFICATION: Traitement unifié des médias - uniquement avec media_file
+            try {
+                $mediaFile = $_FILES['media_file'] ?? null;
+                if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name']) && $mediaFile['error'] === UPLOAD_ERR_OK) {
+                    // Récupérer les informations sur le média
+                    $mediaTitle = $data['media_title'] ?? null;
+                    $relationshipType = $data['media_relationship_type'] ?? 'gallery';
 
-                // Uploader le média
-                $mediaId = $this->mediaService->uploadMedia($mediaFile, [
-                    'title' => $mediaTitle ?? $data['name'],
-                    'description' => "Image pour le secteur: {$data['name']}",
-                    'is_public' => 1,
-                    'media_type' => 'image',
-                    'entity_type' => 'sector',
-                    'entity_id' => (int)$id,
-                    'relationship_type' => $relationshipType
-                ], $data['updated_by']);
+                    // Logging supplémentaire pour le débogage
+                    error_log("SectorUpdate: Téléchargement de média détecté: " . $mediaFile['name']);
 
-                if ($mediaId) {
-                    // Si c'est une image principale, mettre à jour les anciennes relations "main"
-                    if ($relationshipType === 'main') {
-                        $this->db->update(
-                            'climbing_media_relationships',
-                            ['relationship_type' => 'gallery'],
-                            'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
-                            ['sector', (int)$id, 'main', $mediaId]
-                        );
+                    // Uploader le média
+                    $mediaId = $this->mediaService->uploadMedia($mediaFile, [
+                        'title' => $mediaTitle ?? $data['name'],
+                        'description' => "Image pour le secteur: {$data['name']}",
+                        'is_public' => 1,
+                        'media_type' => 'image',
+                        'entity_type' => 'sector',
+                        'entity_id' => (int)$id,
+                        'relationship_type' => $relationshipType
+                    ], $data['updated_by']);
 
-                        // Mettre à jour le champ image pour la compatibilité avec l'ancien système
-                        $mediaInfo = $this->mediaService->getMediaById($mediaId);
-                        if ($mediaInfo && !empty($mediaInfo['file_path'])) {
-                            $this->db->update('climbing_sectors', [
-                                'image' => $mediaInfo['file_path']
-                            ], "id = ?", [(int)$id]);
+                    if ($mediaId) {
+                        error_log("SectorUpdate: Média ajouté avec succès, ID: " . $mediaId);
+
+                        // Si c'est une image principale, mettre à jour les anciennes relations "main"
+                        if ($relationshipType === 'main') {
+                            $this->db->update(
+                                'climbing_media_relationships',
+                                ['relationship_type' => 'gallery'],
+                                'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
+                                ['sector', (int)$id, 'main', $mediaId]
+                            );
                         }
+                    } else {
+                        error_log("SectorUpdate: Échec de l'ajout du média");
                     }
                 }
-            }
-            // Support de l'ancien champ pour compatibilité
-            elseif (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $mediaId = $this->mediaService->uploadMedia($_FILES['image'], [
-                    'entity_type' => 'sector',
-                    'entity_id' => (int)$id,
-                    'relationship_type' => 'main',
-                    'title' => $data['name'],
-                    'is_public' => 1
-                ], $data['updated_by']);
-
-                if ($mediaId) {
-                    // Mettre à jour les anciennes relations "main"
-                    $this->db->update(
-                        'climbing_media_relationships',
-                        ['relationship_type' => 'gallery'],
-                        'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
-                        ['sector', (int)$id, 'main', $mediaId]
-                    );
-                }
+            } catch (\Exception $e) {
+                // Capture des erreurs de traitement d'image mais continue l'exécution
+                error_log("SectorUpdate: Erreur lors du traitement de l'image: " . $e->getMessage());
+                // Ne pas lancer d'exception ici pour permettre à la mise à jour de se terminer
             }
 
             // Commit de la transaction
