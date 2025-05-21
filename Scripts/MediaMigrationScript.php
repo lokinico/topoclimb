@@ -46,7 +46,7 @@ class MediaMigrationScript
         $this->mediaService = new MediaService($this->db);
 
         // Définir les chemins source et cible (à ajuster selon votre environnement)
-        $this->sourceDir = dirname(__DIR__, 2) . '/public/image/';
+        $this->sourceDir = dirname(__DIR__, 2) . '/public/images/';
         $this->targetBaseDir = dirname(__DIR__, 2) . '/public/uploads/media/';
 
         // Créer la structure de répertoires si nécessaire
@@ -78,10 +78,10 @@ class MediaMigrationScript
      */
     public function run(): void
     {
-        echo "Démarrage de la migration des médias depuis '/image/' vers '/uploads/media/'...\n";
+        echo "Démarrage de la migration des médias depuis '/images/' vers '/uploads/media/'...\n";
 
         // Récupérer tous les médias de la base de données qui n'ont pas encore été migrés
-        $query = "SELECT * FROM climbing_media WHERE file_path LIKE '%image/%' OR file_path IS NULL OR file_path = ''";
+        $query = "SELECT * FROM climbing_media WHERE file_path LIKE '%images/%' OR file_path IS NULL OR file_path = ''";
         $medias = $this->db->query($query)->fetchAll(\PDO::FETCH_ASSOC);
 
         if (empty($medias)) {
@@ -122,7 +122,7 @@ class MediaMigrationScript
         try {
             // Déterminer le chemin source
             $sourcePath = '';
-            if (!empty($media['file_path']) && strpos($media['file_path'], 'image/') !== false) {
+            if (!empty($media['file_path']) && strpos($media['file_path'], 'images/') !== false) {
                 // Le chemin est déjà dans la base de données
                 $sourcePath = dirname(__DIR__, 2) . '/public/' . $media['file_path'];
             } elseif (!empty($media['filename'])) {
@@ -345,8 +345,8 @@ class MediaMigrationScript
                 foreach ($records as $record) {
                     $oldValue = $record[$column];
 
-                    // Vérifier si c'est un nom de fichier dans /image/
-                    if (strpos($oldValue, 'image/') === 0 || strpos($oldValue, '/image/') === 0) {
+                    // Vérifier si c'est un nom de fichier dans /images/
+                    if (strpos($oldValue, 'images/') === 0 || strpos($oldValue, '/images/') === 0) {
                         // Trouver le nom de fichier
                         $filename = basename($oldValue);
 
