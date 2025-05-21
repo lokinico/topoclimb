@@ -240,13 +240,41 @@ class SectorController extends BaseController
 
         try {
             // Add the current user ID
-            $data['created_by'] = $this->session->get('user_id');
+            $data['created_by'] = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? 1;
 
             // Start transaction
-            $this->db->beginTransaction();
+            if (!$this->db->beginTransaction()) {
+                error_log("SectorStore: Erreur démarrage transaction");
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
+                return $this->redirect('/sectors/create');
+            }
 
-            // Store the sector
-            $sectorId = $this->sectorService->createSector($data);
+            // Prepare data for insertion
+            $sectorData = [
+                'name' => $data['name'],
+                'code' => $data['code'],
+                'book_id' => $data['book_id'],
+                'region_id' => $data['region_id'] ?? null,
+                'description' => $data['description'] ?? null,
+                'access_info' => $data['access_info'] ?? null,
+                'color' => $data['color'] ?? '#FF0000',
+                'access_time' => !empty($data['access_time']) ? (int)$data['access_time'] : null,
+                'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
+                'approach' => $data['approach'] ?? null,
+                'height' => !empty($data['height']) ? (float)$data['height'] : null,
+                'parking_info' => $data['parking_info'] ?? null,
+                'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
+                'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+                'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
+                'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
+                'active' => isset($data['active']) ? 1 : 0,
+                'created_by' => $data['created_by'],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Insert the sector
+            $sectorId = $this->db->insert('climbing_sectors', $sectorData);
 
             if (!$sectorId) {
                 $this->db->rollBack();
@@ -256,13 +284,30 @@ class SectorController extends BaseController
 
             // Handle exposures if provided
             if (!empty($data['exposures'])) {
-                $primaryExposure = $data['primary_exposure'] ?? null;
-                $this->sectorService->updateSectorExposures($sectorId, $data['exposures'], $primaryExposure);
+                foreach ($data['exposures'] as $exposureId) {
+                    $isPrimary = ($data['primary_exposure'] ?? 0) == $exposureId ? 1 : 0;
+                    $this->db->insert('climbing_sector_exposures', [
+                        'sector_id' => (int)$sectorId,
+                        'exposure_id' => (int)$exposureId,
+                        'is_primary' => $isPrimary,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
             }
 
             // Handle months if provided
             if (!empty($data['months'])) {
-                $this->sectorService->updateSectorMonths($sectorId, $data['months']);
+                foreach ($data['months'] as $monthId => $monthData) {
+                    if (isset($monthData['quality'])) {
+                        $this->db->insert('climbing_sector_months', [
+                            'sector_id' => (int)$sectorId,
+                            'month_id' => (int)$monthId,
+                            'quality' => $monthData['quality'],
+                            'notes' => $monthData['notes'] ?? null,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                }
             }
 
             // Handle uploaded image if any
@@ -273,10 +318,14 @@ class SectorController extends BaseController
                     'relationship_type' => 'main',
                     'title' => $data['name'],
                     'is_public' => 1
-                ], $this->session->get('user_id'));
+                ], $data['created_by']);
             }
 
-            $this->db->commit();
+            if (!$this->db->commit()) {
+                error_log("SectorStore: Échec commit transaction");
+                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+            }
+
             $this->session->flash('success', 'Secteur créé avec succès');
             return $this->redirect('/sectors/' . $sectorId);
         } catch (ServiceException $e) {
@@ -285,7 +334,7 @@ class SectorController extends BaseController
             return $this->redirect('/sectors/create');
         } catch (\Exception $e) {
             $this->db->rollBack();
-            error_log($e->getMessage());
+            error_log("SectorStore: Exception: " . $e->getMessage());
             $this->session->flash('error', 'Erreur lors de la création du secteur');
             return $this->redirect('/sectors/create');
         }
@@ -371,7 +420,6 @@ class SectorController extends BaseController
      * @param Request $request
      * @return Response
      */
-    // Dans SectorController.php, méthode update()
     public function update(Request $request): Response
     {
         $id = $request->attributes->get('id');
@@ -391,7 +439,7 @@ class SectorController extends BaseController
         }
 
         try {
-            // IMPORTANT: ⚠️ Obtenir l'ID utilisateur directement de $_SESSION pour éviter toute référence à Auth
+            // IMPORTANT: Obtenir l'ID utilisateur directement de $_SESSION
             $data['updated_by'] = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? 1;
 
             // Log détaillé pour déboguer
@@ -404,83 +452,96 @@ class SectorController extends BaseController
                 return $this->redirect('/sectors/' . $id . '/edit');
             }
 
-            // Update with simpler direct DB access to avoid complex service calls
-            try {
-                // Mise à jour principale de la table climbing_sectors
-                $updateData = [
-                    'name' => $data['name'],
-                    'code' => $data['code'],
-                    'book_id' => $data['book_id'],
-                    'region_id' => $data['region_id'] ?? null,
-                    'description' => $data['description'] ?? null,
-                    'access_info' => $data['access_info'] ?? null,
-                    'color' => $data['color'] ?? '#FF0000',
-                    'access_time' => !empty($data['access_time']) ? (int)$data['access_time'] : null,
-                    'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
-                    'approach' => $data['approach'] ?? null,
-                    'height' => !empty($data['height']) ? (float)$data['height'] : null,
-                    'parking_info' => $data['parking_info'] ?? null,
-                    'active' => isset($data['active']) ? 1 : 0,
+            // Mise à jour principale de la table climbing_sectors
+            $updateData = [
+                'name' => $data['name'],
+                'code' => $data['code'],
+                'book_id' => $data['book_id'],
+                'region_id' => $data['region_id'] ?? null,
+                'description' => $data['description'] ?? null,
+                'access_info' => $data['access_info'] ?? null,
+                'color' => $data['color'] ?? '#FF0000',
+                'access_time' => !empty($data['access_time']) ? (int)$data['access_time'] : null,
+                'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
+                'approach' => $data['approach'] ?? null,
+                'height' => !empty($data['height']) ? (float)$data['height'] : null,
+                'parking_info' => $data['parking_info'] ?? null,
+                'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
+                'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+                'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
+                'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
+                'active' => isset($data['active']) ? 1 : 0,
+                'updated_at' => date('Y-m-d H:i:s'),
+                'updated_by' => $data['updated_by']
+            ];
 
-                    'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
-                    'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+            // Mise à jour directe via Database
+            $success = $this->db->update('climbing_sectors', $updateData, 'id = ?', [(int)$id]);
 
-                    'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
-                    'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
+            if (!$success) {
+                error_log("SectorUpdate: Échec mise à jour table climbing_sectors");
+                throw new \Exception("Échec de la mise à jour du secteur principal");
+            }
 
-                    'active' => isset($data['active']) ? 1 : 0,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                    'updated_by' => $data['updated_by']
-                ];
+            // Gestion des exposures - suppression puis réinsertion
+            $this->db->delete('climbing_sector_exposures', 'sector_id = ?', [(int)$id]);
 
-                // Mise à jour directe via Database
-                $success = $this->db->update('climbing_sectors', $updateData, 'id = ?', [(int)$id]);
-
-                if (!$success) {
-                    error_log("SectorUpdate: Échec mise à jour table climbing_sectors");
-                    throw new \Exception("Échec de la mise à jour du secteur principal");
+            if (!empty($data['exposures'])) {
+                foreach ($data['exposures'] as $exposureId) {
+                    $isPrimary = ($data['primary_exposure'] ?? 0) == $exposureId ? 1 : 0;
+                    $this->db->insert('climbing_sector_exposures', [
+                        'sector_id' => (int)$id,
+                        'exposure_id' => (int)$exposureId,
+                        'is_primary' => $isPrimary,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
                 }
+            }
 
-                // Gestion des exposures - suppression puis réinsertion
-                $this->db->delete('climbing_sector_exposures', 'sector_id = ?', [(int)$id]);
+            // Gestion des months - suppression puis réinsertion si définis
+            $this->db->delete('climbing_sector_months', 'sector_id = ?', [(int)$id]);
 
-                if (!empty($data['exposures'])) {
-                    foreach ($data['exposures'] as $exposureId) {
-                        $isPrimary = ($data['primary_exposure'] ?? 0) == $exposureId ? 1 : 0;
-                        $this->db->insert('climbing_sector_exposures', [
+            if (!empty($data['months'])) {
+                foreach ($data['months'] as $monthId => $monthData) {
+                    if (isset($monthData['quality'])) {
+                        $this->db->insert('climbing_sector_months', [
                             'sector_id' => (int)$id,
-                            'exposure_id' => (int)$exposureId,
-                            'is_primary' => $isPrimary
+                            'month_id' => (int)$monthId,
+                            'quality' => $monthData['quality'],
+                            'notes' => $monthData['notes'] ?? null,
+                            'created_at' => date('Y-m-d H:i:s')
                         ]);
                     }
                 }
-
-                // Gestion des months - si définis
-                if (!empty($data['months'])) {
-                    // Implémentation similaire à celle des exposures
-                    // ...
-                }
-
-                // Commit de la transaction
-                if (!$this->db->commit()) {
-                    error_log("SectorUpdate: Échec commit transaction");
-                    throw new \Exception("Échec lors de l'enregistrement final des modifications");
-                }
-
-                error_log("SectorUpdate: Mise à jour réussie du secteur #" . $id);
-                $this->session->flash('success', 'Secteur mis à jour avec succès');
-                return $this->redirect('/sectors/' . $id);
-            } catch (\Exception $e) {
-                // En cas d'erreur, rollback et message d'erreur
-                $this->db->rollback();
-                error_log("SectorUpdate - Exception précise: " . $e->getMessage());
-                $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
-                return $this->redirect('/sectors/' . $id . '/edit');
             }
+
+            // Handle uploaded image if any
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $this->mediaService->uploadMedia($_FILES['image'], [
+                    'entity_type' => 'sector',
+                    'entity_id' => (int)$id,
+                    'relationship_type' => 'main',
+                    'title' => $data['name'],
+                    'is_public' => 1
+                ], $data['updated_by']);
+            }
+
+            // Commit de la transaction
+            if (!$this->db->commit()) {
+                error_log("SectorUpdate: Échec commit transaction");
+                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+            }
+
+            error_log("SectorUpdate: Mise à jour réussie du secteur #" . $id);
+            $this->session->flash('success', 'Secteur mis à jour avec succès');
+            return $this->redirect('/sectors/' . $id);
         } catch (\Exception $e) {
-            // Cette partie ne devrait s'exécuter que si l'erreur est survenue avant ou après la transaction
-            error_log("SectorUpdate - Exception externe: " . $e->getMessage());
-            $this->session->flash('error', 'Erreur système lors de la mise à jour du secteur');
+            // En cas d'erreur, rollback et message d'erreur
+            if ($this->db->inTransaction()) {
+                $this->db->rollback();
+            }
+            error_log("SectorUpdate - Exception: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
             return $this->redirect('/sectors/' . $id . '/edit');
         }
     }
@@ -537,14 +598,38 @@ class SectorController extends BaseController
         }
 
         try {
+            // Vérifier si le secteur existe
             $sector = $this->sectorService->getSectorById((int) $id);
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
                 return $this->redirect('/sectors');
             }
 
-            $this->db->beginTransaction();
-            $success = $this->sectorService->deleteSector((int) $id);
+            if (!$this->db->beginTransaction()) {
+                error_log("SectorDelete: Erreur démarrage transaction");
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
+                return $this->redirect('/sectors/' . $id . '/delete');
+            }
+
+            // Supprimer les relations associées
+            $this->db->delete('climbing_sector_exposures', 'sector_id = ?', [(int)$id]);
+            $this->db->delete('climbing_sector_months', 'sector_id = ?', [(int)$id]);
+
+            // Récupérer les relations média pour pouvoir supprimer les médias
+            $mediaRelations = $this->db->fetchAll("SELECT media_id FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", [(int)$id]);
+            foreach ($mediaRelations as $relation) {
+                // Supprimer les annotations des médias
+                $this->db->delete('climbing_media_annotations', 'media_id = ?', [(int)$relation['media_id']]);
+                // Supprimer les relations des médias
+                $this->db->delete('climbing_media_relationships', 'media_id = ?', [(int)$relation['media_id']]);
+                // Supprimer les tags des médias
+                $this->db->delete('climbing_media_tags', 'media_id = ?', [(int)$relation['media_id']]);
+                // Supprimer les médias eux-mêmes
+                $this->db->delete('climbing_media', 'id = ?', [(int)$relation['media_id']]);
+            }
+
+            // Supprimer le secteur lui-même
+            $success = $this->db->delete('climbing_sectors', 'id = ?', [(int)$id]);
 
             if (!$success) {
                 $this->db->rollBack();
@@ -552,12 +637,18 @@ class SectorController extends BaseController
                 return $this->redirect('/sectors/' . $id . '/delete');
             }
 
-            $this->db->commit();
+            if (!$this->db->commit()) {
+                error_log("SectorDelete: Échec commit transaction");
+                throw new \Exception("Échec lors de la suppression finale");
+            }
+
             $this->session->flash('success', 'Secteur supprimé avec succès');
             return $this->redirect('/sectors');
         } catch (\Exception $e) {
-            $this->db->rollBack();
-            error_log($e->getMessage());
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log("SectorDelete: Exception: " . $e->getMessage());
             $this->session->flash('error', 'Erreur lors de la suppression du secteur: ' . $e->getMessage());
             return $this->redirect('/sectors/' . $id . '/delete');
         }
