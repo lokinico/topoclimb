@@ -40,7 +40,6 @@ class MediaService
         $sql = "SELECT * FROM climbing_media WHERE id = ?";
         return $this->db->fetchOne($sql, [$id]);
     }
-
     /**
      * Upload a new media file
      *
@@ -48,12 +47,31 @@ class MediaService
      * @param array $data Additional data
      * @param int $userId ID of the user uploading the file
      * @return int|null ID of the new media or null on failure
+     * @throws \Exception Si une erreur grave se produit
      */
     public function uploadMedia(array $file, array $data, int $userId): ?int
     {
-        // Check if file is valid
+        // Vérification approfondie du fichier
         if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            error_log("MediaService::uploadMedia - Fichier invalide ou manquant");
             return null;
+        }
+
+        // Vérification des erreurs de téléchargement
+        if (isset($file['error']) && $file['error'] !== UPLOAD_ERR_OK) {
+            $errorMessages = [
+                UPLOAD_ERR_INI_SIZE => "Le fichier dépasse la taille maximale autorisée par PHP",
+                UPLOAD_ERR_FORM_SIZE => "Le fichier dépasse la taille maximale autorisée par le formulaire",
+                UPLOAD_ERR_PARTIAL => "Le fichier n'a été que partiellement téléchargé",
+                UPLOAD_ERR_NO_FILE => "Aucun fichier n'a été téléchargé",
+                UPLOAD_ERR_NO_TMP_DIR => "Dossier temporaire manquant",
+                UPLOAD_ERR_CANT_WRITE => "Échec d'écriture du fichier sur le disque",
+                UPLOAD_ERR_EXTENSION => "Une extension PHP a arrêté le téléchargement du fichier"
+            ];
+
+            $errorMessage = $errorMessages[$file['error']] ?? "Erreur inconnue lors du téléchargement";
+            error_log("MediaService::uploadMedia - Erreur de téléchargement: " . $errorMessage);
+            throw new \Exception($errorMessage);
         }
 
         // Generate a unique filename
@@ -66,7 +84,17 @@ class MediaService
 
         // Create directory if it doesn't exist
         if (!is_dir($filePath)) {
-            mkdir($filePath, 0755, true);
+            $dirCreated = mkdir($filePath, 0755, true);
+            if (!$dirCreated) {
+                error_log("MediaService::uploadMedia - Impossible de créer le répertoire: " . $filePath);
+                throw new \Exception("Impossible de créer le répertoire de destination");
+            }
+        }
+
+        // Vérifier si le répertoire est accessible en écriture
+        if (!is_writable($filePath)) {
+            error_log("MediaService::uploadMedia - Répertoire non accessible en écriture: " . $filePath);
+            throw new \Exception("Le répertoire de destination n'est pas accessible en écriture");
         }
 
         // Full file path
@@ -74,7 +102,7 @@ class MediaService
 
         // Determine media type
         $mediaType = 'image';
-        $mimeType = $file['type'];
+        $mimeType = $file['type'] ?? 'application/octet-stream';
 
         if (strpos($mimeType, 'application/pdf') === 0) {
             $mediaType = 'pdf';
@@ -84,73 +112,116 @@ class MediaService
             $mediaType = 'topo';
         }
 
-        // Move the uploaded file
-        move_uploaded_file($file['tmp_name'], $fullPath);
+        // Move the uploaded file with error handling
+        $moved = move_uploaded_file($file['tmp_name'], $fullPath);
+        if (!$moved) {
+            error_log("MediaService::uploadMedia - Échec du déplacement du fichier vers: " . $fullPath);
+            throw new \Exception("Impossible de déplacer le fichier téléchargé");
+        }
 
         // Process image with Intervention\Image if needed
         $metadata = [];
-        if ($mediaType === 'image' && class_exists('\Intervention\Image\ImageManager')) {
-            $imageManager = new ImageManager(['driver' => 'gd']);
-            $image = $imageManager->make($fullPath);
+        if ($mediaType === 'image') {
+            try {
+                if (class_exists('\Intervention\Image\ImageManager')) {
+                    $imageManager = new \Intervention\Image\ImageManager(['driver' => 'gd']);
+                    $image = $imageManager->make($fullPath);
 
-            // Resize if necessary
-            if ($image->width() > 2000 || $image->height() > 2000) {
-                $image->resize(2000, 2000, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
-                $image->save($fullPath, 85);
+                    // Resize if necessary
+                    if ($image->width() > 2000 || $image->height() > 2000) {
+                        $image->resize(2000, 2000, function ($constraint) {
+                            $constraint->aspectRatio();
+                            $constraint->upsize();
+                        });
+                        $image->save($fullPath, 85);
+                    }
+
+                    // Create thumbnail
+                    $thumbPath = "$filePath/thumb_$filename";
+                    $image->resize(300, 300, function ($constraint) {
+                        $constraint->aspectRatio();
+                        $constraint->upsize();
+                    })->save($thumbPath, 75);
+
+                    // Extract metadata
+                    $metadata = [
+                        'width' => $image->width(),
+                        'height' => $image->height(),
+                        'thumbnails' => [
+                            'thumb' => "$relativePath/thumb_$filename"
+                        ]
+                    ];
+                } else {
+                    error_log("MediaService::uploadMedia - La bibliothèque Intervention Image n'est pas disponible");
+                }
+            } catch (\Exception $e) {
+                error_log("MediaService::uploadMedia - Erreur lors du traitement de l'image: " . $e->getMessage());
+                // Continuer sans traitement d'image plutôt que d'échouer complètement
             }
-
-            // Create thumbnail
-            $thumbPath = "$filePath/thumb_$filename";
-            $image->resize(300, 300, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            })->save($thumbPath, 75);
-
-            // Extract metadata
-            $metadata = [
-                'width' => $image->width(),
-                'height' => $image->height(),
-                'thumbnails' => [
-                    'thumb' => "$relativePath/thumb_$filename"
-                ]
-            ];
         }
 
         // Insert into database
-        $mediaData = [
-            'media_type' => $mediaType,
-            'filename' => $filename,
-            'file_path' => "$relativePath/$filename",
-            'file_size' => $file['size'],
-            'mime_type' => $mimeType,
-            'title' => $data['title'] ?? null,
-            'description' => $data['description'] ?? null,
-            'is_public' => $data['is_public'] ?? 1,
-            'is_featured' => $data['is_featured'] ?? 0,
-            'storage_type' => 'local',
-            'original_filename' => $file['name'],
-            'metadata' => json_encode($metadata),
-            'created_by' => $userId,
-            'created_at' => date('Y-m-d H:i:s')
-        ];
+        try {
+            $mediaData = [
+                'media_type' => $mediaType,
+                'filename' => $filename,
+                'file_path' => "$relativePath/$filename",
+                'file_size' => $file['size'] ?? 0,
+                'mime_type' => $mimeType,
+                'title' => $data['title'] ?? null,
+                'description' => $data['description'] ?? null,
+                'is_public' => $data['is_public'] ?? 1,
+                'is_featured' => $data['is_featured'] ?? 0,
+                'storage_type' => 'local',
+                'original_filename' => $file['name'],
+                'metadata' => json_encode($metadata),
+                'created_by' => $userId,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
 
-        $mediaId = $this->db->insert('climbing_media', $mediaData);
+            $mediaId = $this->db->insert('climbing_media', $mediaData);
 
-        // If entity info is provided, create relationship
-        if ($mediaId && isset($data['entity_type']) && isset($data['entity_id'])) {
-            $this->associateMediaWithEntity(
-                $mediaId,
-                $data['entity_type'],
-                (int) $data['entity_id'],
-                $data['relationship_type'] ?? 'gallery',
-                $data['sort_order'] ?? 0
-            );
+            if (!$mediaId) {
+                error_log("MediaService::uploadMedia - Échec de l'insertion en base de données");
+                // Supprimer le fichier si l'insertion échoue
+                if (file_exists($fullPath)) {
+                    unlink($fullPath);
+                }
+                throw new \Exception("Échec de l'enregistrement du média en base de données");
+            }
+
+            // If entity info is provided, create relationship
+            if (isset($data['entity_type']) && isset($data['entity_id'])) {
+                $relationSuccess = $this->associateMediaWithEntity(
+                    $mediaId,
+                    $data['entity_type'],
+                    (int) $data['entity_id'],
+                    $data['relationship_type'] ?? 'gallery',
+                    $data['sort_order'] ?? 0
+                );
+
+                if (!$relationSuccess) {
+                    error_log("MediaService::uploadMedia - Avertissement: Échec de l'association avec l'entité");
+                    // Continuer malgré l'échec de la relation
+                }
+            }
+
+            return $mediaId;
+        } catch (\Exception $e) {
+            error_log("MediaService::uploadMedia - Exception lors de l'insertion en BDD: " . $e->getMessage());
+
+            // Nettoyage des fichiers en cas d'erreur
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+
+            $thumbPath = "$filePath/thumb_$filename";
+            if (file_exists($thumbPath)) {
+                unlink($thumbPath);
+            }
+
+            throw $e;
         }
-
-        return $mediaId;
     }
 
     /**
