@@ -266,26 +266,42 @@ try {
     }
 
     // Gestion spéciale des erreurs d'authentification
-    if ((strpos($e->getMessage(), 'Auth') !== false ||
-        strpos($e->getMessage(), 'auth') !== false ||
-        strpos($e->getFile(), 'Auth.php') !== false) && isset($session)) {
-
-        error_log("Tentative de nettoyage de la session après erreur Auth");
+    if (
+        isset($session) &&
+        // Vérifier si l'erreur est liée à l'authentification
+        (
+            (strpos($e->getMessage(), 'Auth') !== false) ||
+            (strpos($e->getMessage(), 'auth') !== false) ||
+            (strpos($e->getFile(), 'Auth.php') !== false)
+        ) &&
+        // IMPORTANT: Ne jamais rediriger vers login pour les erreurs dans SectorController
+        (strpos($e->getFile(), 'SectorController.php') === false) &&
+        // Éviter les redirections infinies
+        ($requestInfo['uri'] !== '/login')
+    ) {
+        error_log("Tentative de nettoyage de la session après erreur Auth (non liée à SectorController)");
 
         // Nettoyage complet des données d'authentification
         unset($_SESSION['auth_user_id']);
         unset($_SESSION['is_authenticated']);
-        $session->remove('auth_user_id');
-        $session->remove('is_authenticated');
+
+        if (method_exists($session, 'remove')) {
+            $session->remove('auth_user_id');
+            $session->remove('is_authenticated');
+        }
 
         // Sauvegarde URL courante pour y revenir après login
         $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
         if ($currentUrl !== '/login' && $currentUrl !== '/logout') {
             $_SESSION['intended_url'] = $currentUrl;
-            $session->set('intended_url', $currentUrl);
+            if (method_exists($session, 'set')) {
+                $session->set('intended_url', $currentUrl);
+            }
         }
 
-        $session->flash('error', 'Problème d\'authentification. Veuillez vous reconnecter.');
+        if (method_exists($session, 'flash')) {
+            $session->flash('error', 'Problème d\'authentification. Veuillez vous reconnecter.');
+        }
 
         if (method_exists($session, 'persist')) {
             $session->persist();
