@@ -7,7 +7,7 @@
  */
 
 // Définir une clé secrète pour protéger l'accès (à changer)
-define('SECRET_KEY', 'changez_moi_avec_une_cle_complexe_et_unique');
+define('SECRET_KEY', 'TestMigrationKey');
 
 // Augmenter les limites d'exécution si possible
 ini_set('max_execution_time', 300); // 5 minutes
@@ -56,7 +56,7 @@ function loadMigrationScript()
 // Fonction pour obtenir les médias à migrer
 function getMediaToMigrate($db, $offset, $batchSize)
 {
-    $query = "SELECT * FROM climbing_media WHERE file_path LIKE '%image/%' OR file_path IS NULL OR file_path = '' LIMIT ? OFFSET ?";
+    $query = "SELECT * FROM climbing_media WHERE file_path LIKE '%images/%' OR file_path IS NULL OR file_path = '' LIMIT ? OFFSET ?";
     $stmt = $db->prepare($query);
     $stmt->bindParam(1, $batchSize, \PDO::PARAM_INT);
     $stmt->bindParam(2, $offset, \PDO::PARAM_INT);
@@ -67,7 +67,7 @@ function getMediaToMigrate($db, $offset, $batchSize)
 // Fonction pour obtenir le nombre total de médias à migrer
 function getTotalMediaToMigrate($db)
 {
-    $query = "SELECT COUNT(*) FROM climbing_media WHERE file_path LIKE '%image/%' OR file_path IS NULL OR file_path = ''";
+    $query = "SELECT COUNT(*) FROM climbing_media WHERE file_path LIKE '%images/%' OR file_path IS NULL OR file_path = ''";
     $stmt = $db->prepare($query);
     $stmt->execute();
     return (int)$stmt->fetchColumn();
