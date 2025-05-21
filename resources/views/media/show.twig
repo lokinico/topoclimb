@@ -1,0 +1,182 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ media.title|default('Média #' ~ media.id) }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <h1>{{ media.title|default('Média #' ~ media.id) }}</h1>
+            
+            <div class="btn-group">
+                <a href="{{ url('/media/' ~ media.id ~ '/edit') }}" class="btn btn-primary">
+                    <i class="fa fa-edit"></i> Modifier
+                </a>
+                <a href="{{ url('/media/' ~ media.id ~ '/delete') }}?csrf_token={{ csrf_token }}" 
+                   class="btn btn-danger" 
+                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce média?')">
+                    <i class="fa fa-trash"></i> Supprimer
+                </a>
+                <a href="{{ url('/media') }}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-body text-center p-3">
+                        {% if media.media_type == 'image' %}
+                            <img src="{{ url(media.file_path) }}" class="img-fluid" 
+                                 alt="{{ media.title|default('Image ' ~ media.id) }}" 
+                                 style="max-height: 600px;">
+                        {% elseif media.media_type == 'pdf' %}
+                            <div class="embed-responsive embed-responsive-4by3">
+                                <iframe class="embed-responsive-item" src="{{ url(media.file_path) }}"></iframe>
+                            </div>
+                        {% elseif media.media_type == 'video' %}
+                            <div class="embed-responsive embed-responsive-16by9">
+                                <video controls class="embed-responsive-item">
+                                    <source src="{{ url(media.file_path) }}" type="{{ media.mime_type }}">
+                                    Votre navigateur ne supporte pas les vidéos.
+                                </video>
+                            </div>
+                        {% else %}
+                            <div class="p-5 text-center">
+                                <i class="fa fa-file fa-5x text-secondary mb-3"></i>
+                                <p>Type de fichier non reconnu ou non prévisualisable.</p>
+                                <a href="{{ url(media.file_path) }}" class="btn btn-primary" target="_blank">
+                                    <i class="fa fa-download"></i> Télécharger
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if media.description %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Description</h5>
+                        </div>
+                        <div class="card-body">
+                            {{ media.description|nl2br }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Informations</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <th>ID</th>
+                                    <td>{{ media.id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Type</th>
+                                    <td>
+                                        <span class="badge badge-info">{{ media.media_type|capitalize }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Nom de fichier</th>
+                                    <td>{{ media.filename }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Taille</th>
+                                    <td>{{ (media.file_size / 1024)|round }} Ko</td>
+                                </tr>
+                                <tr>
+                                    <th>Type MIME</th>
+                                    <td>{{ media.mime_type }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Visibilité</th>
+                                    <td>
+                                        {% if media.is_public %}
+                                            <span class="badge badge-success">Public</span>
+                                        {% else %}
+                                            <span class="badge badge-warning">Privé</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Date de création</th>
+                                    <td>{{ media.created_at|date('d/m/Y H:i') }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Dernière modification</th>
+                                    <td>{{ media.updated_at|date('d/m/Y H:i') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if relations|length > 0 %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Entités liées</h5>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {% for relation in relations %}
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="badge badge-primary">{{ relation.entity_type|capitalize }}</span> 
+                                            {{ relation.entity_name|default('ID: ' ~ relation.entity_id) }}
+                                        </div>
+                                        <span class="badge badge-secondary">{{ relation.relationship_type|capitalize }}</span>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                {% if media.metadata and media.metadata|length > 4 %}
+                    {% set metadata = media.metadata|json_decode %}
+                    {% if metadata %}
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Métadonnées</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        {% if metadata.width is defined and metadata.height is defined %}
+                                            <tr>
+                                                <th>Dimensions</th>
+                                                <td>{{ metadata.width }} x {{ metadata.height }} px</td>
+                                            </tr>
+                                        {% endif %}
+                                        
+                                        {% if metadata.thumbnails is defined %}
+                                            <tr>
+                                                <th>Miniatures</th>
+                                                <td>
+                                                    {% for name, path in metadata.thumbnails %}
+                                                        <div class="mb-1">
+                                                            <small>{{ name|capitalize }}:</small>
+                                                            <img src="{{ url(path) }}" alt="Miniature {{ name }}" 
+                                                                 style="max-width: 100px; max-height: 50px;" class="img-thumbnail">
+                                                        </div>
+                                                    {% endfor %}
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

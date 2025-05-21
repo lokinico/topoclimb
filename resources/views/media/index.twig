@@ -1,0 +1,139 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Galerie de médias - TopoclimbCH{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <h1>Galerie de médias</h1>
+            <a href="{{ url('/media/create') }}" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Ajouter un média
+            </a>
+        </div>
+        
+        <div class="filters card mb-4">
+            <div class="card-body">
+                <form action="{{ url('/media') }}" method="get" class="form-inline">
+                    <div class="form-group mr-2 mb-2">
+                        <label for="media_type" class="mr-2">Type:</label>
+                        <select name="media_type" id="media_type" class="form-control">
+                            <option value="">Tous</option>
+                            <option value="image" {% if filters.media_type == 'image' %}selected{% endif %}>Images</option>
+                            <option value="pdf" {% if filters.media_type == 'pdf' %}selected{% endif %}>PDF</option>
+                            <option value="video" {% if filters.media_type == 'video' %}selected{% endif %}>Vidéos</option>
+                            <option value="topo" {% if filters.media_type == 'topo' %}selected{% endif %}>Topos</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mr-2 mb-2">
+                        <label for="entity_type" class="mr-2">Entité:</label>
+                        <select name="entity_type" id="entity_type" class="form-control">
+                            <option value="">Toutes</option>
+                            <option value="sector" {% if filters.entity_type == 'sector' %}selected{% endif %}>Secteurs</option>
+                            <option value="route" {% if filters.entity_type == 'route' %}selected{% endif %}>Voies</option>
+                            <option value="event" {% if filters.entity_type == 'event' %}selected{% endif %}>Événements</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mr-2 mb-2">
+                        <label for="search" class="mr-2">Recherche:</label>
+                        <input type="text" name="search" id="search" class="form-control" value="{{ filters.search }}">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary mb-2">Filtrer</button>
+                    <a href="{{ url('/media') }}" class="btn btn-outline-secondary mb-2 ml-2">Réinitialiser</a>
+                </form>
+            </div>
+        </div>
+        
+        {% if medias|length > 0 %}
+            <div class="media-gallery row">
+                {% for media in medias %}
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="card h-100">
+                            <div class="card-img-container" style="height: 200px; overflow: hidden;">
+                                {% if media.media_type == 'image' %}
+                                    <img src="{{ url(media.file_path) }}" class="card-img-top" 
+                                         alt="{{ media.title|default('Image ' ~ media.id) }}" 
+                                         style="object-fit: cover; height: 100%; width: 100%;">
+                                {% elseif media.media_type == 'pdf' %}
+                                    <div class="text-center p-5 bg-light">
+                                        <i class="fa fa-file-pdf fa-4x text-danger"></i>
+                                    </div>
+                                {% elseif media.media_type == 'video' %}
+                                    <div class="text-center p-5 bg-light">
+                                        <i class="fa fa-file-video fa-4x text-primary"></i>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center p-5 bg-light">
+                                        <i class="fa fa-file fa-4x text-secondary"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="card-body">
+                                <h5 class="card-title text-truncate">{{ media.title|default('Média ' ~ media.id) }}</h5>
+                                
+                                <p class="card-text small">
+                                    <span class="badge badge-info">{{ media.media_type|capitalize }}</span>
+                                    {% if media.relationship_type %}
+                                        <span class="badge badge-secondary">{{ media.relationship_type|capitalize }}</span>
+                                    {% endif %}
+                                </p>
+                                
+                                <div class="btn-group btn-group-sm d-flex">
+                                    <a href="{{ url('/media/' ~ media.id) }}" class="btn btn-outline-primary w-100">
+                                        <i class="fa fa-eye"></i> Voir
+                                    </a>
+                                    <a href="{{ url('/media/' ~ media.id ~ '/edit') }}" class="btn btn-outline-secondary w-100">
+                                        <i class="fa fa-edit"></i> Modifier
+                                    </a>
+                                    <a href="{{ url('/media/' ~ media.id ~ '/delete') }}?csrf_token={{ csrf_token }}" 
+                                       class="btn btn-outline-danger w-100" 
+                                       onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce média?')">
+                                        <i class="fa fa-trash"></i> Supprimer
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="card-footer text-muted small">
+                                Ajouté: {{ media.created_at|date('d/m/Y') }}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            {# Pagination #}
+            {% if pagination.last_page > 1 %}
+                <nav aria-label="Pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {{ pagination.page == 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ url('/media', {'page': pagination.page - 1, 'media_type': filters.media_type, 'entity_type': filters.entity_type, 'search': filters.search}) }}" aria-label="Précédent">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        
+                        {% for i in 1..pagination.last_page %}
+                            <li class="page-item {{ pagination.page == i ? 'active' : '' }}">
+                                <a class="page-link" href="{{ url('/media', {'page': i, 'media_type': filters.media_type, 'entity_type': filters.entity_type, 'search': filters.search}) }}">
+                                    {{ i }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                        
+                        <li class="page-item {{ pagination.page == pagination.last_page ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ url('/media', {'page': pagination.page + 1, 'media_type': filters.media_type, 'entity_type': filters.entity_type, 'search': filters.search}) }}" aria-label="Suivant">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle mr-2"></i> Aucun média trouvé.
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

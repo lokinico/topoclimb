@@ -310,8 +310,21 @@ class SectorController extends BaseController
                 }
             }
 
-            // Handle uploaded image if any
-            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            // Traiter le média si présent (nouvelle approche unifiée)
+            $mediaFile = $_FILES['media_file'] ?? null;
+            if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name'])) {
+                $this->mediaService->uploadMedia($mediaFile, [
+                    'title' => $data['media_title'] ?? $data['name'],
+                    'description' => "Image pour le secteur: {$data['name']}",
+                    'is_public' => 1,
+                    'media_type' => 'image',
+                    'entity_type' => 'sector',
+                    'entity_id' => $sectorId,
+                    'relationship_type' => $data['media_relationship_type'] ?? 'main'
+                ], $data['created_by']);
+            }
+            // Support de l'ancien champ pour compatibilité
+            elseif (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
                 $this->mediaService->uploadMedia($_FILES['image'], [
                     'entity_type' => 'sector',
                     'entity_id' => $sectorId,
@@ -392,8 +405,23 @@ class SectorController extends BaseController
                 ];
             }
 
-            // Get media for this sector
-            $media = $this->sectorService->getSectorMedia((int) $id);
+            // Récupérer les médias associés à ce secteur, avec les relations
+            $media = $this->db->query(
+                "SELECT m.*, mr.relationship_type, mr.id as relationship_id 
+                 FROM climbing_media m
+                 JOIN climbing_media_relationships mr ON m.id = mr.media_id
+                 WHERE mr.entity_type = 'sector' AND mr.entity_id = ?
+                 ORDER BY mr.relationship_type = 'main' DESC, mr.sort_order ASC",
+                [$id]
+            )->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Améliorer les chemins d'accès pour les médias
+            foreach ($media as &$item) {
+                // Si le chemin commence déjà par un slash, ne pas ajouter de préfixe
+                if (!empty($item['file_path']) && $item['file_path'][0] !== '/') {
+                    $item['file_path'] = '/' . $item['file_path'];
+                }
+            }
 
             return $this->render('sectors/form', [
                 'title' => 'Modifier le secteur ' . $sector['name'],
@@ -515,15 +543,63 @@ class SectorController extends BaseController
                 }
             }
 
-            // Handle uploaded image if any
-            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $this->mediaService->uploadMedia($_FILES['image'], [
+            // Traiter le média si présent (nouvelle approche unifiée)
+            $mediaFile = $_FILES['media_file'] ?? null;
+            if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name'])) {
+                // Récupérer les informations sur le média
+                $mediaTitle = $data['media_title'] ?? null;
+                $relationshipType = $data['media_relationship_type'] ?? 'gallery';
+
+                // Uploader le média
+                $mediaId = $this->mediaService->uploadMedia($mediaFile, [
+                    'title' => $mediaTitle ?? $data['name'],
+                    'description' => "Image pour le secteur: {$data['name']}",
+                    'is_public' => 1,
+                    'media_type' => 'image',
+                    'entity_type' => 'sector',
+                    'entity_id' => (int)$id,
+                    'relationship_type' => $relationshipType
+                ], $data['updated_by']);
+
+                if ($mediaId) {
+                    // Si c'est une image principale, mettre à jour les anciennes relations "main"
+                    if ($relationshipType === 'main') {
+                        $this->db->update(
+                            'climbing_media_relationships',
+                            ['relationship_type' => 'gallery'],
+                            'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
+                            ['sector', (int)$id, 'main', $mediaId]
+                        );
+
+                        // Mettre à jour le champ image pour la compatibilité avec l'ancien système
+                        $mediaInfo = $this->mediaService->getMediaById($mediaId);
+                        if ($mediaInfo && !empty($mediaInfo['file_path'])) {
+                            $this->db->update('climbing_sectors', [
+                                'image' => $mediaInfo['file_path']
+                            ], "id = ?", [(int)$id]);
+                        }
+                    }
+                }
+            }
+            // Support de l'ancien champ pour compatibilité
+            elseif (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $mediaId = $this->mediaService->uploadMedia($_FILES['image'], [
                     'entity_type' => 'sector',
                     'entity_id' => (int)$id,
                     'relationship_type' => 'main',
                     'title' => $data['name'],
                     'is_public' => 1
                 ], $data['updated_by']);
+
+                if ($mediaId) {
+                    // Mettre à jour les anciennes relations "main"
+                    $this->db->update(
+                        'climbing_media_relationships',
+                        ['relationship_type' => 'gallery'],
+                        'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
+                        ['sector', (int)$id, 'main', $mediaId]
+                    );
+                }
             }
 
             // Commit de la transaction

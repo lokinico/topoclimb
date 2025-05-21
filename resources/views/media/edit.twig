@@ -1,0 +1,220 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Modifier {{ media.title|default('Média #' ~ media.id) }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="page-header">
+            <h1>Modifier {{ media.title|default('Média #' ~ media.id) }}</h1>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form action="{{ url('/media/' ~ media.id ~ '/update') }}" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            
+                            <div class="form-group">
+                                <label for="title">Titre</label>
+                                <input type="text" name="title" id="title" class="form-control" 
+                                       value="{{ media.title }}" aria-describedby="title-help">
+                                <small id="title-help" class="form-text text-muted">Titre descriptif du média</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="description">Description</label>
+                                <textarea name="description" id="description" class="form-control" 
+                                          rows="3" aria-describedby="description-help">{{ media.description }}</textarea>
+                                <small id="description-help" class="form-text text-muted">Description détaillée du média</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="is_public" 
+                                           name="is_public" value="1" {{ media.is_public ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="is_public">Public</label>
+                                </div>
+                                <small class="form-text text-muted">Si coché, le média sera visible par tous les utilisateurs</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="is_featured" 
+                                           name="is_featured" value="1" {{ media.is_featured ? 'checked' : '' }}>
+                                    <label class="custom-control-label" for="is_featured">Mis en avant</label>
+                                </div>
+                                <small class="form-text text-muted">Si coché, le média pourra être affiché en page d'accueil ou en sections spéciales</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="media_file">Remplacer le fichier</label>
+                                <div class="custom-file">
+                                    <input type="file" class="custom-file-input" id="media_file" name="media_file" 
+                                           accept="image/*,application/pdf,video/*" aria-describedby="file-help">
+                                    <label class="custom-file-label" for="media_file">Choisir un fichier</label>
+                                </div>
+                                <small id="file-help" class="form-text text-muted">
+                                    Laissez vide pour conserver le fichier actuel. Formats supportés: JPG, PNG, GIF, PDF, MP4.
+                                </small>
+                            </div>
+                            
+                            <hr>
+                            <h5>Relations</h5>
+                            
+                            {% if relations|length > 0 %}
+                                <div class="table-responsive mb-3">
+                                    <table class="table table-sm table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Type d'entité</th>
+                                                <th>Entité</th>
+                                                <th>Relation</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for relation in relations %}
+                                                <tr>
+                                                    <td>{{ relation.entity_type|capitalize }}</td>
+                                                    <td>{{ relation.entity_name|default('ID: ' ~ relation.entity_id) }}</td>
+                                                    <td>
+                                                        <select name="relation_types[{{ relation.id }}]" class="form-control form-control-sm">
+                                                            <option value="main" {{ relation.relationship_type == 'main' ? 'selected' : '' }}>Principale</option>
+                                                            <option value="gallery" {{ relation.relationship_type == 'gallery' ? 'selected' : '' }}>Galerie</option>
+                                                            <option value="topo" {{ relation.relationship_type == 'topo' ? 'selected' : '' }}>Topo</option>
+                                                            <option value="profile" {{ relation.relationship_type == 'profile' ? 'selected' : '' }}>Profil</option>
+                                                            <option value="cover" {{ relation.relationship_type == 'cover' ? 'selected' : '' }}>Couverture</option>
+                                                            <option value="other" {{ relation.relationship_type == 'other' ? 'selected' : '' }}>Autre</option>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <a href="#" class="btn btn-sm btn-outline-danger delete-relation" 
+                                                           data-relation-id="{{ relation.id }}"
+                                                           data-confirmation="Êtes-vous sûr de vouloir supprimer cette relation ?">
+                                                            <i class="fa fa-unlink"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    Ce média n'est lié à aucune entité.
+                                </div>
+                            {% endif %}
+                            
+                            <hr>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa fa-save"></i> Enregistrer
+                                </button>
+                                
+                                <a href="{{ url('/media/' ~ media.id) }}" class="btn btn-secondary">
+                                    <i class="fa fa-times"></i> Annuler
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Aperçu</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        {% if media.media_type == 'image' %}
+                            <img src="{{ url(media.file_path) }}" class="img-fluid mb-3" 
+                                 alt="{{ media.title|default('Image ' ~ media.id) }}" 
+                                 style="max-height: 300px;">
+                        {% elseif media.media_type == 'pdf' %}
+                            <div class="text-center p-4">
+                                <i class="fa fa-file-pdf fa-5x text-danger mb-3"></i>
+                                <p>Document PDF</p>
+                            </div>
+                        {% elseif media.media_type == 'video' %}
+                            <div class="text-center p-4">
+                                <i class="fa fa-file-video fa-5x text-primary mb-3"></i>
+                                <p>Fichier vidéo</p>
+                            </div>
+                        {% else %}
+                            <div class="text-center p-4">
+                                <i class="fa fa-file fa-5x text-secondary mb-3"></i>
+                                <p>Fichier: {{ media.filename }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        <a href="{{ url(media.file_path) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                            <i class="fa fa-external-link-alt"></i> Voir en taille réelle
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Informations</h5>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>ID:</strong> {{ media.id }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Type:</strong> {{ media.media_type|capitalize }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Fichier:</strong> {{ media.filename }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Taille:</strong> {{ (media.file_size / 1024)|round }} Ko
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Créé le:</strong> {{ media.created_at|date('d/m/Y H:i') }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Afficher le nom du fichier sélectionné
+            document.getElementById('media_file').addEventListener('change', function(e) {
+                const fileName = e.target.files[0]?.name || 'Choisir un fichier';
+                const label = e.target.nextElementSibling;
+                label.textContent = fileName;
+            });
+            
+            // Supprimer une relation
+            document.querySelectorAll('.delete-relation').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const relationId = this.dataset.relationId;
+                    const confirmation = this.dataset.confirmation || 'Êtes-vous sûr ?';
+                    
+                    if (confirm(confirmation)) {
+                        // Ajouter un champ caché pour indiquer que cette relation doit être supprimée
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'delete_relations[]';
+                        input.value = relationId;
+                        
+                        // Ajouter l'input au formulaire
+                        this.closest('form').appendChild(input);
+                        
+                        // Masquer visuellement la ligne
+                        this.closest('tr').style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}
