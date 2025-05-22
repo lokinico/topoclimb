@@ -495,13 +495,36 @@ class Auth
             return false;
         }
     }
-
     /**
      * Vérifie si l'utilisateur a une permission spécifique
      */
     public function can(string $ability, $model = null): bool
     {
         if (!$this->check()) {
+            error_log("Auth::can - Utilisateur non authentifié pour: $ability");
+            return false;
+        }
+
+        // Debug: Afficher les informations de l'utilisateur
+        $userAutorisation = null;
+        try {
+            // Essayer d'accéder à l'autorisation de différentes manières
+            if (isset($this->user->autorisation)) {
+                $userAutorisation = $this->user->autorisation;
+            } elseif (method_exists($this->user, '__get')) {
+                $userAutorisation = $this->user->__get('autorisation');
+            } elseif (method_exists($this->user, 'getAttribute')) {
+                $userAutorisation = $this->user->getAttribute('autorisation');
+            }
+
+            error_log("Auth::can - Debug utilisateur: ID=" . $this->id() . ", autorisation='" . $userAutorisation . "'");
+        } catch (\Exception $e) {
+            error_log("Auth::can - Erreur accès autorisation: " . $e->getMessage());
+        }
+
+        // Si on ne peut pas accéder à l'autorisation, refuser
+        if ($userAutorisation === null || $userAutorisation === '') {
+            error_log("Auth::can - Autorisation vide ou inaccessible pour: $ability");
             return false;
         }
 
@@ -539,13 +562,13 @@ class Auth
         ];
 
         // L'admin (autorisation = 0) peut tout faire
-        if ($this->user->autorisation == '0') {
+        if ($userAutorisation === '0' || $userAutorisation === 0) {
             error_log("Auth: Accès admin accordé pour: " . $ability);
             return true;
         }
 
         // Le rédacteur (autorisation = 1) peut faire les actions de rédaction et consultation
-        if ($this->user->autorisation == '1' && (
+        if (($userAutorisation === '1' || $userAutorisation === 1) && (
             in_array($ability, $redactorAbilities) ||
             in_array($ability, $viewerAbilities) ||
             in_array($ability, $restrictedAbilities)
@@ -555,7 +578,7 @@ class Auth
         }
 
         // Le viewer (autorisation = 2) peut consulter tout le contenu
-        if ($this->user->autorisation == '2' && (
+        if (($userAutorisation === '2' || $userAutorisation === 2) && (
             in_array($ability, $viewerAbilities) ||
             in_array($ability, $restrictedAbilities)
         )) {
@@ -564,27 +587,27 @@ class Auth
         }
 
         // Accès restreint (autorisation = 3) - compte d'essai
-        if ($this->user->autorisation == '3' && in_array($ability, $restrictedAbilities)) {
+        if (($userAutorisation === '3' || $userAutorisation === 3) && in_array($ability, $restrictedAbilities)) {
             error_log("Auth: Accès restreint accordé pour: " . $ability);
             return true;
         }
 
         // Vérification pour l'édition de contenu créé par l'utilisateur
         if (($ability === 'update-route' || $ability === 'delete-route') &&
-            $model && isset($model->created_by) && $model->created_by === $this->extractUserId($this->user)
+            $model && isset($model->created_by) && $model->created_by === $this->id()
         ) {
             error_log("Auth: Accès accordé pour édition de contenu personnel");
             return true;
         }
 
         if (($ability === 'update-sector' || $ability === 'delete-sector') &&
-            $model && isset($model->created_by) && $model->created_by === $this->extractUserId($this->user)
+            $model && isset($model->created_by) && $model->created_by === $this->id()
         ) {
             error_log("Auth: Accès accordé pour édition de contenu personnel");
             return true;
         }
 
-        error_log("Auth: Accès refusé pour: " . $ability . " (niveau: " . $this->user->autorisation . ")");
+        error_log("Auth: Accès refusé pour: " . $ability . " (niveau: " . $userAutorisation . ")");
         return false;
     }
 
