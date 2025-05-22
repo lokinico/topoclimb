@@ -3,6 +3,7 @@
 namespace TopoclimbCH\Middleware;
 
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 
@@ -18,7 +19,7 @@ class CsrfMiddleware
         $this->session = $session;
     }
 
-    public function handle(Request $request, callable $next): Response
+    public function handle(Request $request, callable $next): SymfonyResponse
     {
         error_log("CsrfMiddleware: Traitement " . $request->getMethod() . " " . $request->getPathInfo());
 
@@ -42,14 +43,10 @@ class CsrfMiddleware
             if (empty($submittedToken) || !hash_equals($sessionToken, $submittedToken)) {
                 error_log("CSRF: Validation échouée, redirection");
                 $this->session->flash('error', 'Session expirée ou formulaire invalide. Veuillez réessayer.');
-                return Response::redirect($request->headers->get('referer') ?: '/');
+                return $this->createRedirectResponse($request->headers->get('referer') ?: '/');
             }
 
             error_log("CSRF: Validation réussie");
-
-            // === AJOUT CETTE LIGNE CI-DESSOUS ===
-            $this->session->set('_csrf_middleware_validated', true);
-            // === FIN DE L'AJOUT ===
 
             // Stocker le token original pour pouvoir le récupérer si nécessaire
             $this->session->set('_original_csrf_token', $sessionToken);
@@ -108,10 +105,33 @@ class CsrfMiddleware
         return $request->headers->get('X-CSRF-TOKEN');
     }
 
-    private function isRedirect(Response $response): bool
+    /**
+     * CORRECTION: Accepter les deux types de Response
+     */
+    private function isRedirect($response): bool
     {
-        $code = $response->getStatusCode();
+        // Gérer à la fois TopoclimbCH\Core\Response et Symfony\Component\HttpFoundation\Response
+        if ($response instanceof Response) {
+            // Notre propre classe Response
+            $code = $response->getStatusCode();
+        } elseif ($response instanceof SymfonyResponse) {
+            // Classe Symfony Response
+            $code = $response->getStatusCode();
+        } else {
+            // Type inconnu, considérer comme non-redirection
+            error_log("CSRF: Type de response inconnu: " . get_class($response));
+            return false;
+        }
+
         return $code >= 300 && $code < 400;
+    }
+
+    /**
+     * CORRECTION: Créer une réponse de redirection compatible
+     */
+    private function createRedirectResponse(string $url): SymfonyResponse
+    {
+        return new SymfonyResponse('', 302, ['Location' => $url]);
     }
 
     private function ensureTokenExists(): string
