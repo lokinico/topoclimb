@@ -78,6 +78,7 @@ class AuthController extends BaseController
             'csrf_token' => $csrfToken
         ]);
     }
+
     public function login(Request $request): Response
     {
         // ================== IGNORER TEMPORAIREMENT LA VALIDATION CSRF ===================
@@ -356,45 +357,8 @@ class AuthController extends BaseController
         return $this->redirect('/reset-password?token=' . $token);
     }
 
-    /**
-     * Validate CSRF token from string
-     * 
-     * @param string|null $token
-     * @return bool
-     */
-    protected function validateCsrfToken(?string $token): bool
-    {
-        if (empty($token)) {
-            error_log('Token CSRF vide');
-            return false;
-        }
-
-        $storedToken = $this->session->get('csrf_token');
-        if (empty($storedToken)) {
-            error_log('Token CSRF non trouvé en session');
-            return false;
-        }
-
-        // Vérifier si les tokens correspondent
-        $result = hash_equals($storedToken, $token);
-        error_log('Validation CSRF: ' . ($result ? 'succès' : 'échec') . ' (soumis: ' . substr($token, 0, 10) . '..., stocké: ' . substr($storedToken, 0, 10) . '...)');
-
-        // Si la validation réussit, sauvegarder le token pour le protéger
-        if ($result) {
-            // Sauvegarder le token original
-            $this->session->set('_original_csrf_token', $storedToken);
-
-            // Installer un hook de fermeture qui sera exécuté à la fin du script
-            register_shutdown_function(function () use ($storedToken) {
-                if (isset($_SESSION['csrf_token']) && $_SESSION['csrf_token'] !== $storedToken) {
-                    $_SESSION['csrf_token'] = $storedToken;
-                    error_log("CSRF Token restauré en fin de script");
-                }
-            });
-        }
-
-        return $result;
-    }
+    // SUPPRESSION DE LA MÉTHODE validateCsrfToken 
+    // Elle sera héritée de BaseController
 
     /**
      * Méthode pour tester la connexion à la base de données
