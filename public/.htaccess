@@ -2,35 +2,60 @@
     RewriteEngine On
     RewriteBase /
     
-    # Servir les fichiers d'uploads directement
+    # Nouvelle structure : servir les fichiers organisés par entité
+    # /uploads/sectors/24/main/image.jpg
+    # /uploads/routes/156/gallery/photo.jpg
     RewriteCond %{REQUEST_URI} ^/uploads/(.*)$
     RewriteCond %{DOCUMENT_ROOT}/uploads/%1 -f
-    RewriteRule ^uploads/(.*)$ /uploads/$1 [L]
+    RewriteRule ^uploads/(.*)$ uploads/$1 [L]
     
-    # Servir les fichiers média directement depuis le dossier uploads
+    # Compatibilité : ancienne structure par date
+    # /media/2025/05/file.jpg -> /uploads/media/2025/05/file.jpg
     RewriteCond %{REQUEST_URI} ^/media/(.*)$
     RewriteCond %{DOCUMENT_ROOT}/uploads/media/$1 -f
-    RewriteRule ^media/(.*)$ /uploads/media/$1 [L]
+    RewriteRule ^media/(.*)$ uploads/media/$1 [L]
     
-    # Headers pour les fichiers média (cache et sécurité)
-    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
-        Header set Cache-Control "public, max-age=31536000"
-        Header set Expires "Thu, 31 Dec 2037 23:55:55 GMT"
+    # Compatibilité : fichiers à la racine (très anciens)
+    RewriteCond %{REQUEST_URI} ^/([^/]+\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4))$
+    RewriteCond %{DOCUMENT_ROOT}/uploads/%1 -f
+    RewriteRule ^([^/]+\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4))$ uploads/$1 [L]
+    
+    # Headers optimisés pour les médias
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4|webm)$">
+        <IfModule mod_headers.c>
+            Header set Cache-Control "public, max-age=31536000"
+            Header set Expires "Thu, 31 Dec 2037 23:55:55 GMT"
+            Header unset ETag
+            Header set X-Content-Type-Options "nosniff"
+        </IfModule>
+        FileETag None
     </FilesMatch>
     
-    # Rediriger vers index.php si le fichier n'existe pas
+    # Redirection vers index.php pour les autres requêtes
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
 
-# Protection supplémentaire pour les fichiers sensibles
-<Files ~ "^\.">
-    Require all denied
-</Files>
+# Sécurité renforcée
+<Directory "uploads">
+    # Empêcher l'exécution de scripts
+    <Files "*.php">
+        Require all denied
+    </Files>
+    <Files "*.phtml">
+        Require all denied  
+    </Files>
+    
+    # Empêcher l'affichage des listings de répertoires
+    Options -Indexes
+</Directory>
 
-# Types MIME pour les images
+# Types MIME complets
 <IfModule mod_mime.c>
     AddType image/webp .webp
     AddType image/svg+xml .svg
+    AddType video/mp4 .mp4
+    AddType video/webm .webm
+    AddType application/pdf .pdf
 </IfModule>

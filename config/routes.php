@@ -375,23 +375,7 @@ return [
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
 
-    // Ajouter ces routes dans le fichier config/routes.php
 
-    // Routes pour servir les fichiers médias
-    [
-        'method' => 'GET',
-        'path' => '/media/{year}/{month}/{filename}',
-        'controller' => \TopoclimbCH\Controllers\MediaController::class,
-        'action' => 'serve'
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/uploads/{filename}',
-        'controller' => \TopoclimbCH\Controllers\MediaController::class,
-        'action' => 'serve'
-    ],
-
-    // Routes pour la gestion des médias
     [
         'method' => 'GET',
         'path' => '/media/{id}',
@@ -412,22 +396,6 @@ return [
         'controller' => \TopoclimbCH\Controllers\MediaController::class,
         'action' => 'delete',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/media/{id}/delete',
-        'controller' => \TopoclimbCH\Controllers\MediaController::class,
-        'action' => 'delete',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
-    ],
-
-    // Route pour l'index des médias (optionnel)
-    [
-        'method' => 'GET',
-        'path' => '/media',
-        'controller' => \TopoclimbCH\Controllers\MediaController::class,
-        'action' => 'index',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
+    ]
 
 ];
