@@ -352,7 +352,6 @@ class SectorController extends BaseController
             return $this->redirect('/sectors/create');
         }
     }
-
     /**
      * Display edit sector form
      *
@@ -405,22 +404,13 @@ class SectorController extends BaseController
                 ];
             }
 
-            // Récupérer les médias associés à ce secteur, avec les relations
-            $media = $this->db->query(
-                "SELECT m.*, mr.relationship_type, mr.id as relationship_id 
-                 FROM climbing_media m
-                 JOIN climbing_media_relationships mr ON m.id = mr.media_id
-                 WHERE mr.entity_type = 'sector' AND mr.entity_id = ?
-                 ORDER BY mr.relationship_type = 'main' DESC, mr.sort_order ASC",
-                [$id]
-            )->fetchAll(\PDO::FETCH_ASSOC);
+            // Récupérer les médias associés à ce secteur via MediaService
+            $media = $this->mediaService->getMediaForEntity('sector', (int) $id);
 
-            // Améliorer les chemins d'accès pour les médias
-            foreach ($media as &$item) {
-                // Si le chemin commence déjà par un slash, ne pas ajouter de préfixe
-                if (!empty($item['file_path']) && $item['file_path'][0] !== '/') {
-                    $item['file_path'] = '/' . $item['file_path'];
-                }
+            // Debug log pour vérifier les médias récupérés
+            error_log("SectorEdit: Médias récupérés pour le secteur $id: " . count($media));
+            foreach ($media as $item) {
+                error_log("Média ID: {$item['id']}, Path: {$item['file_path']}, Type: {$item['relationship_type']}");
             }
 
             return $this->render('sectors/form', [
@@ -437,6 +427,7 @@ class SectorController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
+            error_log("SectorEdit - Exception: " . $e->getMessage());
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
             return $this->redirect('/sectors');
         }
