@@ -219,7 +219,7 @@ class MediaController extends BaseController
     }
 
     /**
-     * Delete media
+     * Delete media - Version corrigée
      */
     public function delete(Request $request): Response
     {
@@ -227,14 +227,31 @@ class MediaController extends BaseController
 
         if (!$id) {
             $this->session->flash('error', 'ID du média non spécifié');
-            return $this->redirect('/media');
+            // Rediriger vers les secteurs au lieu de /media qui n'existe pas
+            return $this->redirect('/sectors');
         }
 
-        // Validate CSRF token
+        // Récupérer l'information sur le média AVANT la validation CSRF pour connaître l'entité d'origine
+        $mediaRelation = null;
+        try {
+            $mediaRelation = $this->db->fetchOne(
+                "SELECT entity_type, entity_id FROM climbing_media_relationships WHERE media_id = ? LIMIT 1",
+                [$id]
+            );
+        } catch (\Exception $e) {
+            error_log("Erreur lors de la récupération de la relation média: " . $e->getMessage());
+        }
+
+        // Validate CSRF token - CORRECTION ICI
         $csrfToken = $request->query->get('csrf_token') ?? $request->request->get('csrf_token');
-        if (!$this->session->validateCsrfToken($csrfToken)) {
+        if (!$this->validateCsrfToken($csrfToken)) {  // Utiliser la méthode de BaseController
             $this->session->flash('error', 'Token de sécurité invalide');
-            return $this->redirect('/media/' . $id);
+
+            // Redirection intelligente vers l'entité d'origine
+            if ($mediaRelation && $mediaRelation['entity_type'] === 'sector') {
+                return $this->redirect('/sectors/' . $mediaRelation['entity_id'] . '/edit');
+            }
+            return $this->redirect('/sectors');
         }
 
         try {
@@ -246,9 +263,57 @@ class MediaController extends BaseController
                 $this->session->flash('error', 'Erreur lors de la suppression du média');
             }
         } catch (\Exception $e) {
+            error_log("Erreur lors de la suppression du média $id: " . $e->getMessage());
             $this->session->flash('error', 'Erreur lors de la suppression: ' . $e->getMessage());
         }
 
-        return $this->redirect('/media');
+        // Redirection intelligente après suppression
+        if ($mediaRelation && $mediaRelation['entity_type'] === 'sector') {
+            return $this->redirect('/sectors/' . $mediaRelation['entity_id'] . '/edit');
+        }
+
+        // Fallback vers la liste des secteurs
+        return $this->redirect('/sectors');
+    }
+
+    /**
+     * Liste tous les médias - À ajouter dans MediaController
+     */
+    public function index(Request $request): Response
+    {
+        try {
+            $page = (int) $request->query->get('page', 1);
+            $perPage = (int) $request->query->get('per_page', 20);
+
+            // Récupérer les filtres
+            $filters = [
+                'media_type' => $request->query->get('media_type'),
+                'entity_type' => $request->query->get('entity_type'),
+                'search' => $request->query->get('search')
+            ];
+
+            // Nettoyer les filtres vides
+            $filters = array_filter($filters);
+
+            // Récupérer les médias avec pagination
+            $result = $this->mediaService->getAllMedia($page, $perPage, $filters);
+
+            return $this->render('media/index', [
+                'title' => 'Gestion des médias',
+                'medias' => $result['data'],
+                'pagination' => [
+                    'current_page' => $result['page'],
+                    'per_page' => $result['per_page'],
+                    'total' => $result['total'],
+                    'last_page' => $result['last_page']
+                ],
+                'filters' => $filters,
+                'stats' => $this->mediaService->getMediaStats()
+            ]);
+        } catch (\Exception $e) {
+            error_log("Erreur dans MediaController::index: " . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement des médias');
+            return $this->redirect('/sectors');
+        }
     }
 }
