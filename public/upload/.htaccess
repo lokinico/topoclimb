@@ -1,0 +1,48 @@
+# Sécurité du dossier uploads
+# Bloquer l'exécution de tous les scripts
+
+# Désactiver l'exécution PHP
+<Files "*.php">
+    Require all denied
+</Files>
+
+<Files "*.phtml">
+    Require all denied
+</Files>
+
+<Files "*.php3">
+    Require all denied
+</Files>
+
+<Files "*.php4">
+    Require all denied
+</Files>
+
+<Files "*.php5">
+    Require all denied
+</Files>
+
+# Désactiver les listings de répertoires
+Options -Indexes
+
+# Empêcher l'accès aux fichiers sensibles
+<Files ~ "^\.">
+    Require all denied
+</Files>
+
+# Types MIME sécurisés uniquement
+<IfModule mod_mime.c>
+    # Réinitialiser les handlers PHP
+    RemoveHandler .php .phtml .php3 .php4 .php5
+    RemoveType .php .phtml .php3 .php4 .php5
+    
+    # Types autorisés pour les uploads
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+    AddType image/gif .gif
+    AddType image/webp .webp
+    AddType image/svg+xml .svg
+    AddType application/pdf .pdf
+    AddType video/mp4 .mp4
+    AddType video/webm .webm
+</IfModule>

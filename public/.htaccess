@@ -2,60 +2,63 @@
     RewriteEngine On
     RewriteBase /
     
-    # Nouvelle structure : servir les fichiers organisés par entité
-    # /uploads/sectors/24/main/image.jpg
-    # /uploads/routes/156/gallery/photo.jpg
+    # Servir les fichiers d'uploads directement (nouveau système)
     RewriteCond %{REQUEST_URI} ^/uploads/(.*)$
     RewriteCond %{DOCUMENT_ROOT}/uploads/%1 -f
     RewriteRule ^uploads/(.*)$ uploads/$1 [L]
     
-    # Compatibilité : ancienne structure par date
-    # /media/2025/05/file.jpg -> /uploads/media/2025/05/file.jpg
+    # Servir les fichiers média via le chemin /media/ (redirection vers uploads/media/)
     RewriteCond %{REQUEST_URI} ^/media/(.*)$
     RewriteCond %{DOCUMENT_ROOT}/uploads/media/$1 -f
     RewriteRule ^media/(.*)$ uploads/media/$1 [L]
     
-    # Compatibilité : fichiers à la racine (très anciens)
-    RewriteCond %{REQUEST_URI} ^/([^/]+\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4))$
+    # Compatibilité avec les anciens fichiers (à la racine)
+    RewriteCond %{REQUEST_URI} ^/([^/]+\.(jpg|jpeg|png|gif|webp|svg))$
     RewriteCond %{DOCUMENT_ROOT}/uploads/%1 -f
-    RewriteRule ^([^/]+\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4))$ uploads/$1 [L]
+    RewriteRule ^([^/]+\.(jpg|jpeg|png|gif|webp|svg))$ uploads/$1 [L]
     
-    # Headers optimisés pour les médias
+    # SÉCURITÉ : Bloquer l'exécution de fichiers PHP dans uploads
+    RewriteCond %{REQUEST_URI} ^/uploads/.*\.php$ [NC]
+    RewriteRule ^(.*)$ - [F,L]
+    
+    # Headers pour les fichiers média (cache et sécurité)
     <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4|webm)$">
         <IfModule mod_headers.c>
             Header set Cache-Control "public, max-age=31536000"
             Header set Expires "Thu, 31 Dec 2037 23:55:55 GMT"
             Header unset ETag
-            Header set X-Content-Type-Options "nosniff"
         </IfModule>
         FileETag None
     </FilesMatch>
     
-    # Redirection vers index.php pour les autres requêtes
+    # Rediriger vers index.php si le fichier n'existe pas
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
 
-# Sécurité renforcée
-<Directory "uploads">
-    # Empêcher l'exécution de scripts
-    <Files "*.php">
-        Require all denied
-    </Files>
-    <Files "*.phtml">
-        Require all denied  
-    </Files>
-    
-    # Empêcher l'affichage des listings de répertoires
-    Options -Indexes
-</Directory>
+# Protection des fichiers sensibles
+<Files ~ "^\.">
+    Require all denied
+</Files>
 
-# Types MIME complets
+# Protection supplémentaire : bloquer les fichiers PHP dans uploads
+<FilesMatch "^uploads/.*\.php$">
+    Require all denied
+</FilesMatch>
+
+# Types MIME pour tous les formats média
 <IfModule mod_mime.c>
     AddType image/webp .webp
     AddType image/svg+xml .svg
     AddType video/mp4 .mp4
     AddType video/webm .webm
     AddType application/pdf .pdf
+</IfModule>
+
+# Compression pour économiser la bande passante
+<IfModule mod_deflate.c>
+    <FilesMatch "\.(css|js|html|htm|xml|txt|svg)$">
+        SetOutputFilter DEFLATE
+    </FilesMatch>
 </IfModule>
