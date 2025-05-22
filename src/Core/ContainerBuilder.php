@@ -191,6 +191,13 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\SectorService',
                 'TopoclimbCH\\Services\\AuthService'
             ],
+            // AJOUT DU MEDIACONTROLLER - C'ÉTAIT ÇA LE PROBLÈME !
+            'TopoclimbCH\\Controllers\\MediaController' => [
+                View::class,
+                Session::class,
+                'TopoclimbCH\\Services\\MediaService',
+                Database::class
+            ],
             'TopoclimbCH\\Controllers\\RegionController' => [
                 View::class,
                 Session::class,
@@ -258,13 +265,6 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\DifficultySystemController' => [
                 View::class,
                 Session::class,
-                Database::class
-            ],
-            'TopoclimbCH\\Controllers\\UserController' => [
-                View::class,
-                Session::class,
-                'TopoclimbCH\\Services\\UserService',  // Remplacer Auth::class par UserService
-                'TopoclimbCH\\Services\\AuthService',
                 Database::class
             ]
         ];
