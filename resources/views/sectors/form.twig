@@ -336,66 +336,16 @@
 {% endblock %}
 
 {% block scripts %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialisation de la carte
-            const map = L.map('map').setView([46.8, 8.2], 8); // Centre sur la Suisse
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-            
-            let marker;
-            
-            // Initialiser le marqueur si des coordonnées sont disponibles
-            {% if sector.coordinates_lat and sector.coordinates_lng %}
-                marker = L.marker([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}]).addTo(map);
-                map.setView([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}], 15);
-            {% endif %}
-            
-            // Mettre à jour les coordonnées lors d'un clic sur la carte
-            map.on('click', function(e) {
-                if (marker) {
-                    map.removeLayer(marker);
-                }
-                
-                marker = L.marker(e.latlng).addTo(map);
-                
-                document.getElementById('coordinates_lat').value = e.latlng.lat.toFixed(8);
-                document.getElementById('coordinates_lng').value = e.latlng.lng.toFixed(8);
-                
-                // Convertir en coordonnées suisses si nécessaire
-                // Cette conversion nécessiterait une bibliothèque spécifique
-            });
-            
-            // Bouton de localisation
-            document.getElementById('locate-button').addEventListener('click', function() {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function(position) {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        
-                        if (marker) {
-                            map.removeLayer(marker);
-                        }
-                        
-                        marker = L.marker([lat, lng]).addTo(map);
-                        map.setView([lat, lng], 15);
-                        
-                        document.getElementById('coordinates_lat').value = lat.toFixed(8);
-                        document.getElementById('coordinates_lng').value = lng.toFixed(8);
-                    }, function(error) {
-                        console.error("Erreur de géolocalisation:", error.message);
-                        alert("Impossible d'obtenir votre position. Erreur: " + error.message);
-                    }, {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0
-                    });
-                } else {
-                    alert("La géolocalisation n'est pas prise en charge par votre navigateur");
-                }
-            });
-        });
-    </script>
+    <!-- Leaflet pour les cartes -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Composants JavaScript -->
+    <script src="{{ url('/js/components/media-manager.js') }}"></script>
+    <script src="{{ url('/js/components/map-manager.js') }}"></script>
+    
+    <!-- Script spécifique à cette page -->
+    <script src="{{ url('/js/pages/sectors/form.js') }}"></script>
 {% endblock %}
