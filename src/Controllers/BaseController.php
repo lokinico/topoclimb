@@ -143,7 +143,7 @@ abstract class BaseController
     }
 
     /**
-     * Validate CSRF token - Version améliorée
+     * Validate CSRF token - Version unifiée et améliorée
      *
      * @param Request|string|null $input
      * @return bool
@@ -152,6 +152,7 @@ abstract class BaseController
     {
         $token = null;
 
+        // Récupérer le token selon le type d'entrée
         if ($input instanceof Request) {
             // Essayer d'abord POST, puis query string
             $token = $input->request->get('csrf_token') ?? $input->query->get('csrf_token');
@@ -163,18 +164,33 @@ abstract class BaseController
             $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? null;
         }
 
-        if (!$token) {
-            error_log("BaseController::validateCsrfToken - Aucun token fourni");
+        // Vérifier que le token est présent
+        if (empty($token)) {
+            error_log('BaseController::validateCsrfToken - Token CSRF vide ou manquant');
             return false;
         }
 
-        $isValid = $this->session->validateCsrfToken($token);
-
-        if (!$isValid) {
-            error_log("BaseController::validateCsrfToken - Token invalide: " . $token);
+        // Récupérer le token stocké en session
+        $storedToken = $this->session->get('csrf_token');
+        if (empty($storedToken)) {
+            error_log('BaseController::validateCsrfToken - Token CSRF non trouvé en session');
+            return false;
         }
 
-        return $isValid;
+        // Vérifier si nous sommes en cours de validation par le middleware
+        if ($this->session->get('csrf_validation_in_progress', false)) {
+            error_log('BaseController::validateCsrfToken - Validation déjà en cours par le middleware, accepté');
+            return true;
+        }
+
+        // Validation sécurisée avec hash_equals
+        $result = hash_equals($storedToken, $token);
+
+        // Log détaillé pour déboguer
+        error_log('BaseController::validateCsrfToken - Validation CSRF: ' . ($result ? 'succès' : 'échec') .
+            ' (soumis: ' . substr($token, 0, 10) . '..., stocké: ' . substr($storedToken, 0, 10) . '...)');
+
+        return $result;
     }
 
     /**

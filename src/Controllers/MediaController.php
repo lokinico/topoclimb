@@ -221,12 +221,10 @@ class MediaController extends BaseController
             error_log("Erreur lors de la récupération de la relation média: " . $e->getMessage());
         }
 
-        // CORRECTION PRINCIPALE : Récupérer le token depuis la query string
-        $csrfToken = $request->query->get('csrf_token');
-
-        // Utiliser la méthode héritée de BaseController avec le token récupéré
-        if (!$this->session->validateCsrfToken($csrfToken)) {
-            error_log("MediaController::delete - Token CSRF invalide. Token reçu: " . ($csrfToken ?: 'null'));
+        // CORRECTION PRINCIPALE : Utiliser la méthode validateCsrfToken de BaseController
+        // qui gère automatiquement la récupération depuis Request (POST et query string)
+        if (!$this->validateCsrfToken($request)) {
+            error_log("MediaController::delete - Token CSRF invalide");
             $this->session->flash('error', 'Token de sécurité invalide');
 
             // Redirection intelligente vers l'entité d'origine
