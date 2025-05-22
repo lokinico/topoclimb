@@ -178,38 +178,6 @@ abstract class BaseController
     }
 
     /**
-     * Validate CSRF token from string
-     * 
-     * @param string|null $token
-     * @return bool
-     */
-    protected function validateCsrfToken(?string $token): bool
-    {
-        if (empty($token)) {
-            error_log('Token CSRF vide');
-            return false;
-        }
-
-        $storedToken = $this->session->get('csrf_token');
-        if (empty($storedToken)) {
-            error_log('Token CSRF non trouvé en session');
-            return false;
-        }
-
-        // Vérifier si nous sommes en cours de validation par le middleware
-        if ($this->session->get('csrf_validation_in_progress', false)) {
-            error_log('CSRF: Validation déjà en cours par le middleware, accepté');
-            return true;
-        }
-
-        $result = hash_equals($storedToken, $token);
-        error_log('Validation CSRF: ' . ($result ? 'succès' : 'échec') . ' (soumis: ' . substr($token, 0, 10) . '..., stocké: ' . substr($storedToken, 0, 10) . '...)');
-
-        // Ne pas générer un nouveau token ici - laissez le middleware s'en charger
-        return $result;
-    }
-
-    /**
      * Set a flash message
      *
      * @param string $type
