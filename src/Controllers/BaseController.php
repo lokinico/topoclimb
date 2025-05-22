@@ -228,7 +228,6 @@ abstract class BaseController
 
         return $data;
     }
-
     /**
      * Check if user has permission
      *
@@ -239,15 +238,22 @@ abstract class BaseController
      */
     protected function authorize(string $ability, $model = null): void
     {
-        // Vérifier que le conteneur est disponible
+        // Utiliser Auth directement au lieu d'AuthService
         $container = Container::getInstance();
-        if (!$container || !$container->has(AuthService::class)) {
+        if (!$container || !$container->has(Auth::class)) {
             throw new AuthorizationException("Service d'authentification non disponible");
         }
 
-        $authService = $container->get(AuthService::class);
-        if (!$authService->can($ability, $model)) {
-            throw new AuthorizationException("Action non autorisée");
+        $auth = $container->get(Auth::class);
+
+        // Vérifier si l'utilisateur est connecté
+        if (!$auth->check()) {
+            throw new AuthorizationException("Authentification requise");
+        }
+
+        // Vérifier les permissions
+        if (!$auth->can($ability, $model)) {
+            throw new AuthorizationException("Action non autorisée: $ability");
         }
     }
 }

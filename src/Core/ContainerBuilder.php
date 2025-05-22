@@ -13,7 +13,7 @@ use TopoclimbCH\Controllers\ErrorController;
 use TopoclimbCH\Controllers\SectorController;
 use TopoclimbCH\Controllers\RouteController;
 use TopoclimbCH\Controllers\AuthController;
-use TopoclimbCH\Middleware\PreserveCsrfTokenMiddleware;
+// SUPPRIMÉ: use TopoclimbCH\Middleware\PreserveCsrfTokenMiddleware;
 use TopoclimbCH\Core\Router;
 
 class ContainerBuilder
@@ -47,7 +47,6 @@ class ContainerBuilder
 
         // Middlewares
         $this->registerMiddlewares($container);
-
 
         return $container;
     }
@@ -99,7 +98,6 @@ class ContainerBuilder
             ->addArgument(new Reference(LoggerInterface::class))
             ->addArgument(new Reference('service_container'));
 
-
         $container->setAlias('router', Router::class)->setPublic(true);
     }
 
@@ -115,7 +113,6 @@ class ContainerBuilder
                 Session::class,
                 Database::class
             ],
-
             'TopoclimbCH\\Services\\SectorService' => [
                 Database::class
             ],
@@ -125,7 +122,6 @@ class ContainerBuilder
             'TopoclimbCH\\Services\\MediaService' => [
                 Database::class
             ],
-
             'TopoclimbCH\\Services\\RegionService' => [
                 Database::class
             ],
@@ -158,6 +154,7 @@ class ContainerBuilder
             }
         }
     }
+
     /**
      * Register controllers in the container.
      */
@@ -190,7 +187,6 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\SectorService',
                 'TopoclimbCH\\Services\\AuthService'
             ],
-            // AJOUT DU MEDIACONTROLLER - C'ÉTAIT ÇA LE PROBLÈME !
             'TopoclimbCH\\Controllers\\MediaController' => [
                 View::class,
                 Session::class,
@@ -237,7 +233,6 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\RouteService',
                 Database::class
             ],
-
             'TopoclimbCH\\Controllers\\UserAscentController' => [
                 View::class,
                 Session::class,
@@ -269,12 +264,6 @@ class ContainerBuilder
         ];
 
         foreach ($controllers as $id => $dependencies) {
-            // CORRECTION DU BUG: Supprimer le log problématique
-            // Cette ligne causait 15 logs identiques par requête
-            // if ($_ENV['APP_ENV'] === 'development') {
-            //     error_log("HomeController exists in container: " . ($container->has('TopoclimbCH\\Controllers\\HomeController') ? 'YES' : 'NO'));
-            // }
-
             // Ajouter une vérification d'existence
             if (!class_exists($id)) {
                 error_log("Warning: Controller class $id does not exist");
@@ -311,11 +300,8 @@ class ContainerBuilder
             ],
             'TopoclimbCH\\Middleware\\CsrfMiddleware' => [
                 Session::class
-            ],
-            // Ajout du middleware manquant
-            'TopoclimbCH\\Middleware\\PreserveCsrfTokenMiddleware' => [
-                Session::class
             ]
+            // SUPPRIMÉ: PreserveCsrfTokenMiddleware n'existe pas
         ];
 
         foreach ($middlewares as $id => $dependencies) {
