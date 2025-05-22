@@ -396,6 +396,6 @@ return [
         'controller' => \TopoclimbCH\Controllers\MediaController::class,
         'action' => 'delete',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ]
+    ],
 
 ];
