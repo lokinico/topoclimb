@@ -217,101 +217,96 @@
                     </button>
                 </div>
             </div>
-            
             <div class="form-section">
-                <h3>Images</h3>
-                
-                <div class="media-upload-section">
-                    <div class="form-group">
-                        <label for="media_file">Ajouter une image</label>
-                        <div class="custom-file">
-                            <input type="file" name="media_file" id="media_file" class="custom-file-input" 
-                                   accept="image/*" aria-describedby="media-help">
-                            <label class="custom-file-label" for="media_file">Choisir un fichier</label>
-                        </div>
-                        <small id="media-help" class="form-text text-muted">Formats supportés: JPG, PNG, GIF. Taille max: 5MB</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="media_title">Titre de l'image</label>
-                        <input type="text" name="media_title" id="media_title" class="form-control" 
-                               aria-describedby="media-title-help">
-                        <small id="media-title-help" class="form-text text-muted">Titre descriptif de l'image (optionnel)</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Type d'image</label>
-                        <div class="custom-control custom-radio">
-                            <input type="radio" id="media_type_main" name="media_relationship_type" 
-                                   value="main" class="custom-control-input" checked>
-                            <label class="custom-control-label" for="media_type_main">Image principale</label>
-                        </div>
-                        <div class="custom-control custom-radio">
-                            <input type="radio" id="media_type_gallery" name="media_relationship_type" 
-                                   value="gallery" class="custom-control-input">
-                            <label class="custom-control-label" for="media_type_gallery">Galerie</label>
-                        </div>
-                        <div class="custom-control custom-radio">
-                            <input type="radio" id="media_type_topo" name="media_relationship_type" 
-                                   value="topo" class="custom-control-input">
-                            <label class="custom-control-label" for="media_type_topo">Topo</label>
-                        </div>
-                    </div>
+        <h3>Images</h3>
+        
+        <div class="media-upload-section">
+            <div class="form-group">
+                <label for="media_file">Ajouter une image</label>
+                <div class="custom-file">
+                    <input type="file" name="media_file" id="media_file" class="custom-file-input" 
+                        accept="image/*" aria-describedby="media-help">
+                    <label class="custom-file-label" for="media_file">Choisir un fichier</label>
                 </div>
+                <small id="media-help" class="form-text text-muted">Formats supportés: JPG, PNG, GIF. Taille max: 5MB</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="media_title">Titre de l'image</label>
+                <input type="text" name="media_title" id="media_title" class="form-control" 
+                    aria-describedby="media-title-help">
+                <small id="media-title-help" class="form-text text-muted">Titre descriptif de l'image (optionnel)</small>
+            </div>
+            
+            <div class="form-group">
+                <label>Type d'image</label>
+                <div class="custom-control custom-radio">
+                    <input type="radio" id="media_type_main" name="media_relationship_type" 
+                        value="main" class="custom-control-input" checked>
+                    <label class="custom-control-label" for="media_type_main">Image principale</label>
+                </div>
+                <div class="custom-control custom-radio">
+                    <input type="radio" id="media_type_gallery" name="media_relationship_type" 
+                        value="gallery" class="custom-control-input">
+                    <label class="custom-control-label" for="media_type_gallery">Galerie</label>
+                </div>
+                <div class="custom-control custom-radio">
+                    <input type="radio" id="media_type_topo" name="media_relationship_type" 
+                        value="topo" class="custom-control-input">
+                    <label class="custom-control-label" for="media_type_topo">Topo</label>
+                </div>
+            </div>
+        </div>
+        
+        {% if media and media|length > 0 %}
+            <div class="existing-media mt-4">
+                <h4>Images existantes</h4>
                 
-                {% if media and media|length > 0 %}
-                    <div class="existing-media mt-4">
-                        <h4>Images existantes</h4>
-                        
-                        <div class="media-gallery row">
-                            {% for item in media %}
-                                <div class="media-item col-md-4 mb-4">
-                                    <div class="card h-100">
-                                        <div class="card-img-container" style="height: 200px; overflow: hidden;">
-                                            {% if item.file_path %}
-                                                <img src="{{ url(item.file_path) }}" class="card-img-top" 
-                                                     alt="{{ item.title|default('Image du secteur') }}" 
-                                                     style="object-fit: cover; height: 100%; width: 100%;">
-                                            {% else %}
-                                                <div class="text-center p-5 bg-light">Image non disponible</div>
-                                            {% endif %}
-                                        </div>
+                <div class="media-gallery row">
+                    {% for item in media %}
+                        <div class="media-item col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-img-container" style="height: 200px; overflow: hidden;">
+                                    {% if item.file_path %}
+                                        {% set image_url = item.file_path starts with 'http' ? item.file_path : url(item.file_path starts with '/' ? item.file_path : '/' ~ item.file_path) %}
+                                        <img src="{{ image_url }}" class="card-img-top" 
+                                            alt="{{ item.title|default('Image du secteur') }}" 
+                                            style="object-fit: cover; height: 100%; width: 100%;"
+                                            onerror="this.parentElement.innerHTML='<div class=&quot;text-center p-5 bg-light&quot;>Image non disponible</div>'">
+                                    {% else %}
+                                        <div class="text-center p-5 bg-light">Image non disponible</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="card-body">
+                                    <h5 class="card-title text-truncate">
+                                        {{ item.title|default('Image ' ~ item.id) }}
+                                    </h5>
+                                    
+                                    <p class="card-text small text-muted">
+                                        Type: {{ item.relationship_type|default('gallery')|capitalize }}
+                                    </p>
+                                    
+                                    <div class="btn-group btn-group-sm d-flex">
+                                        <a href="{{ url('/media/' ~ item.id) }}" class="btn btn-outline-primary w-100">
+                                            <i class="fa fa-eye mr-1"></i> Voir
+                                        </a>
                                         
-                                        <div class="card-body">
-                                            <h5 class="card-title text-truncate">
-                                                {{ item.title|default('Image ' ~ item.id) }}
-                                            </h5>
-                                            
-                                            <p class="card-text small text-muted">
-                                                Type: {{ item.relationship_type|default('gallery')|capitalize }}
-                                            </p>
-                                            
-                                            <div class="btn-group btn-group-sm d-flex">
-                                                <button type="button" 
-                                                        class="btn btn-outline-primary w-100"
-                                                        data-toggle="modal" 
-                                                        data-target="#editMediaModal"
-                                                        data-media-id="{{ item.id }}"
-                                                        data-media-title="{{ item.title }}"
-                                                        data-relationship-type="{{ item.relationship_type|default('gallery') }}">
-                                                    <i class="fa fa-edit mr-1"></i> Modifier
-                                                </button>
-                                                
-                                                <button type="button" 
-                                                        class="btn btn-outline-danger w-100 media-delete-btn"
-                                                        data-media-id="{{ item.id }}"
-                                                        data-csrf-token="{{ csrf_token }}">
-                                                    <i class="fa fa-trash mr-1"></i> Supprimer
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <button type="button" 
+                                                class="btn btn-outline-danger w-100 media-delete-btn"
+                                                data-media-id="{{ item.id }}"
+                                                data-csrf-token="{{ csrf_token }}">
+                                            <i class="fa fa-trash mr-1"></i> Supprimer
+                                        </button>
                                     </div>
                                 </div>
-                            {% endfor %}
+                            </div>
                         </div>
-                    </div>
-                {% endif %}
+                    {% endfor %}
+                </div>
             </div>
+        {% endif %}
+    </div>
             
             <div class="form-group">
                 <label for="active">État</label>
