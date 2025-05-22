@@ -93,11 +93,108 @@ class Auth
     }
 
     /**
-     * Récupère l'ID de l'utilisateur connecté
-     * Modification: Accès plus robuste à l'ID
+     * Méthode pour extraire de façon fiable l'ID d'un objet User - OPTIMISÉE
+     * NOUVELLE MÉTHODE OPTIMISÉE pour éviter les requêtes SQL inutiles
+     */
+    private function extractUserId(User $user): int
+    {
+        // 1. PRIORITÉ: Vérifier d'abord l'ID directement accessible
+        if (isset($user->id) && is_numeric($user->id) && $user->id > 0) {
+            return (int)$user->id;
+        }
+
+        // 2. Vérifier si l'attribut 'attributes' est accessible via réflexion
+        $reflection = new \ReflectionObject($user);
+        $idValue = null;
+
+        if ($reflection->hasProperty('attributes')) {
+            $attributesProperty = $reflection->getProperty('attributes');
+            $attributesProperty->setAccessible(true);
+            $attributes = $attributesProperty->getValue($user);
+
+            if (isset($attributes['id']) && is_numeric($attributes['id']) && $attributes['id'] > 0) {
+                $idValue = (int)$attributes['id'];
+                error_log("extractUserId: Trouvé via réflexion attributes['id'] = " . $idValue);
+                return $idValue;
+            }
+        }
+
+        // 3. Si non trouvé, essayer la réflexion directe sur 'id'
+        if ($reflection->hasProperty('id')) {
+            $idProperty = $reflection->getProperty('id');
+            $idProperty->setAccessible(true);
+            $idValue = $idProperty->getValue($user);
+
+            if (is_numeric($idValue) && $idValue > 0) {
+                error_log("extractUserId: Trouvé via réflexion propriété id = " . $idValue);
+                return (int)$idValue;
+            }
+        }
+
+        // 4. Essayer la méthode __get si disponible
+        if (method_exists($user, '__get')) {
+            try {
+                $idValue = $user->__get('id');
+                if (is_numeric($idValue) && $idValue > 0) {
+                    error_log("extractUserId: Trouvé via __get = " . $idValue);
+                    return (int)$idValue;
+                }
+            } catch (\Exception $e) {
+                error_log("extractUserId: Erreur __get: " . $e->getMessage());
+            }
+        }
+
+        // 5. OPTIMISATION: Vérifier d'abord en session avant la requête SQL
+        if ($this->session) {
+            $sessionUserId = $this->session->get('auth_user_id') ?? $_SESSION['auth_user_id'] ?? null;
+            if ($sessionUserId && is_numeric($sessionUserId) && $sessionUserId > 0) {
+                error_log("extractUserId: Trouvé en session = " . $sessionUserId);
+                return (int)$sessionUserId;
+            }
+        }
+
+        // 6. DERNIER RECOURS: requête SQL seulement si on a le mail ou username
+        if ($this->db && (isset($user->mail) || isset($user->username))) {
+            $field = isset($user->mail) && !empty($user->mail) ? 'mail' : 'username';
+            $value = $field === 'mail' ? $user->mail : $user->username;
+
+            if (!empty($value)) {
+                try {
+                    $query = "SELECT id FROM users WHERE $field = ? LIMIT 1";
+                    $result = $this->db->query($query, [$value])->fetch();
+
+                    if ($result && isset($result['id']) && is_numeric($result['id']) && $result['id'] > 0) {
+                        $idValue = (int)$result['id'];
+                        error_log("extractUserId: Trouvé via requête SQL = " . $idValue);
+                        return $idValue;
+                    }
+                } catch (\Exception $e) {
+                    error_log("extractUserId: Erreur SQL: " . $e->getMessage());
+                }
+            }
+        }
+
+        // En cas d'échec complet, lancer une exception
+        error_log("ERREUR CRITIQUE: Impossible d'extraire un ID utilisateur valide");
+        error_log("User object debug: " . print_r($user, true));
+        throw new \RuntimeException("Impossible d'extraire un ID utilisateur valide");
+    }
+
+    /**
+     * Récupère l'ID de l'utilisateur connecté - OPTIMISÉE
+     * Modification: Accès plus robuste à l'ID avec priorité session
      */
     public function id(): ?int
     {
+        // OPTIMISATION: Vérifier d'abord directement en session
+        if ($this->session) {
+            $sessionUserId = $this->session->get('auth_user_id') ?? $_SESSION['auth_user_id'] ?? null;
+            if ($sessionUserId && is_numeric($sessionUserId) && $sessionUserId > 0) {
+                return (int)$sessionUserId;
+            }
+        }
+
+        // Si pas d'utilisateur chargé, essayer de le charger
         if ($this->user === null && $this->initialized) {
             $this->checkSession();
         }
@@ -113,77 +210,6 @@ class Auth
             error_log("Auth::id - Exception lors de l'extraction de l'ID: " . $e->getMessage());
             return null;
         }
-    }
-
-    /**
-     * Méthode pour extraire de façon fiable l'ID d'un objet User
-     * NOUVELLE MÉTHODE
-     */
-    private function extractUserId(User $user): int
-    {
-        // Tenter d'accéder à l'ID via la réflexion pour voir les attributs
-        $reflection = new \ReflectionObject($user);
-        $idValue = null;
-
-        // 1. Vérifier si l'attribut 'attributes' est accessible
-        if ($reflection->hasProperty('attributes')) {
-            $attributesProperty = $reflection->getProperty('attributes');
-            $attributesProperty->setAccessible(true);
-            $attributes = $attributesProperty->getValue($user);
-
-            if (isset($attributes['id'])) {
-                $idValue = $attributes['id'];
-                error_log("extractUserId: Trouvé via réflexion attributes['id'] = " . $idValue);
-            }
-        }
-
-        // 2. Si non trouvé, essayer la réflexion directe sur 'id'
-        if ($idValue === null && $reflection->hasProperty('id')) {
-            $idProperty = $reflection->getProperty('id');
-            $idProperty->setAccessible(true);
-            $idValue = $idProperty->getValue($user);
-            error_log("extractUserId: Trouvé via réflexion propriété id = " . $idValue);
-        }
-
-        // 3. Si toujours pas trouvé, essayer la méthode __get en appelant directement via user->id
-        if ($idValue === null && method_exists($user, '__get')) {
-            try {
-                $idValue = $user->id;
-                error_log("extractUserId: Trouvé via __get = " . $idValue);
-            } catch (\Exception $e) {
-                error_log("extractUserId: Erreur __get: " . $e->getMessage());
-            }
-        }
-
-        // 4. Dernier recours: requête SQL directe si on a le mail ou username
-        if (($idValue === null || $idValue === 0) && $this->db && ($user->mail || $user->username)) {
-            $field = $user->mail ? 'mail' : 'username';
-            $value = $user->mail ?: $user->username;
-
-            try {
-                $query = "SELECT id FROM users WHERE $field = ? LIMIT 1";
-                $result = $this->db->query($query, [$value])->fetch();
-
-                if ($result && isset($result['id'])) {
-                    $idValue = $result['id'];
-                    error_log("extractUserId: Trouvé via requête SQL = " . $idValue);
-                }
-            } catch (\Exception $e) {
-                error_log("extractUserId: Erreur SQL: " . $e->getMessage());
-            }
-        }
-
-        // Convertir et valider
-        if (is_numeric($idValue)) {
-            $id = (int)$idValue;
-            if ($id > 0) {
-                return $id;
-            }
-        }
-
-        // En cas d'échec complet, lancer une exception
-        error_log("ERREUR CRITIQUE: Impossible d'extraire un ID utilisateur valide");
-        throw new \RuntimeException("Impossible d'extraire un ID utilisateur valide");
     }
 
     /**

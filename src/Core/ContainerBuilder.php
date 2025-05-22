@@ -158,7 +158,6 @@ class ContainerBuilder
             }
         }
     }
-
     /**
      * Register controllers in the container.
      */
@@ -270,9 +269,11 @@ class ContainerBuilder
         ];
 
         foreach ($controllers as $id => $dependencies) {
-            if ($_ENV['APP_ENV'] === 'development') {
-                error_log("HomeController exists in container: " . ($container->has('TopoclimbCH\\Controllers\\HomeController') ? 'YES' : 'NO'));
-            }
+            // CORRECTION DU BUG: Supprimer le log problématique
+            // Cette ligne causait 15 logs identiques par requête
+            // if ($_ENV['APP_ENV'] === 'development') {
+            //     error_log("HomeController exists in container: " . ($container->has('TopoclimbCH\\Controllers\\HomeController') ? 'YES' : 'NO'));
+            // }
 
             // Ajouter une vérification d'existence
             if (!class_exists($id)) {

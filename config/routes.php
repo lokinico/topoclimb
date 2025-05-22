@@ -237,6 +237,44 @@ return [
         ]
     ],
 
+    // AJOUT: Routes manquantes pour RouteController
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/log-ascent',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'logAscent',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/log-ascent',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'recordAscent',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/comments',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'comments',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/comments',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'storeComment',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+
     // Routes pour les ascensions des utilisateurs (protégées)
     [
         'method' => 'GET',
