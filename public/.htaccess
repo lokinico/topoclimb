@@ -2,8 +2,35 @@
     RewriteEngine On
     RewriteBase /
     
+    # Servir les fichiers d'uploads directement
+    RewriteCond %{REQUEST_URI} ^/uploads/(.*)$
+    RewriteCond %{DOCUMENT_ROOT}/uploads/%1 -f
+    RewriteRule ^uploads/(.*)$ /uploads/$1 [L]
+    
+    # Servir les fichiers média directement depuis le dossier uploads
+    RewriteCond %{REQUEST_URI} ^/media/(.*)$
+    RewriteCond %{DOCUMENT_ROOT}/uploads/media/$1 -f
+    RewriteRule ^media/(.*)$ /uploads/media/$1 [L]
+    
+    # Headers pour les fichiers média (cache et sécurité)
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
+        Header set Cache-Control "public, max-age=31536000"
+        Header set Expires "Thu, 31 Dec 2037 23:55:55 GMT"
+    </FilesMatch>
+    
     # Rediriger vers index.php si le fichier n'existe pas
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Protection supplémentaire pour les fichiers sensibles
+<Files ~ "^\.">
+    Require all denied
+</Files>
+
+# Types MIME pour les images
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+    AddType image/svg+xml .svg
 </IfModule>
