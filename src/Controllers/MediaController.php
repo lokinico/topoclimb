@@ -1,5 +1,5 @@
 <?php
-// src/Controllers/MediaController.php
+// src/Controllers/MediaController.php - Version corrigée
 
 namespace TopoclimbCH\Controllers;
 
@@ -10,6 +10,7 @@ use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Models\Media;
 
 class MediaController extends BaseController
 {
@@ -33,15 +34,10 @@ class MediaController extends BaseController
     public function serve(Request $request): Response
     {
         $path = $request->getPathInfo();
-
-        // Remove leading slash
         $path = ltrim($path, '/');
-
-        // Construct full file path
         $uploadsPath = BASE_PATH . '/public/uploads';
         $fullPath = $uploadsPath . '/' . $path;
 
-        // Security check - ensure file is within uploads directory
         $realUploadsPath = realpath($uploadsPath);
         $realFilePath = realpath($fullPath);
 
@@ -49,21 +45,16 @@ class MediaController extends BaseController
             return new Response('Forbidden', 403);
         }
 
-        // Check if file exists
         if (!file_exists($fullPath) || !is_file($fullPath)) {
             return new Response('File not found', 404);
         }
 
-        // Determine MIME type
         $mimeType = $this->mediaService->detectMimeType($fullPath);
-
-        // Create response
         $response = new BinaryFileResponse($fullPath);
         $response->headers->set('Content-Type', $mimeType);
 
-        // Set cache headers for images
         if (str_starts_with($mimeType, 'image/')) {
-            $response->headers->set('Cache-Control', 'public, max-age=31536000'); // 1 year
+            $response->headers->set('Cache-Control', 'public, max-age=31536000');
             $response->setLastModified(new \DateTime('@' . filemtime($fullPath)));
         }
 
@@ -90,7 +81,6 @@ class MediaController extends BaseController
                 return $this->redirect('/media');
             }
 
-            // Get relations
             $relations = $this->db->fetchAll(
                 "SELECT mr.*, 
                         CASE 
@@ -129,7 +119,6 @@ class MediaController extends BaseController
             return $this->redirect('/media');
         }
 
-        // Validate CSRF token
         if (!$this->validateCsrfToken($request)) {
             $this->session->flash('error', 'Token de sécurité invalide');
             return $this->redirect('/media/' . $id . '/edit');
@@ -138,7 +127,6 @@ class MediaController extends BaseController
         try {
             $data = $request->request->all();
 
-            // Update basic media info
             $updated = $this->mediaService->updateMedia($id, [
                 'title' => $data['title'] ?? null,
                 'description' => $data['description'] ?? null,
@@ -151,19 +139,15 @@ class MediaController extends BaseController
                 return $this->redirect('/media/' . $id . '/edit');
             }
 
-            // Handle file replacement if provided
             if (isset($_FILES['media_file']) && $_FILES['media_file']['error'] === UPLOAD_ERR_OK) {
-                // Get current media info
                 $currentMedia = $this->mediaService->getMediaById($id);
 
                 if ($currentMedia) {
-                    // Delete old file
                     $oldPath = BASE_PATH . '/public/uploads' . $currentMedia['file_path'];
                     if (file_exists($oldPath)) {
                         unlink($oldPath);
                     }
 
-                    // Upload new file
                     $userId = $_SESSION['auth_user_id'] ?? 1;
                     $newMediaId = $this->mediaService->uploadMedia($_FILES['media_file'], [
                         'title' => $data['title'] ?? $currentMedia['title'],
@@ -174,7 +158,6 @@ class MediaController extends BaseController
                     ], $userId);
 
                     if ($newMediaId) {
-                        // Update file path in current media record
                         $newMedia = $this->mediaService->getMediaById($newMediaId);
                         $this->db->update('climbing_media', [
                             'filename' => $newMedia['filename'],
@@ -185,13 +168,11 @@ class MediaController extends BaseController
                             'updated_at' => date('Y-m-d H:i:s')
                         ], 'id = ?', [$id]);
 
-                        // Delete the temporary new media record
                         $this->db->delete('climbing_media', 'id = ?', [$newMediaId]);
                     }
                 }
             }
 
-            // Update relationship types if provided
             if (isset($data['relation_types']) && is_array($data['relation_types'])) {
                 foreach ($data['relation_types'] as $relationId => $relationshipType) {
                     $this->db->update(
@@ -203,7 +184,6 @@ class MediaController extends BaseController
                 }
             }
 
-            // Delete relations if requested
             if (isset($data['delete_relations']) && is_array($data['delete_relations'])) {
                 foreach ($data['delete_relations'] as $relationId) {
                     $this->db->delete('climbing_media_relationships', 'id = ?', [(int)$relationId]);
@@ -219,7 +199,7 @@ class MediaController extends BaseController
     }
 
     /**
-     * Delete media - Version corrigée
+     * Delete media - VERSION CORRIGÉE
      */
     public function delete(Request $request): Response
     {
@@ -227,11 +207,10 @@ class MediaController extends BaseController
 
         if (!$id) {
             $this->session->flash('error', 'ID du média non spécifié');
-            // Rediriger vers les secteurs au lieu de /media qui n'existe pas
             return $this->redirect('/sectors');
         }
 
-        // Récupérer l'information sur le média AVANT la validation CSRF pour connaître l'entité d'origine
+        // Récupérer l'information sur l'entité d'origine AVANT validation
         $mediaRelation = null;
         try {
             $mediaRelation = $this->db->fetchOne(
@@ -242,9 +221,12 @@ class MediaController extends BaseController
             error_log("Erreur lors de la récupération de la relation média: " . $e->getMessage());
         }
 
-        // Validate CSRF token - CORRECTION ICI
-        $csrfToken = $request->query->get('csrf_token') ?? $request->request->get('csrf_token');
-        if (!$this->validateCsrfToken($csrfToken)) {  // Utiliser la méthode de BaseController
+        // CORRECTION PRINCIPALE : Récupérer le token depuis la query string
+        $csrfToken = $request->query->get('csrf_token');
+
+        // Utiliser la méthode héritée de BaseController avec le token récupéré
+        if (!$this->session->validateCsrfToken($csrfToken)) {
+            error_log("MediaController::delete - Token CSRF invalide. Token reçu: " . ($csrfToken ?: 'null'));
             $this->session->flash('error', 'Token de sécurité invalide');
 
             // Redirection intelligente vers l'entité d'origine
@@ -255,7 +237,8 @@ class MediaController extends BaseController
         }
 
         try {
-            $deleted = $this->mediaService->deleteMedia($id);
+            // Utiliser le modèle Media pour la suppression avec fichiers
+            $deleted = Media::deleteWithFiles($id);
 
             if ($deleted) {
                 $this->session->flash('success', 'Média supprimé avec succès');
@@ -272,12 +255,11 @@ class MediaController extends BaseController
             return $this->redirect('/sectors/' . $mediaRelation['entity_id'] . '/edit');
         }
 
-        // Fallback vers la liste des secteurs
         return $this->redirect('/sectors');
     }
 
     /**
-     * Liste tous les médias - À ajouter dans MediaController
+     * Liste tous les médias
      */
     public function index(Request $request): Response
     {
@@ -285,17 +267,13 @@ class MediaController extends BaseController
             $page = (int) $request->query->get('page', 1);
             $perPage = (int) $request->query->get('per_page', 20);
 
-            // Récupérer les filtres
             $filters = [
                 'media_type' => $request->query->get('media_type'),
                 'entity_type' => $request->query->get('entity_type'),
                 'search' => $request->query->get('search')
             ];
 
-            // Nettoyer les filtres vides
             $filters = array_filter($filters);
-
-            // Récupérer les médias avec pagination
             $result = $this->mediaService->getAllMedia($page, $perPage, $filters);
 
             return $this->render('media/index', [
@@ -308,7 +286,8 @@ class MediaController extends BaseController
                     'last_page' => $result['last_page']
                 ],
                 'filters' => $filters,
-                'stats' => $this->mediaService->getMediaStats()
+                'stats' => $this->mediaService->getMediaStats(),
+                'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
             error_log("Erreur dans MediaController::index: " . $e->getMessage());

@@ -133,42 +133,48 @@ abstract class BaseController
     }
 
     /**
-     * Create a CSRF token for forms
+     * Create a CSRF token
      *
      * @return string
      */
     protected function createCsrfToken(): string
     {
-        // Assurer qu'un token est généré même si setCsrfToken n'en retourne pas
-        $token = $this->session->setCsrfToken();
-
-        // Si setCsrfToken ne retourne pas de token, en générer un et le stocker
-        if (empty($token)) {
-            $token = bin2hex(random_bytes(32));
-            $this->session->set('csrf_token', $token);
-        }
-
-        return $token;
+        return $this->session->setCsrfToken();
     }
 
     /**
-     * Validate CSRF token from Request
+     * Validate CSRF token - Version améliorée
      *
-     * @param Request $request
+     * @param Request|string|null $input
      * @return bool
      */
-    protected function validateCsrfRequestToken(Request $request): bool
+    protected function validateCsrfToken($input = null): bool
     {
+        $token = null;
 
-        error_log("Stack trace validateCsrfToken: " . json_encode(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5)));
-
-        $token = $request->request->get('csrf_token');
+        if ($input instanceof Request) {
+            // Essayer d'abord POST, puis query string
+            $token = $input->request->get('csrf_token') ?? $input->query->get('csrf_token');
+        } elseif (is_string($input)) {
+            // Token fourni directement
+            $token = $input;
+        } else {
+            // Chercher dans $_POST puis $_GET comme fallback
+            $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? null;
+        }
 
         if (!$token) {
+            error_log("BaseController::validateCsrfToken - Aucun token fourni");
             return false;
         }
 
-        return $this->validateCsrfToken($token);
+        $isValid = $this->session->validateCsrfToken($token);
+
+        if (!$isValid) {
+            error_log("BaseController::validateCsrfToken - Token invalide: " . $token);
+        }
+
+        return $isValid;
     }
 
     /**
