@@ -4,7 +4,6 @@
 namespace TopoclimbCH\Services;
 
 use TopoclimbCH\Core\Database;
-use Intervention\Image\ImageManager;
 
 class MediaService
 {
@@ -27,6 +26,11 @@ class MediaService
     {
         $this->db = $db;
         $this->uploadsPath = BASE_PATH . '/public/uploads';
+
+        // Créer le dossier uploads s'il n'existe pas
+        if (!is_dir($this->uploadsPath)) {
+            mkdir($this->uploadsPath, 0755, true);
+        }
     }
 
     /**
@@ -40,8 +44,9 @@ class MediaService
         $sql = "SELECT * FROM climbing_media WHERE id = ?";
         return $this->db->fetchOne($sql, [$id]);
     }
+
     /**
-     * Upload a new media file
+     * Upload a new media file with new entity-based structure
      *
      * @param array $file File from $_FILES
      * @param array $data Additional data
@@ -59,22 +64,94 @@ class MediaService
 
         // Vérification des erreurs de téléchargement
         if (isset($file['error']) && $file['error'] !== UPLOAD_ERR_OK) {
-            $errorMessages = [
-                UPLOAD_ERR_INI_SIZE => "Le fichier dépasse la taille maximale autorisée par PHP",
-                UPLOAD_ERR_FORM_SIZE => "Le fichier dépasse la taille maximale autorisée par le formulaire",
-                UPLOAD_ERR_PARTIAL => "Le fichier n'a été que partiellement téléchargé",
-                UPLOAD_ERR_NO_FILE => "Aucun fichier n'a été téléchargé",
-                UPLOAD_ERR_NO_TMP_DIR => "Dossier temporaire manquant",
-                UPLOAD_ERR_CANT_WRITE => "Échec d'écriture du fichier sur le disque",
-                UPLOAD_ERR_EXTENSION => "Une extension PHP a arrêté le téléchargement du fichier"
-            ];
-
-            $errorMessage = $errorMessages[$file['error']] ?? "Erreur inconnue lors du téléchargement";
+            $errorMessage = $this->getUploadErrorMessage($file['error']);
             error_log("MediaService::uploadMedia - Erreur de téléchargement: " . $errorMessage);
             throw new \Exception($errorMessage);
         }
 
-        // Generate a unique filename
+        // Déterminer si on utilise la nouvelle structure ou l'ancienne
+        $useNewStructure = isset($data['entity_type']) && isset($data['entity_id']);
+
+        if ($useNewStructure) {
+            return $this->uploadMediaNewStructure($file, $data, $userId);
+        } else {
+            return $this->uploadMediaOldStructure($file, $data, $userId);
+        }
+    }
+
+    /**
+     * Upload avec la nouvelle structure par entité
+     */
+    private function uploadMediaNewStructure(array $file, array $data, int $userId): ?int
+    {
+        // Générer les chemins avec la nouvelle structure
+        $paths = $this->generateEntityBasedPaths($file['name'], $data);
+
+        // Créer le répertoire de destination
+        if (!is_dir($paths['directory'])) {
+            if (!mkdir($paths['directory'], 0755, true)) {
+                throw new \Exception("Impossible de créer le répertoire: " . $paths['directory']);
+            }
+        }
+
+        // Vérifier les permissions
+        if (!is_writable($paths['directory'])) {
+            throw new \Exception("Le répertoire n'est pas accessible en écriture: " . $paths['directory']);
+        }
+
+        // Déplacer le fichier
+        if (!move_uploaded_file($file['tmp_name'], $paths['full_path'])) {
+            throw new \Exception("Impossible de déplacer le fichier téléchargé");
+        }
+
+        // Traitement de l'image
+        $mediaType = $this->determineMediaType($file['type'] ?? '');
+        $metadata = $this->processMedia($paths['full_path'], $paths['directory'], $paths['filename'], $mediaType);
+
+        // Enregistrer en base de données
+        $mediaData = [
+            'media_type' => $mediaType,
+            'filename' => $paths['filename'],
+            'file_path' => $paths['relative_path'],
+            'file_size' => $file['size'] ?? 0,
+            'mime_type' => $file['type'] ?? $this->detectMimeType($paths['full_path']),
+            'title' => $data['title'] ?? null,
+            'description' => $data['description'] ?? null,
+            'is_public' => $data['is_public'] ?? 1,
+            'is_featured' => $data['is_featured'] ?? 0,
+            'storage_type' => 'local',
+            'original_filename' => $file['name'],
+            'metadata' => json_encode($metadata),
+            'created_by' => $userId,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        $mediaId = $this->db->insert('climbing_media', $mediaData);
+
+        if (!$mediaId) {
+            // Nettoyer le fichier en cas d'échec
+            $this->cleanupFiles($paths['full_path'], $metadata);
+            throw new \Exception("Échec de l'enregistrement du média en base de données");
+        }
+
+        // Créer la relation avec l'entité
+        $this->associateMediaWithEntity(
+            $mediaId,
+            $data['entity_type'],
+            (int) $data['entity_id'],
+            $data['relationship_type'] ?? 'gallery',
+            $data['sort_order'] ?? 0
+        );
+
+        return $mediaId;
+    }
+
+    /**
+     * Upload avec l'ancienne structure par date (pour compatibilité)
+     */
+    private function uploadMediaOldStructure(array $file, array $data, int $userId): ?int
+    {
+        // Générer les chemins avec l'ancienne structure
         $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
         $filename = uniqid('media_') . '.' . $extension;
         $year = date('Y');
@@ -82,146 +159,408 @@ class MediaService
         $relativePath = "/media/$year/$month";
         $filePath = $this->uploadsPath . $relativePath;
 
-        // Create directory if it doesn't exist
-        if (!is_dir($filePath)) {
-            $dirCreated = mkdir($filePath, 0755, true);
-            if (!$dirCreated) {
-                error_log("MediaService::uploadMedia - Impossible de créer le répertoire: " . $filePath);
-                throw new \Exception("Impossible de créer le répertoire de destination");
-            }
+        // Créer le répertoire
+        if (!is_dir($filePath) && !mkdir($filePath, 0755, true)) {
+            throw new \Exception("Impossible de créer le répertoire: " . $filePath);
         }
 
-        // Vérifier si le répertoire est accessible en écriture
         if (!is_writable($filePath)) {
-            error_log("MediaService::uploadMedia - Répertoire non accessible en écriture: " . $filePath);
-            throw new \Exception("Le répertoire de destination n'est pas accessible en écriture");
+            throw new \Exception("Le répertoire n'est pas accessible en écriture: " . $filePath);
         }
 
-        // Full file path
         $fullPath = "$filePath/$filename";
 
-        // Determine media type
-        $mediaType = 'image';
-        $mimeType = $file['type'] ?? 'application/octet-stream';
-
-        if (strpos($mimeType, 'application/pdf') === 0) {
-            $mediaType = 'pdf';
-        } elseif (strpos($mimeType, 'video/') === 0) {
-            $mediaType = 'video';
-        } elseif (isset($data['media_type']) && $data['media_type'] === 'topo') {
-            $mediaType = 'topo';
-        }
-
-        // Move the uploaded file with error handling
-        $moved = move_uploaded_file($file['tmp_name'], $fullPath);
-        if (!$moved) {
-            error_log("MediaService::uploadMedia - Échec du déplacement du fichier vers: " . $fullPath);
+        // Déplacer le fichier
+        if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
             throw new \Exception("Impossible de déplacer le fichier téléchargé");
         }
 
-        // Process image with Intervention\Image if needed
+        // Traitement du média
+        $mediaType = $this->determineMediaType($file['type'] ?? '');
+        $metadata = $this->processMedia($fullPath, $filePath, $filename, $mediaType);
+
+        // Enregistrer en base
+        $mediaData = [
+            'media_type' => $mediaType,
+            'filename' => $filename,
+            'file_path' => "$relativePath/$filename",
+            'file_size' => $file['size'] ?? 0,
+            'mime_type' => $file['type'] ?? $this->detectMimeType($fullPath),
+            'title' => $data['title'] ?? null,
+            'description' => $data['description'] ?? null,
+            'is_public' => $data['is_public'] ?? 1,
+            'is_featured' => $data['is_featured'] ?? 0,
+            'storage_type' => 'local',
+            'original_filename' => $file['name'],
+            'metadata' => json_encode($metadata),
+            'created_by' => $userId,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        $mediaId = $this->db->insert('climbing_media', $mediaData);
+
+        if (!$mediaId) {
+            $this->cleanupFiles($fullPath, $metadata);
+            throw new \Exception("Échec de l'enregistrement du média en base de données");
+        }
+
+        // Créer la relation si les données sont fournies
+        if (isset($data['entity_type']) && isset($data['entity_id'])) {
+            $this->associateMediaWithEntity(
+                $mediaId,
+                $data['entity_type'],
+                (int) $data['entity_id'],
+                $data['relationship_type'] ?? 'gallery',
+                $data['sort_order'] ?? 0
+            );
+        }
+
+        return $mediaId;
+    }
+
+    /**
+     * Génère les chemins pour la nouvelle structure par entité
+     */
+    private function generateEntityBasedPaths(string $originalFilename, array $data): array
+    {
+        $extension = pathinfo($originalFilename, PATHINFO_EXTENSION);
+        $filename = $this->generateUniqueFilename($originalFilename);
+
+        // Construire le chemin selon l'entité
+        $entityPath = $this->getEntityPath($data['entity_type'], $data['entity_id']);
+        $relationshipPath = $data['relationship_type'] ?? 'gallery';
+
+        $relativePath = "/{$entityPath}/{$relationshipPath}";
+        $fullDirectory = $this->uploadsPath . $relativePath;
+
+        return [
+            'filename' => $filename,
+            'relative_path' => "{$relativePath}/{$filename}",
+            'full_path' => "{$fullDirectory}/{$filename}",
+            'directory' => $fullDirectory,
+            'entity_path' => $entityPath
+        ];
+    }
+
+    /**
+     * Obtient le chemin de l'entité
+     */
+    private function getEntityPath(string $entityType, int $entityId): string
+    {
+        $pluralTypes = [
+            'sector' => 'sectors',
+            'route' => 'routes',
+            'event' => 'events',
+            'user' => 'users'
+        ];
+
+        $plural = $pluralTypes[$entityType] ?? $entityType . 's';
+
+        if ($entityType === 'user') {
+            return "{$plural}/profiles";
+        }
+
+        return "{$plural}/{$entityId}";
+    }
+
+    /**
+     * Génère un nom de fichier unique et sécurisé
+     */
+    private function generateUniqueFilename(string $originalFilename): string
+    {
+        $extension = pathinfo($originalFilename, PATHINFO_EXTENSION);
+        $basename = pathinfo($originalFilename, PATHINFO_FILENAME);
+
+        // Nettoyer le nom de base
+        $cleanBasename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $basename);
+        $cleanBasename = trim($cleanBasename, '_-');
+        $cleanBasename = substr($cleanBasename, 0, 50);
+
+        if (empty($cleanBasename)) {
+            $cleanBasename = 'media';
+        }
+
+        return $cleanBasename . '_' . uniqid() . '.' . $extension;
+    }
+
+    /**
+     * Traite un média (images, vidéos, etc.)
+     */
+    private function processMedia(string $fullPath, string $directory, string $filename, string $mediaType): array
+    {
         $metadata = [];
+
         if ($mediaType === 'image') {
-            try {
-                if (class_exists('\Intervention\Image\ImageManager')) {
-                    $imageManager = new \Intervention\Image\ImageManager(['driver' => 'gd']);
-                    $image = $imageManager->make($fullPath);
-
-                    // Resize if necessary
-                    if ($image->width() > 2000 || $image->height() > 2000) {
-                        $image->resize(2000, 2000, function ($constraint) {
-                            $constraint->aspectRatio();
-                            $constraint->upsize();
-                        });
-                        $image->save($fullPath, 85);
-                    }
-
-                    // Create thumbnail
-                    $thumbPath = "$filePath/thumb_$filename";
-                    $image->resize(300, 300, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    })->save($thumbPath, 75);
-
-                    // Extract metadata
-                    $metadata = [
-                        'width' => $image->width(),
-                        'height' => $image->height(),
-                        'thumbnails' => [
-                            'thumb' => "$relativePath/thumb_$filename"
-                        ]
-                    ];
-                } else {
-                    error_log("MediaService::uploadMedia - La bibliothèque Intervention Image n'est pas disponible");
-                }
-            } catch (\Exception $e) {
-                error_log("MediaService::uploadMedia - Erreur lors du traitement de l'image: " . $e->getMessage());
-                // Continuer sans traitement d'image plutôt que d'échouer complètement
-            }
+            $metadata = $this->processImage($fullPath, $directory, $filename);
+        } elseif ($mediaType === 'video') {
+            $metadata = $this->processVideo($fullPath);
+        } elseif ($mediaType === 'pdf') {
+            $metadata = $this->processPdf($fullPath);
         }
 
-        // Insert into database
+        return $metadata;
+    }
+
+    /**
+     * Traite une image (redimensionnement, miniatures)
+     */
+    private function processImage(string $fullPath, string $directory, string $filename): array
+    {
+        $metadata = [];
+
         try {
-            $mediaData = [
-                'media_type' => $mediaType,
-                'filename' => $filename,
-                'file_path' => "$relativePath/$filename",
-                'file_size' => $file['size'] ?? 0,
-                'mime_type' => $mimeType,
-                'title' => $data['title'] ?? null,
-                'description' => $data['description'] ?? null,
-                'is_public' => $data['is_public'] ?? 1,
-                'is_featured' => $data['is_featured'] ?? 0,
-                'storage_type' => 'local',
-                'original_filename' => $file['name'],
-                'metadata' => json_encode($metadata),
-                'created_by' => $userId,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-
-            $mediaId = $this->db->insert('climbing_media', $mediaData);
-
-            if (!$mediaId) {
-                error_log("MediaService::uploadMedia - Échec de l'insertion en base de données");
-                // Supprimer le fichier si l'insertion échoue
-                if (file_exists($fullPath)) {
-                    unlink($fullPath);
-                }
-                throw new \Exception("Échec de l'enregistrement du média en base de données");
+            // Utiliser GD si Intervention Image n'est pas disponible
+            if (class_exists('\Intervention\Image\ImageManager')) {
+                $metadata = $this->processImageWithIntervention($fullPath, $directory, $filename);
+            } else {
+                $metadata = $this->processImageWithGD($fullPath, $directory, $filename);
             }
-
-            // If entity info is provided, create relationship
-            if (isset($data['entity_type']) && isset($data['entity_id'])) {
-                $relationSuccess = $this->associateMediaWithEntity(
-                    $mediaId,
-                    $data['entity_type'],
-                    (int) $data['entity_id'],
-                    $data['relationship_type'] ?? 'gallery',
-                    $data['sort_order'] ?? 0
-                );
-
-                if (!$relationSuccess) {
-                    error_log("MediaService::uploadMedia - Avertissement: Échec de l'association avec l'entité");
-                    // Continuer malgré l'échec de la relation
-                }
-            }
-
-            return $mediaId;
         } catch (\Exception $e) {
-            error_log("MediaService::uploadMedia - Exception lors de l'insertion en BDD: " . $e->getMessage());
-
-            // Nettoyage des fichiers en cas d'erreur
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
+            error_log("Erreur traitement image: " . $e->getMessage());
+            // Récupérer au moins les dimensions de base
+            $imageInfo = getimagesize($fullPath);
+            if ($imageInfo) {
+                $metadata['width'] = $imageInfo[0];
+                $metadata['height'] = $imageInfo[1];
             }
-
-            $thumbPath = "$filePath/thumb_$filename";
-            if (file_exists($thumbPath)) {
-                unlink($thumbPath);
-            }
-
-            throw $e;
         }
+
+        return $metadata;
+    }
+
+    /**
+     * Traite une image avec Intervention Image
+     */
+    private function processImageWithIntervention(string $fullPath, string $directory, string $filename): array
+    {
+        $imageManager = new \Intervention\Image\ImageManager(['driver' => 'gd']);
+        $image = $imageManager->make($fullPath);
+
+        $metadata = [
+            'width' => $image->width(),
+            'height' => $image->height()
+        ];
+
+        // Redimensionner si trop grande
+        if ($image->width() > 2000 || $image->height() > 2000) {
+            $image->resize(2000, 2000, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
+            $image->save($fullPath, 85);
+        }
+
+        // Créer le dossier thumbnails
+        $thumbDirectory = dirname($directory) . '/thumbnails';
+        if (!is_dir($thumbDirectory)) {
+            mkdir($thumbDirectory, 0755, true);
+        }
+
+        // Créer différentes tailles de miniatures
+        $thumbnails = [];
+        $sizes = [
+            'thumb' => [300, 300],
+            'medium' => [800, 600],
+            'small' => [150, 150]
+        ];
+
+        foreach ($sizes as $sizeName => $dimensions) {
+            $thumbFilename = $sizeName . '_' . $filename;
+            $thumbPath = $thumbDirectory . '/' . $thumbFilename;
+
+            $thumbImage = clone $image;
+            $thumbImage->resize($dimensions[0], $dimensions[1], function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })->save($thumbPath, 75);
+
+            $relativePath = str_replace($this->uploadsPath, '', $thumbPath);
+            $thumbnails[$sizeName] = $relativePath;
+        }
+
+        $metadata['thumbnails'] = $thumbnails;
+
+        return $metadata;
+    }
+
+    /**
+     * Traite une image avec GD (fallback)
+     */
+    private function processImageWithGD(string $fullPath, string $directory, string $filename): array
+    {
+        $imageInfo = getimagesize($fullPath);
+        if (!$imageInfo) {
+            return [];
+        }
+
+        $metadata = [
+            'width' => $imageInfo[0],
+            'height' => $imageInfo[1]
+        ];
+
+        // Créer une miniature simple avec GD
+        $thumbDirectory = dirname($directory) . '/thumbnails';
+        if (!is_dir($thumbDirectory)) {
+            mkdir($thumbDirectory, 0755, true);
+        }
+
+        $thumbPath = $thumbDirectory . '/thumb_' . $filename;
+        if ($this->createThumbnailWithGD($fullPath, $thumbPath, 300, 300)) {
+            $relativePath = str_replace($this->uploadsPath, '', $thumbPath);
+            $metadata['thumbnails'] = ['thumb' => $relativePath];
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * Crée une miniature avec GD
+     */
+    private function createThumbnailWithGD(string $source, string $destination, int $maxWidth, int $maxHeight): bool
+    {
+        $imageInfo = getimagesize($source);
+        if (!$imageInfo) return false;
+
+        $sourceWidth = $imageInfo[0];
+        $sourceHeight = $imageInfo[1];
+        $sourceType = $imageInfo[2];
+
+        // Calculer les nouvelles dimensions
+        $ratio = min($maxWidth / $sourceWidth, $maxHeight / $sourceHeight);
+        $newWidth = (int)($sourceWidth * $ratio);
+        $newHeight = (int)($sourceHeight * $ratio);
+
+        // Créer les ressources d'image
+        switch ($sourceType) {
+            case IMAGETYPE_JPEG:
+                $sourceImage = imagecreatefromjpeg($source);
+                break;
+            case IMAGETYPE_PNG:
+                $sourceImage = imagecreatefrompng($source);
+                break;
+            case IMAGETYPE_GIF:
+                $sourceImage = imagecreatefromgif($source);
+                break;
+            default:
+                return false;
+        }
+
+        if (!$sourceImage) return false;
+
+        $thumbnail = imagecreatetruecolor($newWidth, $newHeight);
+
+        // Conserver la transparence pour PNG et GIF
+        if ($sourceType == IMAGETYPE_PNG || $sourceType == IMAGETYPE_GIF) {
+            imagealphablending($thumbnail, false);
+            imagesavealpha($thumbnail, true);
+            $transparent = imagecolorallocatealpha($thumbnail, 255, 255, 255, 127);
+            imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+
+        // Redimensionner
+        imagecopyresampled($thumbnail, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $sourceWidth, $sourceHeight);
+
+        // Sauvegarder
+        $success = false;
+        switch ($sourceType) {
+            case IMAGETYPE_JPEG:
+                $success = imagejpeg($thumbnail, $destination, 75);
+                break;
+            case IMAGETYPE_PNG:
+                $success = imagepng($thumbnail, $destination, 7);
+                break;
+            case IMAGETYPE_GIF:
+                $success = imagegif($thumbnail, $destination);
+                break;
+        }
+
+        imagedestroy($sourceImage);
+        imagedestroy($thumbnail);
+
+        return $success;
+    }
+
+    /**
+     * Traite une vidéo
+     */
+    private function processVideo(string $fullPath): array
+    {
+        $metadata = [];
+
+        // Informations de base sur le fichier
+        $metadata['file_size'] = filesize($fullPath);
+
+        // TODO: Utiliser FFmpeg si disponible pour extraire des métadonnées détaillées
+        // Pour l'instant, on retourne les informations de base
+
+        return $metadata;
+    }
+
+    /**
+     * Traite un PDF
+     */
+    private function processPdf(string $fullPath): array
+    {
+        $metadata = [];
+
+        $metadata['file_size'] = filesize($fullPath);
+
+        // TODO: Utiliser une bibliothèque PDF pour extraire le nombre de pages, etc.
+
+        return $metadata;
+    }
+
+    /**
+     * Détermine le type de média
+     */
+    private function determineMediaType(string $mimeType): string
+    {
+        if (strpos($mimeType, 'image/') === 0) {
+            return 'image';
+        } elseif (strpos($mimeType, 'video/') === 0) {
+            return 'video';
+        } elseif (strpos($mimeType, 'application/pdf') === 0) {
+            return 'pdf';
+        }
+
+        return 'other';
+    }
+
+    /**
+     * Nettoie les fichiers en cas d'erreur
+     */
+    private function cleanupFiles(string $mainFile, array $metadata): void
+    {
+        if (file_exists($mainFile)) {
+            unlink($mainFile);
+        }
+
+        if (isset($metadata['thumbnails'])) {
+            foreach ($metadata['thumbnails'] as $thumbPath) {
+                $fullThumbPath = $this->uploadsPath . $thumbPath;
+                if (file_exists($fullThumbPath)) {
+                    unlink($fullThumbPath);
+                }
+            }
+        }
+    }
+
+    /**
+     * Obtient le message d'erreur d'upload
+     */
+    private function getUploadErrorMessage(int $errorCode): string
+    {
+        $errorMessages = [
+            UPLOAD_ERR_INI_SIZE => "Le fichier dépasse la taille maximale autorisée par PHP",
+            UPLOAD_ERR_FORM_SIZE => "Le fichier dépasse la taille maximale autorisée par le formulaire",
+            UPLOAD_ERR_PARTIAL => "Le fichier n'a été que partiellement téléchargé",
+            UPLOAD_ERR_NO_FILE => "Aucun fichier n'a été téléchargé",
+            UPLOAD_ERR_NO_TMP_DIR => "Dossier temporaire manquant",
+            UPLOAD_ERR_CANT_WRITE => "Échec d'écriture du fichier sur le disque",
+            UPLOAD_ERR_EXTENSION => "Une extension PHP a arrêté le téléchargement du fichier"
+        ];
+
+        return $errorMessages[$errorCode] ?? "Erreur inconnue lors du téléchargement";
     }
 
     /**
@@ -241,7 +580,7 @@ class MediaService
         string $relationshipType = 'gallery',
         int $sortOrder = 0
     ): bool {
-        // Check if association already exists
+        // Vérifier si l'association existe déjà
         $existing = $this->db->fetchOne(
             "SELECT id FROM climbing_media_relationships 
              WHERE media_id = ? AND entity_type = ? AND entity_id = ? AND relationship_type = ?",
@@ -257,7 +596,7 @@ class MediaService
             ) > 0;
         }
 
-        // If it's a 'main' relationship, we need to update any existing main relationships for this entity
+        // Si c'est une relation 'main', mettre à jour les relations main existantes pour cette entité
         if ($relationshipType === 'main') {
             $this->db->update(
                 'climbing_media_relationships',
@@ -267,7 +606,7 @@ class MediaService
             );
         }
 
-        // Create new association
+        // Créer la nouvelle association
         $data = [
             'media_id' => $mediaId,
             'entity_type' => $entityType,
@@ -288,20 +627,20 @@ class MediaService
      */
     public function deleteMedia(int $mediaId): bool
     {
-        // First get the media data
+        // Récupérer les données du média
         $media = $this->getMediaById($mediaId);
 
         if (!$media) {
             return false;
         }
 
-        // Delete the file
+        // Supprimer le fichier principal
         $filePath = $this->uploadsPath . $media['file_path'];
         if (file_exists($filePath)) {
             unlink($filePath);
         }
 
-        // Delete thumbnails if they exist
+        // Supprimer les miniatures
         $metadata = json_decode($media['metadata'] ?? '{}', true);
         if (isset($metadata['thumbnails'])) {
             foreach ($metadata['thumbnails'] as $thumbPath) {
@@ -312,10 +651,10 @@ class MediaService
             }
         }
 
-        // Delete relationships
+        // Supprimer les relations
         $this->db->delete('climbing_media_relationships', "media_id = ?", [$mediaId]);
 
-        // Delete the media record
+        // Supprimer l'enregistrement du média
         return $this->db->delete('climbing_media', "id = ?", [$mediaId]) > 0;
     }
 
@@ -330,11 +669,11 @@ class MediaService
     public function getMediaForEntity(string $entityType, int $entityId, ?string $relationshipType = null): array
     {
         $sql = "
-        SELECT m.*, mr.relationship_type, mr.sort_order
-        FROM climbing_media m
-        JOIN climbing_media_relationships mr ON m.id = mr.media_id
-        WHERE mr.entity_type = ? AND mr.entity_id = ?
-    ";
+            SELECT m.*, mr.relationship_type, mr.sort_order
+            FROM climbing_media m
+            JOIN climbing_media_relationships mr ON m.id = mr.media_id
+            WHERE mr.entity_type = ? AND mr.entity_id = ?
+        ";
 
         $params = [$entityType, $entityId];
 
@@ -347,7 +686,7 @@ class MediaService
 
         $medias = $this->db->fetchAll($sql, $params);
 
-        // Ajouter URLs complètes et métadonnées traitées
+        // Améliorer les données des médias
         foreach ($medias as &$media) {
             $this->enhanceMediaData($media);
         }
@@ -417,8 +756,9 @@ class MediaService
             $filePath = '/' . $filePath;
         }
 
-        // Construire l'URL complète
-        return rtrim(BASE_URL, '/') . $filePath;
+        // Construire l'URL complète - utiliser une URL de base si définie
+        $baseUrl = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+        return $baseUrl . $filePath;
     }
 
     /**
@@ -445,95 +785,37 @@ class MediaService
             'pdf' => 'application/pdf',
             'mp4' => 'video/mp4',
             'webm' => 'video/webm',
+            'avi' => 'video/x-msvideo',
+            'mov' => 'video/quicktime'
         ];
 
         return $mimeTypes[$extension] ?? 'application/octet-stream';
     }
 
     /**
-     * Génère les chemins pour un nouveau média
+     * Met à jour les informations d'un média
      *
-     * @param string $originalFilename Nom du fichier original
-     * @param string $mediaType Type de média
-     * @return array Tableau avec les chemins générés
+     * @param int $mediaId ID du média
+     * @param array $data Nouvelles données
+     * @return bool
      */
-    public function generateMediaPaths(string $originalFilename, string $mediaType = 'image'): array
+    public function updateMedia(int $mediaId, array $data): bool
     {
-        $extension = pathinfo($originalFilename, PATHINFO_EXTENSION);
-        $filename = uniqid('media_') . '.' . $extension;
-        $year = date('Y');
-        $month = date('m');
-        $relativePath = "/media/$year/$month";
-        $filePath = $this->uploadsPath . $relativePath;
-
-        return [
-            'filename' => $filename,
-            'relative_path' => "$relativePath/$filename",
-            'full_path' => "$filePath/$filename",
-            'directory' => $filePath,
+        $allowedFields = [
+            'title',
+            'description',
+            'is_public',
+            'is_featured'
         ];
-    }
 
-    /**
-     * Retourne la liste de tous les médias, avec pagination
-     *
-     * @param int $page Page courante
-     * @param int $perPage Nombre d'éléments par page
-     * @param array $filters Filtres optionnels (media_type, entity_type, etc.)
-     * @return array
-     */
-    public function getAllMedia(int $page = 1, int $perPage = 20, array $filters = []): array
-    {
-        $offset = ($page - 1) * $perPage;
-        $whereClause = "1=1";
-        $params = [];
-
-        // Appliquer les filtres
-        if (!empty($filters['media_type'])) {
-            $whereClause .= " AND media_type = ?";
-            $params[] = $filters['media_type'];
+        $updateData = array_intersect_key($data, array_flip($allowedFields));
+        if (empty($updateData)) {
+            return false;
         }
 
-        if (!empty($filters['entity_type']) && !empty($filters['entity_id'])) {
-            $whereClause .= " AND id IN (
-            SELECT media_id FROM climbing_media_relationships 
-            WHERE entity_type = ? AND entity_id = ?
-        )";
-            $params[] = $filters['entity_type'];
-            $params[] = $filters['entity_id'];
-        }
+        $updateData['updated_at'] = date('Y-m-d H:i:s');
 
-        if (!empty($filters['search'])) {
-            $search = '%' . $filters['search'] . '%';
-            $whereClause .= " AND (title LIKE ? OR description LIKE ? OR filename LIKE ?)";
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
-        }
-
-        // Requête principale
-        $sql = "SELECT * FROM climbing_media WHERE $whereClause ORDER BY created_at DESC LIMIT ? OFFSET ?";
-        $params[] = $perPage;
-        $params[] = $offset;
-
-        $medias = $this->db->fetchAll($sql, $params);
-
-        // Compter le total
-        $countSql = "SELECT COUNT(*) FROM climbing_media WHERE $whereClause";
-        $total = (int)$this->db->fetchColumn($countSql, array_slice($params, 0, -2));
-
-        // Enrichir les données
-        foreach ($medias as &$media) {
-            $this->enhanceMediaData($media);
-        }
-
-        return [
-            'data' => $medias,
-            'total' => $total,
-            'page' => $page,
-            'per_page' => $perPage,
-            'last_page' => ceil($total / $perPage)
-        ];
+        return $this->db->update('climbing_media', $updateData, "id = ?", [$mediaId]) > 0;
     }
 
     /**
@@ -569,28 +851,102 @@ class MediaService
     }
 
     /**
-     * Met à jour les informations d'un média
+     * Retourne la liste de tous les médias, avec pagination
      *
-     * @param int $mediaId ID du média
-     * @param array $data Nouvelles données
-     * @return bool
+     * @param int $page Page courante
+     * @param int $perPage Nombre d'éléments par page
+     * @param array $filters Filtres optionnels (media_type, entity_type, etc.)
+     * @return array
      */
-    public function updateMedia(int $mediaId, array $data): bool
+    public function getAllMedia(int $page = 1, int $perPage = 20, array $filters = []): array
     {
-        $allowedFields = [
-            'title',
-            'description',
-            'is_public',
-            'is_featured'
-        ];
+        $offset = ($page - 1) * $perPage;
+        $whereClause = "1=1";
+        $params = [];
 
-        $updateData = array_intersect_key($data, array_flip($allowedFields));
-        if (empty($updateData)) {
-            return false;
+        // Appliquer les filtres
+        if (!empty($filters['media_type'])) {
+            $whereClause .= " AND media_type = ?";
+            $params[] = $filters['media_type'];
         }
 
-        $updateData['updated_at'] = date('Y-m-d H:i:s');
+        if (!empty($filters['entity_type']) && !empty($filters['entity_id'])) {
+            $whereClause .= " AND id IN (
+                SELECT media_id FROM climbing_media_relationships 
+                WHERE entity_type = ? AND entity_id = ?
+            )";
+            $params[] = $filters['entity_type'];
+            $params[] = $filters['entity_id'];
+        }
 
-        return $this->db->update('climbing_media', $updateData, "id = ?", [$mediaId]) > 0;
+        if (!empty($filters['search'])) {
+            $search = '%' . $filters['search'] . '%';
+            $whereClause .= " AND (title LIKE ? OR description LIKE ? OR filename LIKE ?)";
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+        }
+
+        // Requête principale
+        $sql = "SELECT * FROM climbing_media WHERE $whereClause ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        $params[] = $perPage;
+        $params[] = $offset;
+
+        $medias = $this->db->fetchAll($sql, $params);
+
+        // Compter le total
+        $countSql = "SELECT COUNT(*) as count FROM climbing_media WHERE $whereClause";
+        $countResult = $this->db->fetchOne($countSql, array_slice($params, 0, -2));
+        $total = (int)($countResult['count'] ?? 0);
+
+        // Enrichir les données
+        foreach ($medias as &$media) {
+            $this->enhanceMediaData($media);
+        }
+
+        return [
+            'data' => $medias,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => ceil($total / $perPage)
+        ];
+    }
+
+    /**
+     * Vérifie si un fichier est une image
+     */
+    private function isImage(string $filePath): bool
+    {
+        $imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $mimeType = $this->detectMimeType($filePath);
+        return in_array($mimeType, $imageTypes);
+    }
+
+    /**
+     * Obtient les statistiques d'utilisation des médias
+     */
+    public function getMediaStats(): array
+    {
+        $stats = [];
+
+        // Nombre total de médias
+        $totalResult = $this->db->fetchOne("SELECT COUNT(*) as count FROM climbing_media");
+        $stats['total_media'] = (int)($totalResult['count'] ?? 0);
+
+        // Répartition par type
+        $typeStats = $this->db->fetchAll("
+            SELECT media_type, COUNT(*) as count 
+            FROM climbing_media 
+            GROUP BY media_type 
+            ORDER BY count DESC
+        ");
+        $stats['by_type'] = $typeStats;
+
+        // Taille totale des fichiers
+        $sizeResult = $this->db->fetchOne("SELECT SUM(file_size) as total_size FROM climbing_media");
+        $stats['total_size'] = (int)($sizeResult['total_size'] ?? 0);
+
+        return $stats;
     }
 }
