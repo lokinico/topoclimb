@@ -617,6 +617,13 @@ class Auth
      */
     private function checkSession(): void
     {
+        // DEBUG TEMPORAIRE
+        if ($userId = ($_SESSION['auth_user_id'] ?? $this->session->get('auth_user_id'))) {
+            $query = "SELECT id, username, autorisation FROM users WHERE id = ? LIMIT 1";
+            $result = $this->db->query($query, [$userId])->fetch();
+            error_log("DEBUG Auth::checkSession - Données utilisateur brutes: " . json_encode($result));
+        }
+
         // Vérifier directement dans $_SESSION pour plus de fiabilité
         $sessionUserId = $_SESSION['auth_user_id'] ?? null;
         $userId = $sessionUserId !== null ? $sessionUserId : $this->session->get('auth_user_id');
