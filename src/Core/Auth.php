@@ -500,6 +500,12 @@ class Auth
      */
     public function can(string $ability, $model = null): bool
     {
+        error_log("DEBUG Auth::can appelée pour: $ability");
+
+        if (!$this->check()) {
+            error_log("DEBUG Auth::can - Utilisateur non authentifié");
+            return false;
+        }
         if (!$this->check()) {
             error_log("Auth::can - Utilisateur non authentifié pour: $ability");
             return false;
