@@ -6,6 +6,7 @@
     <title>{% block title %}TopoclimbCH{% endblock %}</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="icon" href="{{ asset('images/favicon.ico') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/css/lightgallery-bundle.min.css">
     <meta name="description" content="Plateforme suisse de sites d'escalade, topos et voies">
     {% block styles %}{% endblock %}
 </head>
@@ -54,4 +55,21 @@
     <script src="{{ asset('js/app.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
+{% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/lightgallery.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/thumbnail/lg-thumbnail.umd.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const galleryEl = document.getElementById('lightgallery');
+            if (galleryEl) {
+                lightGallery(galleryEl, {
+                    selector: '.thumbnail',
+                    thumbnail: true,
+                    download: false
+                });
+            }
+        });
+    </script>
+{% endblock %}
 </html>
