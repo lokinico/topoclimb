@@ -15,7 +15,7 @@
                         {% set fullImage = url('/uploads/' ~ item.file_path) %}
                         {% set thumbImage = url('/uploads/thumbnails/' ~ item.file_path) %}
                         <a href="{{ fullImage }}" class="thumbnail" data-lg-size="1406-1390">
-                            <img src="{{ thumbImage }}" alt="" loading="lazy">
+                            <img src="{{ thumbImage }}" alt="Image secteur {{ sector.name }}" loading="lazy">
                         </a>
                     {% endfor %}
                 </div>
@@ -23,3 +23,52 @@
         </div>
     {% endif %}
 </div>
+
+<h1>{{ sector.name }}</h1>
+
+{% if sector.description %}
+    <div class="description">
+        {{ sector.description|raw }}
+    </div>
+{% endif %}
+
+{% if sector.approach %}
+    <div class="approach">
+        <h2>Approche</h2>
+        <p>{{ sector.approach }}</p>
+    </div>
+{% endif %}
+
+{% if sector.access %}
+    <div class="access">
+        <h2>Accès</h2>
+        <p>{{ sector.access }}</p>
+    </div>
+{% endif %}
+
+{% if sector.altitude %}
+    <div class="altitude">
+        <strong>Altitude :</strong> {{ sector.altitude }} m
+    </div>
+{% endif %}
+
+{% if sector.orientation %}
+    <div class="orientation">
+        <strong>Orientation :</strong> {{ sector.orientation }}
+    </div>
+{% endif %}
+
+{% if sector.coordinates_lat is defined and sector.coordinates_lng is defined %}
+    <div id="map" style="height: 400px; margin-top: 20px;"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var map = L.map('map').setView([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            L.marker([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}]).addTo(map)
+                .bindPopup('{{ sector.name }}')
+                .openPopup();
+        });
+    </script>
+{% endif %}
