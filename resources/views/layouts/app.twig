@@ -12,13 +12,12 @@
 </head>
 <body>
     <header>
-    {% include 'partials/navigation.twig' %}
+        {% include 'partials/navigation.twig' %}
     </header>
 
     <main>
         <div class="container py-4">
             {% include 'partials/flash.twig' %}
-            
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -53,21 +52,21 @@
     </footer>
 
     <script src="{{ asset('js/app.js') }}"></script>
-    {% block scripts %}<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/lightgallery.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/thumbnail/lg-thumbnail.umd.min.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const galleryEl = document.getElementById('lightgallery');
-        if (galleryEl) {
-            lightGallery(galleryEl, {
-                selector: '.thumbnail',
-                thumbnail: true,
-                download: false
+    {% block scripts %}
+        <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/lightgallery.umd.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/thumbnail/lg-thumbnail.umd.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const galleryEl = document.getElementById('lightgallery');
+                if (galleryEl) {
+                    lightGallery(galleryEl, {
+                        selector: '.thumbnail',
+                        thumbnail: true,
+                        download: false
+                    });
+                }
             });
-        }
-    });
-</script>
-{% endblock %}
+        </script>
+    {% endblock %}
 </body>
 </html>
