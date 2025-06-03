@@ -124,10 +124,6 @@ return [
         'path' => '/sectors/create',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'store',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
     ],
     [
         'method' => 'GET',
@@ -141,31 +137,18 @@ return [
         'path' => '/sectors/{id}/edit',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'update',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
     ],
     [
         'method' => 'GET',
         'path' => '/sectors/{id}/delete',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\ModeratorMiddleware::class
-        ]
     ],
     [
         'method' => 'POST',
         'path' => '/sectors/{id}/delete',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\ModeratorMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
     ],
 
     // Routes pour les voies
@@ -193,10 +176,6 @@ return [
         'path' => '/routes/create',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'store',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
     ],
     [
         'method' => 'GET',
@@ -210,230 +189,35 @@ return [
         'path' => '/routes/{id}/edit',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'update',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
     ],
     [
         'method' => 'GET',
         'path' => '/routes/{id}/delete',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\ModeratorMiddleware::class
-        ]
     ],
     [
         'method' => 'POST',
         'path' => '/routes/{id}/delete',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\ModeratorMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
     ],
 
-    // AJOUT: Routes manquantes pour RouteController
+    // Routes pour log ascent (ascension)
     [
         'method' => 'GET',
         'path' => '/routes/{id}/log-ascent',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'logAscent',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class
-        ]
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
     [
         'method' => 'POST',
         'path' => '/routes/{id}/log-ascent',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'recordAscent',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/routes/{id}/comments',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'comments',
-        'middlewares' => []
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/routes/{id}/comments',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'storeComment',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
-    ],
-
-    // Routes pour les ascensions des utilisateurs (protégées)
-    [
-        'method' => 'GET',
-        'path' => '/mes-voies',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'myRoutes',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/ascent/add/{route_id}',
-        'controller' => \TopoclimbCH\Controllers\AscentController::class,
-        'action' => 'create',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/ascent/add',
-        'controller' => \TopoclimbCH\Controllers\AscentController::class,
-        'action' => 'store',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
-    ],
-
-    // Routes d'administration (protégées par middleware admin)
-    [
-        'method' => 'GET',
-        'path' => '/admin',
-        'controller' => \TopoclimbCH\Controllers\AdminController::class,
-        'action' => 'index',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\AdminMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/admin/users',
-        'controller' => \TopoclimbCH\Controllers\AdminController::class,
-        'action' => 'users',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\AdminMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/admin/sectors',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'adminIndex',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\AdminMiddleware::class
-        ]
-    ],
-    // Ajouter ces routes dans le fichier config/routes.php
-
-    // Route pour les paramètres utilisateur
-    [
-        'method' => 'GET',
-        'path' => '/settings',
-        'controller' => \TopoclimbCH\Controllers\UserController::class,
-        'action' => 'settings',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/settings/profile',
-        'controller' => \TopoclimbCH\Controllers\UserController::class,
-        'action' => 'updateProfile',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/settings/password',
-        'controller' => \TopoclimbCH\Controllers\UserController::class,
-        'action' => 'updatePassword',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/settings/privacy',
-        'controller' => \TopoclimbCH\Controllers\UserController::class,
-        'action' => 'updatePrivacy',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
-    ],
-
-    // Routes pour les ascensions
-    [
-        'method' => 'GET',
-        'path' => '/ascents',
-        'controller' => \TopoclimbCH\Controllers\AscentController::class,
-        'action' => 'index',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/ascents/create',
-        'controller' => \TopoclimbCH\Controllers\AscentController::class,
-        'action' => 'create',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/ascents/{id}/edit',
-        'controller' => \TopoclimbCH\Controllers\AscentController::class,
-        'action' => 'edit',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/ascents/{id}/edit',
-        'controller' => \TopoclimbCH\Controllers\AscentController::class,
-        'action' => 'update',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/ascents/{id}/delete',
-        'controller' => \TopoclimbCH\Controllers\AscentController::class,
-        'action' => 'delete',
+        'action' => 'storeAscent',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
 
-
-    [
-        'method' => 'GET',
-        'path' => '/media/{id}',
-        'controller' => \TopoclimbCH\Controllers\MediaController::class,
-        'action' => 'show',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/media/{id}/update',
-        'controller' => \TopoclimbCH\Controllers\MediaController::class,
-        'action' => 'update',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
-        'path' => '/media/{id}/delete',
-        'controller' => \TopoclimbCH\Controllers\MediaController::class,
-        'action' => 'delete',
-        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
-    ],
-
+    // Ajoutez ici d'autres routes nécessaires (ascents, commentaires, etc.)
 ];
