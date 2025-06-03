@@ -27,38 +27,23 @@
         <div class="sector-header" style="border-color: {{ sector.color }}">
             {% if media|length > 0 %}
                 <div class="sector-gallery">
-                    <div class="main-image">
-                        {% set mainImage = false %}
-                        {% set displayedImage = false %}
-                        
-                        {# Essayer d'abord de trouver une image featured #}
-                        {% for item in media %}
-                            {% if item.is_featured and not displayedImage %}
-                                {% set mainImage = url('/uploads/' ~ item.file_path) %}
-                                {% set displayedImage = true %}
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {# Si aucune image featured n'a été trouvée, utiliser la première #}
-                        {% if not displayedImage and media|length > 0 %}
-                            {% set mainImage = url('/uploads/' ~ media[0].file_path) %}
-                        {% endif %}
-                        
-                        {% if mainImage %}
-                            <img src="{{ mainImage }}" alt="{{ sector.name }}">
-                        {% endif %}
+                {% if mainImage %}
+                    <div class="main-image-container">
+                        <img src="{{ mainImage }}" alt="{{ sector.name }}" class="main-image">
                     </div>
-                    
-                    {% if media|length > 1 %}
-                        <div class="thumbnails">
-                            {% for item in media %}
-                                <a href="{{ url('/uploads/' ~ item.file_path) }}" class="thumbnail">
-                                    <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="">
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+                {% endif %}
+                
+                {% if media|length > 1 %}
+                    <div class="thumbnail-gallery">
+                        {% for item in media %}
+                            <a href="{{ url('/uploads/' ~ item.file_path) }}" class="thumbnail" target="_blank">
+                                <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="" loading="lazy">
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
             {% endif %}
             
             <div class="sector-info">
