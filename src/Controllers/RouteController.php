@@ -84,15 +84,6 @@ class RouteController extends BaseController
             'ASC'
         );
 
-        // DEBUG: Log the raw attributes of the first route (if any)
-        $items = $paginatedRoutes->getItems();
-        if (!empty($items) && isset($items[0])) {
-            error_log('First route raw attributes: ' . print_r($items[0], true));
-            if (method_exists($items[0], 'toArray')) {
-                error_log('First route toArray: ' . print_r($items[0]->toArray(), true));
-            }
-        }
-
         // Récupérer les données pour les filtres
         $sectors = \TopoclimbCH\Models\Sector::active();
         $diffSystems = \TopoclimbCH\Models\DifficultySystem::getActiveSystems();
