@@ -1,19 +1,69 @@
-{# resources/views/components/pagination.twig #}
-{% macro render(paginator) %}
+{# Macro pour afficher la pagination #}
+{% macro render(paginator, options = {}) %}
+    {% set showInfo = options.showInfo|default(true) %}
+    {% set size = options.size|default('') %}
+    {% set align = options.align|default('center') %}
+    
     {% if paginator.hasPages() %}
-        <nav aria-label="Pagination">
-            <ul class="pagination">
-                {% for link in paginator.getLinks() %}
-                    <li class="page-item {{ link.active ? 'active' : '' }} {{ link.disabled ? 'disabled' : '' }}">
-                        <a class="page-link" href="{{ link.url }}" {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }}>
-                            {{ link.label|raw }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
+        <nav aria-label="Navigation par pagination" class="mt-4">
+            <div class="d-flex justify-content-{{ align }} align-items-center flex-wrap gap-3">
+                {# Informations de pagination #}
+                {% if showInfo and paginator.getTotal() > 0 %}
+                    <div class="text-muted small">
+                        Affichage de <strong>{{ paginator.getInfo().from }}</strong> 
+                        à <strong>{{ paginator.getInfo().to }}</strong> 
+                        sur <strong>{{ paginator.getTotal() }}</strong> résultats
+                    </div>
+                {% endif %}
+                
+                {# Liens de pagination #}
+                <ul class="pagination {{ size ? 'pagination-' ~ size : '' }} mb-0">
+                    {% for link in paginator.getLinks() %}
+                        {% if link.label == '&laquo;' %}
+                            <li class="page-item {{ link.disabled ? 'disabled' : '' }}">
+                                <a class="page-link" href="{{ link.url }}" {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }} aria-label="Page précédente">
+                                    <i class="fas fa-chevron-left"></i>
+                                    <span class="d-none d-sm-inline ms-1">Précédent</span>
+                                </a>
+                            </li>
+                        {% elseif link.label == '&raquo;' %}
+                            <li class="page-item {{ link.disabled ? 'disabled' : '' }}">
+                                <a class="page-link" href="{{ link.url }}" {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }} aria-label="Page suivante">
+                                    <span class="d-none d-sm-inline me-1">Suivant</span>
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% elseif link.label == '...' %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item {{ link.active ? 'active' : '' }}">
+                                {% if link.active %}
+                                    <span class="page-link" aria-current="page">{{ link.label }}</span>
+                                {% else %}
+                                    <a class="page-link" href="{{ link.url }}">{{ link.label }}</a>
+                                {% endif %}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
         </nav>
-        <p class="text-muted">
-            Affichage de {{ paginator.getInfo().from }} à {{ paginator.getInfo().to }} sur {{ paginator.getTotal() }} résultats
-        </p>
     {% endif %}
+{% endmacro %}
+
+{# Macro pour sélecteur de nombre d'éléments par page #}
+{% macro perPageSelector(currentPerPage, currentUrl, options = [15, 30, 50, 100]) %}
+    <div class="d-flex align-items-center gap-2">
+        <label for="perPageSelect" class="form-label mb-0 text-nowrap">Afficher :</label>
+        <select id="perPageSelect" class="form-select form-select-sm" style="width: auto;" onchange="window.location.href=this.value">
+            {% for option in options %}
+                <option value="{{ currentUrl }}?{{ app.request.query|merge({'per_page': option})|url_encode }}" 
+                        {% if currentPerPage == option %}selected{% endif %}>
+                    {{ option }} par page
+                </option>
+            {% endfor %}
+        </select>
+    </div>
 {% endmacro %}

@@ -1,11 +1,26 @@
 {% set messages = flash() %}
 {% if messages %}
-    <div class="flash-messages">
+    <div class="flash-messages mb-4">
         {% for type, typeMessages in messages %}
+            {% set alertClass = 'alert-info' %}
+            {% set icon = 'info-circle' %}
+            
+            {% if type == 'success' %}
+                {% set alertClass = 'alert-success' %}
+                {% set icon = 'check-circle' %}
+            {% elseif type == 'error' or type == 'danger' %}
+                {% set alertClass = 'alert-danger' %}
+                {% set icon = 'exclamation-circle' %}
+            {% elseif type == 'warning' %}
+                {% set alertClass = 'alert-warning' %}
+                {% set icon = 'exclamation-triangle' %}
+            {% endif %}
+            
             {% for message in typeMessages %}
-                <div class="alert alert-{{ type }} alert-dismissible fade show">
+                <div class="alert {{ alertClass }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{{ icon }} me-2"></i>
                     {{ message }}
-                    <button type="button" class="close" aria-label="Fermer">&times;</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
                 </div>
             {% endfor %}
         {% endfor %}
@@ -13,22 +28,17 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Auto-dismiss alerts after 5 seconds
+        // Auto-dismiss après 5 secondes
         setTimeout(function() {
-            document.querySelectorAll('.alert').forEach(function(alert) {
-                alert.style.display = 'none';
+            const alerts = document.querySelectorAll('.flash-messages .alert');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
             });
         }, 5000);
-
-        // Add click handler for dismiss buttons
-        document.querySelectorAll('.alert .close').forEach(function(button) {
-            button.addEventListener('click', function() {
-                this.parentElement.style.display = 'none';
-            });
-        });
     });
     </script>
     
-    {# Effacer les messages après les avoir affichés #}
+    {# Effacer les messages après affichage #}
     {{ clear_flash() }}
 {% endif %}
