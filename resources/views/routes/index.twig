@@ -63,8 +63,12 @@
                                     <td>{{ route.beautyStars|raw }}</td>
                                     <td>{{ route.lengthFormatted }}</td>
                                     <td>
-                                        <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-sm btn-primary">Voir</a>
-                                        <a href="{{ url('/routes/' ~ route.id ~ '/edit') }}" class="btn btn-sm btn-secondary">Modifier</a>
+                                        {% if route.id and route.id > 0 %}
+                                            <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-sm btn-primary">Voir</a>
+                                            <a href="{{ url('/routes/' ~ route.id ~ '/edit') }}" class="btn btn-sm btn-secondary">Modifier</a>
+                                        {% else %}
+                                            <span class="text-muted">ID invalide</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
