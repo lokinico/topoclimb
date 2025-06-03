@@ -172,7 +172,12 @@ class AuthController extends BaseController
     // Dans AuthController.php
     public function logout(): void
     {
-        // Nettoyer la session
+        // IMPORTANT: Utiliser la méthode logout() de Auth qui gère tout correctement
+        if ($this->auth) {
+            $this->auth->logout();
+        }
+
+        // Nettoyer complètement la session
         $_SESSION = [];
 
         // Supprimer le cookie de session
@@ -188,6 +193,9 @@ class AuthController extends BaseController
                 $params["httponly"]
             );
         }
+
+        // CRUCIAL: Supprimer aussi le cookie remember_token
+        setcookie('remember_token', '', time() - 3600, '/', '', true, true);
 
         // Détruire la session
         session_destroy();
