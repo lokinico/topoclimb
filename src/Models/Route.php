@@ -16,6 +16,7 @@ class Route extends Model
      * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
+        'id', // Ajouté pour corriger l'absence de l'ID dans les attributs
         'sector_id', 'name', 'number', 'difficulty', 'difficulty_system_id',
         'beauty', 'style', 'length', 'equipment', 'rappel', 'comment', 
         'legacy_topo_item', 'active'
