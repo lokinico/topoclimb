@@ -27,26 +27,20 @@
         <div class="sector-header" style="border-color: {{ sector.color }}">
             {% if media|length > 0 %}
                 <div class="sector-gallery">
-                    {% if mainImage %}
-                        <div class="main-image-container">
-                            <a href="{{ mainImage }}" class="thumbnail">
-                                <img src="{{ mainImage }}" alt="{{ sector.name }}" class="main-image">
+                {% if mainImage %}
+                    <div class="main-image-container">
+                        <img src="{{ mainImage }}" alt="{{ sector.name }}" class="main-image">
+                    </div>
+                {% endif %}
+                
+                {% if media|length > 1 %}
+                    <div class="thumbnail-gallery">
+                        {% for item in media %}
+                            <a href="{{ url('/uploads/' ~ item.file_path) }}" class="thumbnail" target="_blank">
+                                <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="" loading="lazy">
                             </a>
-                        </div>
-                    {% endif %}
-
-                    {% if media|length > 1 %}
-                        <div id="lightgallery" class="thumbnail-gallery">
-                            {% for item in media %}
-                                {% set fullImage = url('/uploads/' ~ item.file_path) %}
-                                {% set thumbImage = url('/uploads/thumbnails/' ~ item.file_path) %}
-                                <a href="{{ fullImage }}" class="thumbnail" data-lg-size="1406-1390">
-                                    <img src="{{ thumbImage }}" alt="" loading="lazy">
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             </div>
 
