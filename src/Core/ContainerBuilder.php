@@ -13,6 +13,7 @@ use TopoclimbCH\Controllers\ErrorController;
 use TopoclimbCH\Controllers\SectorController;
 use TopoclimbCH\Controllers\RouteController;
 use TopoclimbCH\Controllers\AuthController;
+use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Router;
 
 class ContainerBuilder
@@ -99,6 +100,11 @@ class ContainerBuilder
             ->addArgument(new Reference('service_container'));
 
         $container->setAlias('router', Router::class)->setPublic(true);
+
+        // Enregistrer CsrfManager
+        $container->register(CsrfManager::class)
+            ->addArgument($container->get(Session::class)); // Injecte la session si nécessaire
+
     }
 
     /**
