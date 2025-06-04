@@ -16,7 +16,7 @@ class HomeController extends BaseController
      * @param View $view
      * @param Session $session
      */
-    public function __construct(View $view, Session $session)
+    public function __construct(View $view, Session $session, CsrfManager $csrfManager)
     {
         parent::__construct($view, $session, $csrfManager);
     }
