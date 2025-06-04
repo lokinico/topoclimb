@@ -1,17 +1,26 @@
 <?php
-// src/Core/Application.php
+// src/Core/Application.php - Application refactorisée
 
 namespace TopoclimbCH\Core;
 
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use TopoclimbCH\Core\Router;
+use TopoclimbCH\Core\Routing\RouteCache;
+use TopoclimbCH\Core\Routing\UrlGenerator;
+use TopoclimbCH\Middleware\MiddlewareRegistry;
 use TopoclimbCH\Exceptions\RouteNotFoundException;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use TopoclimbCH\Middleware\PreserveCsrfTokenMiddleware;
 
 class Application
 {
+    /**
+     * @var ContainerInterface
+     */
+    private ContainerInterface $container;
+
     /**
      * @var Router
      */
@@ -23,169 +32,704 @@ class Application
     private LoggerInterface $logger;
 
     /**
-     * @var Request
+     * @var MiddlewareRegistry
      */
-    private Request $request;
+    private MiddlewareRegistry $middlewareRegistry;
 
     /**
-     * @var ContainerInterface
+     * @var array
      */
-    private ContainerInterface $container;
+    private array $config;
 
     /**
-     * @var string
+     * @var bool
      */
-    private string $environment;
+    private bool $booted = false;
 
     /**
-     * Application constructor.
+     * Application constructor
      *
-     * @param Router $router
-     * @param LoggerInterface $logger
-     * @param ContainerInterface $container
-     * @param string $environment
+     * @param array $config
      */
-    public function __construct(
-        Router $router,
-        LoggerInterface $logger,
-        ContainerInterface $container,
-        string $environment = 'production'
-    ) {
-        $this->router = $router;
-        $this->logger = $logger;
-        $this->container = $container;
-        $this->environment = $environment;
-        $this->request = Request::createFromGlobals();
-    }
-    /**
-     * Handle the request and return a response.
-     *
-     * @return Response
-     */
-    public function handle(): Response
+    public function __construct(array $config = [])
     {
-        try {
-            // CORRECTION: Retirer le middleware CSRF global qui n'existe pas
-            // L'ancienne ligne causait l'erreur "PreserveCsrfTokenMiddleware does not exist"
-            return $this->router->dispatch($this->request);
+        $this->config = $config;
+        $this->container = $this->buildContainer();
+        $this->logger = $this->container->get(LoggerInterface::class);
+        $this->middlewareRegistry = $this->container->get(MiddlewareRegistry::class);
+        $this->router = $this->container->get(Router::class);
+    }
 
-            // ANCIEN CODE PROBLÉMATIQUE (commenté pour référence):
-            /*
-            // Pour toutes les autres routes, appliquer le middleware CSRF
-            $session = $this->container->get(Session::class);
-            $preserveCsrfMiddleware = new PreserveCsrfTokenMiddleware($session);
+    /**
+     * Bootstrap l'application
+     *
+     * @return void
+     */
+    public function bootstrap(): void
+    {
+        if ($this->booted) {
+            return;
+        }
 
-            return $preserveCsrfMiddleware->handle($this->request, function ($request) {
-                return $this->router->dispatch($request);
-            });
-            */
-        } catch (RouteNotFoundException $e) {
-            return $this->createNotFoundResponse($e);
-        } catch (\Throwable $e) {
-            return $this->createErrorResponse($e);
+        // Charger la configuration
+        $this->loadConfiguration();
+
+        // Enregistrer les services
+        $this->registerServices();
+
+        // Charger les routes
+        $this->loadRoutes();
+
+        // Enregistrer les middlewares globaux
+        $this->registerGlobalMiddlewares();
+
+        $this->booted = true;
+    }
+
+    /**
+     * Charger la configuration
+     *
+     * @return void
+     */
+    private function loadConfiguration(): void
+    {
+        // Charger les configurations depuis les fichiers
+        $configPaths = [
+            'app' => config_path('app.php'),
+            'database' => config_path('database.php'),
+            'routing' => config_path('routing.php'),
+            'middleware' => config_path('middleware.php'),
+        ];
+
+        foreach ($configPaths as $key => $path) {
+            if (file_exists($path)) {
+                $this->config[$key] = require $path;
+            }
         }
     }
 
     /**
-     * Run the application
-     * 
+     * Enregistrer les services dans le container
+     *
+     * @return void
+     */
+    private function registerServices(): void
+    {
+        // Les services sont déjà enregistrés via ContainerBuilder
+        // Ici on peut ajouter des configurations spécifiques
+    }
+
+    /**
+     * Charger les routes
+     *
+     * @return void
+     */
+    private function loadRoutes(): void
+    {
+        $routesPath = config_path('routes');
+        
+        if (is_dir($routesPath)) {
+            // Nouveau système : charger depuis le répertoire routes/
+            $this->router->loadRoutesFromDirectory($routesPath);
+        } else {
+            // Compatibilité ascendante : charger depuis le fichier unique
+            $routesFile = config_path('routes.php');
+            if (file_exists($routesFile)) {
+                $this->router->loadRoutes($routesFile);
+            }
+        }
+
+        // Optimiser le cache des routes en production
+        if ($this->isProduction() && $this->router->isEmpty()) {
+            $this->logger->warning('No routes loaded in production environment');
+        }
+    }
+
+    /**
+     * Enregistrer les middlewares globaux
+     *
+     * @return void
+     */
+    private function registerGlobalMiddlewares(): void
+    {
+        $globalMiddlewares = $this->config['middleware']['global'] ?? [];
+        
+        foreach ($globalMiddlewares as $middleware) {
+            // Les middlewares globaux peuvent être ajoutés ici si nécessaire
+            // Pour l'instant, ils sont gérés au niveau des routes
+        }
+    }
+
+    /**
+     * Construire le container DI
+     *
+     * @return ContainerInterface
+     */
+    private function buildContainer(): ContainerInterface
+    {
+        $builder = new ContainerBuilder();
+
+        // Enregistrer les services de base
+        $this->registerCoreServices($builder);
+
+        // Enregistrer les contrôleurs
+        $this->registerControllers($builder);
+
+        // Enregistrer les middlewares
+        $this->registerMiddlewares($builder);
+
+        // Compiler le container
+        $builder->compile();
+
+        return $builder;
+    }
+
+    /**
+     * Enregistrer les services de base
+     *
+     * @param ContainerBuilder $builder
+     * @return void
+     */
+    private function registerCoreServices(ContainerBuilder $builder): void
+    {
+        // Database
+        $builder->register(Database::class, Database::class)
+            ->setPublic(true);
+
+        // Session
+        $builder->register(Session::class, Session::class)
+            ->setPublic(true);
+
+        // View
+        $builder->register(View::class, View::class)
+            ->setPublic(true);
+
+        // Logger
+        $builder->register(LoggerInterface::class, \Monolog\Logger::class)
+            ->setArguments(['topoclimb'])
+            ->setPublic(true);
+
+        // Router avec configuration
+        $builder->register(Router::class, Router::class)
+            ->setArguments([
+                '$logger' => $builder->getDefinition(LoggerInterface::class),
+                '$container' => $builder,
+                '$config' => $this->config['routing'] ?? []
+            ])
+            ->setPublic(true);
+
+        // Route Cache
+        $builder->register(RouteCache::class, RouteCache::class)
+            ->setArguments([
+                '$cachePath' => $this->config['routing']['cache_path'] ?? sys_get_temp_dir() . '/routes.cache'
+            ])
+            ->setPublic(true);
+
+        // URL Generator
+        $builder->register(UrlGenerator::class, UrlGenerator::class)
+            ->setArguments([
+                '$router' => $builder->getDefinition(Router::class),
+                '$config' => $this->config['routing'] ?? []
+            ])
+            ->setPublic(true);
+
+        // Middleware Registry
+        $builder->register(MiddlewareRegistry::class, MiddlewareRegistry::class)
+            ->setArguments(['$container' => $builder])
+            ->setPublic(true);
+    }
+
+    /**
+     * Enregistrer les contrôleurs
+     *
+     * @param ContainerBuilder $builder
+     * @return void
+     */
+    private function registerControllers(ContainerBuilder $builder): void
+    {
+        $controllerNamespaces = [
+            'TopoclimbCH\\Controllers\\',
+            'TopoclimbCH\\Controllers\\Admin\\',
+            'TopoclimbCH\\Controllers\\Api\\V1\\',
+            'TopoclimbCH\\Controllers\\Api\\V2\\',
+        ];
+
+        foreach ($controllerNamespaces as $namespace) {
+            $this->autoRegisterClasses($builder, $namespace, 'src/Controllers/');
+        }
+    }
+
+    /**
+     * Enregistrer les middlewares
+     *
+     * @param ContainerBuilder $builder
+     * @return void
+     */
+    private function registerMiddlewares(ContainerBuilder $builder): void
+    {
+        $this->autoRegisterClasses($builder, 'TopoclimbCH\\Middleware\\', 'src/Middleware/');
+    }
+
+    /**
+     * Auto-enregistrer les classes d'un namespace
+     *
+     * @param ContainerBuilder $builder
+     * @param string $namespace
+     * @param string $directory
+     * @return void
+     */
+    private function autoRegisterClasses(ContainerBuilder $builder, string $namespace, string $directory): void
+    {
+        $path = base_path($directory);
+        
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->getExtension() === 'php') {
+                $relativePath = str_replace($path . '/', '', $file->getPathname());
+                $className = $namespace . str_replace(['/', '.php'], ['\\', ''], $relativePath);
+                
+                if (class_exists($className)) {
+                    $builder->register($className, $className)
+                        ->setAutowired(true)
+                        ->setPublic(true);
+                }
+            }
+        }
+    }
+
+    /**
+     * Gérer une requête HTTP
+     *
+     * @param Request $request
+     * @return Response
+     */
+    public function handle(Request $request): Response
+    {
+        try {
+            $this->bootstrap();
+            
+            return $this->router->dispatch($request);
+            
+        } catch (RouteNotFoundException $e) {
+            return $this->handleRouteNotFound($request, $e);
+        } catch (\Exception $e) {
+            return $this->handleException($request, $e);
+        }
+    }
+
+    /**
+     * Gérer les routes non trouvées
+     *
+     * @param Request $request
+     * @param RouteNotFoundException $e
+     * @return Response
+     */
+    private function handleRouteNotFound(Request $request, RouteNotFoundException $e): Response
+    {
+        $this->logger->warning('Route not found', [
+            'method' => $request->getMethod(),
+            'uri' => $request->getRequestUri(),
+            'message' => $e->getMessage()
+        ]);
+
+        if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
+            return new Response(
+                json_encode(['error' => 'Route not found']),
+                404,
+                ['Content-Type' => 'application/json']
+            );
+        }
+
+        // Essayer de charger un contrôleur d'erreur
+        try {
+            if ($this->container->has('TopoclimbCH\\Controllers\\ErrorController')) {
+                $errorController = $this->container->get('TopoclimbCH\\Controllers\\ErrorController');
+                return $errorController->notFound($request);
+            }
+        } catch (\Exception $controllerException) {
+            $this->logger->error('Error controller failed', [
+                'exception' => $controllerException->getMessage()
+            ]);
+        }
+
+        return new Response('Not Found', 404);
+    }
+
+    /**
+     * Gérer les exceptions
+     *
+     * @param Request $request
+     * @param \Exception $e
+     * @return Response
+     */
+    private function handleException(Request $request, \Exception $e): Response
+    {
+        $this->logger->error('Application exception', [
+            'exception' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'method' => $request->getMethod(),
+            'uri' => $request->getRequestUri()
+        ]);
+
+        if ($this->isDevelopment()) {
+            // En développement, afficher l'erreur complète
+            if (class_exists('Whoops\\Run')) {
+                $whoops = new \Whoops\Run();
+                $whoops->allowQuit(false);
+                $whoops->writeToOutput(false);
+                
+                if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
+                    $whoops->prependHandler(new \Whoops\Handler\JsonResponseHandler());
+                } else {
+                    $whoops->prependHandler(new \Whoops\Handler\PrettyPageHandler());
+                }
+                
+                return new Response($whoops->handleException($e), 500);
+            }
+        }
+
+        if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
+            return new Response(
+                json_encode(['error' => 'Internal Server Error']),
+                500,
+                ['Content-Type' => 'application/json']
+            );
+        }
+
+        return new Response('Internal Server Error', 500);
+    }
+
+    /**
+     * Exécuter l'application
+     *
      * @return void
      */
     public function run(): void
     {
-        error_log("Application::run() started");
-        $response = $this->handle();
-
-        error_log("Response object created: " . get_class($response));
-        error_log("Response status code: " . $response->getStatusCode());
-
-        // Toute réponse devrait être une instance de Symfony\Component\HttpFoundation\Response
-        if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
-            error_log("Sending response...");
-            $response->send();
-        } else {
-            error_log("WARNING: Unknown response type: " . get_class($response));
-            // Fallback - convertir en réponse
-            if (is_string($response)) {
-                (new Response($response))->send();
-            }
-        }
+        $request = Request::createFromGlobals();
+        $response = $this->handle($request);
+        $response->send();
     }
 
     /**
-     * Create a 404 response
+     * Obtenir le router
      *
-     * @param \Throwable $e
-     * @return Response
+     * @return Router
      */
-    private function createNotFoundResponse(\Throwable $e): Response
+    public function getRouter(): Router
     {
-        $this->logger->warning('Route not found', [
-            'uri' => $this->request->getUri(),
-            'message' => $e->getMessage()
-        ]);
-
-        try {
-            $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
-            return $controller->notFound($this->request);
-        } catch (\Throwable $e) {
-            // Fallback if error controller fails
-            $response = new Response('Page not found', 404);
-            $response->headers->set('Content-Type', 'text/html');
-            $response->setContent('<h1>404 - Page Not Found</h1><p>The requested page could not be found.</p>');
-            return $response;
-        }
+        return $this->router;
     }
 
     /**
-     * Create a 500 error response
+     * Obtenir le container
      *
-     * @param \Throwable $e
-     * @return Response
+     * @return ContainerInterface
      */
-    private function createErrorResponse(\Throwable $e): Response
+    public function getContainer(): ContainerInterface
     {
-        $this->logger->error('Application error', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
+        return $this->container;
+    }
 
-        try {
-            // Vérifier si le contrôleur existe avant de l'utiliser
-            if ($this->container->has(\TopoclimbCH\Controllers\ErrorController::class)) {
-                $controller = $this->container->get(\TopoclimbCH\Controllers\ErrorController::class);
-                return $controller->serverError($this->request, $e);
-            }
+    /**
+     * Obtenir l'URL generator
+     *
+     * @return UrlGenerator
+     */
+    public function getUrlGenerator(): UrlGenerator
+    {
+        return $this->container->get(UrlGenerator::class);
+    }
 
-            // Fallback si le contrôleur n'existe pas
-            $response = new Response('Internal Server Error', 500);
-            $response->headers->set('Content-Type', 'text/html');
-            $response->setContent('<h1>500 - Internal Server Error</h1>');
+    /**
+     * Vérifier si on est en environnement de développement
+     *
+     * @return bool
+     */
+    public function isDevelopment(): bool
+    {
+        return ($_ENV['APP_ENV'] ?? 'production') === 'development';
+    }
 
-            if ($this->environment === 'development') {
-                $response->setContent(
-                    $response->getContent() .
-                        '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>' .
-                        '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ' (line ' . $e->getLine() . ')</p>' .
-                        '<h2>Stack Trace</h2>' .
-                        '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>'
-                );
-            }
+    /**
+     * Vérifier si on est en environnement de production
+     *
+     * @return bool
+     */
+    public function isProduction(): bool
+    {
+        return ($_ENV['APP_ENV'] ?? 'production') === 'production';
+    }
 
-            return $response;
-        } catch (\Throwable $fallbackError) {
-            // Gestion d'erreur de dernier recours
-            $response = new Response('Internal Server Error', 500);
-            $response->headers->set('Content-Type', 'text/html');
-            $content = '<h1>500 - Internal Server Error</h1>';
+    /**
+     * Démarrer l'application (méthode statique pour compatibilité)
+     *
+     * @param array $config
+     * @return Application
+     */
+    public static function start(array $config = []): self
+    {
+        return new self($config);
+    }
+}
 
-            if ($this->environment === 'development') {
-                $content .= '<p>Original error: ' . htmlspecialchars($e->getMessage()) . '</p>';
-                $content .= '<p>Error handler failed: ' . htmlspecialchars($fallbackError->getMessage()) . '</p>';
-            }
+// config/routing.php - Configuration du routage
 
-            $response->setContent($content);
-            return $response;
-        }
+<?php
+
+return [
+    // Cache des routes
+    'cache_enabled' => $_ENV['APP_ENV'] === 'production',
+    'cache_path' => storage_path('framework/routes.cache'),
+    
+    // URL de base
+    'base_url' => $_ENV['APP_URL'] ?? 'http://localhost',
+    'force_https' => $_ENV['APP_ENV'] === 'production',
+    'default_domain' => $_ENV['APP_DOMAIN'] ?? 'localhost',
+    
+    // API
+    'api_version' => 'v1',
+    'api_rate_limit' => [
+        'enabled' => true,
+        'requests_per_minute' => 60,
+        'requests_per_hour' => 1000
+    ],
+    
+    // Domaines supportés
+    'supported_domains' => [
+        'topoclimb.ch',
+        'api.topoclimb.ch',
+        'admin.topoclimb.ch',
+        'www.topoclimb.ch'
+    ],
+    
+    // Model binding automatique
+    'route_model_binding' => true,
+    
+    // Middlewares globaux
+    'global_middlewares' => [
+        'log.requests',
+        'maintenance'
+    ],
+    
+    // Groupes de middlewares
+    'middleware_groups' => [
+        'web' => [
+            'csrf',
+            'auth:optional'
+        ],
+        'api' => [
+            'api.throttle:60,1',
+            'api.cors',
+            'api.auth'
+        ],
+        'admin' => [
+            'auth',
+            'admin',
+            'csrf'
+        ]
+    ],
+    
+    // Contraintes par défaut
+    'default_constraints' => [
+        'id' => '\d+',
+        'slug' => '[a-z0-9\-]+',
+        'uuid' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+        'locale' => '(fr|en|de)'
+    ],
+    
+    // Redirections permanentes
+    'permanent_redirects' => [
+        '/secteur/{id}' => '/climbing/sectors/{id}',
+        '/voie/{id}' => '/climbing/routes/{id}',
+        '/ascension/{id}' => '/users/ascents/{id}',
+        '/topo/{id}' => '/climbing/guides/{id}'
+    ],
+    
+    // Routes conditionnelles
+    'conditional_routes' => [
+        'development' => [
+            '/dev/*',
+            '/debug/*'
+        ],
+        'admin' => [
+            '/admin/*'
+        ]
+    ]
+];
+
+// config/middleware.php - Configuration des middlewares
+
+<?php
+
+return [
+    // Middlewares globaux (appliqués à toutes les routes)
+    'global' => [
+        \TopoclimbCH\Middleware\LogRequestMiddleware::class,
+        \TopoclimbCH\Middleware\MaintenanceMiddleware::class,
+    ],
+    
+    // Groupes de middlewares
+    'groups' => [
+        'web' => [
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+        ],
+        
+        'api' => [
+            \TopoclimbCH\Middleware\ThrottleMiddleware::class,
+            \TopoclimbCH\Middleware\CorsMiddleware::class,
+        ],
+        
+        'admin' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+        ]
+    ],
+    
+    // Alias des middlewares
+    'aliases' => [
+        'auth' => \TopoclimbCH\Middleware\AuthMiddleware::class,
+        'admin' => \TopoclimbCH\Middleware\AdminMiddleware::class,
+        'csrf' => \TopoclimbCH\Middleware\CsrfMiddleware::class,
+        'cors' => \TopoclimbCH\Middleware\CorsMiddleware::class,
+        'api.auth' => \TopoclimbCH\Middleware\ApiAuthMiddleware::class,
+        'api.throttle' => \TopoclimbCH\Middleware\ThrottleMiddleware::class,
+        'maintenance' => \TopoclimbCH\Middleware\MaintenanceMiddleware::class,
+        'log.requests' => \TopoclimbCH\Middleware\LogRequestMiddleware::class,
+    ],
+    
+    // Configuration spécifique des middlewares
+    'config' => [
+        'throttle' => [
+            'max_attempts' => 60,
+            'decay_minutes' => 1
+        ],
+        
+        'cors' => [
+            'allowed_origins' => ['*'],
+            'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+            'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-TOKEN'],
+            'exposed_headers' => [],
+            'max_age' => 86400,
+            'supports_credentials' => false
+        ]
+    ]
+];
+
+// Helpers pour les routes (src/Helpers/route_helpers.php)
+
+<?php
+
+if (!function_exists('route')) {
+    /**
+     * Générer une URL pour une route nommée
+     *
+     * @param string $name
+     * @param array $params
+     * @param bool $absolute
+     * @return string
+     */
+    function route(string $name, array $params = [], bool $absolute = false): string
+    {
+        global $app;
+        return $app->getUrlGenerator()->generate($name, $params, $absolute);
+    }
+}
+
+if (!function_exists('url')) {
+    /**
+     * Générer une URL absolue
+     *
+     * @param string $name
+     * @param array $params
+     * @return string
+     */
+    function url(string $name, array $params = []): string
+    {
+        return route($name, $params, true);
+    }
+}
+
+if (!function_exists('api_route')) {
+    /**
+     * Générer une URL d'API
+     *
+     * @param string $name
+     * @param array $params
+     * @param string $version
+     * @return string
+     */
+    function api_route(string $name, array $params = [], string $version = 'v1'): string
+    {
+        global $app;
+        return $app->getUrlGenerator()->api($name, $params, $version);
+    }
+}
+
+if (!function_exists('admin_route')) {
+    /**
+     * Générer une URL d'administration
+     *
+     * @param string $name
+     * @param array $params
+     * @return string
+     */
+    function admin_route(string $name, array $params = []): string
+    {
+        global $app;
+        return $app->getUrlGenerator()->admin($name, $params);
+    }
+}
+
+if (!function_exists('asset')) {
+    /**
+     * Générer une URL d'asset
+     *
+     * @param string $path
+     * @param bool $absolute
+     * @return string
+     */
+    function asset(string $path, bool $absolute = false): string
+    {
+        global $app;
+        return $app->getUrlGenerator()->asset($path, $absolute);
+    }
+}
+
+if (!function_exists('redirect')) {
+    /**
+     * Créer une réponse de redirection
+     *
+     * @param string $route
+     * @param array $params
+     * @param int $status
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    function redirect(string $route, array $params = [], int $status = 302): \Symfony\Component\HttpFoundation\Response
+    {
+        $url = route($route, $params);
+        return new \Symfony\Component\HttpFoundation\Response('', $status, ['Location' => $url]);
+    }
+}
+
+if (!function_exists('back')) {
+    /**
+     * Rediriger vers la page précédente
+     *
+     * @param string $fallback
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    function back(string $fallback = '/'): \Symfony\Component\HttpFoundation\Response
+    {
+        $referer = $_SERVER['HTTP_REFERER'] ?? $fallback;
+        return new \Symfony\Component\HttpFoundation\Response('', 302, ['Location' => $referer]);
     }
 }

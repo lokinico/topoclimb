@@ -1,41 +1,34 @@
-<?php
+// src/Middleware/AdminMiddleware.php
 
 namespace TopoclimbCH\Middleware;
 
 use Symfony\Component\HttpFoundation\Request;
-use TopoclimbCH\Core\Auth;
-use TopoclimbCH\Core\Response;
-use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\Database;
+use Symfony\Component\HttpFoundation\Response;
+use TopoclimbCH\Services\AuthService;
 
-class AdminMiddleware
+class AdminMiddleware implements MiddlewareInterface
 {
-    private Auth $auth;
-    private Session $session;
+private AuthService $authService;
 
-    public function __construct(Session $session, Database $db)
-    {
-        $this->auth = Auth::getInstance($session, $db);
-        $this->session = $session;
-    }
+public function __construct(AuthService $authService)
+{
+$this->authService = $authService;
+}
 
-    public function handle(Request $request, callable $next): Response
-    {
-        // Vérifier si l'utilisateur est connecté et a les autorisations admin
-        if (!$this->auth->check()) {
-            $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
-            $this->session->set('intended_url', $request->getPathInfo());
-            return Response::redirect('/login');
-        }
+public function handle(Request $request, callable $next): Response
+{
+if (!$this->authService->check() || !$this->authService->hasRole('admin')) {
+if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
+return new Response(
+json_encode(['error' => 'Admin access required']),
+403,
+['Content-Type' => 'application/json']
+);
+}
 
-        $user = $this->auth->user();
+return new Response('', 403, ['Location' => '/']);
+}
 
-        // Vérifier si l'utilisateur a les droits d'administrateur
-        if (!$user || !isset($user->autorisation) || $user->autorisation !== '1') {
-            $this->session->flash('error', 'Accès non autorisé. Permission administrateur requise.');
-            return Response::redirect('/');
-        }
-
-        return $next($request);
-    }
+return $next($request);
+}
 }

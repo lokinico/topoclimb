@@ -1,60 +1,40 @@
-<?php
+// src/Middleware/AuthMiddleware.php
 
 namespace TopoclimbCH\Middleware;
 
-use TopoclimbCH\Core\Container;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\Database;
+use TopoclimbCH\Services\AuthService;
 
-class AuthMiddleware
+class AuthMiddleware implements MiddlewareInterface
 {
-    private Session $session;
-    private Database $db;
-    private ?Auth $auth = null;
+private AuthService $authService;
+private Session $session;
 
-    public function __construct(Session $session, Database $db)
-    {
-        $this->session = $session;
-        $this->db = $db;
+public function __construct(AuthService $authService, Session $session)
+{
+$this->authService = $authService;
+$this->session = $session;
+}
 
-        // On ne tente plus d'obtenir Auth via le conteneur ici
-    }
+public function handle(Request $request, callable $next): Response
+{
+if (!$this->authService->check()) {
+// Sauvegarder l'URL demandée pour redirection après login
+$this->session->set('intended_url', $request->getRequestUri());
 
-    public function handle(Request $request, callable $next): Response
-    {
-        // Vérification directe basée sur la session, sans interaction DB risquée
-        $hasAuthUserId = isset($_SESSION['auth_user_id']) && $_SESSION['auth_user_id'];
-        $isAuthenticated = isset($_SESSION['is_authenticated']) && $_SESSION['is_authenticated'];
+if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
+return new Response(
+json_encode(['error' => 'Authentication required']),
+401,
+['Content-Type' => 'application/json']
+);
+}
 
-        error_log("AuthMiddleware: Vérification auth - ID=" .
-            ($hasAuthUserId ? $_SESSION['auth_user_id'] : 'non défini') .
-            ", Authentifié=" . ($isAuthenticated ? 'oui' : 'non'));
+return new Response('', 302, ['Location' => '/auth/login']);
+}
 
-        // Si authentification présente en session, on accepte et on continue
-        if ($hasAuthUserId && $isAuthenticated) {
-            // On continue la chaîne de middleware sans tenter d'initialiser Auth
-            return $next($request);
-        }
-
-        // Si on arrive ici, l'utilisateur n'est pas authentifié
-        $currentPath = $request->getPathInfo();
-
-        // Éviter les boucles de redirection
-        if ($currentPath === '/login') {
-            return $next($request);
-        }
-
-        // Stocker l'URL pour redirection après login
-        $this->session->set('intended_url', $currentPath);
-        $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
-
-        // Persister la session
-        $this->session->persist();
-
-        // Redirection vers login
-        return Response::redirect('/login');
-    }
+return $next($request);
+}
 }
