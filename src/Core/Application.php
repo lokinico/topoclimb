@@ -1,5 +1,5 @@
 <?php
-// src/Core/Application.php - Application refactorisée
+// src/Core/Application.php - Version avec compatibilité ascendante
 
 namespace TopoclimbCH\Core;
 
@@ -32,9 +32,9 @@ class Application
     private LoggerInterface $logger;
 
     /**
-     * @var MiddlewareRegistry
+     * @var MiddlewareRegistry|null
      */
-    private MiddlewareRegistry $middlewareRegistry;
+    private ?MiddlewareRegistry $middlewareRegistry = null;
 
     /**
      * @var array
@@ -47,17 +47,90 @@ class Application
     private bool $booted = false;
 
     /**
-     * Application constructor
+     * @var string
+     */
+    private string $environment;
+
+    /**
+     * Application constructor - Compatible avec ancien et nouveau format
+     *
+     * Nouveau format : new Application(['config' => 'array'])
+     * Ancien format  : new Application($router, $logger, $container, $environment)
+     */
+    public function __construct(...$args)
+    {
+        if (count($args) === 1 && is_array($args[0])) {
+            // Nouveau format avec array de configuration
+            $this->initializeNew($args[0]);
+        } elseif (count($args) >= 3) {
+            // Ancien format avec arguments séparés (compatibilité ascendante)
+            $this->initializeOld(...$args);
+        } else {
+            throw new \InvalidArgumentException(
+                'Invalid arguments for Application constructor. ' .
+                    'Use either new Application($config) or new Application($router, $logger, $container, $environment)'
+            );
+        }
+    }
+
+    /**
+     * Initialisation avec le nouveau format
      *
      * @param array $config
      */
-    public function __construct(array $config = [])
+    private function initializeNew(array $config): void
     {
         $this->config = $config;
+        $this->environment = $_ENV['APP_ENV'] ?? 'production';
+
         $this->container = $this->buildContainer();
         $this->logger = $this->container->get(LoggerInterface::class);
-        $this->middlewareRegistry = $this->container->get(MiddlewareRegistry::class);
         $this->router = $this->container->get(Router::class);
+
+        if ($this->container->has(MiddlewareRegistry::class)) {
+            $this->middlewareRegistry = $this->container->get(MiddlewareRegistry::class);
+        }
+    }
+
+    /**
+     * Initialisation avec l'ancien format (compatibilité)
+     *
+     * @param Router $router
+     * @param LoggerInterface $logger
+     * @param ContainerInterface $container
+     * @param string $environment
+     */
+    private function initializeOld(Router $router, LoggerInterface $logger, ContainerInterface $container, string $environment = 'production'): void
+    {
+        $this->router = $router;
+        $this->logger = $logger;
+        $this->container = $container;
+        $this->environment = $environment;
+        $this->config = $this->loadDefaultConfig();
+
+        // Essayer de récupérer le MiddlewareRegistry si disponible
+        if ($this->container->has(MiddlewareRegistry::class)) {
+            $this->middlewareRegistry = $this->container->get(MiddlewareRegistry::class);
+        }
+    }
+
+    /**
+     * Charger la configuration par défaut pour l'ancien format
+     *
+     * @return array
+     */
+    private function loadDefaultConfig(): array
+    {
+        return [
+            'routing' => [
+                'cache_enabled' => $this->environment === 'production',
+                'cache_path' => sys_get_temp_dir() . '/routes.cache',
+                'base_url' => $_ENV['APP_URL'] ?? 'http://localhost',
+                'force_https' => $this->environment === 'production',
+                'api_version' => 'v1',
+                'route_model_binding' => true
+            ]
+        ];
     }
 
     /**
@@ -74,8 +147,10 @@ class Application
         // Charger la configuration
         $this->loadConfiguration();
 
-        // Enregistrer les services
-        $this->registerServices();
+        // Enregistrer les services (uniquement pour le nouveau format)
+        if ($this->wasInitializedWithNewFormat()) {
+            $this->registerServices();
+        }
 
         // Charger les routes
         $this->loadRoutes();
@@ -87,18 +162,30 @@ class Application
     }
 
     /**
+     * Vérifier si l'application a été initialisée avec le nouveau format
+     *
+     * @return bool
+     */
+    private function wasInitializedWithNewFormat(): bool
+    {
+        // Si le container n'a pas les services de base, c'est l'ancien format
+        return $this->container instanceof ContainerBuilder ||
+            $this->container->has(Router::class);
+    }
+
+    /**
      * Charger la configuration
      *
      * @return void
      */
     private function loadConfiguration(): void
     {
-        // Charger les configurations depuis les fichiers
+        // Essayer de charger les fichiers de configuration
         $configPaths = [
-            'app' => config_path('app.php'),
-            'database' => config_path('database.php'),
-            'routing' => config_path('routing.php'),
-            'middleware' => config_path('middleware.php'),
+            'app' => $this->getConfigPath('app.php'),
+            'database' => $this->getConfigPath('database.php'),
+            'routing' => $this->getConfigPath('routing.php'),
+            'middleware' => $this->getConfigPath('middleware.php'),
         ];
 
         foreach ($configPaths as $key => $path) {
@@ -109,14 +196,38 @@ class Application
     }
 
     /**
-     * Enregistrer les services dans le container
+     * Obtenir le chemin vers un fichier de configuration
+     *
+     * @param string $filename
+     * @return string
+     */
+    private function getConfigPath(string $filename): string
+    {
+        // Essayer plusieurs emplacements possibles
+        $possiblePaths = [
+            __DIR__ . '/../../config/' . $filename,
+            dirname(dirname(__DIR__)) . '/config/' . $filename,
+            $_SERVER['DOCUMENT_ROOT'] . '/../config/' . $filename
+        ];
+
+        foreach ($possiblePaths as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Enregistrer les services dans le container (nouveau format uniquement)
      *
      * @return void
      */
     private function registerServices(): void
     {
-        // Les services sont déjà enregistrés via ContainerBuilder
-        // Ici on peut ajouter des configurations spécifiques
+        // Cette méthode est appelée uniquement pour le nouveau format
+        // Les services sont déjà enregistrés via ContainerBuilder dans buildContainer()
     }
 
     /**
@@ -126,16 +237,19 @@ class Application
      */
     private function loadRoutes(): void
     {
-        $routesPath = config_path('routes');
+        // Si le router n'a pas de routes et qu'on peut en charger
+        if ($this->router->isEmpty()) {
+            $routesPath = $this->getConfigPath('routes');
 
-        if (is_dir($routesPath)) {
-            // Nouveau système : charger depuis le répertoire routes/
-            $this->router->loadRoutesFromDirectory($routesPath);
-        } else {
-            // Compatibilité ascendante : charger depuis le fichier unique
-            $routesFile = config_path('routes.php');
-            if (file_exists($routesFile)) {
-                $this->router->loadRoutes($routesFile);
+            if (is_dir($routesPath)) {
+                // Nouveau système : charger depuis le répertoire routes/
+                $this->router->loadRoutesFromDirectory($routesPath);
+            } else {
+                // Compatibilité ascendante : charger depuis le fichier unique
+                $routesFile = $this->getConfigPath('routes.php');
+                if (file_exists($routesFile)) {
+                    $this->router->loadRoutes($routesFile);
+                }
             }
         }
 
@@ -161,7 +275,7 @@ class Application
     }
 
     /**
-     * Construire le container DI
+     * Construire le container DI (nouveau format uniquement)
      *
      * @return ContainerInterface
      */
@@ -280,7 +394,7 @@ class Application
      */
     private function autoRegisterClasses(ContainerBuilder $builder, string $namespace, string $directory): void
     {
-        $path = base_path($directory);
+        $path = $this->getBasePath() . '/' . $directory;
 
         if (!is_dir($path)) {
             return;
@@ -302,6 +416,22 @@ class Application
                 }
             }
         }
+    }
+
+    /**
+     * Obtenir le chemin de base de l'application
+     *
+     * @return string
+     */
+    private function getBasePath(): string
+    {
+        // Essayer plusieurs méthodes pour trouver le chemin de base
+        if (defined('BASE_PATH')) {
+            return BASE_PATH;
+        }
+
+        // Remonter depuis le fichier actuel
+        return dirname(dirname(__DIR__));
     }
 
     /**
@@ -440,11 +570,29 @@ class Application
     /**
      * Obtenir l'URL generator
      *
-     * @return UrlGenerator
+     * @return UrlGenerator|null
      */
-    public function getUrlGenerator(): UrlGenerator
+    public function getUrlGenerator(): ?UrlGenerator
     {
-        return $this->container->get(UrlGenerator::class);
+        try {
+            if ($this->container->has(UrlGenerator::class)) {
+                return $this->container->get(UrlGenerator::class);
+            }
+        } catch (\Exception $e) {
+            $this->logger->warning('UrlGenerator not available: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Obtenir l'environnement
+     *
+     * @return string
+     */
+    public function getEnvironment(): string
+    {
+        return $this->environment;
     }
 
     /**
@@ -454,7 +602,7 @@ class Application
      */
     public function isDevelopment(): bool
     {
-        return ($_ENV['APP_ENV'] ?? 'production') === 'development';
+        return $this->environment === 'development';
     }
 
     /**
@@ -464,7 +612,7 @@ class Application
      */
     public function isProduction(): bool
     {
-        return ($_ENV['APP_ENV'] ?? 'production') === 'production';
+        return $this->environment === 'production';
     }
 
     /**
@@ -477,4 +625,4 @@ class Application
     {
         return new self($config);
     }
-};
+}
