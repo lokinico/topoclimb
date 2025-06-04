@@ -207,7 +207,9 @@ class UrlGenerator
         if ($version) {
             $url .= '?v=' . $version;
         } elseif (defined('ASSET_VERSION')) {
-            $url .= '?v=' . ASSET_VERSION;
+            $url .= '?v=' . constant('ASSET_VERSION');
+        } elseif (!empty($_ENV['ASSET_VERSION'])) {
+            $url .= '?v=' . $_ENV['ASSET_VERSION'];
         }
 
         if ($absolute) {
