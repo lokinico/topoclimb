@@ -182,10 +182,10 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\SectorController' => [
                 View::class,
                 Session::class,
-                CsrfManager::class,
                 'TopoclimbCH\\Services\\SectorService',
                 'TopoclimbCH\\Services\\MediaService',
-                Database::class
+                Database::class,
+                CsrfManager::class
             ],
             'TopoclimbCH\\Controllers\\RouteController' => [
                 View::class,

@@ -5,6 +5,7 @@ namespace TopoclimbCH\Controllers;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Response;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class SiteController extends BaseController
 {
