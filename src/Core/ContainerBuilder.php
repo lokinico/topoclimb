@@ -91,7 +91,7 @@ class ContainerBuilder
             ->setPublic(true)
             ->addArgument('%views_path%')
             ->addArgument('%cache_path%')
-            ->addArgument($container->get(CsrfManager::class));
+            ->addArgument(new Reference(CsrfManager::class)); // Utilise une référence au service enregistré
 
         // Router
         $container->register(Router::class, Router::class)
@@ -102,7 +102,8 @@ class ContainerBuilder
         $container->setAlias('router', Router::class)->setPublic(true);
 
         // Enregistrer CsrfManager
-        $container->register(CsrfManager::class)
+        $container->register(CsrfManager::class, CsrfManager::class)
+            ->setPublic(true)
             ->addArgument($container->get(Session::class)); // Injecte la session si nécessaire
 
     }
