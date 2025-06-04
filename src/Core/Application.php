@@ -127,7 +127,7 @@ class Application
     private function loadRoutes(): void
     {
         $routesPath = config_path('routes');
-        
+
         if (is_dir($routesPath)) {
             // Nouveau système : charger depuis le répertoire routes/
             $this->router->loadRoutesFromDirectory($routesPath);
@@ -153,7 +153,7 @@ class Application
     private function registerGlobalMiddlewares(): void
     {
         $globalMiddlewares = $this->config['middleware']['global'] ?? [];
-        
+
         foreach ($globalMiddlewares as $middleware) {
             // Les middlewares globaux peuvent être ajoutés ici si nécessaire
             // Pour l'instant, ils sont gérés au niveau des routes
@@ -281,7 +281,7 @@ class Application
     private function autoRegisterClasses(ContainerBuilder $builder, string $namespace, string $directory): void
     {
         $path = base_path($directory);
-        
+
         if (!is_dir($path)) {
             return;
         }
@@ -294,7 +294,7 @@ class Application
             if ($file->getExtension() === 'php') {
                 $relativePath = str_replace($path . '/', '', $file->getPathname());
                 $className = $namespace . str_replace(['/', '.php'], ['\\', ''], $relativePath);
-                
+
                 if (class_exists($className)) {
                     $builder->register($className, $className)
                         ->setAutowired(true)
@@ -314,9 +314,8 @@ class Application
     {
         try {
             $this->bootstrap();
-            
+
             return $this->router->dispatch($request);
-            
         } catch (RouteNotFoundException $e) {
             return $this->handleRouteNotFound($request, $e);
         } catch (\Exception $e) {
@@ -384,13 +383,13 @@ class Application
                 $whoops = new \Whoops\Run();
                 $whoops->allowQuit(false);
                 $whoops->writeToOutput(false);
-                
+
                 if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
                     $whoops->prependHandler(new \Whoops\Handler\JsonResponseHandler());
                 } else {
                     $whoops->prependHandler(new \Whoops\Handler\PrettyPageHandler());
                 }
-                
+
                 return new Response($whoops->handleException($e), 500);
             }
         }
@@ -478,258 +477,4 @@ class Application
     {
         return new self($config);
     }
-}
-
-// config/routing.php - Configuration du routage
-
-<?php
-
-return [
-    // Cache des routes
-    'cache_enabled' => $_ENV['APP_ENV'] === 'production',
-    'cache_path' => storage_path('framework/routes.cache'),
-    
-    // URL de base
-    'base_url' => $_ENV['APP_URL'] ?? 'http://localhost',
-    'force_https' => $_ENV['APP_ENV'] === 'production',
-    'default_domain' => $_ENV['APP_DOMAIN'] ?? 'localhost',
-    
-    // API
-    'api_version' => 'v1',
-    'api_rate_limit' => [
-        'enabled' => true,
-        'requests_per_minute' => 60,
-        'requests_per_hour' => 1000
-    ],
-    
-    // Domaines supportés
-    'supported_domains' => [
-        'topoclimb.ch',
-        'api.topoclimb.ch',
-        'admin.topoclimb.ch',
-        'www.topoclimb.ch'
-    ],
-    
-    // Model binding automatique
-    'route_model_binding' => true,
-    
-    // Middlewares globaux
-    'global_middlewares' => [
-        'log.requests',
-        'maintenance'
-    ],
-    
-    // Groupes de middlewares
-    'middleware_groups' => [
-        'web' => [
-            'csrf',
-            'auth:optional'
-        ],
-        'api' => [
-            'api.throttle:60,1',
-            'api.cors',
-            'api.auth'
-        ],
-        'admin' => [
-            'auth',
-            'admin',
-            'csrf'
-        ]
-    ],
-    
-    // Contraintes par défaut
-    'default_constraints' => [
-        'id' => '\d+',
-        'slug' => '[a-z0-9\-]+',
-        'uuid' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
-        'locale' => '(fr|en|de)'
-    ],
-    
-    // Redirections permanentes
-    'permanent_redirects' => [
-        '/secteur/{id}' => '/climbing/sectors/{id}',
-        '/voie/{id}' => '/climbing/routes/{id}',
-        '/ascension/{id}' => '/users/ascents/{id}',
-        '/topo/{id}' => '/climbing/guides/{id}'
-    ],
-    
-    // Routes conditionnelles
-    'conditional_routes' => [
-        'development' => [
-            '/dev/*',
-            '/debug/*'
-        ],
-        'admin' => [
-            '/admin/*'
-        ]
-    ]
-];
-
-// config/middleware.php - Configuration des middlewares
-
-<?php
-
-return [
-    // Middlewares globaux (appliqués à toutes les routes)
-    'global' => [
-        \TopoclimbCH\Middleware\LogRequestMiddleware::class,
-        \TopoclimbCH\Middleware\MaintenanceMiddleware::class,
-    ],
-    
-    // Groupes de middlewares
-    'groups' => [
-        'web' => [
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-        ],
-        
-        'api' => [
-            \TopoclimbCH\Middleware\ThrottleMiddleware::class,
-            \TopoclimbCH\Middleware\CorsMiddleware::class,
-        ],
-        
-        'admin' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\AdminMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-        ]
-    ],
-    
-    // Alias des middlewares
-    'aliases' => [
-        'auth' => \TopoclimbCH\Middleware\AuthMiddleware::class,
-        'admin' => \TopoclimbCH\Middleware\AdminMiddleware::class,
-        'csrf' => \TopoclimbCH\Middleware\CsrfMiddleware::class,
-        'cors' => \TopoclimbCH\Middleware\CorsMiddleware::class,
-        'api.auth' => \TopoclimbCH\Middleware\ApiAuthMiddleware::class,
-        'api.throttle' => \TopoclimbCH\Middleware\ThrottleMiddleware::class,
-        'maintenance' => \TopoclimbCH\Middleware\MaintenanceMiddleware::class,
-        'log.requests' => \TopoclimbCH\Middleware\LogRequestMiddleware::class,
-    ],
-    
-    // Configuration spécifique des middlewares
-    'config' => [
-        'throttle' => [
-            'max_attempts' => 60,
-            'decay_minutes' => 1
-        ],
-        
-        'cors' => [
-            'allowed_origins' => ['*'],
-            'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-            'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-TOKEN'],
-            'exposed_headers' => [],
-            'max_age' => 86400,
-            'supports_credentials' => false
-        ]
-    ]
-];
-
-// Helpers pour les routes (src/Helpers/route_helpers.php)
-
-<?php
-
-if (!function_exists('route')) {
-    /**
-     * Générer une URL pour une route nommée
-     *
-     * @param string $name
-     * @param array $params
-     * @param bool $absolute
-     * @return string
-     */
-    function route(string $name, array $params = [], bool $absolute = false): string
-    {
-        global $app;
-        return $app->getUrlGenerator()->generate($name, $params, $absolute);
-    }
-}
-
-if (!function_exists('url')) {
-    /**
-     * Générer une URL absolue
-     *
-     * @param string $name
-     * @param array $params
-     * @return string
-     */
-    function url(string $name, array $params = []): string
-    {
-        return route($name, $params, true);
-    }
-}
-
-if (!function_exists('api_route')) {
-    /**
-     * Générer une URL d'API
-     *
-     * @param string $name
-     * @param array $params
-     * @param string $version
-     * @return string
-     */
-    function api_route(string $name, array $params = [], string $version = 'v1'): string
-    {
-        global $app;
-        return $app->getUrlGenerator()->api($name, $params, $version);
-    }
-}
-
-if (!function_exists('admin_route')) {
-    /**
-     * Générer une URL d'administration
-     *
-     * @param string $name
-     * @param array $params
-     * @return string
-     */
-    function admin_route(string $name, array $params = []): string
-    {
-        global $app;
-        return $app->getUrlGenerator()->admin($name, $params);
-    }
-}
-
-if (!function_exists('asset')) {
-    /**
-     * Générer une URL d'asset
-     *
-     * @param string $path
-     * @param bool $absolute
-     * @return string
-     */
-    function asset(string $path, bool $absolute = false): string
-    {
-        global $app;
-        return $app->getUrlGenerator()->asset($path, $absolute);
-    }
-}
-
-if (!function_exists('redirect')) {
-    /**
-     * Créer une réponse de redirection
-     *
-     * @param string $route
-     * @param array $params
-     * @param int $status
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    function redirect(string $route, array $params = [], int $status = 302): \Symfony\Component\HttpFoundation\Response
-    {
-        $url = route($route, $params);
-        return new \Symfony\Component\HttpFoundation\Response('', $status, ['Location' => $url]);
-    }
-}
-
-if (!function_exists('back')) {
-    /**
-     * Rediriger vers la page précédente
-     *
-     * @param string $fallback
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    function back(string $fallback = '/'): \Symfony\Component\HttpFoundation\Response
-    {
-        $referer = $_SERVER['HTTP_REFERER'] ?? $fallback;
-        return new \Symfony\Component\HttpFoundation\Response('', 302, ['Location' => $referer]);
-    }
-}
+};
