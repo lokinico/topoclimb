@@ -1,124 +1,251 @@
 {% extends "layouts/app.twig" %}
 
-{% block title %}{{ sector.name }} – TopoclimbCH{% endblock %}
-
-{% block styles %}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-{% endblock %}
+{% block title %}{{ sector.name }} - TopoclimbCH{% endblock %}
 
 {% block content %}
-<div class="sector-page">
-    <div class="mb-4 pb-2 border-b">
-        <h1 class="text-3xl font-bold text-gray-800">{{ sector.name }}</h1>
-        <p class="text-gray-500 text-sm">Secteur situé dans le site <a href="{{ url('/site/' ~ sector.site_id) }}" class="underline">{{ sector.site.name }}</a></p>
+    <div class="page-header">
+        <div class="breadcrumbs">
+            <a href="{{ url('/') }}">Accueil</a> &raquo;
+            <a href="{{ url('/regions/' ~ sector.region_id) }}">{{ sector.region_name }}</a> &raquo;
+            <span>{{ sector.name }}</span>
+        </div>
+        
+        <h1>{{ sector.name }}</h1>
+        
+        <div class="actions">
+            <a href="{{ url('/sectors/' ~ sector.id ~ '/edit') }}" class="btn btn-secondary">
+                <i class="icon-edit"></i> Modifier
+            </a>
+            
+            <a href="{{ url('/routes/create?sector_id=' ~ sector.id) }}" class="btn btn-primary">
+                <i class="icon-plus"></i> Ajouter une voie
+            </a>
+        </div>
     </div>
-
-    {% if media|length > 0 %}
-        <div class="mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    
+    <div class="sector-details">
+        <div class="sector-header" style="border-color: {{ sector.color }}">
+            {% if media|length > 0 %}
+                <div class="sector-gallery">
                 {% if mainImage %}
-                    <div class="rounded overflow-hidden shadow">
-                        <a href="{{ mainImage }}" class="thumbnail">
-                            <img src="{{ mainImage }}" alt="{{ sector.name }}" class="w-full h-auto">
-                        </a>
+                    <div class="main-image-container">
+                        <img src="{{ mainImage }}" alt="{{ sector.name }}" class="main-image">
                     </div>
                 {% endif %}
-
+                
                 {% if media|length > 1 %}
-                    <div id="lightgallery" class="grid grid-cols-3 gap-2">
+                    <div class="thumbnail-gallery">
                         {% for item in media %}
-                            {% set fullImage = url('/uploads/' ~ item.file_path) %}
-                            {% set thumbImage = url('/uploads/thumbnails/' ~ item.file_path) %}
-                            <a href="{{ fullImage }}" class="thumbnail" data-lg-size="1406-1390">
-                                <img src="{{ thumbImage }}" alt="Image secteur {{ sector.name }}" class="rounded shadow">
+                            <a href="{{ url('/uploads/' ~ item.file_path) }}" class="thumbnail" target="_blank">
+                                <img src="{{ url('/uploads/' ~ item.file_path) }}" alt="" loading="lazy">
                             </a>
                         {% endfor %}
                     </div>
                 {% endif %}
             </div>
-        </div>
-    {% endif %}
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-            {% if sector.description %}
-                <h2 class="text-xl font-semibold text-gray-700 mb-2">Description</h2>
-                <div class="prose max-w-none mb-4">
-                    {{ sector.description|raw }}
+            {% endif %}
+            
+            <div class="sector-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">Région:</span>
+                        <span class="value">{{ sector.region_name }}</span>
+                    </div>
+                    
+                    {% if sector.altitude %}
+                        <div class="info-item">
+                            <span class="label">Altitude:</span>
+                            <span class="value">{{ sector.altitude }}m</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if sector.height %}
+                        <div class="info-item">
+                            <span class="label">Hauteur:</span>
+                            <span class="value">{{ sector.height }}m</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if sector.access_time %}
+                        <div class="info-item">
+                            <span class="label">Temps d'accès:</span>
+                            <span class="value">{{ sector.access_time }} min</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if exposures is defined and exposures|length > 0 %}
+                        <div class="info-item">
+                            <span class="label">Exposition:</span>
+                            <span class="value">
+                                {% for expo in exposures %}
+                                    <span class="badge {{ expo.is_primary ? 'primary' : 'secondary' }}">
+                                        {{ expo.name }}
+                                    </span>
+                                {% endfor %}
+                            </span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if sector.coordinates_lat and sector.coordinates_lng %}
+                        <div class="info-item">
+                            <span class="label">Coordonnées:</span>
+                            <span class="value">
+                                <a href="https://www.google.com/maps?q={{ sector.coordinates_lat }},{{ sector.coordinates_lng }}" target="_blank">
+                                    Voir sur Google Maps
+                                </a>
+                            </span>
+                        </div>
+                    {% endif %}
                 </div>
-            {% endif %}
-
-            {% if sector.approach %}
-                <h2 class="text-xl font-semibold text-gray-700 mb-2">Approche</h2>
-                <p class="mb-4">{{ sector.approach }}</p>
-            {% endif %}
-
-            {% if sector.access %}
-                <h2 class="text-xl font-semibold text-gray-700 mb-2">Accès</h2>
-                <p class="mb-4">{{ sector.access }}</p>
-            {% endif %}
+            </div>
         </div>
-
-        <div class="bg-gray-100 rounded-lg p-4 shadow-sm">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">Informations techniques</h2>
-            <ul class="text-sm text-gray-800 space-y-2">
-                {% if sector.altitude %}
-                    <li><strong>Altitude :</strong> {{ sector.altitude }} m</li>
-                {% endif %}
-                {% if sector.orientation %}
-                    <li><strong>Orientation :</strong> {{ sector.orientation }}</li>
-                {% endif %}
-                {% if sector.cotation_min and sector.cotation_max %}
-                    <li><strong>Degrés :</strong> {{ sector.cotation_min }} – {{ sector.cotation_max }}</li>
-                {% endif %}
-                {% if sector.season %}
-                    <li><strong>Saison :</strong> {{ sector.season }}</li>
-                {% endif %}
-                {% if sector.children|length > 0 %}
-                    <li><strong>Nombre de voies :</strong> {{ sector.children|length }}</li>
-                {% endif %}
+        
+        <div class="sector-tabs">
+            <ul class="nav-tabs">
+                <li class="active"><a href="#tab-routes">Voies</a></li>
+                <li><a href="#tab-info">Infos détaillées</a></li>
+                <li><a href="#tab-access">Accès</a></li>
             </ul>
+            
+            <div class="tab-content">
+                <div id="tab-routes" class="tab-pane active">
+                    <div class="routes-list">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>№</th>
+                                    <th>Nom</th>
+                                    <th>Cotation</th>
+                                    <th>Beauté</th>
+                                    <th>Style</th>
+                                    <th>Longueur</th>
+                                    <th>Équipement</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if routes is defined and routes|length > 0 %}
+                                    {% for route in routes %}
+                                        <tr>
+                                            <td>{{ route.number }}</td>
+                                            <td>
+                                                <a href="{{ url('/routes/' ~ route.id) }}">
+                                                    {{ route.name }}
+                                                </a>
+                                            </td>
+                                            <td>{{ route.difficulty }}</td>
+                                            <td>{{ route.beauty is defined ? route.beauty|format_beauty : '-' }}</td>
+                                            <td>{{ route.style }}</td>
+                                            <td>{{ route.length ? route.length ~ 'm' : '-' }}</td>
+                                            <td>
+                                                {% if route.equipment == 'excellent' %}
+                                                    Excellent
+                                                {% elseif route.equipment == 'good' %}
+                                                    Bon
+                                                {% elseif route.equipment == 'adequate' %}
+                                                    Adéquat
+                                                {% elseif route.equipment == 'poor' %}
+                                                    Mauvais
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-sm btn-outline">
+                                                    Voir
+                                                </a>
+                                                <a href="{{ url('/routes/' ~ route.id ~ '/edit') }}" class="btn btn-sm btn-outline">
+                                                    Modifier
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="8" class="text-center">
+                                            Aucune voie trouvée.
+                                            <a href="{{ url('/routes/create?sector_id=' ~ sector.id) }}">Ajouter une voie</a>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="tab-info" class="tab-pane">
+                    {% if sector.description %}
+                        <div class="section">
+                            <h3>Description</h3>
+                            <div class="content">
+                                {{ sector.description|nl2br }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div id="tab-access" class="tab-pane">
+                    {% if sector.access_info %}
+                        <div class="section">
+                            <h3>Information d'accès</h3>
+                            <div class="content">
+                                {{ sector.access_info|nl2br }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if sector.parking_info %}
+                        <div class="section">
+                            <h3>Parking</h3>
+                            <div class="content">
+                                {{ sector.parking_info|nl2br }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if sector.approach %}
+                        <div class="section">
+                            <h3>Approche</h3>
+                            <div class="content">
+                                {{ sector.approach|nl2br }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if sector.coordinates_lat and sector.coordinates_lng %}
+                        <div class="section">
+                            <h3>Carte</h3>
+                            <div class="map-container">
+                                <div id="map" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
-
-    {% if sector.coordinates_lat and sector.coordinates_lng %}
-        <div class="mt-10">
-            <h2 class="text-xl font-semibold text-gray-700 mb-2">Localisation</h2>
-            <div id="map" class="w-full h-96 rounded shadow"></div>
-        </div>
-    {% endif %}
-
-    {% if sector.children|length > 0 %}
-        <div class="mt-10">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">Voies du secteur</h2>
-            <ul class="space-y-3">
-                {% for route in sector.children %}
-                    <li class="border-b pb-2">
-                        <span class="font-semibold">{{ route.name }}</span>
-                        {% if route.cotation %} – <span class="text-gray-600">{{ route.cotation }}</span>{% endif %}
-                        {% if route.length %} ({{ route.length }} m){% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% endif %}
-</div>
 {% endblock %}
 
 {% block scripts %}
-    {{ parent() }}
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     {% if sector.coordinates_lat and sector.coordinates_lng %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var map = L.map('map').setView([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
-            L.marker([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}]).addTo(map)
-                .bindPopup('{{ sector.name }}')
-                .openPopup();
-        });
-    </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                try {
+                    // Code d'initialisation de la carte
+                    const map = L.map('map').setView([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}], 15);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+                    
+                    L.marker([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}])
+                        .addTo(map)
+                        .bindPopup('{{ sector.name|e('js') }}');
+                } catch (error) {
+                    console.error("Erreur d'initialisation de la carte:", error);
+                }
+            });
+        </script>
     {% endif %}
 {% endblock %}
