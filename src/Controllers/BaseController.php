@@ -4,72 +4,51 @@
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
-// Changer l'import pour utiliser notre propre classe Response
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Container;
 use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Validation\Validator;
 use TopoclimbCH\Exceptions\ValidationException;
 use TopoclimbCH\Exceptions\AuthorizationException;
-use TopoclimbCH\Services\AuthService;
 
 abstract class BaseController
 {
-    /**
-     * @var View
-     */
     protected View $view;
-
-    /**
-     * @var Session
-     */
     protected Session $session;
-
-    /**
-     * @var Auth|null
-     */
     protected ?Auth $auth = null;
+    protected CsrfManager $csrfManager;
 
-    /**
-     * Constructor
-     *
-     * @param View $view
-     * @param Session $session
-     */
-    public function __construct(View $view, Session $session)
+    public function __construct(View $view, Session $session, CsrfManager $csrfManager)
     {
         $this->view = $view;
         $this->session = $session;
+        $this->csrfManager = $csrfManager;
 
-        // Ne pas initialiser Auth directement, le récupérer du conteneur si disponible
+        // Initialiser Auth depuis le conteneur si disponible
         try {
             if (Container::getInstance() && Container::getInstance()->has(Auth::class)) {
                 $this->auth = Container::getInstance()->get(Auth::class);
             }
         } catch (\Exception $e) {
-            // Auth ne sera pas disponible mais ce n'est pas critique
             error_log('Auth non initialisé dans BaseController: ' . $e->getMessage());
         }
     }
 
     /**
      * Render a view with data
-     *
-     * @param string $view
-     * @param array $data
-     * @return Response
      */
     protected function render(string $view, array $data = []): Response
     {
-        // Utiliser notre classe Response
         $response = new Response();
 
         // Ajouter automatiquement des données globales
         $globalData = [
             'flashes' => $this->session->getFlashes(),
+            'csrf_token' => $this->csrfManager->getToken(), // Token CSRF automatiquement disponible
             'app' => [
                 'debug' => env('APP_DEBUG', false),
                 'environment' => env('APP_ENV', 'production'),
@@ -85,7 +64,7 @@ abstract class BaseController
         // Fusionner avec les données fournies
         $data = array_merge($globalData, $data);
 
-        // Assurez-vous que l'extension .twig est ajoutée si elle n'est pas présente
+        // Assurez-vous que l'extension .twig est ajoutée
         if (!str_ends_with($view, '.twig')) {
             $view .= '.twig';
         }
@@ -96,8 +75,8 @@ abstract class BaseController
         // Configurer la mise en cache selon l'environnement
         if (env('APP_ENV') === 'production') {
             $response->setPublic();
-            $response->setMaxAge(60); // 1 minute
-            $response->setSharedMaxAge(120); // 2 minutes
+            $response->setMaxAge(60);
+            $response->setSharedMaxAge(120);
         } else {
             $response->setPrivate();
             $response->headers->addCacheControlDirective('no-store', true);
@@ -108,45 +87,31 @@ abstract class BaseController
 
     /**
      * Redirect to a route
-     *
-     * @param string $url
-     * @param int $status
-     * @return Response
      */
     protected function redirect(string $url, int $status = 302): Response
     {
-        // Utiliser notre classe Response statique redirect
         return Response::redirect($url, $status);
     }
 
     /**
      * Return a JSON response
-     *
-     * @param mixed $data
-     * @param int $status
-     * @return Response
      */
     protected function json(mixed $data, int $status = 200): Response
     {
-        // Utiliser notre classe Response statique json
         return Response::json($data, $status);
     }
 
     /**
      * Create a CSRF token
-     *
-     * @return string
+     * @deprecated Utiliser $this->csrfManager->getToken() directement
      */
     protected function createCsrfToken(): string
     {
-        return $this->session->setCsrfToken();
+        return $this->csrfManager->getToken();
     }
 
     /**
-     * Validate CSRF token - Version unifiée et améliorée
-     *
-     * @param Request|string|null $input
-     * @return bool
+     * Validate CSRF token - Version simplifiée utilisant CsrfManager
      */
     protected function validateCsrfToken($input = null): bool
     {
@@ -154,51 +119,24 @@ abstract class BaseController
 
         // Récupérer le token selon le type d'entrée
         if ($input instanceof Request) {
-            // Essayer d'abord POST, puis query string
-            $token = $input->request->get('csrf_token') ?? $input->query->get('csrf_token');
+            $token = $this->csrfManager->getTokenFromRequest($input);
         } elseif (is_string($input)) {
-            // Token fourni directement
             $token = $input;
         } else {
-            // Chercher dans $_POST puis $_GET comme fallback
+            // Fallback pour compatibilité
             $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? null;
         }
 
-        // Vérifier que le token est présent
         if (empty($token)) {
             error_log('BaseController::validateCsrfToken - Token CSRF vide ou manquant');
             return false;
         }
 
-        // Récupérer le token stocké en session
-        $storedToken = $this->session->get('csrf_token');
-        if (empty($storedToken)) {
-            error_log('BaseController::validateCsrfToken - Token CSRF non trouvé en session');
-            return false;
-        }
-
-        // Vérifier si nous sommes en cours de validation par le middleware
-        if ($this->session->get('csrf_validation_in_progress', false)) {
-            error_log('BaseController::validateCsrfToken - Validation déjà en cours par le middleware, accepté');
-            return true;
-        }
-
-        // Validation sécurisée avec hash_equals
-        $result = hash_equals($storedToken, $token);
-
-        // Log détaillé pour déboguer
-        error_log('BaseController::validateCsrfToken - Validation CSRF: ' . ($result ? 'succès' : 'échec') .
-            ' (soumis: ' . substr($token, 0, 10) . '..., stocké: ' . substr($storedToken, 0, 10) . '...)');
-
-        return $result;
+        return $this->csrfManager->validateToken($token);
     }
 
     /**
      * Set a flash message
-     *
-     * @param string $type
-     * @param string $message
-     * @return void
      */
     protected function flash(string $type, string $message): void
     {
@@ -207,11 +145,6 @@ abstract class BaseController
 
     /**
      * Validate request data
-     *
-     * @param array $data
-     * @param array $rules
-     * @throws ValidationException
-     * @return array
      */
     protected function validate(array $data, array $rules): array
     {
@@ -228,17 +161,12 @@ abstract class BaseController
 
         return $data;
     }
+
     /**
      * Check if user has permission
-     *
-     * @param string $ability
-     * @param mixed $model
-     * @throws AuthorizationException
-     * @return void
      */
     protected function authorize(string $ability, $model = null): void
     {
-        // Utiliser Auth directement au lieu d'AuthService
         $container = Container::getInstance();
         if (!$container || !$container->has(Auth::class)) {
             throw new AuthorizationException("Service d'authentification non disponible");
@@ -246,14 +174,40 @@ abstract class BaseController
 
         $auth = $container->get(Auth::class);
 
-        // Vérifier si l'utilisateur est connecté
         if (!$auth->check()) {
             throw new AuthorizationException("Authentification requise");
         }
 
-        // Vérifier les permissions
         if (!$auth->can($ability, $model)) {
             throw new AuthorizationException("Action non autorisée: $ability");
         }
+    }
+
+    /**
+     * Méthodes utilitaires pour CSRF
+     */
+
+    /**
+     * Génère un nouveau token CSRF (utile après validation réussie)
+     */
+    protected function regenerateCsrfToken(): string
+    {
+        return $this->csrfManager->regenerateToken();
+    }
+
+    /**
+     * Valide une requête complète (méthode + token)
+     */
+    protected function validateCsrfRequest(Request $request): bool
+    {
+        return $this->csrfManager->validateRequest($request);
+    }
+
+    /**
+     * Retourne le HTML pour un champ caché CSRF
+     */
+    protected function csrfField(): string
+    {
+        return $this->csrfManager->getHiddenField();
     }
 }

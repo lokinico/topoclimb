@@ -42,10 +42,10 @@ class AuthController extends BaseController
      * @param Session $session
      * @param Database $db
      */
-    public function __construct(View $view, Session $session, Database $db)
+
+    public function __construct(View $view, Session $session, Database $db, CsrfManager $csrfManager)
     {
-        // Appeler le constructeur parent avec les paramètres requis
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager);
 
         // Initialiser les propriétés spécifiques à ce contrôleur
         $this->db = $db;
