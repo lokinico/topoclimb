@@ -7,6 +7,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class HomeController extends BaseController
 {
