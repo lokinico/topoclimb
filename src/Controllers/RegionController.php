@@ -19,22 +19,22 @@ class RegionController extends BaseController
      * @var RegionService
      */
     protected RegionService $regionService;
-    
+
     /**
      * @var CountryService
      */
     protected CountryService $countryService;
-    
+
     /**
      * @var AuthService
      */
     protected AuthService $authService;
-    
+
     /**
      * @var Database
      */
     protected Database $db;
-    
+
     /**
      * Constructor
      *
@@ -48,18 +48,19 @@ class RegionController extends BaseController
     public function __construct(
         View $view,
         Session $session,
+        CsrfManager $csrfManager,
         RegionService $regionService,
         CountryService $countryService,
         AuthService $authService,
         Database $db
     ) {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager);
         $this->regionService = $regionService;
         $this->countryService = $countryService;
         $this->authService = $authService;
         $this->db = $db;
     }
-    
+
     /**
      * Affiche la liste des régions
      *
@@ -69,7 +70,7 @@ class RegionController extends BaseController
     public function index(Request $request): Response
     {
         $countryId = $request->query->get('country_id');
-        
+
         if ($countryId) {
             $regions = $this->regionService->getRegionsByCountry((int) $countryId);
             $country = $this->countryService->getCountry((int) $countryId);
@@ -78,10 +79,10 @@ class RegionController extends BaseController
             $regions = $this->regionService->getAllRegions();
             $title = 'Toutes les régions';
         }
-        
+
         // Récupérer tous les pays pour le filtre
         $countries = $this->countryService->getAllCountries();
-        
+
         return $this->render('regions/index', [
             'regions' => $regions,
             'countries' => $countries,
@@ -89,7 +90,7 @@ class RegionController extends BaseController
             'title' => $title
         ]);
     }
-    
+
     /**
      * Affiche une région spécifique
      *
@@ -99,20 +100,20 @@ class RegionController extends BaseController
     public function show(Request $request): Response
     {
         $id = (int) $request->attributes->get('id');
-        
+
         $region = $this->regionService->getRegionWithRelations($id);
-        
+
         if (!$region) {
             $this->flash('error', 'Région non trouvée');
             return $this->redirect('/regions');
         }
-        
+
         // Récupérer les secteurs de cette région
         $sectors = $this->regionService->getRegionSectors($id);
-        
+
         // Récupérer les statistiques de la région
         $stats = $this->regionService->getRegionStatistics($id);
-        
+
         return $this->render('regions/show', [
             'region' => $region,
             'sectors' => $sectors,
@@ -120,7 +121,7 @@ class RegionController extends BaseController
             'title' => $region->name
         ]);
     }
-    
+
     /**
      * Affiche le formulaire de création d'une région
      *
@@ -131,17 +132,17 @@ class RegionController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         // Récupère les pays pour le dropdown
         $countries = $this->countryService->getAllCountries();
-        
+
         return $this->render('regions/create', [
             'countries' => $countries,
             'title' => 'Créer une nouvelle région',
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Enregistre une nouvelle région
      *
@@ -152,13 +153,13 @@ class RegionController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/regions/create');
         }
-        
+
         // Valide les données
         $data = $this->validate($request->request->all(), [
             'country_id' => 'required|numeric',
@@ -166,16 +167,16 @@ class RegionController extends BaseController
             'description' => 'nullable',
             'active' => 'in:0,1'
         ]);
-        
+
         // Ajoute l'utilisateur courant comme créateur
         if ($this->authService->check()) {
             $data['created_by'] = $this->authService->id();
         }
-        
+
         try {
             // Crée la région
             $region = $this->regionService->createRegion($data);
-            
+
             $this->flash('success', 'Région créée avec succès');
             return $this->redirect('/regions/' . $region->id);
         } catch (\Exception $e) {
@@ -183,7 +184,7 @@ class RegionController extends BaseController
             return $this->redirect('/regions/create');
         }
     }
-    
+
     /**
      * Affiche le formulaire d'édition d'une région
      *
@@ -194,19 +195,19 @@ class RegionController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         $region = $this->regionService->getRegion($id);
-        
+
         if (!$region) {
             $this->flash('error', 'Région non trouvée');
             return $this->redirect('/regions');
         }
-        
+
         // Récupère les pays pour le dropdown
         $countries = $this->countryService->getAllCountries();
-        
+
         return $this->render('regions/edit', [
             'region' => $region,
             'countries' => $countries,
@@ -214,7 +215,7 @@ class RegionController extends BaseController
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Met à jour une région
      *
@@ -225,22 +226,22 @@ class RegionController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/regions/' . $id . '/edit');
         }
-        
+
         $region = $this->regionService->getRegion($id);
-        
+
         if (!$region) {
             $this->flash('error', 'Région non trouvée');
             return $this->redirect('/regions');
         }
-        
+
         // Valide les données
         $data = $this->validate($request->request->all(), [
             'country_id' => 'required|numeric',
@@ -248,16 +249,16 @@ class RegionController extends BaseController
             'description' => 'nullable',
             'active' => 'in:0,1'
         ]);
-        
+
         // Ajoute l'utilisateur courant comme modificateur
         if ($this->authService->check()) {
             $data['updated_by'] = $this->authService->id();
         }
-        
+
         try {
             // Met à jour la région
             $region = $this->regionService->updateRegion($region, $data);
-            
+
             $this->flash('success', 'Région mise à jour avec succès');
             return $this->redirect('/regions/' . $region->id);
         } catch (\Exception $e) {
@@ -265,7 +266,7 @@ class RegionController extends BaseController
             return $this->redirect('/regions/' . $id . '/edit');
         }
     }
-    
+
     /**
      * Supprime une région
      *
@@ -276,21 +277,21 @@ class RegionController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         $region = $this->regionService->getRegion($id);
-        
+
         if (!$region) {
             $this->flash('error', 'Région non trouvée');
             return $this->redirect('/regions');
         }
-        
+
         // Vérifie s'il s'agit d'une demande de confirmation
         if ($request->getMethod() !== 'POST') {
             // Vérifie si la région contient des secteurs
             $sectorsCount = count($this->regionService->getRegionSectors($id));
-            
+
             return $this->render('regions/delete', [
                 'region' => $region,
                 'sectorsCount' => $sectorsCount,
@@ -298,17 +299,17 @@ class RegionController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         }
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/regions/' . $id . '/delete');
         }
-        
+
         try {
             // Supprime la région
             $this->regionService->deleteRegion($region);
-            
+
             $this->flash('success', 'Région supprimée avec succès');
             return $this->redirect('/regions');
         } catch (\Exception $e) {

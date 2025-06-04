@@ -177,11 +177,12 @@ class ContainerBuilder
                 View::class,
                 Session::class,
                 Database::class,
-                'TopoclimbCH\\Services\\AuthService'
+                CsrfManager::class // Remplace AuthService par CsrfManager
             ],
             'TopoclimbCH\\Controllers\\SectorController' => [
                 View::class,
                 Session::class,
+                CsrfManager::class,
                 'TopoclimbCH\\Services\\SectorService',
                 'TopoclimbCH\\Services\\MediaService',
                 Database::class
@@ -189,6 +190,7 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\RouteController' => [
                 View::class,
                 Session::class,
+                CsrfManager::class,
                 'TopoclimbCH\\Services\\RouteService',
                 'TopoclimbCH\\Services\\MediaService',
                 'TopoclimbCH\\Services\\SectorService',
@@ -197,12 +199,14 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\MediaController' => [
                 View::class,
                 Session::class,
+                CsrfManager::class,
                 'TopoclimbCH\\Services\\MediaService',
                 Database::class
             ],
             'TopoclimbCH\\Controllers\\RegionController' => [
                 View::class,
                 Session::class,
+                CsrfManager::class,
                 'TopoclimbCH\\Services\\RegionService',
                 'TopoclimbCH\\Services\\CountryService',
                 'TopoclimbCH\\Services\\AuthService',
@@ -211,6 +215,7 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\SiteController' => [
                 View::class,
                 Session::class,
+                CsrfManager::class,
                 'TopoclimbCH\\Services\\MediaService',
                 'TopoclimbCH\\Services\\RegionService',
                 Database::class
@@ -223,6 +228,7 @@ class ContainerBuilder
             'TopoclimbCH\\Controllers\\UserController' => [
                 View::class,
                 Session::class,
+                CsrfManager::class,
                 'TopoclimbCH\\Services\\UserService',
                 'TopoclimbCH\\Services\\AscentService',
                 'TopoclimbCH\\Services\\AuthService',
@@ -232,7 +238,8 @@ class ContainerBuilder
                 View::class,
                 Session::class,
                 Auth::class,
-                Database::class
+                Database::class,
+                CsrfManager::class
             ]
         ];
 

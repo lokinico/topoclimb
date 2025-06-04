@@ -8,11 +8,20 @@ use TopoclimbCH\Core\Response;
 
 class SiteController extends BaseController
 {
-    public function __construct(View $view, Session $session)
-    {
-        parent::__construct($view, $session);
+    public function __construct(
+        View $view,
+        Session $session,
+        CsrfManager $csrfManager,
+        MediaService $mediaService,
+        RegionService $regionService,
+        Database $db
+    ) {
+        parent::__construct($view, $session, $csrfManager);
+        $this->mediaService = $mediaService;
+        $this->regionService = $regionService;
+        $this->db = $db;
     }
-    
+
     public function index(): Response
     {
         return $this->redirect('/');
