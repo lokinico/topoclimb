@@ -126,47 +126,37 @@ class Session
      */
     public function destroy(): bool
     {
-        try {
-            if (session_status() !== PHP_SESSION_ACTIVE) {
-                error_log("Session::destroy - La session était déjà inactive");
-                $this->started = false;
-                return true;
-            }
 
-            $sessionId = session_id();
-            error_log("Session::destroy - Destruction de la session: " . $sessionId);
-
-            // Effacer toutes les données
-            $_SESSION = [];
-
-            // Supprimer le cookie
-            if (ini_get("session.use_cookies")) {
-                $params = session_get_cookie_params();
-                setcookie(
-                    session_name(),
-                    '',
-                    [
-                        'expires' => time() - 42000,
-                        'path' => $params["path"],
-                        'domain' => $params["domain"],
-                        'secure' => $params["secure"],
-                        'httponly' => $params["httponly"],
-                        'samesite' => 'Lax'
-                    ]
-                );
-            }
-
-            $result = session_destroy();
+        if (session_status() !== PHP_SESSION_ACTIVE) {
             $this->started = false;
-
-            error_log("Session::destroy - " . ($result ? "Succès" : "Échec"));
-            return $result;
-        } catch (\Throwable $e) {
-            error_log("Session::destroy - Exception: " . $e->getMessage());
-            $_SESSION = [];
-            $this->started = false;
-            return false;
+            return true;
         }
+
+        $sessionId = session_id();
+
+        // Effacer toutes les données
+        $_SESSION = [];
+
+        // Supprimer le cookie
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                [
+                    'expires' => time() - 42000,
+                    'path' => $params["path"],
+                    'domain' => $params["domain"],
+                    'secure' => $params["secure"],
+                    'httponly' => $params["httponly"],
+                    'samesite' => 'Lax'
+                ]
+            );
+        }
+
+        $result = session_destroy();
+        $this->started = false;
+        return $result;
     }
 
     /**

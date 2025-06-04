@@ -24,14 +24,12 @@ class CsrfMiddleware
 
     public function handle(Request $request, callable $next): SymfonyResponse
     {
-        error_log("CsrfMiddleware: Traitement " . $request->getMethod() . " " . $request->getPathInfo());
 
         // S'assurer qu'un token existe pour les futures utilisations
         $this->csrfManager->getToken();
 
         // Valider la requête en utilisant CsrfManager
         if (!$this->csrfManager->validateRequest($request)) {
-            error_log("CSRF: Validation échouée, redirection vers referer");
             $this->session->flash('error', 'Session expirée ou formulaire invalide. Veuillez réessayer.');
             return $this->createRedirectResponse($request->headers->get('referer') ?: '/');
         }

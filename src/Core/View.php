@@ -16,7 +16,7 @@ class View
 {
     private Environment $twig;
     private array $globalData = [];
-    private CsrfManager $csrfManager;
+    private ?CsrfManager $csrfManager = null;
 
     public function __construct(string $viewsPath = null, string $cachePath = null, CsrfManager $csrfManager = null)
     {

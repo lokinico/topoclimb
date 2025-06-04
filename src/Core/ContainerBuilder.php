@@ -89,7 +89,8 @@ class ContainerBuilder
         $container->register(View::class, View::class)
             ->setPublic(true)
             ->addArgument('%views_path%')
-            ->addArgument('%cache_path%');
+            ->addArgument('%cache_path%')
+            ->addArgument($container->get(CsrfManager::class));
 
         // Router
         $container->register(Router::class, Router::class)
