@@ -111,9 +111,9 @@ class ContainerBuilder
     /**
      * Register business services in the container.
      */
+
     private function registerBusinessServices(SymfonyContainerBuilder $container): void
     {
-        // Services métier
         $services = [
             'TopoclimbCH\\Services\\AuthService' => [
                 Auth::class,
@@ -147,7 +147,6 @@ class ContainerBuilder
         ];
 
         foreach ($services as $id => $dependencies) {
-            // Ajouter une vérification d'existence
             if (!class_exists($id)) {
                 error_log("Warning: Service class $id does not exist");
                 continue;
@@ -165,9 +164,9 @@ class ContainerBuilder
     /**
      * Register controllers in the container.
      */
+
     private function registerControllers(SymfonyContainerBuilder $container): void
     {
-        // Définition des contrôleurs et leurs dépendances
         $controllers = [
             'TopoclimbCH\\Controllers\\HomeController' => [
                 View::class,
@@ -234,46 +233,10 @@ class ContainerBuilder
                 Session::class,
                 Auth::class,
                 Database::class
-            ],
-            'TopoclimbCH\\Controllers\\AscentController' => [
-                View::class,
-                Session::class,
-                Auth::class,
-                'TopoclimbCH\\Services\\RouteService',
-                Database::class
-            ],
-            'TopoclimbCH\\Controllers\\UserAscentController' => [
-                View::class,
-                Session::class,
-                Auth::class,
-                'TopoclimbCH\\Services\\RouteService',
-                Database::class
-            ],
-            'TopoclimbCH\\Controllers\\ClimbingDataController' => [
-                View::class,
-                Session::class,
-                Database::class
-            ],
-            'TopoclimbCH\\Controllers\\CountryController' => [
-                View::class,
-                Session::class,
-                'TopoclimbCH\\Services\\CountryService',
-                Database::class
-            ],
-            'TopoclimbCH\\Controllers\\DifficultyGradeController' => [
-                View::class,
-                Session::class,
-                Database::class
-            ],
-            'TopoclimbCH\\Controllers\\DifficultySystemController' => [
-                View::class,
-                Session::class,
-                Database::class
             ]
         ];
 
         foreach ($controllers as $id => $dependencies) {
-            // Ajouter une vérification d'existence
             if (!class_exists($id)) {
                 error_log("Warning: Controller class $id does not exist");
                 continue;
@@ -291,9 +254,9 @@ class ContainerBuilder
     /**
      * Register middlewares in the container.
      */
+
     private function registerMiddlewares(SymfonyContainerBuilder $container): void
     {
-        // Définition des middlewares et leurs dépendances
         $middlewares = [
             'TopoclimbCH\\Middleware\\AuthMiddleware' => [
                 Session::class,
@@ -310,7 +273,6 @@ class ContainerBuilder
             'TopoclimbCH\\Middleware\\CsrfMiddleware' => [
                 Session::class
             ]
-            // SUPPRIMÉ: PreserveCsrfTokenMiddleware n'existe pas
         ];
 
         foreach ($middlewares as $id => $dependencies) {
