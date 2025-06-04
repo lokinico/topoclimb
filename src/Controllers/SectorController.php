@@ -125,14 +125,7 @@ class SectorController extends BaseController
         }
 
         try {
-            // Debug - vérifier l'ID du secteur
-            error_log("Affichage du secteur: " . $id);
-
             $sector = $this->sectorService->getSectorById((int) $id);
-
-            // Debug - vérifier si le secteur est trouvé
-            error_log("Secteur trouvé: " . ($sector ? 'OUI' : 'NON'));
-
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
                 return $this->redirect('/sectors');
@@ -150,9 +143,6 @@ class SectorController extends BaseController
                 'media_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", [$id])['count'] ?? 0)
             ];
 
-            // Debug - toutes les données sont prêtes
-            error_log("Données prêtes pour le rendu");
-
             return $this->render('sectors/show', [
                 'title' => $sector['name'],
                 'sector' => $sector,
@@ -163,7 +153,6 @@ class SectorController extends BaseController
             ]);
         } catch (\Exception $e) {
             // Debug - capturer et journaliser les exceptions
-            error_log("Exception dans SectorController::show: " . $e->getMessage());
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
             return $this->redirect('/sectors');
         }
@@ -244,7 +233,6 @@ class SectorController extends BaseController
 
             // Start transaction
             if (!$this->db->beginTransaction()) {
-                error_log("SectorStore: Erreur démarrage transaction");
                 $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
                 return $this->redirect('/sectors/create');
             }
@@ -335,7 +323,6 @@ class SectorController extends BaseController
             }
 
             if (!$this->db->commit()) {
-                error_log("SectorStore: Échec commit transaction");
                 throw new \Exception("Échec lors de l'enregistrement final des modifications");
             }
 
@@ -347,7 +334,6 @@ class SectorController extends BaseController
             return $this->redirect('/sectors/create');
         } catch (\Exception $e) {
             $this->db->rollBack();
-            error_log("SectorStore: Exception: " . $e->getMessage());
             $this->session->flash('error', 'Erreur lors de la création du secteur');
             return $this->redirect('/sectors/create');
         }
@@ -407,11 +393,6 @@ class SectorController extends BaseController
             // Récupérer les médias associés à ce secteur via MediaService
             $media = $this->mediaService->getMediaForEntity('sector', (int) $id);
 
-            // Debug log pour vérifier les médias récupérés
-            error_log("SectorEdit: Médias récupérés pour le secteur $id: " . count($media));
-            foreach ($media as $item) {
-                error_log("Média ID: {$item['id']}, Path: {$item['file_path']}, Type: {$item['relationship_type']}");
-            }
 
             return $this->render('sectors/form', [
                 'title' => 'Modifier le secteur ' . $sector['name'],
@@ -427,7 +408,6 @@ class SectorController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
-            error_log("SectorEdit - Exception: " . $e->getMessage());
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
             return $this->redirect('/sectors');
         }
@@ -460,12 +440,8 @@ class SectorController extends BaseController
             // IMPORTANT: Obtenir l'ID utilisateur directement de $_SESSION
             $data['updated_by'] = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? 1;
 
-            // Log détaillé pour déboguer
-            error_log("SectorUpdate: Début mise à jour secteur #" . $id . " par utilisateur #" . $data['updated_by']);
-
             // Begin transaction avec gestion d'erreur explicite
             if (!$this->db->beginTransaction()) {
-                error_log("SectorUpdate: Erreur démarrage transaction");
                 $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
                 return $this->redirect('/sectors/' . $id . '/edit');
             }
@@ -497,7 +473,6 @@ class SectorController extends BaseController
             $success = $this->db->update('climbing_sectors', $updateData, 'id = ?', [(int)$id]);
 
             if (!$success) {
-                error_log("SectorUpdate: Échec mise à jour table climbing_sectors");
                 throw new \Exception("Échec de la mise à jour du secteur principal");
             }
 
@@ -541,9 +516,6 @@ class SectorController extends BaseController
                     $mediaTitle = $data['media_title'] ?? null;
                     $relationshipType = $data['media_relationship_type'] ?? 'gallery';
 
-                    // Logging supplémentaire pour le débogage
-                    error_log("SectorUpdate: Téléchargement de média détecté: " . $mediaFile['name']);
-
                     // Uploader le média
                     $mediaId = $this->mediaService->uploadMedia($mediaFile, [
                         'title' => $mediaTitle ?? $data['name'],
@@ -556,7 +528,6 @@ class SectorController extends BaseController
                     ], $data['updated_by']);
 
                     if ($mediaId) {
-                        error_log("SectorUpdate: Média ajouté avec succès, ID: " . $mediaId);
 
                         // Si c'est une image principale, mettre à jour les anciennes relations "main"
                         if ($relationshipType === 'main') {

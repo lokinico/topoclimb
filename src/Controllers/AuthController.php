@@ -81,14 +81,6 @@ class AuthController extends BaseController
 
     public function login(Request $request): Response
     {
-        // ================== IGNORER TEMPORAIREMENT LA VALIDATION CSRF ===================
-        // $submittedToken = $request->request->get('csrf_token');
-        // if (!$this->validateCsrfToken($submittedToken)) {
-        //     $this->flash('error', 'Token CSRF invalide. Veuillez réessayer.');
-        //     return $this->redirect('/login');
-        // }
-        // ================================================================================
-
         $credentials = $request->request->all();
 
         // Ajouter des logs pour déboguer

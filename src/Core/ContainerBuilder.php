@@ -13,7 +13,6 @@ use TopoclimbCH\Controllers\ErrorController;
 use TopoclimbCH\Controllers\SectorController;
 use TopoclimbCH\Controllers\RouteController;
 use TopoclimbCH\Controllers\AuthController;
-// SUPPRIMÉ: use TopoclimbCH\Middleware\PreserveCsrfTokenMiddleware;
 use TopoclimbCH\Core\Router;
 
 class ContainerBuilder

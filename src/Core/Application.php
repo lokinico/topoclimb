@@ -65,20 +65,7 @@ class Application
     public function handle(): Response
     {
         try {
-            // CORRECTION: Retirer le middleware CSRF global qui n'existe pas
-            // L'ancienne ligne causait l'erreur "PreserveCsrfTokenMiddleware does not exist"
             return $this->router->dispatch($this->request);
-
-            // ANCIEN CODE PROBLÉMATIQUE (commenté pour référence):
-            /*
-            // Pour toutes les autres routes, appliquer le middleware CSRF
-            $session = $this->container->get(Session::class);
-            $preserveCsrfMiddleware = new PreserveCsrfTokenMiddleware($session);
-
-            return $preserveCsrfMiddleware->handle($this->request, function ($request) {
-                return $this->router->dispatch($request);
-            });
-            */
         } catch (RouteNotFoundException $e) {
             return $this->createNotFoundResponse($e);
         } catch (\Throwable $e) {
