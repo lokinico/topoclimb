@@ -171,7 +171,8 @@ class ContainerBuilder
         $controllers = [
             'TopoclimbCH\\Controllers\\HomeController' => [
                 View::class,
-                Session::class
+                Session::class,
+                CsrfManager::class
             ],
             'TopoclimbCH\\Controllers\\AuthController' => [
                 View::class,
@@ -217,7 +218,8 @@ class ContainerBuilder
             ],
             'TopoclimbCH\\Controllers\\ErrorController' => [
                 View::class,
-                Session::class
+                Session::class,
+                CsrfManager::class
             ],
             'TopoclimbCH\\Controllers\\UserController' => [
                 View::class,

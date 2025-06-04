@@ -18,7 +18,7 @@ class HomeController extends BaseController
      */
     public function __construct(View $view, Session $session)
     {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager);
     }
 
     /**
@@ -34,7 +34,7 @@ class HomeController extends BaseController
             'title' => 'Bienvenue sur TopoclimbCH',
             'description' => 'La plateforme de gestion des sites d\'escalade en Suisse',
         ];
-        
+
         // Utiliser la méthode render du BaseController
         return $this->render('home/index', $data);
     }

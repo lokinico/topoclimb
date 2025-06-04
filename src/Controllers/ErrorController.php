@@ -16,9 +16,9 @@ class ErrorController extends BaseController
      * @param View $view
      * @param Session $session
      */
-    public function __construct(View $view, Session $session)
+    public function __construct(View $view, Session $session, CsrfManager $csrfManager)
     {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager);
     }
 
     /**
@@ -33,10 +33,10 @@ class ErrorController extends BaseController
         $response->setStatusCode(Response::HTTP_NOT_FOUND);
         $content = $this->view->render('errors/404.twig');
         $response->setContent($content);
-        
+
         return $response;
     }
-    
+
     /**
      * 500 error page
      *
@@ -48,7 +48,7 @@ class ErrorController extends BaseController
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR);
-        
+
         $data = [];
         if ($exception && $_ENV['APP_ENV'] === 'development') {
             $data['exception'] = [
@@ -58,13 +58,13 @@ class ErrorController extends BaseController
                 'trace' => $exception->getTraceAsString()
             ];
         }
-        
+
         $content = $this->view->render('errors/500.twig', $data);
         $response->setContent($content);
-        
+
         return $response;
     }
-    
+
     /**
      * 403 error page
      *
@@ -77,7 +77,7 @@ class ErrorController extends BaseController
         $response->setStatusCode(Response::HTTP_FORBIDDEN);
         $content = $this->view->render('errors/403.twig');
         $response->setContent($content);
-        
+
         return $response;
     }
 }
