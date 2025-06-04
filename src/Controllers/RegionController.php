@@ -12,6 +12,7 @@ use TopoclimbCH\Models\Region;
 use TopoclimbCH\Services\RegionService;
 use TopoclimbCH\Services\CountryService;
 use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class RegionController extends BaseController
 {

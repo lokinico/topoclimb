@@ -12,6 +12,7 @@ use TopoclimbCH\Services\RouteService;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class RouteController extends BaseController
 {
@@ -48,12 +49,13 @@ class RouteController extends BaseController
     public function __construct(
         View $view,
         Session $session,
+        CsrfManager $csrfManager, // Ajoutez ce paramètre
         RouteService $routeService,
         MediaService $mediaService,
         SectorService $sectorService,
         AuthService $authService
     ) {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager);
         $this->routeService = $routeService;
         $this->mediaService = $mediaService;
         $this->sectorService = $sectorService;

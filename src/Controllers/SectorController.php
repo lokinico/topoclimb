@@ -16,6 +16,7 @@ use TopoclimbCH\Models\Region;
 use TopoclimbCH\Models\Month;
 use TopoclimbCH\Models\Exposure;
 use TopoclimbCH\Exceptions\ServiceException;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class SectorController extends BaseController
 {
@@ -46,11 +47,12 @@ class SectorController extends BaseController
     public function __construct(
         View $view,
         Session $session,
+        CsrfManager $csrfManager, // Ajoutez ce paramètre
         SectorService $sectorService,
         MediaService $mediaService,
         Database $db
     ) {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager);
         $this->sectorService = $sectorService;
         $this->mediaService = $mediaService;
         $this->db = $db;
