@@ -7,99 +7,66 @@ use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Models\User;
-use Symfony\Component\Mailer\Mailer;
-use Symfony\Component\Mailer\Transport;
-use Symfony\Component\Mime\Email;
 
 class AuthService
 {
     private Auth $auth;
     private Session $session;
     private Database $db;
-    private ?Mailer $mailer = null;
-
-    public function check(): bool
-    {
-        return $this->auth->check();
-    }
-
-    public function id(): ?int
-    {
-        return $this->auth->id();
-    }
-
-    public function can(string $ability, $model = null): bool
-    {
-        return $this->auth->can($ability, $model);
-    }
 
     public function __construct(Auth $auth, Session $session, Database $db)
     {
         $this->auth = $auth;
         $this->session = $session;
         $this->db = $db;
-
-        // Initialiser le mailer uniquement si nécessaire
-        // Ne pas le faire dans le constructeur pour éviter les erreurs
     }
 
     /**
-     * Obtient une instance de Mailer à la demande
+     * Vérifie si l'utilisateur est connecté
      */
-    private function getMailer(): ?Mailer
+    public function check(): bool
     {
-        if ($this->mailer === null) {
-            try {
-                // Vérifier que les paramètres requis sont définis
-                $host = $_ENV['MAIL_HOST'] ?? '';
-                $port = $_ENV['MAIL_PORT'] ?? 25;
+        return $this->auth->check();
+    }
 
-                if (empty($host)) {
-                    // Si pas de configuration, retourner null
-                    return null;
-                }
+    /**
+     * Récupère l'ID de l'utilisateur connecté
+     */
+    public function id(): ?int
+    {
+        return $this->auth->id();
+    }
 
-                // Construire le DSN correctement
-                $username = (!empty($_ENV['MAIL_USERNAME']) && $_ENV['MAIL_USERNAME'] !== 'null')
-                    ? $_ENV['MAIL_USERNAME'] : '';
+    /**
+     * Récupère l'utilisateur connecté
+     */
+    public function user(): ?User
+    {
+        return $this->auth->user();
+    }
 
-                $password = (!empty($_ENV['MAIL_PASSWORD']) && $_ENV['MAIL_PASSWORD'] !== 'null')
-                    ? $_ENV['MAIL_PASSWORD'] : '';
+    /**
+     * Vérifie les permissions
+     */
+    public function can(string $ability, $model = null): bool
+    {
+        return $this->auth->can($ability, $model);
+    }
 
-                $encryption = (!empty($_ENV['MAIL_ENCRYPTION']) && $_ENV['MAIL_ENCRYPTION'] !== 'null')
-                    ? $_ENV['MAIL_ENCRYPTION'] : '';
+    /**
+     * Connecte un utilisateur
+     */
+    public function login(User $user): bool
+    {
+        return $this->auth->login($user);
+    }
 
-                // Construction du DSN
-                if (!empty($username) && !empty($password)) {
-                    // Format avec authentification
-                    $dsn = sprintf(
-                        '%s://%s:%s@%s:%s',
-                        $encryption ? $encryption . 'smtp' : 'smtp',
-                        $username,
-                        $password,
-                        $host,
-                        $port
-                    );
-                } else {
-                    // Format sans authentification
-                    $dsn = sprintf(
-                        '%s://%s:%s',
-                        $encryption ? $encryption . 'smtp' : 'smtp',
-                        $host,
-                        $port
-                    );
-                }
-
-                $transport = Transport::fromDsn($dsn);
-                $this->mailer = new Mailer($transport);
-            } catch (\Exception $e) {
-                // En cas d'erreur, logger et retourner null
-                error_log('Erreur de configuration du mailer: ' . $e->getMessage());
-                return null;
-            }
-        }
-
-        return $this->mailer;
+    /**
+     * Déconnecte l'utilisateur
+     */
+    public function logout(): void
+    {
+        $this->auth->logout();
     }
 
     /**
@@ -107,9 +74,11 @@ class AuthService
      */
     public function sendPasswordResetEmail(string $email): bool
     {
-        $user = User::where('mail', $email)->first();
+        // Utiliser une requête SQL directe pour éviter les problèmes de modèles
+        $result = $this->db->query("SELECT * FROM users WHERE mail = ? LIMIT 1", [$email]);
+        $userData = $result[0] ?? null;
 
-        if (!$user) {
+        if (!$userData) {
             // Ne pas révéler que l'email n'existe pas
             return false;
         }
@@ -118,75 +87,12 @@ class AuthService
         $token = bin2hex(random_bytes(10)); // Token de 20 caractères
 
         // Met à jour le token dans la base de données
-        $user->reset_token = $token;
-        $user->save();
+        $this->db->query("UPDATE users SET reset_token = ? WHERE id = ?", [$token, $userData['id']]);
 
-        // Obtient le mailer
-        $mailer = $this->getMailer();
-        if (!$mailer) {
-            // Si le mailer n'est pas disponible, simuler un succès mais logger
-            error_log("Mail non envoyé (mailer non configuré) pour: $email");
-            return true;
-        }
+        // Pour l'instant, simplement logger le token (à remplacer par un vrai envoi d'email)
+        error_log("Token de réinitialisation pour {$email}: {$token}");
 
-        try {
-            // URL de réinitialisation
-            $appUrl = $_ENV['APP_URL'] ?? '';
-            if (empty($appUrl)) {
-                // Détecter l'URL de l'application
-                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443)
-                    ? "https://" : "http://";
-                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $appUrl = $protocol . $host;
-            }
-
-            $resetUrl = "{$appUrl}/reset-password?token={$token}";
-
-            $emailMessage = (new Email())
-                ->from($_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@example.com')
-                ->to($user->mail)
-                ->subject('Réinitialisation de mot de passe - ' . ($_ENV['APP_NAME'] ?? 'TopoclimbCH'))
-                ->html($this->getPasswordResetEmailTemplate($user->prenom, $resetUrl));
-
-            $mailer->send($emailMessage);
-            return true;
-        } catch (\Exception $e) {
-            // Journaliser l'erreur
-            error_log("Erreur d'envoi d'email: " . $e->getMessage());
-            return false;
-        }
-    }
-
-
-
-    /**
-     * Template pour l'email de réinitialisation
-     */
-    private function getPasswordResetEmailTemplate(string $firstName, string $resetUrl): string
-    {
-        return <<<HTML
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .button { display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h2>Réinitialisation de votre mot de passe</h2>
-                <p>Bonjour {$firstName},</p>
-                <p>Vous recevez cet email car nous avons reçu une demande de réinitialisation de mot de passe pour votre compte.</p>
-                <p><a class="button" href="{$resetUrl}">Réinitialiser le mot de passe</a></p>
-                <p>Ce lien expirera dans 60 minutes.</p>
-                <p>Si vous n'avez pas demandé de réinitialisation, aucune action n'est requise.</p>
-                <p>Cordialement,<br>L'équipe TopoclimbCH</p>
-            </div>
-        </body>
-        </html>
-        HTML;
+        return true;
     }
 
     /**
@@ -198,7 +104,8 @@ class AuthService
             return false;
         }
 
-        return User::where('reset_token', $token)->exists();
+        $result = $this->db->query("SELECT COUNT(*) as count FROM users WHERE reset_token = ?", [$token]);
+        return ($result[0]['count'] ?? 0) > 0;
     }
 
     /**
@@ -206,15 +113,19 @@ class AuthService
      */
     public function resetPassword(string $token, string $newPassword): bool
     {
-        $user = User::where('reset_token', $token)->first();
+        $result = $this->db->query("SELECT * FROM users WHERE reset_token = ? LIMIT 1", [$token]);
+        $userData = $result[0] ?? null;
 
-        if (!$user) {
+        if (!$userData) {
             return false;
         }
 
-        $user->password = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-        $user->reset_token = null;
+        $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+        $updateResult = $this->db->query(
+            "UPDATE users SET password = ?, reset_token = NULL WHERE id = ?",
+            [$hashedPassword, $userData['id']]
+        );
 
-        return $user->save();
+        return $updateResult !== false;
     }
 }
