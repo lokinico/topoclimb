@@ -94,9 +94,30 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'show'
+    ],
+
+    // Routes des sites
+    [
+        'method' => 'GET',
         'path' => '/sites',
         'controller' => \TopoclimbCH\Controllers\SiteController::class,
         'action' => 'index'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sites/{id}',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'show'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sites/create',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'create',
+        'middlewares' => [\TopoclimbCH\Middleware\ModeratorMiddleware::class]
     ],
 
     // Routes pour les secteurs
@@ -219,5 +240,67 @@ return [
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
 
-    // Ajoutez ici d'autres routes nécessaires (ascents, commentaires, etc.)
+    [
+        'method' => 'GET',
+        'path' => '/profile',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'profile',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/settings',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'settings',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+
+    // Routes statiques
+    [
+        'method' => 'GET',
+        'path' => '/about',
+        'controller' => \TopoclimbCH\Controllers\HomeController::class,
+        'action' => 'about'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/contact',
+        'controller' => \TopoclimbCH\Controllers\HomeController::class,
+        'action' => 'contact'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/privacy',
+        'controller' => \TopoclimbCH\Controllers\HomeController::class,
+        'action' => 'privacy'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/terms',
+        'controller' => \TopoclimbCH\Controllers\HomeController::class,
+        'action' => 'terms'
+    ],
+
+    // Route newsletter
+    [
+        'method' => 'POST',
+        'path' => '/newsletter',
+        'controller' => \TopoclimbCH\Controllers\NewsletterController::class,
+        'action' => 'subscribe',
+        'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+
+    // Routes erreurs
+    [
+        'method' => 'GET',
+        'path' => '/404',
+        'controller' => \TopoclimbCH\Controllers\ErrorController::class,
+        'action' => 'notFound'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/403',
+        'controller' => \TopoclimbCH\Controllers\ErrorController::class,
+        'action' => 'forbidden'
+    ]
 ];
