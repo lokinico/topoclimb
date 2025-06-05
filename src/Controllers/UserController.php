@@ -12,6 +12,7 @@ use TopoclimbCH\Models\User;
 use TopoclimbCH\Services\UserService;
 use TopoclimbCH\Services\AscentService;
 use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class UserController extends BaseController
 {
@@ -19,22 +20,22 @@ class UserController extends BaseController
      * @var UserService
      */
     protected UserService $userService;
-    
+
     /**
      * @var AscentService
      */
     protected AscentService $ascentService;
-    
+
     /**
      * @var AuthService
      */
     protected AuthService $authService;
-    
+
     /**
      * @var Database
      */
     protected Database $db;
-    
+
     /**
      * Constructor
      *
@@ -59,7 +60,7 @@ class UserController extends BaseController
         $this->authService = $authService;
         $this->db = $db;
     }
-    
+
     /**
      * Affiche le profil de l'utilisateur connecté
      *
@@ -74,19 +75,19 @@ class UserController extends BaseController
             $this->flash('error', 'Vous devez être connecté pour accéder à cette page');
             return $this->redirect('/login');
         }
-        
+
         $userId = $this->authService->id();
         $user = $this->authService->user();
-        
+
         // Récupère les statistiques d'ascension
         $ascentStats = $this->ascentService->getUserStats($userId);
-        
+
         // Récupère les ascensions récentes
         $recentAscents = $this->ascentService->getUserRecentAscents($userId, 5);
-        
+
         // Récupère les voies favorites
         $favoriteRoutes = $this->userService->getUserFavoriteRoutes($userId);
-        
+
         return $this->render('users/profile', [
             'user' => $user,
             'ascentStats' => $ascentStats,
@@ -95,7 +96,7 @@ class UserController extends BaseController
             'title' => 'Mon profil'
         ]);
     }
-    
+
     /**
      * Affiche le formulaire d'édition du profil
      *
@@ -110,16 +111,16 @@ class UserController extends BaseController
             $this->flash('error', 'Vous devez être connecté pour accéder à cette page');
             return $this->redirect('/login');
         }
-        
+
         $user = $this->authService->user();
-        
+
         return $this->render('users/edit', [
             'user' => $user,
             'title' => 'Modifier mon profil',
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Met à jour le profil utilisateur
      *
@@ -133,16 +134,16 @@ class UserController extends BaseController
             $this->flash('error', 'Vous devez être connecté pour modifier votre profil');
             return $this->redirect('/login');
         }
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/profile/edit');
         }
-        
+
         $userId = $this->authService->id();
         $user = $this->authService->user();
-        
+
         // Valide les données
         $data = $this->validate($request->request->all(), [
             'nom' => 'required|max:255',
@@ -151,7 +152,7 @@ class UserController extends BaseController
             'mail' => 'required|email|max:255',
             'username' => 'required|max:100'
         ]);
-        
+
         // Vérifie si l'email est déjà utilisé par un autre utilisateur
         if ($data['mail'] !== $user->mail) {
             $existingUser = User::findByEmail($data['mail']);
@@ -160,7 +161,7 @@ class UserController extends BaseController
                 return $this->redirect('/profile/edit');
             }
         }
-        
+
         // Vérifie si le nom d'utilisateur est déjà utilisé par un autre utilisateur
         if ($data['username'] !== $user->username) {
             $existingUser = User::findByUsername($data['username']);
@@ -169,11 +170,11 @@ class UserController extends BaseController
                 return $this->redirect('/profile/edit');
             }
         }
-        
+
         try {
             // Met à jour l'utilisateur
             $this->userService->updateUser($userId, $data);
-            
+
             $this->flash('success', 'Profil mis à jour avec succès');
             return $this->redirect('/profile');
         } catch (\Exception $e) {
@@ -181,7 +182,7 @@ class UserController extends BaseController
             return $this->redirect('/profile/edit');
         }
     }
-    
+
     /**
      * Affiche le formulaire de changement de mot de passe
      *
@@ -196,13 +197,13 @@ class UserController extends BaseController
             $this->flash('error', 'Vous devez être connecté pour accéder à cette page');
             return $this->redirect('/login');
         }
-        
+
         return $this->render('users/change-password', [
             'title' => 'Changer de mot de passe',
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Change le mot de passe de l'utilisateur
      *
@@ -216,39 +217,39 @@ class UserController extends BaseController
             $this->flash('error', 'Vous devez être connecté pour changer votre mot de passe');
             return $this->redirect('/login');
         }
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/profile/change-password');
         }
-        
+
         $userId = $this->authService->id();
         $user = $this->authService->user();
-        
+
         // Valide les données
         $data = $this->validate($request->request->all(), [
             'current_password' => 'required',
             'password' => 'required|min:8',
             'password_confirmation' => 'required'
         ]);
-        
+
         // Vérifie que le mot de passe actuel est correct
         if (!$user->checkPassword($data['current_password'])) {
             $this->flash('error', 'Le mot de passe actuel est incorrect');
             return $this->redirect('/profile/change-password');
         }
-        
+
         // Vérifie que les nouveaux mots de passe correspondent
         if ($data['password'] !== $data['password_confirmation']) {
             $this->flash('error', 'Les nouveaux mots de passe ne correspondent pas');
             return $this->redirect('/profile/change-password');
         }
-        
+
         try {
             // Met à jour le mot de passe
             $this->userService->changePassword($userId, $data['password']);
-            
+
             $this->flash('success', 'Mot de passe modifié avec succès');
             return $this->redirect('/profile');
         } catch (\Exception $e) {
@@ -256,7 +257,7 @@ class UserController extends BaseController
             return $this->redirect('/profile/change-password');
         }
     }
-    
+
     /**
      * Affiche la vue des préférences utilisateur
      *
@@ -271,15 +272,15 @@ class UserController extends BaseController
             $this->flash('error', 'Vous devez être connecté pour accéder à cette page');
             return $this->redirect('/login');
         }
-        
+
         $userId = $this->authService->id();
-        
+
         // Récupère les préférences utilisateur
         $preferences = $this->userService->getUserPreferences($userId);
-        
+
         // Récupère les systèmes de difficulté disponibles
         $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
-        
+
         return $this->render('users/preferences', [
             'preferences' => $preferences,
             'difficultySystems' => $difficultySystems,
@@ -287,7 +288,7 @@ class UserController extends BaseController
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Enregistre les préférences utilisateur
      *
@@ -301,22 +302,22 @@ class UserController extends BaseController
             $this->flash('error', 'Vous devez être connecté pour modifier vos préférences');
             return $this->redirect('/login');
         }
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/profile/preferences');
         }
-        
+
         $userId = $this->authService->id();
-        
+
         // Récupère les données
         $data = $request->request->all();
-        
+
         try {
             // Enregistre les préférences
             $this->userService->saveUserPreferences($userId, $data);
-            
+
             $this->flash('success', 'Préférences enregistrées avec succès');
             return $this->redirect('/profile/preferences');
         } catch (\Exception $e) {
@@ -324,7 +325,7 @@ class UserController extends BaseController
             return $this->redirect('/profile/preferences');
         }
     }
-    
+
     /**
      * Administration: Affiche la liste des utilisateurs
      *
@@ -335,21 +336,21 @@ class UserController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-users');
-        
+
         $page = (int) $request->query->get('page', 1);
         $perPage = (int) $request->query->get('per_page', 20);
         $search = $request->query->get('search', '');
-        
+
         // Récupère les utilisateurs
         $users = $this->userService->getPaginatedUsers($search, $page, $perPage);
-        
+
         return $this->render('admin/users/index', [
             'users' => $users,
             'search' => $search,
             'title' => 'Gestion des utilisateurs'
         ]);
     }
-    
+
     /**
      * Administration: Affiche le formulaire d'édition d'un utilisateur
      *
@@ -360,16 +361,16 @@ class UserController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-users');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         $user = $this->userService->getUser($id);
-        
+
         if (!$user) {
             $this->flash('error', 'Utilisateur non trouvé');
             return $this->redirect('/admin/users');
         }
-        
+
         return $this->render('admin/users/edit', [
             'user' => $user,
             'roles' => [
@@ -381,7 +382,7 @@ class UserController extends BaseController
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Administration: Met à jour un utilisateur
      *
@@ -392,22 +393,22 @@ class UserController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-users');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/admin/users/' . $id . '/edit');
         }
-        
+
         $user = $this->userService->getUser($id);
-        
+
         if (!$user) {
             $this->flash('error', 'Utilisateur non trouvé');
             return $this->redirect('/admin/users');
         }
-        
+
         // Valide les données
         $data = $this->validate($request->request->all(), [
             'nom' => 'required|max:255',
@@ -417,7 +418,7 @@ class UserController extends BaseController
             'username' => 'required|max:100',
             'autorisation' => 'required|in:1,2,3'
         ]);
-        
+
         // Vérifie si l'email est déjà utilisé par un autre utilisateur
         if ($data['mail'] !== $user->mail) {
             $existingUser = User::findByEmail($data['mail']);
@@ -426,7 +427,7 @@ class UserController extends BaseController
                 return $this->redirect('/admin/users/' . $id . '/edit');
             }
         }
-        
+
         // Vérifie si le nom d'utilisateur est déjà utilisé par un autre utilisateur
         if ($data['username'] !== $user->username) {
             $existingUser = User::findByUsername($data['username']);
@@ -435,7 +436,7 @@ class UserController extends BaseController
                 return $this->redirect('/admin/users/' . $id . '/edit');
             }
         }
-        
+
         // Vérifie si le nouveau mot de passe est fourni
         if (!empty($request->request->get('password'))) {
             $password = $request->request->get('password');
@@ -445,11 +446,11 @@ class UserController extends BaseController
             }
             $data['password'] = $password;
         }
-        
+
         try {
             // Met à jour l'utilisateur
             $this->userService->updateUser($id, $data);
-            
+
             $this->flash('success', 'Utilisateur mis à jour avec succès');
             return $this->redirect('/admin/users');
         } catch (\Exception $e) {
@@ -457,7 +458,7 @@ class UserController extends BaseController
             return $this->redirect('/admin/users/' . $id . '/edit');
         }
     }
-    
+
     /**
      * Administration: Supprime un utilisateur
      *
@@ -468,22 +469,22 @@ class UserController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-users');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         $user = $this->userService->getUser($id);
-        
+
         if (!$user) {
             $this->flash('error', 'Utilisateur non trouvé');
             return $this->redirect('/admin/users');
         }
-        
+
         // Vérifie qu'on ne supprime pas l'utilisateur connecté
         if ($id === $this->authService->id()) {
             $this->flash('error', 'Vous ne pouvez pas supprimer votre propre compte');
             return $this->redirect('/admin/users');
         }
-        
+
         // Vérifie s'il s'agit d'une demande de confirmation
         if ($request->getMethod() !== 'POST') {
             return $this->render('admin/users/delete', [
@@ -492,17 +493,17 @@ class UserController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         }
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/admin/users/' . $id . '/delete');
         }
-        
+
         try {
             // Supprime l'utilisateur
             $this->userService->deleteUser($user);
-            
+
             $this->flash('success', 'Utilisateur supprimé avec succès');
             return $this->redirect('/admin/users');
         } catch (\Exception $e) {

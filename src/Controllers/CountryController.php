@@ -11,6 +11,7 @@ use TopoclimbCH\Core\Database;
 use TopoclimbCH\Models\Country;
 use TopoclimbCH\Services\CountryService;
 use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class CountryController extends BaseController
 {
@@ -18,17 +19,17 @@ class CountryController extends BaseController
      * @var CountryService
      */
     protected CountryService $countryService;
-    
+
     /**
      * @var AuthService
      */
     protected AuthService $authService;
-    
+
     /**
      * @var Database
      */
     protected Database $db;
-    
+
     /**
      * Constructor
      *
@@ -50,7 +51,7 @@ class CountryController extends BaseController
         $this->authService = $authService;
         $this->db = $db;
     }
-    
+
     /**
      * Affiche la liste des pays
      *
@@ -60,13 +61,13 @@ class CountryController extends BaseController
     public function index(Request $request): Response
     {
         $countries = $this->countryService->getAllCountries();
-        
+
         return $this->render('countries/index', [
             'countries' => $countries,
             'title' => 'Tous les pays'
         ]);
     }
-    
+
     /**
      * Affiche un pays spécifique
      *
@@ -76,24 +77,24 @@ class CountryController extends BaseController
     public function show(Request $request): Response
     {
         $id = (int) $request->attributes->get('id');
-        
+
         $country = $this->countryService->getCountryWithStatistics($id);
-        
+
         if (!$country) {
             $this->flash('error', 'Pays non trouvé');
             return $this->redirect('/countries');
         }
-        
+
         // Récupère les régions associées
         $regions = $this->countryService->getCountryRegions($id);
-        
+
         return $this->render('countries/show', [
             'country' => $country,
             'regions' => $regions,
             'title' => $country->name
         ]);
     }
-    
+
     /**
      * Affiche le formulaire de création d'un pays
      *
@@ -104,13 +105,13 @@ class CountryController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         return $this->render('countries/create', [
             'title' => 'Créer un nouveau pays',
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Enregistre un nouveau pays
      *
@@ -121,13 +122,13 @@ class CountryController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/countries/create');
         }
-        
+
         // Valide les données
         $data = $this->validate($request->request->all(), [
             'name' => 'required|max:100',
@@ -135,11 +136,11 @@ class CountryController extends BaseController
             'description' => 'nullable',
             'active' => 'in:0,1'
         ]);
-        
+
         try {
             // Crée le pays
             $country = $this->countryService->createCountry($data);
-            
+
             $this->flash('success', 'Pays créé avec succès');
             return $this->redirect('/countries/' . $country->id);
         } catch (\Exception $e) {
@@ -147,7 +148,7 @@ class CountryController extends BaseController
             return $this->redirect('/countries/create');
         }
     }
-    
+
     /**
      * Affiche le formulaire d'édition d'un pays
      *
@@ -158,23 +159,23 @@ class CountryController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         $country = $this->countryService->getCountry($id);
-        
+
         if (!$country) {
             $this->flash('error', 'Pays non trouvé');
             return $this->redirect('/countries');
         }
-        
+
         return $this->render('countries/edit', [
             'country' => $country,
             'title' => 'Modifier ' . $country->name,
             'csrf_token' => $this->createCsrfToken()
         ]);
     }
-    
+
     /**
      * Met à jour un pays
      *
@@ -185,22 +186,22 @@ class CountryController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/countries/' . $id . '/edit');
         }
-        
+
         $country = $this->countryService->getCountry($id);
-        
+
         if (!$country) {
             $this->flash('error', 'Pays non trouvé');
             return $this->redirect('/countries');
         }
-        
+
         // Valide les données
         $data = $this->validate($request->request->all(), [
             'name' => 'required|max:100',
@@ -208,11 +209,11 @@ class CountryController extends BaseController
             'description' => 'nullable',
             'active' => 'in:0,1'
         ]);
-        
+
         try {
             // Met à jour le pays
             $country = $this->countryService->updateCountry($country, $data);
-            
+
             $this->flash('success', 'Pays mis à jour avec succès');
             return $this->redirect('/countries/' . $country->id);
         } catch (\Exception $e) {
@@ -220,7 +221,7 @@ class CountryController extends BaseController
             return $this->redirect('/countries/' . $id . '/edit');
         }
     }
-    
+
     /**
      * Supprime un pays
      *
@@ -231,21 +232,21 @@ class CountryController extends BaseController
     {
         // Vérifie les permissions
         $this->authorize('manage-climbing-data');
-        
+
         $id = (int) $request->attributes->get('id');
-        
+
         $country = $this->countryService->getCountry($id);
-        
+
         if (!$country) {
             $this->flash('error', 'Pays non trouvé');
             return $this->redirect('/countries');
         }
-        
+
         // Vérifie s'il s'agit d'une demande de confirmation
         if ($request->getMethod() !== 'POST') {
             // Vérifie si le pays contient des régions
             $regionsCount = count($this->countryService->getCountryRegions($id));
-            
+
             return $this->render('countries/delete', [
                 'country' => $country,
                 'regionsCount' => $regionsCount,
@@ -253,17 +254,17 @@ class CountryController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         }
-        
+
         // Vérifie le token CSRF
         if (!$this->validateCsrfToken($request)) {
             $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
             return $this->redirect('/countries/' . $id . '/delete');
         }
-        
+
         try {
             // Supprime le pays
             $this->countryService->deleteCountry($country);
-            
+
             $this->flash('success', 'Pays supprimé avec succès');
             return $this->redirect('/countries');
         } catch (\Exception $e) {

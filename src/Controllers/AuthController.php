@@ -11,6 +11,8 @@ use TopoclimbCH\Core\Database;
 use TopoclimbCH\Models\User;
 use TopoclimbCH\Services\AuthService;
 use TopoclimbCH\Services\ValidationService;
+use TopoclimbCH\Core\Security\CsrfManager;
+
 
 class AuthController extends BaseController
 {

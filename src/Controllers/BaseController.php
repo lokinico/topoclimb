@@ -14,6 +14,7 @@ use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Validation\Validator;
 use TopoclimbCH\Exceptions\ValidationException;
 use TopoclimbCH\Exceptions\AuthorizationException;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 abstract class BaseController
 {

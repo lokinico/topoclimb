@@ -9,6 +9,7 @@ use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class MediaController extends BaseController
 {

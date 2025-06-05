@@ -5,6 +5,7 @@ namespace TopoclimbCH\Controllers;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Response;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class AdminController extends BaseController
 {
@@ -12,14 +13,14 @@ class AdminController extends BaseController
     {
         parent::__construct($view, $session);
     }
-    
+
     public function index(): Response
     {
         return $this->render('admin/index.twig', [
             'title' => 'Administration'
         ]);
     }
-    
+
     public function users(): Response
     {
         // Logique pour afficher la liste des utilisateurs
