@@ -123,7 +123,7 @@ class SectorController extends BaseController
 
         if (!$id) {
             $this->session->flash('error', 'ID du secteur non spécifié');
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');
         }
 
         try {
