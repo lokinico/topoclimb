@@ -120,43 +120,40 @@ class SectorController extends BaseController
     public function show(Request $request): Response
     {
         $id = $request->attributes->get('id');
+        error_log("DEBUG show() - ID reçu: " . ($id ?? 'NULL'));
 
         if (!$id) {
+            error_log("DEBUG show() - Pas d'ID, redirection");
             $this->session->flash('error', 'ID du secteur non spécifié');
             return Response::redirect('/sectors');
         }
 
         try {
+            error_log("DEBUG show() - Appel getSectorById pour ID: " . $id);
             $sector = $this->sectorService->getSectorById((int) $id);
+            error_log("DEBUG show() - Secteur trouvé: " . ($sector ? 'OUI' : 'NON'));
+
             if (!$sector) {
+                error_log("DEBUG show() - Secteur non trouvé, redirection");
                 $this->session->flash('error', 'Secteur non trouvé');
-                return Response::redirect('/sectors');  // ✅ CORRECTION
+                return Response::redirect('/sectors');
             }
 
-            // Get additional data
-            $exposures = $this->sectorService->getSectorExposures((int) $id);
-            $routes = $this->sectorService->getSectorRoutes((int) $id);
-            $media = $this->sectorService->getSectorMedia((int) $id);
-
-            // Utilisons Database directement ici au lieu de Sector::getStats
-            $db = \TopoclimbCH\Core\Database::getInstance();
-            $stats = [
-                'routes_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1", [$id])['count'] ?? 0),
-                'media_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", [$id])['count'] ?? 0)
-            ];
+            error_log("DEBUG show() - Secteur OK, nom: " . $sector['name']);
+            // Le reste du code...
 
             return $this->render('sectors/show', [
                 'title' => $sector['name'],
                 'sector' => $sector,
-                'exposures' => $exposures,
-                'media' => $media,
-                'routes' => $routes,
-                'stats' => $stats
+                'exposures' => [],
+                'media' => [],
+                'routes' => [],
+                'stats' => []
             ]);
         } catch (\Exception $e) {
-            // Debug - capturer et journaliser les exceptions
+            error_log("DEBUG show() - Exception: " . $e->getMessage());
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/sectors');  // ✅ CORRECTION
+            return Response::redirect('/sectors');
         }
     }
 
