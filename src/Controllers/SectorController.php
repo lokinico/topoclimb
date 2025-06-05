@@ -117,95 +117,94 @@ class SectorController extends BaseController
      * @param Request $request
      * @return Response
      */
-    <?php
-public function show(Request $request): Response
-{
-    $id = $request->attributes->get('id');
-    error_log("DEBUG show() - ID reçu: " . ($id ?? 'NULL'));
 
-    if (!$id) {
-        error_log("DEBUG show() - Pas d'ID, redirection");
-        $this->session->flash('error', 'ID du secteur non spécifié');
-        return Response::redirect('/sectors');
-    }
+    public function show(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        error_log("DEBUG show() - ID reçu: " . ($id ?? 'NULL'));
 
-    try {
-        error_log("DEBUG show() - Appel getSectorById pour ID: " . $id);
-        $sector = $this->sectorService->getSectorById((int) $id);
-        error_log("DEBUG show() - Secteur trouvé: " . ($sector ? 'OUI' : 'NON'));
-
-        if (!$sector) {
-            error_log("DEBUG show() - Secteur non trouvé, redirection");
-            $this->session->flash('error', 'Secteur non trouvé');
+        if (!$id) {
+            error_log("DEBUG show() - Pas d'ID, redirection");
+            $this->session->flash('error', 'ID du secteur non spécifié');
             return Response::redirect('/sectors');
         }
 
-        // Récupérer les routes du secteur
-        $routes = Route::where(['sector_id' => $id, 'active' => 1]);
-        $routes_count = count($routes);
+        try {
+            error_log("DEBUG show() - Appel getSectorById pour ID: " . $id);
+            $sector = $this->sectorService->getSectorById((int) $id);
+            error_log("DEBUG show() - Secteur trouvé: " . ($sector ? 'OUI' : 'NON'));
 
-        // Récupérer les expositions
-        $exposures = $this->db->fetchAll(
-            "SELECT e.* FROM climbing_exposures e 
+            if (!$sector) {
+                error_log("DEBUG show() - Secteur non trouvé, redirection");
+                $this->session->flash('error', 'Secteur non trouvé');
+                return Response::redirect('/sectors');
+            }
+
+            // Récupérer les routes du secteur
+            $routes = Route::where(['sector_id' => $id, 'active' => 1]);
+            $routes_count = count($routes);
+
+            // Récupérer les expositions
+            $exposures = $this->db->fetchAll(
+                "SELECT e.* FROM climbing_exposures e 
              JOIN climbing_sector_exposures se ON e.id = se.exposure_id 
              WHERE se.sector_id = ?",
-            [(int)$id]
-        );
+                [(int)$id]
+            );
 
-        // Récupérer les médias
-        $media = $this->mediaService->getMediaForEntity('sector', (int)$id);
+            // Récupérer les médias
+            $media = $this->mediaService->getMediaForEntity('sector', (int)$id);
 
-        // Calculer les statistiques
-        $stats = $this->calculateSectorStats($routes);
+            // Calculer les statistiques
+            $stats = $this->calculateSectorStats($routes);
 
-        return $this->render('sectors/show', [
-            'title' => $sector['name'],
-            'sector' => $sector,
-            'exposures' => $exposures,
-            'media' => $media,
-            'routes' => $routes,
-            'routes_count' => $routes_count,
-            'min_difficulty' => $stats['min_difficulty'] ?? null,
-            'max_difficulty' => $stats['max_difficulty'] ?? null,
-            'avg_route_length' => $stats['avg_length'] ?? null,
-            'route_styles' => array_unique(array_column($routes, 'style'))
-        ]);
-
-    } catch (\Exception $e) {
-        error_log("DEBUG show() - Exception: " . $e->getMessage());
-        $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-        return Response::redirect('/sectors');
+            return $this->render('sectors/show', [
+                'title' => $sector['name'],
+                'sector' => $sector,
+                'exposures' => $exposures,
+                'media' => $media,
+                'routes' => $routes,
+                'routes_count' => $routes_count,
+                'min_difficulty' => $stats['min_difficulty'] ?? null,
+                'max_difficulty' => $stats['max_difficulty'] ?? null,
+                'avg_route_length' => $stats['avg_length'] ?? null,
+                'route_styles' => array_unique(array_column($routes, 'style'))
+            ]);
+        } catch (\Exception $e) {
+            error_log("DEBUG show() - Exception: " . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return Response::redirect('/sectors');
+        }
     }
-}
 
-/**
- * Calculer les statistiques du secteur
- */
-private function calculateSectorStats(array $routes): array
-{
-    $stats = [];
-    
-    if (empty($routes)) {
+    /**
+     * Calculer les statistiques du secteur
+     */
+    private function calculateSectorStats(array $routes): array
+    {
+        $stats = [];
+
+        if (empty($routes)) {
+            return $stats;
+        }
+
+        // Calcul des difficultés min/max
+        $difficulties = array_column($routes, 'difficulty');
+        $difficulties = array_filter($difficulties); // Enlever les valeurs vides
+        if (!empty($difficulties)) {
+            $stats['min_difficulty'] = min($difficulties);
+            $stats['max_difficulty'] = max($difficulties);
+        }
+
+        // Calcul de la longueur moyenne
+        $lengths = array_column($routes, 'length');
+        $lengths = array_filter($lengths); // Enlever les valeurs nulles
+        if (!empty($lengths)) {
+            $stats['avg_length'] = round(array_sum($lengths) / count($lengths));
+        }
+
         return $stats;
     }
-
-    // Calcul des difficultés min/max
-    $difficulties = array_column($routes, 'difficulty');
-    $difficulties = array_filter($difficulties); // Enlever les valeurs vides
-    if (!empty($difficulties)) {
-        $stats['min_difficulty'] = min($difficulties);
-        $stats['max_difficulty'] = max($difficulties);
-    }
-
-    // Calcul de la longueur moyenne
-    $lengths = array_column($routes, 'length');
-    $lengths = array_filter($lengths); // Enlever les valeurs nulles
-    if (!empty($lengths)) {
-        $stats['avg_length'] = round(array_sum($lengths) / count($lengths));
-    }
-
-    return $stats;
-}
 
     /**
      * Display create sector form
