@@ -47,10 +47,10 @@ class SectorController extends BaseController
     public function __construct(
         View $view,
         Session $session,
-        CsrfManager $csrfManager, // Ajoutez ce paramètre
         SectorService $sectorService,
         MediaService $mediaService,
-        Database $db
+        Database $db,
+        CsrfManager $csrfManager
     ) {
         parent::__construct($view, $session, $csrfManager);
         $this->sectorService = $sectorService;
