@@ -159,50 +159,44 @@ class AuthController extends BaseController
 
 
     /**
-     * Déconnexion de l'utilisateur avec une approche ultra-minimaliste
-     * pour garantir le fonctionnement
-     *
-     * @return never
+     * Déconnexion de l'utilisateur
      */
-    // Dans AuthController.php
-    public function logout(): void
+    public function logout(): Response  //  Retourner Response
     {
-        // IMPORTANT: Utiliser la méthode logout() de Auth qui gère tout correctement
-        if ($this->auth) {
-            $this->auth->logout();
+        try {
+            error_log("=== DÉBUT LOGOUT ===");
+
+            $userId = $this->auth ? $this->auth->id() : null;
+            error_log("User ID avant logout: " . ($userId ?? 'null'));
+
+            // Utiliser la méthode logout() de Auth qui gère tout
+            if ($this->auth) {
+                $success = $this->auth->logout();
+                error_log("Auth::logout() résultat: " . ($success ? 'succès' : 'échec'));
+            }
+
+            // Nettoyer aussi la session via le gestionnaire de session
+            $this->session->remove('auth_user_id');
+            $this->session->remove('is_authenticated');
+
+            // Supprimer le cookie remember_token
+            if (isset($_COOKIE['remember_token'])) {
+                setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+            }
+
+            error_log("Logout réussi");
+
+            //  Retourner une Response au lieu d'exit
+            return $this->redirect('/')
+                ->with('success', 'Vous avez été déconnecté avec succès');
+        } catch (\Exception $e) {
+            error_log("ERREUR LOGOUT: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+
+            //  Même en cas d'erreur, retourner une Response
+            return $this->redirect('/')
+                ->with('error', 'Erreur lors de la déconnexion');
         }
-
-        // Nettoyer complètement la session
-        $_SESSION = [];
-
-        // Supprimer le cookie de session
-        if (ini_get("session.use_cookies")) {
-            $params = session_get_cookie_params();
-            setcookie(
-                session_name(),
-                '',
-                time() - 42000,
-                $params["path"],
-                $params["domain"],
-                $params["secure"],
-                $params["httponly"]
-            );
-        }
-
-        // CRUCIAL: Supprimer aussi le cookie remember_token
-        setcookie('remember_token', '', time() - 3600, '/', '', true, true);
-
-        // Détruire la session
-        session_destroy();
-
-        // Message de confirmation et redirection
-        session_start();
-        $_SESSION['_flashes']['success'][] = 'Vous avez été déconnecté avec succès';
-        session_write_close();
-
-        // Redirection directe
-        header('Location: /');
-        exit;
     }
 
     public function registerForm(): Response
