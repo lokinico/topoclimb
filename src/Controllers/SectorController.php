@@ -4,7 +4,7 @@
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use TopoclimbCH\Core\Response;  // ✅ CORRECTION: Utiliser votre classe Response
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
@@ -130,7 +130,7 @@ class SectorController extends BaseController
             $sector = $this->sectorService->getSectorById((int) $id);
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
-                return $this->redirect('/sectors');
+                return Response::redirect('/sectors');  // ✅ CORRECTION
             }
 
             // Get additional data
@@ -156,7 +156,7 @@ class SectorController extends BaseController
         } catch (\Exception $e) {
             // Debug - capturer et journaliser les exceptions
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');  // ✅ CORRECTION
         }
     }
 
@@ -166,46 +166,43 @@ class SectorController extends BaseController
      * @param Request $request
      * @return Response
      */
-    public function show(Request $request): Response
+    public function create(Request $request): Response
     {
-        $id = $request->attributes->get('id');
-
-        if (!$id) {
-            $this->session->flash('error', 'ID du secteur non spécifié');
-            return Response::redirect('/sectors');
-        }
-
         try {
-            $sector = $this->sectorService->getSectorById((int) $id);
-            if (!$sector) {
-                $this->session->flash('error', 'Secteur non trouvé');
-                return Response::redirect('/sectors');  // ✅ CORRECTION ICI
-            }
+            // Get data for form selections
+            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+            $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
+            $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
+            $months = $this->db->fetchAll("SELECT id, name, short_name FROM climbing_months ORDER BY month_number ASC");
 
-            // Get additional data
-            $exposures = $this->sectorService->getSectorExposures((int) $id);
-            $routes = $this->sectorService->getSectorRoutes((int) $id);
-            $media = $this->sectorService->getSectorMedia((int) $id);
-
-            // Utilisons Database directement ici au lieu de Sector::getStats
-            $db = \TopoclimbCH\Core\Database::getInstance();
-            $stats = [
-                'routes_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1", [$id])['count'] ?? 0),
-                'media_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", [$id])['count'] ?? 0)
+            // Précharger des valeurs par défaut
+            $sector = [
+                'color' => '#FF0000',
+                'active' => 1
             ];
 
-            return $this->render('sectors/show', [
-                'title' => $sector['name'],
+            // Si un region_id est spécifié, préconfigurer le secteur
+            if ($request->query->has('region_id')) {
+                $sector['region_id'] = (int) $request->query->get('region_id');
+            }
+
+            // Si un book_id est spécifié
+            if ($request->query->has('book_id')) {
+                $sector['book_id'] = (int) $request->query->get('book_id');
+            }
+
+            return $this->render('sectors/form', [
+                'title' => 'Créer un nouveau secteur',
                 'sector' => $sector,
+                'regions' => $regions,
+                'books' => $books,
                 'exposures' => $exposures,
-                'media' => $media,
-                'routes' => $routes,
-                'stats' => $stats
+                'months' => $months,
+                'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
-            // Debug - capturer et journaliser les exceptions
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/sectors');  // ✅ CORRECTION ICI
+            return Response::redirect('/sectors');  // ✅ CORRECTION
         }
     }
 
@@ -220,7 +217,7 @@ class SectorController extends BaseController
         // Validate CSRF token
         if (!$this->validateCsrfToken($request)) {
             $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
-            return $this->redirect('/sectors/create');
+            return Response::redirect('/sectors/create');  // ✅ CORRECTION
         }
 
         // Get form data
@@ -229,7 +226,7 @@ class SectorController extends BaseController
         // Basic validation
         if (empty($data['name']) || empty($data['code']) || empty($data['book_id'])) {
             $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires');
-            return $this->redirect('/sectors/create');
+            return Response::redirect('/sectors/create');  // ✅ CORRECTION
         }
 
         try {
@@ -239,7 +236,7 @@ class SectorController extends BaseController
             // Start transaction
             if (!$this->db->beginTransaction()) {
                 $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
-                return $this->redirect('/sectors/create');
+                return Response::redirect('/sectors/create');  // ✅ CORRECTION
             }
 
             // Prepare data for insertion
@@ -272,7 +269,7 @@ class SectorController extends BaseController
             if (!$sectorId) {
                 $this->db->rollBack();
                 $this->session->flash('error', 'Erreur lors de la création du secteur');
-                return $this->redirect('/sectors/create');
+                return Response::redirect('/sectors/create');  // ✅ CORRECTION
             }
 
             // Handle exposures if provided
@@ -332,15 +329,15 @@ class SectorController extends BaseController
             }
 
             $this->session->flash('success', 'Secteur créé avec succès');
-            return $this->redirect('/sectors/' . $sectorId);
+            return Response::redirect('/sectors/' . $sectorId);  // ✅ CORRECTION
         } catch (ServiceException $e) {
             $this->db->rollBack();
             $this->session->flash('error', 'Erreur: ' . $e->getMessage());
-            return $this->redirect('/sectors/create');
+            return Response::redirect('/sectors/create');  // ✅ CORRECTION
         } catch (\Exception $e) {
             $this->db->rollBack();
             $this->session->flash('error', 'Erreur lors de la création du secteur');
-            return $this->redirect('/sectors/create');
+            return Response::redirect('/sectors/create');  // ✅ CORRECTION
         }
     }
     /**
@@ -355,7 +352,7 @@ class SectorController extends BaseController
 
         if (!$id) {
             $this->session->flash('error', 'ID du secteur non spécifié');
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');  // ✅ CORRECTION
         }
 
         try {
@@ -363,7 +360,7 @@ class SectorController extends BaseController
 
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
-                return $this->redirect('/sectors');
+                return Response::redirect('/sectors');  // ✅ CORRECTION
             }
 
             // Get data for form selections
@@ -414,7 +411,7 @@ class SectorController extends BaseController
             ]);
         } catch (\Exception $e) {
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');  // ✅ CORRECTION
         }
     }
     /**
@@ -429,7 +426,7 @@ class SectorController extends BaseController
 
         if (!$id) {
             $this->session->flash('error', 'ID du secteur non spécifié');
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');  // ✅ CORRECTION
         }
 
         // Get form data
@@ -438,7 +435,7 @@ class SectorController extends BaseController
         // Basic validation
         if (empty($data['name']) || empty($data['code']) || empty($data['book_id'])) {
             $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires');
-            return $this->redirect('/sectors/' . $id . '/edit');
+            return Response::redirect('/sectors/' . $id . '/edit');  // ✅ CORRECTION
         }
 
         try {
@@ -448,7 +445,7 @@ class SectorController extends BaseController
             // Begin transaction avec gestion d'erreur explicite
             if (!$this->db->beginTransaction()) {
                 $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
-                return $this->redirect('/sectors/' . $id . '/edit');
+                return Response::redirect('/sectors/' . $id . '/edit');  // ✅ CORRECTION
             }
 
             // Mise à jour principale de la table climbing_sectors
@@ -561,7 +558,7 @@ class SectorController extends BaseController
 
             error_log("SectorUpdate: Mise à jour réussie du secteur #" . $id);
             $this->session->flash('success', 'Secteur mis à jour avec succès');
-            return $this->redirect('/sectors/' . $id);
+            return Response::redirect('/sectors/' . $id);  // ✅ CORRECTION
         } catch (\Exception $e) {
             // En cas d'erreur, rollback et message d'erreur
             if ($this->db->inTransaction()) {
@@ -569,7 +566,7 @@ class SectorController extends BaseController
             }
             error_log("SectorUpdate - Exception: " . $e->getMessage());
             $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
-            return $this->redirect('/sectors/' . $id . '/edit');
+            return Response::redirect('/sectors/' . $id . '/edit');  // ✅ CORRECTION
         }
     }
 
@@ -585,7 +582,7 @@ class SectorController extends BaseController
 
         if (!$id) {
             $this->session->flash('error', 'ID du secteur non spécifié');
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');  // ✅ CORRECTION
         }
 
         // Check if it's a POST request with confirmation
@@ -595,7 +592,7 @@ class SectorController extends BaseController
 
                 if (!$sector) {
                     $this->session->flash('error', 'Secteur non trouvé');
-                    return $this->redirect('/sectors');
+                    return Response::redirect('/sectors');  // ✅ CORRECTION
                 }
 
                 // Get routes count
@@ -612,7 +609,7 @@ class SectorController extends BaseController
                 ]);
             } catch (\Exception $e) {
                 $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-                return $this->redirect('/sectors');
+                return Response::redirect('/sectors');  // ✅ CORRECTION
             }
         }
 
@@ -621,7 +618,7 @@ class SectorController extends BaseController
         // Validate CSRF token
         if (!$this->validateCsrfToken($request)) {
             $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
-            return $this->redirect('/sectors/' . $id . '/delete');
+            return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
         }
 
         try {
@@ -629,13 +626,13 @@ class SectorController extends BaseController
             $sector = $this->sectorService->getSectorById((int) $id);
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
-                return $this->redirect('/sectors');
+                return Response::redirect('/sectors');  // ✅ CORRECTION
             }
 
             if (!$this->db->beginTransaction()) {
                 error_log("SectorDelete: Erreur démarrage transaction");
                 $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
-                return $this->redirect('/sectors/' . $id . '/delete');
+                return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
             }
 
             // Supprimer les relations associées
@@ -661,7 +658,7 @@ class SectorController extends BaseController
             if (!$success) {
                 $this->db->rollBack();
                 $this->session->flash('error', 'Erreur lors de la suppression du secteur');
-                return $this->redirect('/sectors/' . $id . '/delete');
+                return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
             }
 
             if (!$this->db->commit()) {
@@ -670,14 +667,14 @@ class SectorController extends BaseController
             }
 
             $this->session->flash('success', 'Secteur supprimé avec succès');
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');  // ✅ CORRECTION
         } catch (\Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
             error_log("SectorDelete: Exception: " . $e->getMessage());
             $this->session->flash('error', 'Erreur lors de la suppression du secteur: ' . $e->getMessage());
-            return $this->redirect('/sectors/' . $id . '/delete');
+            return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
         }
     }
 }
