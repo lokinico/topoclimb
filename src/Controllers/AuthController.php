@@ -157,11 +157,10 @@ class AuthController extends BaseController
         return $this->redirect($intendedUrl);
     }
 
-
     /**
      * Déconnexion de l'utilisateur
      */
-    public function logout(): Response  //  Retourner Response
+    public function logout(Request $request): Response  // ✅ Ajouter Request $request
     {
         try {
             error_log("=== DÉBUT LOGOUT ===");
@@ -186,16 +185,19 @@ class AuthController extends BaseController
 
             error_log("Logout réussi");
 
-            //  Retourner une Response au lieu d'exit
-            return $this->redirect('/')
-                ->with('success', 'Vous avez été déconnecté avec succès');
+            // ✅ Utiliser flash() au lieu de with()
+            $this->flash('success', 'Vous avez été déconnecté avec succès');
+
+            // ✅ Retourner une Response simple sans with()
+            return $this->redirect('/');
         } catch (\Exception $e) {
             error_log("ERREUR LOGOUT: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
 
-            //  Même en cas d'erreur, retourner une Response
-            return $this->redirect('/')
-                ->with('error', 'Erreur lors de la déconnexion');
+            // ✅ Utiliser flash() au lieu de with()
+            $this->flash('error', 'Erreur lors de la déconnexion');
+
+            return $this->redirect('/');
         }
     }
 
