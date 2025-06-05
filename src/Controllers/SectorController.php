@@ -4,7 +4,7 @@
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
-use TopoclimbCH\Core\Response;  // ✅ CORRECTION: Utiliser votre classe Response
+use TopoclimbCH\Core\Response;  
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
@@ -15,6 +15,7 @@ use TopoclimbCH\Models\Sector;
 use TopoclimbCH\Models\Region;
 use TopoclimbCH\Models\Month;
 use TopoclimbCH\Models\Exposure;
+use TopoclimbCH\Models\Route; /
 use TopoclimbCH\Exceptions\ServiceException;
 use TopoclimbCH\Core\Security\CsrfManager;
 
