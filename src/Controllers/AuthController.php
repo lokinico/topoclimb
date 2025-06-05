@@ -42,14 +42,15 @@ class AuthController extends BaseController
      *
      * @param View $view
      * @param Session $session
-     * @param Database $db
+     * @param Database $db      // ← Déplacé en 3ème position
+     * @param CsrfManager $csrfManager  // ← Déplacé en 4ème position
      */
-    public function __construct(View $view, Session $session, CsrfManager $csrfManager)
+    public function __construct(View $view, Session $session, Database $db, CsrfManager $csrfManager)
     {
         parent::__construct($view, $session, $csrfManager);
 
         // Initialiser les propriétés spécifiques à ce contrôleur
-        $this->db = Database::getInstance();
+        $this->db = $db;  // ← Database maintenant disponible directement
         $this->auth = Auth::getInstance($session, $this->db);
         $this->authService = new AuthService($this->auth, $session, $this->db);
 
