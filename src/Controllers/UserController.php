@@ -11,12 +11,14 @@ use TopoclimbCH\Core\Database;
 use TopoclimbCH\Models\User;
 use TopoclimbCH\Services\UserService;
 use TopoclimbCH\Services\AscentService;
+use TopoclimbCH\Services\AuthService;
 use TopoclimbCH\Core\Security\CsrfManager;
 
 class UserController extends BaseController
 {
     protected UserService $userService;
     protected AscentService $ascentService;
+    protected AuthService $authService;
     protected Database $db;
 
     public function __construct(View $view, Session $session, CsrfManager $csrfManager)
@@ -27,6 +29,7 @@ class UserController extends BaseController
         $this->db = Database::getInstance();
         $this->userService = new UserService($this->db);
         $this->ascentService = new AscentService($this->db);
+        $this->authService = new AuthService($this->auth, $session, $this->db);
     }
 
     /**
@@ -35,14 +38,14 @@ class UserController extends BaseController
     public function profile(Request $request): Response
     {
         // Vérifie que l'utilisateur est connecté
-        if (!$this->auth || !$this->auth->check()) {
+        if (!$this->authService->check()) {
             $this->session->set('intended_url', $request->getPathInfo());
             $this->flash('error', 'Vous devez être connecté pour accéder à cette page');
             return $this->redirect('/login');
         }
 
-        $userId = $this->auth->id();
-        $user = $this->auth->user();
+        $userId = $this->authService->id();
+        $user = $this->authService->user();
 
         // Récupère les statistiques d'ascension
         $ascentStats = $this->ascentService->getUserStats($userId);
@@ -68,13 +71,13 @@ class UserController extends BaseController
     public function edit(Request $request): Response
     {
         // Vérifie que l'utilisateur est connecté
-        if (!$this->auth || !$this->auth->check()) {
+        if (!$this->authService->check()) {
             $this->session->set('intended_url', $request->getPathInfo());
             $this->flash('error', 'Vous devez être connecté pour accéder à cette page');
             return $this->redirect('/login');
         }
 
-        $user = $this->auth->user();
+        $user = $this->authService->user();
 
         return $this->render('users/edit', [
             'user' => $user,
@@ -89,7 +92,7 @@ class UserController extends BaseController
     public function update(Request $request): Response
     {
         // Vérifie que l'utilisateur est connecté
-        if (!$this->auth || !$this->auth->check()) {
+        if (!$this->authService->check()) {
             $this->flash('error', 'Vous devez être connecté pour modifier votre profil');
             return $this->redirect('/login');
         }
@@ -100,8 +103,8 @@ class UserController extends BaseController
             return $this->redirect('/profile/edit');
         }
 
-        $userId = $this->auth->id();
-        $user = $this->auth->user();
+        $userId = $this->authService->id();
+        $user = $this->authService->user();
 
         // Valide les données
         $data = $this->validate($request->request->all(), [
