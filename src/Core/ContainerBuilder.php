@@ -59,15 +59,7 @@ class ContainerBuilder
         // Logger
         $container->register(LoggerInterface::class, Logger::class)
             ->setPublic(true)
-            ->addArgument('app')
-            ->addMethodCall('pushHandler', [
-                new Reference('logger.handler')
-            ]);
-
-        $container->register('logger.handler', StreamHandler::class)
-            ->setPublic(true)
-            ->addArgument(BASE_PATH . '/logs/app.log')
-            ->addArgument(Logger::DEBUG);
+            ->addArgument('app');
 
         // Database
         $container->register(Database::class, Database::class)
@@ -278,6 +270,7 @@ class ContainerBuilder
                 Database::class
             ],
             'TopoclimbCH\\Middleware\\CsrfMiddleware' => [
+                CsrfManager::class,
                 Session::class
             ]
         ];
