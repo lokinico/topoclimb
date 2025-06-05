@@ -166,43 +166,46 @@ class SectorController extends BaseController
      * @param Request $request
      * @return Response
      */
-    public function create(Request $request): Response
+    public function show(Request $request): Response
     {
-        try {
-            // Get data for form selections
-            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-            $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
-            $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
-            $months = $this->db->fetchAll("SELECT id, name, short_name FROM climbing_months ORDER BY month_number ASC");
+        $id = $request->attributes->get('id');
 
-            // Précharger des valeurs par défaut
-            $sector = [
-                'color' => '#FF0000',
-                'active' => 1
+        if (!$id) {
+            $this->session->flash('error', 'ID du secteur non spécifié');
+            return Response::redirect('/sectors');
+        }
+
+        try {
+            $sector = $this->sectorService->getSectorById((int) $id);
+            if (!$sector) {
+                $this->session->flash('error', 'Secteur non trouvé');
+                return Response::redirect('/sectors');  // ✅ CORRECTION ICI
+            }
+
+            // Get additional data
+            $exposures = $this->sectorService->getSectorExposures((int) $id);
+            $routes = $this->sectorService->getSectorRoutes((int) $id);
+            $media = $this->sectorService->getSectorMedia((int) $id);
+
+            // Utilisons Database directement ici au lieu de Sector::getStats
+            $db = \TopoclimbCH\Core\Database::getInstance();
+            $stats = [
+                'routes_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1", [$id])['count'] ?? 0),
+                'media_count' => (int) ($db->fetchOne("SELECT COUNT(*) as count FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", [$id])['count'] ?? 0)
             ];
 
-            // Si un region_id est spécifié, préconfigurer le secteur
-            if ($request->query->has('region_id')) {
-                $sector['region_id'] = (int) $request->query->get('region_id');
-            }
-
-            // Si un book_id est spécifié
-            if ($request->query->has('book_id')) {
-                $sector['book_id'] = (int) $request->query->get('book_id');
-            }
-
-            return $this->render('sectors/form', [
-                'title' => 'Créer un nouveau secteur',
+            return $this->render('sectors/show', [
+                'title' => $sector['name'],
                 'sector' => $sector,
-                'regions' => $regions,
-                'books' => $books,
                 'exposures' => $exposures,
-                'months' => $months,
-                'csrf_token' => $this->createCsrfToken()
+                'media' => $media,
+                'routes' => $routes,
+                'stats' => $stats
             ]);
         } catch (\Exception $e) {
+            // Debug - capturer et journaliser les exceptions
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return $this->redirect('/sectors');
+            return Response::redirect('/sectors');  // ✅ CORRECTION ICI
         }
     }
 
