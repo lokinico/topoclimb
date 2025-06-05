@@ -69,11 +69,7 @@ class SectorController extends BaseController
         try {
             // Créer le filtre à partir des paramètres de requête
             $filter = new SectorFilter($request->query->all());
-            // Validation de la page
-            $totalPages = $paginatedSectors->getTotalPages();
-            if ($page > $totalPages && $totalPages > 0) {
-                return Response::redirect('/sectors?page=' . $totalPages);
-            }
+
             // Récupérer la page courante
             $page = (int) $request->query->get('page', 1);
             $perPage = (int) $request->query->get('per_page', 20);
