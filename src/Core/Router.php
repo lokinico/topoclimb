@@ -285,7 +285,20 @@ class Router
                         throw new \Exception("Controller not found: $controllerClass");
                     }
                 }
+                // Debug temporaire - à supprimer après
+                error_log("=== DEBUG ROUTER ===");
+                error_log("Trying to get controller: " . $controllerClass);
+                error_log("Action: " . $action);
+                error_log("Container has controller: " . ($this->container->has($controllerClass) ? 'YES' : 'NO'));
 
+                try {
+                    $controller = $this->container->get($controllerClass);
+                    error_log("Controller instanciated successfully: " . get_class($controller));
+                } catch (\Throwable $e) {
+                    error_log("ERREUR CRÉATION CONTRÔLEUR: " . $e->getMessage());
+                    error_log("Stack trace: " . $e->getTraceAsString());
+                    throw $e;
+                }
                 $controller = $this->container->get($controllerClass);
 
                 if (!method_exists($controller, $action)) {
