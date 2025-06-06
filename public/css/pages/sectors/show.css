@@ -1,8 +1,9 @@
 /* public/css/pages/sectors/show.css */
+/* Styles spécifiques à la page de détail des secteurs */
 
-/* Section héro spécifique aux secteurs */
+/* Hero spécifique aux secteurs (étend .hero-modern) */
 .sector-hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   color: white;
   padding: 3rem 0;
   margin-bottom: 2rem;
@@ -26,62 +27,22 @@
   z-index: 2;
 }
 
-/* Statistiques du secteur */
-.sector-stats {
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
-  margin-top: -3rem;
-  position: relative;
-  z-index: 10;
-}
-
-.sector-stat {
-  text-align: center;
-  padding: 1rem;
-}
-
-.sector-stat.routes {
-  background: linear-gradient(135deg, #74b9ff, #0984e3);
-  color: white;
-  border-radius: 15px;
-}
-
-.sector-stat.difficulty {
-  background: linear-gradient(135deg, #fd79a8, #e84393);
-  color: white;
-  border-radius: 15px;
-}
-
-.sector-stat.length {
-  background: linear-gradient(135deg, #fdcb6e, #e17055);
-  color: white;
-  border-radius: 15px;
-}
-
-.sector-stat.ascents {
-  background: linear-gradient(135deg, #00b894, #00a085);
-  color: white;
-  border-radius: 15px;
-}
-
-/* Expositions */
+/* Expositions spécifiques */
 .exposure-badge {
   display: inline-block;
-  background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+  background: var(--danger-gradient);
   color: white;
   padding: 0.25rem 0.75rem;
-  border-radius: 50px;
+  border-radius: var(--border-radius-full);
   font-size: 0.8rem;
   margin: 0.25rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .exposure-primary {
-  background: linear-gradient(45deg, #667eea, #764ba2) !important;
+  background: var(--primary-gradient) !important;
   font-size: 0.9rem;
   padding: 0.5rem 1rem;
 }
@@ -89,27 +50,27 @@
 /* Mois et saisons */
 .month-badge {
   padding: 0.25rem 0.5rem;
-  border-radius: 20px;
+  border-radius: var(--border-radius-full);
   font-size: 0.75rem;
   margin: 0.1rem;
   display: inline-block;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }
 
 .month-excellent {
-  background: linear-gradient(135deg, #00b894, #00a085);
+  background: var(--success-gradient);
   color: white;
 }
 
 .month-good {
-  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  background: var(--info-gradient);
   color: white;
 }
 
 .month-average {
-  background: linear-gradient(135deg, #fdcb6e, #f39c12);
-  color: #2d3436;
+  background: var(--warning-gradient);
+  color: var(--text-dark);
 }
 
 .month-poor {
@@ -125,49 +86,46 @@
 /* Voies du secteur */
 .route-card {
   border: none;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+  transition: var(--transition);
   margin-bottom: 1rem;
   overflow: hidden;
 }
 
 .route-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-.route-card .card-body {
-  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
 }
 
 .route-number {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: var(--primary-gradient);
   color: white;
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: var(--border-radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
   font-size: 0.9rem;
 }
 
 .difficulty-badge {
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: var(--primary-gradient);
   color: white;
   padding: 0.25rem 0.75rem;
-  border-radius: 50px;
-  font-weight: bold;
+  border-radius: var(--border-radius-full);
+  font-weight: var(--font-weight-bold);
   font-size: 0.9rem;
 }
 
+/* Indicateurs de style d'escalade */
 .style-indicator {
   padding: 0.25rem 0.5rem;
-  border-radius: 15px;
+  border-radius: var(--border-radius);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }
 
@@ -201,25 +159,71 @@
   color: #0277bd;
 }
 
+/* Étoiles de beauté */
+.beauty-stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.beauty-stars i {
+  color: #ffc107;
+  font-size: 0.9rem;
+}
+
+.beauty-stars .fa-star-o {
+  color: var(--gray-300);
+}
+
+/* Indicateur d'équipement */
+.equipment-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--border-radius-full);
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.equipment-poor {
+  background: #dc3545;
+}
+
+.equipment-adequate {
+  background: #fd7e14;
+}
+
+.equipment-good {
+  background: #28a745;
+}
+
+.equipment-excellent {
+  background: #20c997;
+}
+
 /* Filtres des voies */
 .route-filter-tabs {
-  background: #f8f9fa;
-  border-radius: 10px;
+  background: var(--gray-50);
+  border-radius: var(--border-radius-lg);
   padding: 0.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .route-filter-tabs .nav-pills .nav-link {
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   margin: 0 0.25rem;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition);
 }
 
 .route-filter-tabs .nav-pills .nav-link.active {
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: var(--primary-gradient);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Compteur de voies */
+.routes-count {
+  color: var(--text-muted);
+  font-weight: var(--font-weight-normal);
 }
 
 /* Vue en grille des voies */
@@ -235,21 +239,21 @@
 
 .routes-grid-view .route-title {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   margin-bottom: 0.5rem;
 }
 
 .routes-grid-view .route-meta {
   margin-top: auto;
   padding-top: 1rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--gray-200);
 }
 
-/* Conditions météo */
+/* Widget météo spécifique */
 .weather-widget {
-  background: linear-gradient(135deg, #74b9ff, #0984e3);
+  background: var(--secondary-gradient);
   color: white;
-  border-radius: 15px;
+  border-radius: var(--border-radius-lg);
   padding: 1.5rem;
   margin-bottom: 2rem;
   box-shadow: 0 8px 25px rgba(116, 185, 255, 0.2);
@@ -268,7 +272,7 @@
 
 .weather-temp {
   font-size: 2.5rem;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
 }
 
 .weather-details {
@@ -282,12 +286,12 @@
   text-align: center;
   padding: 0.75rem;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: var(--border-radius);
 }
 
 .weather-detail-value {
   font-size: 1.25rem;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
   display: block;
 }
 
@@ -298,11 +302,11 @@
   letter-spacing: 0.5px;
 }
 
-/* Galerie Swiper */
+/* Galerie Swiper personnalisée */
 .swiper-container {
-  border-radius: 15px;
+  border-radius: var(--border-radius-lg);
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .swiper-slide {
@@ -313,6 +317,21 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.media-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  color: white;
+  padding: 1.5rem;
+}
+
+.media-overlay h5 {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
 }
 
 .swiper-pagination-bullet {
@@ -329,7 +348,7 @@
 .swiper-button-prev {
   color: white;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 50%;
+  border-radius: var(--border-radius-full);
   width: 40px;
   height: 40px;
 }
@@ -341,9 +360,9 @@
 
 /* Carte interactive */
 .map-container {
-  border-radius: 15px;
+  border-radius: var(--border-radius-lg);
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   position: relative;
 }
 
@@ -353,9 +372,32 @@
   right: 10px;
   z-index: 1000;
   background: white;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   padding: 0.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
+}
+
+.map-popup h6 {
+  margin-bottom: 0.5rem;
+  color: var(--text-dark);
+}
+
+.map-popup p {
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Marker personnalisé pour la carte */
+.sector-marker {
+  background: var(--primary-gradient);
+  border-radius: var(--border-radius-full);
+  box-shadow: var(--shadow);
+}
+
+.sector-marker-content {
+  color: white;
+  font-size: 1rem;
 }
 
 /* Équipements recommandés */
@@ -369,7 +411,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .equipment-item:last-child {
@@ -377,41 +419,41 @@
 }
 
 .equipment-name {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .equipment-quantity {
-  background: #e9ecef;
-  color: #495057;
+  background: var(--gray-200);
+  color: var(--text-muted);
   padding: 0.25rem 0.5rem;
-  border-radius: 15px;
+  border-radius: var(--border-radius);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .equipment-mandatory {
-  background: linear-gradient(135deg, #fd79a8, #e84393);
+  background: var(--danger-gradient);
   color: white;
   padding: 0.25rem 0.5rem;
-  border-radius: 15px;
+  border-radius: var(--border-radius);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 /* Fermetures saisonnières */
 .closure-alert {
-  background: linear-gradient(135deg, #fdcb6e, #e17055);
+  background: var(--warning-gradient);
   color: white;
-  border-radius: 10px;
+  border-radius: var(--border-radius-lg);
   padding: 1rem;
   margin-bottom: 1rem;
   border-left: 4px solid #d63031;
 }
 
 .closure-period {
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
   font-size: 1.1rem;
   margin-bottom: 0.5rem;
 }
@@ -425,11 +467,6 @@
 @media (max-width: 768px) {
   .sector-hero {
     padding: 2rem 0;
-  }
-
-  .sector-stats {
-    margin-top: -2rem;
-    padding: 1.5rem;
   }
 
   .route-filter-tabs {
@@ -450,6 +487,11 @@
     align-items: flex-start;
     gap: 0.5rem;
   }
+
+  .swiper-button-next,
+  .swiper-button-prev {
+    display: none;
+  }
 }
 
 @media (max-width: 576px) {
@@ -465,5 +507,13 @@
   .month-badge {
     font-size: 0.7rem;
     padding: 0.2rem 0.5rem;
+  }
+
+  .weather-temp {
+    font-size: 2rem;
+  }
+
+  .weather-icon {
+    font-size: 1.5rem;
   }
 }
