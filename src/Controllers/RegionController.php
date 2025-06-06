@@ -75,42 +75,39 @@ class RegionController extends BaseController
         error_log("=== STEP 1: Début méthode index ===");
 
         try {
-            error_log("STEP 2: Test des services");
+            error_log("STEP 2: Test RegionService exists");
+            if (!$this->regionService) {
+                throw new \Exception("RegionService is null");
+            }
+            error_log("STEP 3: RegionService OK");
 
-            // Test 1 : RegionService
+            error_log("STEP 4: Test Database connection");
+            $testQuery = $this->regionService->db->fetchOne("SELECT COUNT(*) as count FROM climbing_countries");
+            error_log("STEP 5: Database query result: " . json_encode($testQuery));
+
+            error_log("STEP 6: Test getActiveCountries method");
             $countries = $this->regionService->getActiveCountries();
-            error_log("STEP 3: Countries loaded: " . count($countries));
+            error_log("STEP 7: Countries loaded: " . count($countries));
 
-            // Test 2 : Statistiques
-            $stats = $this->regionService->getOverallStatistics();
-            error_log("STEP 4: Stats loaded: " . json_encode($stats));
-
-            // Test 3 : Régions
-            $regions = $this->regionService->getRegionsForApi(['limit' => 5]);
-            error_log("STEP 5: Regions loaded: " . count($regions));
-
-            // Retour JSON avec les données
+            // Retour de succès
             $response = new \TopoclimbCH\Core\Response();
             $response->setContent(json_encode([
                 'success' => true,
+                'database_test' => $testQuery,
                 'countries_count' => count($countries),
-                'stats' => $stats,
-                'regions_count' => count($regions),
-                'message' => 'Services fonctionnent !'
             ]));
             $response->headers->set('Content-Type', 'application/json');
-            $response->setStatusCode(200);
-
             return $response;
         } catch (\Exception $e) {
-            error_log("ERREUR SERVICE: " . $e->getMessage());
+            error_log("ERREUR DÉTAILLÉE: " . $e->getMessage());
             error_log("FICHIER: " . $e->getFile() . " LIGNE: " . $e->getLine());
+            error_log("STACK TRACE: " . $e->getTraceAsString());
 
             $errorResponse = new \TopoclimbCH\Core\Response();
             $errorResponse->setContent(json_encode([
                 'error' => true,
                 'message' => $e->getMessage(),
-                'file' => $e->getFile(),
+                'file' => basename($e->getFile()),
                 'line' => $e->getLine()
             ]));
             $errorResponse->headers->set('Content-Type', 'application/json');
