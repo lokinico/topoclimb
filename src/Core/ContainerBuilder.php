@@ -83,7 +83,7 @@ class ContainerBuilder
             ->setPublic(true)
             ->addArgument('%views_path%')
             ->addArgument('%cache_path%')
-            ->addArgument(new Reference(CsrfManager::class)); // Utilise une référence au service enregistré
+            ->addArgument(new Reference(CsrfManager::class));
 
         // Router
         $container->register(Router::class, Router::class)
@@ -96,14 +96,12 @@ class ContainerBuilder
         // Enregistrer CsrfManager
         $container->register(CsrfManager::class, CsrfManager::class)
             ->setPublic(true)
-            ->addArgument($container->get(Session::class)); // Injecte la session si nécessaire
-
+            ->addArgument($container->get(Session::class));
     }
 
     /**
      * Register business services in the container.
      */
-
     private function registerBusinessServices(SymfonyContainerBuilder $container): void
     {
         $services = [
@@ -126,6 +124,9 @@ class ContainerBuilder
             ],
             'TopoclimbCH\\Services\\CountryService' => [
                 Database::class
+            ],
+            'TopoclimbCH\\Services\\WeatherService' => [
+                Database::class  // Ajout du WeatherService
             ],
             'TopoclimbCH\\Services\\ValidationService' => [
                 Database::class
@@ -156,7 +157,6 @@ class ContainerBuilder
     /**
      * Register controllers in the container.
      */
-
     private function registerControllers(SymfonyContainerBuilder $container): void
     {
         $controllers = [
@@ -169,7 +169,7 @@ class ContainerBuilder
                 View::class,
                 Session::class,
                 Database::class,
-                CsrfManager::class // Remplace AuthService par CsrfManager
+                CsrfManager::class
             ],
             'TopoclimbCH\\Controllers\\SectorController' => [
                 View::class,
@@ -195,14 +195,17 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\MediaService',
                 Database::class
             ],
+            // CORRECTION: RegionController avec le bon ordre des dépendances
             'TopoclimbCH\\Controllers\\RegionController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class,
-                'TopoclimbCH\\Services\\RegionService',
-                'TopoclimbCH\\Services\\CountryService',
-                'TopoclimbCH\\Services\\AuthService',
-                Database::class
+                View::class,                                    // Position 1: View $view
+                Session::class,                                 // Position 2: Session $session  
+                CsrfManager::class,                            // Position 3: CsrfManager $csrfManager
+                'TopoclimbCH\\Services\\RegionService',        // Position 4: RegionService $regionService
+                'TopoclimbCH\\Services\\MediaService',         // Position 5: MediaService $mediaService ← CORRIGÉ
+                'TopoclimbCH\\Services\\WeatherService',       // Position 6: WeatherService $weatherService ← AJOUTÉ
+                Database::class,                               // Position 7: Database $db
+                Auth::class,                                   // Position 8: ?Auth $auth
+                'TopoclimbCH\\Services\\AuthService'           // Position 9: ?AuthService $authService
             ],
             'TopoclimbCH\\Controllers\\SiteController' => [
                 View::class,
@@ -253,7 +256,6 @@ class ContainerBuilder
     /**
      * Register middlewares in the container.
      */
-
     private function registerMiddlewares(SymfonyContainerBuilder $container): void
     {
         $middlewares = [
