@@ -1,44 +1,368 @@
-{% set messages = flash() %}
-{% if messages %}
-    <div class="flash-messages mb-4">
-        {% for type, typeMessages in messages %}
-            {% set alertClass = 'alert-info' %}
-            {% set icon = 'info-circle' %}
-            
-            {% if type == 'success' %}
-                {% set alertClass = 'alert-success' %}
-                {% set icon = 'check-circle' %}
-            {% elseif type == 'error' or type == 'danger' %}
-                {% set alertClass = 'alert-danger' %}
-                {% set icon = 'exclamation-circle' %}
-            {% elseif type == 'warning' %}
-                {% set alertClass = 'alert-warning' %}
-                {% set icon = 'exclamation-triangle' %}
-            {% endif %}
-            
-            {% for message in typeMessages %}
-                <div class="alert {{ alertClass }} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-{{ icon }} me-2"></i>
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+<!-- resources/views/partials/flash.twig -->
+<!-- Messages Flash Modernes -->
+
+{% if flash_messages is defined and flash_messages|length > 0 %}
+    <div class="flash-messages-container">
+        {% for type, messages in flash_messages %}
+            {% for message in messages %}
+                <div class="alert-modern alert-{{ type }}-modern fade-in" data-auto-dismiss="5000" role="alert">
+                    <div class="icon">
+                        {% if type == 'success' %}
+                            <i class="fas fa-check-circle"></i>
+                        {% elseif type == 'error' or type == 'danger' %}
+                            <i class="fas fa-exclamation-triangle"></i>
+                        {% elseif type == 'warning' %}
+                            <i class="fas fa-exclamation-circle"></i>
+                        {% elseif type == 'info' %}
+                            <i class="fas fa-info-circle"></i>
+                        {% else %}
+                            <i class="fas fa-bell"></i>
+                        {% endif %}
+                    </div>
+                    <div class="content">
+                        <div class="message">{{ message|raw }}</div>
+                    </div>
+                    <button type="button" class="alert-close" aria-label="Fermer">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
             {% endfor %}
         {% endfor %}
     </div>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Auto-dismiss après 5 secondes
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.flash-messages .alert');
-            alerts.forEach(function(alert) {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
-    });
-    </script>
-    
-    {# Effacer les messages après affichage #}
-    {{ clear_flash() }}
 {% endif %}
+
+<!-- Messages d'erreur de validation (si présents) -->
+{% if errors is defined and errors|length > 0 %}
+    <div class="alert-modern alert-danger-modern fade-in" role="alert">
+        <div class="icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="content">
+            <strong>Erreurs de validation :</strong>
+            <ul class="error-list">
+                {% for field, fieldErrors in errors %}
+                    {% for error in fieldErrors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        <button type="button" class="alert-close" aria-label="Fermer">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+{% endif %}
+
+<!-- Messages de succès spéciaux (ascensions, favoris, etc.) -->
+{% if success_action is defined %}
+    <div class="alert-modern alert-success-modern fade-in special-success" data-auto-dismiss="3000">
+        <div class="icon">
+            {% if success_action == 'ascent_logged' %}
+                <i class="fas fa-mountain"></i>
+            {% elseif success_action == 'favorite_added' %}
+                <i class="fas fa-heart"></i>
+            {% elseif success_action == 'event_created' %}
+                <i class="fas fa-calendar-plus"></i>
+            {% else %}
+                <i class="fas fa-check-circle"></i>
+            {% endif %}
+        </div>
+        <div class="content">
+            <strong>Excellent !</strong>
+            {% if success_action == 'ascent_logged' %}
+                <div class="message">Votre ascension a été enregistrée avec succès.</div>
+            {% elseif success_action == 'favorite_added' %}
+                <div class="message">Ajouté à vos favoris !</div>
+            {% elseif success_action == 'event_created' %}
+                <div class="message">Votre événement a été créé.</div>
+            {% else %}
+                <div class="message">Action réalisée avec succès.</div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+<style>
+/* Styles intégrés pour les messages flash */
+.flash-messages-container {
+    position: fixed;
+    top: 80px;
+    right: 1rem;
+    z-index: 1050;
+    max-width: 400px;
+    width: 100%;
+}
+
+.alert-modern {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--border-radius-lg);
+    border: none;
+    margin-bottom: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    backdrop-filter: blur(10px);
+    animation: slideInRight 0.4s ease-out;
+}
+
+.alert-modern .icon {
+    font-size: 1.25rem;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+.alert-modern .content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.alert-modern .message {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.alert-modern .error-list {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.25rem;
+    line-height: 1.4;
+}
+
+.alert-modern .error-list li {
+    margin-bottom: 0.25rem;
+}
+
+.alert-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--border-radius);
+    transition: var(--transition-fast);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alert-close:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.alert-close i {
+    font-size: 0.875rem;
+}
+
+/* Types d'alertes avec gradients */
+.alert-info-modern {
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.95), rgba(162, 155, 254, 0.95));
+    color: white;
+}
+
+.alert-success-modern {
+    background: linear-gradient(135deg, rgba(0, 184, 148, 0.95), rgba(0, 160, 133, 0.95));
+    color: white;
+}
+
+.alert-warning-modern {
+    background: linear-gradient(135deg, rgba(253, 203, 110, 0.95), rgba(243, 156, 18, 0.95));
+    color: white;
+}
+
+.alert-danger-modern,
+.alert-error-modern {
+    background: linear-gradient(135deg, rgba(253, 121, 168, 0.95), rgba(232, 67, 147, 0.95));
+    color: white;
+}
+
+/* Animation spéciale pour les succès */
+.special-success {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    animation: slideInRight 0.4s ease-out, pulse 0.6s ease-in-out 0.4s;
+}
+
+/* Animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 200px;
+        margin-bottom: 0.75rem;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+}
+
+.alert-dismissing {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .flash-messages-container {
+        top: 70px;
+        left: 1rem;
+        right: 1rem;
+        max-width: none;
+    }
+    
+    .alert-modern {
+        padding: 0.875rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .alert-modern .icon {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .flash-messages-container {
+        top: 60px;
+        left: 0.5rem;
+        right: 0.5rem;
+    }
+    
+    .alert-modern {
+        padding: 0.75rem;
+    }
+    
+    .alert-close {
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+}
+</style>
+
+<script>
+// Script intégré pour gérer les messages flash
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des boutons de fermeture
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.alert-close')) {
+            const alert = e.target.closest('.alert-modern');
+            dismissAlert(alert);
+        }
+    });
+    
+    // Auto-dismiss pour les alertes avec data-auto-dismiss
+    document.querySelectorAll('.alert-modern[data-auto-dismiss]').forEach(alert => {
+        const delay = parseInt(alert.dataset.autoDismiss) || 5000;
+        setTimeout(() => {
+            if (alert.parentNode) {
+                dismissAlert(alert);
+            }
+        }, delay);
+    });
+    
+    function dismissAlert(alert) {
+        alert.classList.add('alert-dismissing');
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 300);
+    }
+    
+    // Éviter l'accumulation d'alertes (max 5)
+    const container = document.querySelector('.flash-messages-container');
+    if (container) {
+        const alerts = container.querySelectorAll('.alert-modern');
+        if (alerts.length > 5) {
+            // Supprimer les plus anciennes
+            Array.from(alerts).slice(0, alerts.length - 5).forEach(alert => {
+                dismissAlert(alert);
+            });
+        }
+    }
+});
+
+// Fonction globale pour ajouter des messages flash via JavaScript
+window.showFlashMessage = function(type, message, autoHide = true) {
+    let container = document.querySelector('.flash-messages-container');
+    
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'flash-messages-container';
+        document.body.appendChild(container);
+    }
+    
+    const iconMap = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-triangle',
+        warning: 'fa-exclamation-circle',
+        info: 'fa-info-circle'
+    };
+    
+    const alert = document.createElement('div');
+    alert.className = `alert-modern alert-${type}-modern fade-in`;
+    if (autoHide) {
+        alert.setAttribute('data-auto-dismiss', '5000');
+    }
+    
+    alert.innerHTML = `
+        <div class="icon">
+            <i class="fas ${iconMap[type] || 'fa-bell'}"></i>
+        </div>
+        <div class="content">
+            <div class="message">${message}</div>
+        </div>
+        <button type="button" class="alert-close" aria-label="Fermer">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(alert);
+    
+    // Auto-dismiss si demandé
+    if (autoHide) {
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.classList.add('alert-dismissing');
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.parentNode.removeChild(alert);
+                    }
+                }, 300);
+            }
+        }, 5000);
+    }
+    
+    return alert;
+};
+</script>
