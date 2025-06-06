@@ -286,7 +286,8 @@
 window.regionsData = {
     regions: {{ regions|json_encode|raw }},
     currentCountryId: {{ currentCountryId ?? 'null' }},
-    weatherApiKey: '{{ env('WEATHER_API_KEY') }}',
+{# weatherApiKey: '{{ env('WEATHER_API_KEY') }}' #}
+weatherApiKey: ''
     swisstopoApiKey: '{{ env('SWISSTOPO_API_KEY') }}'
 };
 </script>
