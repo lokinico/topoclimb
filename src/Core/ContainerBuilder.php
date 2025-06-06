@@ -70,6 +70,12 @@ class ContainerBuilder
         $container->register(Session::class, Session::class)
             ->setPublic(true);
 
+        // CORRECTION: CsrfManager AVANT Auth car Auth l'utilise
+        $container->register(CsrfManager::class, CsrfManager::class)
+            ->setPublic(true)
+            ->addArgument(new Reference(Session::class))
+            ->addArgument([]); // Array vide pour exemptedRoutes
+
         // Auth
         $container->register(Auth::class, Auth::class)
             ->setPublic(true)
@@ -92,11 +98,6 @@ class ContainerBuilder
             ->addArgument(new Reference('service_container'));
 
         $container->setAlias('router', Router::class)->setPublic(true);
-
-        // Enregistrer CsrfManager
-        $container->register(CsrfManager::class, CsrfManager::class)
-            ->setPublic(true)
-            ->addArgument($container->get(Session::class));
     }
 
     /**
