@@ -19,27 +19,51 @@ use TopoclimbCH\Core\Validation\Validator;
 
 class RegionController extends BaseController
 {
+    private const SWISS_BOUNDS = [
+        'lat_min' => 45.8,
+        'lat_max' => 47.9,
+        'lng_min' => 5.9,
+        'lng_max' => 10.6
+    ];
+
+    private const VALIDATION_RULES = [
+        'country_id' => 'required|numeric',
+        'name' => 'required|min:2|max:100',
+        'description' => 'nullable|max:2000',
+        'coordinates_lat' => 'nullable|numeric|between:-90,90',
+        'coordinates_lng' => 'nullable|numeric|between:-180,180',
+        'altitude' => 'nullable|numeric|min:0|max:5000',
+        'best_season' => 'nullable|in:spring,summer,autumn,winter,year-round',
+        'access_info' => 'nullable|max:1000',
+        'parking_info' => 'nullable|max:1000'
+    ];
+
     protected RegionService $regionService;
     protected MediaService $mediaService;
     protected WeatherService $weatherService;
     protected Database $db;
     protected ?Auth $auth;
+    protected ?AuthService $authService;
 
     public function __construct(
         View $view,
         Session $session,
         CsrfManager $csrfManager,
-        ?RegionService $regionService = null,
-        ?MediaService $mediaService = null,
-        ?WeatherService $weatherService = null,
-        ?Database $db = null  // Ajout du paramètre Database manquant
+        RegionService $regionService,
+        MediaService $mediaService,
+        WeatherService $weatherService,
+        Database $db,
+        ?Auth $auth = null,
+        ?AuthService $authService = null
     ) {
         parent::__construct($view, $session, $csrfManager);
 
-        $this->db = $db ?? Database::getInstance();
-        $this->regionService = $regionService ?? new RegionService($this->db);
-        $this->mediaService = $mediaService ?? new MediaService($this->db);
-        $this->weatherService = $weatherService ?? new WeatherService();
+        $this->regionService = $regionService;
+        $this->mediaService = $mediaService;
+        $this->weatherService = $weatherService;
+        $this->db = $db;
+        $this->auth = $auth ?? Auth::getInstance();
+        $this->authService = $authService;
     }
 
     /**
