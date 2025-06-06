@@ -81,27 +81,32 @@ class RegionController extends BaseController
             }
             error_log("STEP 3: RegionService OK");
 
-            error_log("STEP 4: Test Database connection");
-            $testQuery = $this->regionService->db->fetchOne("SELECT COUNT(*) as count FROM climbing_countries");
-            error_log("STEP 5: Database query result: " . json_encode($testQuery));
+            error_log("STEP 4: Test Database object");
+            if (!$this->regionService->db) {
+                throw new \Exception("Database is null");
+            }
+            error_log("STEP 5: Database object OK");
 
-            error_log("STEP 6: Test getActiveCountries method");
-            $countries = $this->regionService->getActiveCountries();
-            error_log("STEP 7: Countries loaded: " . count($countries));
+            error_log("STEP 6: Test simple query");
+            $testQuery = $this->regionService->db->fetchOne("SELECT 1 as test");
+            error_log("STEP 7: Simple query result: " . json_encode($testQuery));
+
+            error_log("STEP 8: Test if climbing_countries table exists");
+            $tableCheck = $this->regionService->db->fetchOne("SHOW TABLES LIKE 'climbing_countries'");
+            error_log("STEP 9: Table check result: " . json_encode($tableCheck));
 
             // Retour de succès
             $response = new \TopoclimbCH\Core\Response();
             $response->setContent(json_encode([
                 'success' => true,
-                'database_test' => $testQuery,
-                'countries_count' => count($countries),
+                'simple_query' => $testQuery,
+                'table_exists' => $tableCheck ? true : false,
             ]));
             $response->headers->set('Content-Type', 'application/json');
             return $response;
         } catch (\Exception $e) {
             error_log("ERREUR DÉTAILLÉE: " . $e->getMessage());
             error_log("FICHIER: " . $e->getFile() . " LIGNE: " . $e->getLine());
-            error_log("STACK TRACE: " . $e->getTraceAsString());
 
             $errorResponse = new \TopoclimbCH\Core\Response();
             $errorResponse->setContent(json_encode([
