@@ -75,41 +75,36 @@ class RegionController extends BaseController
         error_log("=== STEP 1: Début méthode index ===");
 
         try {
-            error_log("STEP 2: Test RegionService");
+            error_log("STEP 2: Test simple");
 
-            // Test direct de la méthode getActiveCountries (même si vide)
-            error_log("STEP 3: Test getActiveCountries directement");
-            $countries = $this->regionService->getActiveCountries();
-            error_log("STEP 4: Countries result: " . json_encode($countries));
+            // Test 1 : Créer une réponse simple pour vérifier que tout fonctionne
+            error_log("STEP 3: Test création réponse simple");
 
-            // Test des autres statistiques
-            error_log("STEP 5: Test getOverallStatistics");
-            $stats = $this->regionService->getOverallStatistics();
-            error_log("STEP 6: Stats result: " . json_encode($stats));
+            // Au lieu d'utiliser les services, testons la vue directement
+            error_log("STEP 4: Test rendu vue");
 
-            // Retour de succès
-            $response = new \TopoclimbCH\Core\Response();
-            $response->setContent(json_encode([
-                'success' => true,
-                'countries_count' => count($countries),
-                'countries' => $countries,
-                'stats' => $stats,
-                'message' => 'Services fonctionnent même avec tables vides!'
-            ]));
-            $response->headers->set('Content-Type', 'application/json');
-            return $response;
+            return $this->render('regions/index', [
+                'regions' => [],
+                'countries' => [],
+                'filters' => [],
+                'totalStats' => [
+                    'total_regions' => 0,
+                    'total_sectors' => 0,
+                    'total_routes' => 0,
+                    'total_countries' => 0
+                ],
+                'popularRegions' => [],
+                'title' => 'Régions d\'escalade'
+            ]);
         } catch (\Exception $e) {
             error_log("ERREUR DÉTAILLÉE: " . $e->getMessage());
             error_log("FICHIER: " . $e->getFile() . " LIGNE: " . $e->getLine());
+            error_log("TRACE: " . $e->getTraceAsString());
 
             $errorResponse = new \TopoclimbCH\Core\Response();
-            $errorResponse->setContent(json_encode([
-                'error' => true,
-                'message' => $e->getMessage(),
-                'file' => basename($e->getFile()),
-                'line' => $e->getLine()
-            ]));
-            $errorResponse->headers->set('Content-Type', 'application/json');
+            $errorResponse->setContent('<html><body><h1>Erreur</h1><pre>' .
+                htmlspecialchars($e->getMessage() . "\n" . $e->getFile() . ":" . $e->getLine()) .
+                '</pre></body></html>');
             $errorResponse->setStatusCode(500);
             return $errorResponse;
         }
