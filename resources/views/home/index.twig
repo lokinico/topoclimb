@@ -1,37 +1,412 @@
 {% extends "layouts/app.twig" %}
 
-{% block title %}Bienvenue sur TopoclimbCH{% endblock %}
+{% block title %}Bienvenue sur TopoclimbCH - Escalade en Suisse{% endblock %}
+
+{% block description %}Découvrez les meilleurs sites d'escalade en Suisse. Base de données complète avec secteurs, voies, conditions météo et communauté de grimpeurs.{% endblock %}
 
 {% block content %}
-<section class="hero">
+<!-- Hero Section Moderne -->
+<section class="hero-modern">
     <div class="container">
-        <h1>{{ title }}</h1>
-        <p>{{ description }}</p>
-        <a href="{{ url('/regions') }}" class="btn">Découvrir les sites d'escalade</a>
-    </div>
-</section>
-
-<section class="features">
-    <div class="container">
-        <h2>Fonctionnalités</h2>
-        <div class="feature-grid">
-            <div class="feature">
-                <h3>Sites d'escalade</h3>
-                <p>Découvrez tous les sites d'escalade en Suisse avec leurs informations détaillées.</p>
-            </div>
-            <div class="feature">
-                <h3>Voies d'escalade</h3>
-                <p>Parcourez les voies d'escalade avec leurs difficultés, styles et équipements.</p>
-            </div>
-            <div class="feature">
-                <h3>Conditions</h3>
-                <p>Consultez les conditions actuelles des sites et partagez vos observations.</p>
-            </div>
-            <div class="feature">
-                <h3>Événements</h3>
-                <p>Participez à des sorties d'escalade et autres événements de la communauté.</p>
+        <div class="hero-content">
+            <h1 class="fade-in">{{ title|default('Découvrez l\'escalade en Suisse') }}</h1>
+            <p class="fade-in">{{ description|default('La plateforme de référence pour explorer les sites d\'escalade suisses. Plus de 1000 secteurs, 5000 voies et une communauté passionnée vous attendent.') }}</p>
+            <div class="hero-actions fade-in">
+                <a href="{{ url('/regions') }}" class="btn btn-lg" style="background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
+                    <i class="fas fa-mountain"></i>
+                    Explorer les sites
+                </a>
+                <a href="{{ url('/routes') }}" class="btn btn-lg btn-outline-light">
+                    <i class="fas fa-route"></i>
+                    Parcourir les voies
+                </a>
             </div>
         </div>
     </div>
 </section>
+
+<!-- Stats Section -->
+<section class="stats-grid">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-item routes slide-in-up">
+                    <div class="stat-value">{{ stats.regions_count|default('12') }}</div>
+                    <div class="stat-label">Régions</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-item difficulty slide-in-up" style="animation-delay: 0.1s;">
+                    <div class="stat-value">{{ stats.sectors_count|default('1,200+') }}</div>
+                    <div class="stat-label">Secteurs</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-item length slide-in-up" style="animation-delay: 0.2s;">
+                    <div class="stat-value">{{ stats.routes_count|default('5,400+') }}</div>
+                    <div class="stat-label">Voies</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-item ascents slide-in-up" style="animation-delay: 0.3s;">
+                    <div class="stat-value">{{ stats.users_count|default('850+') }}</div>
+                    <div class="stat-label">Grimpeurs</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recherche Rapide -->
+<section style="padding: 3rem 0; background: var(--gray-50);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="text-center mb-4">
+                    <h2>Trouvez votre prochaine voie</h2>
+                    <p class="text-muted">Recherchez parmi nos milliers de voies d'escalade</p>
+                </div>
+                
+                <form action="{{ url('/search') }}" method="get" class="search-form">
+                    <div class="input-group input-group-modern shadow-modern">
+                        <input type="text" class="form-control form-control-lg" name="q" 
+                               placeholder="Rechercher un secteur, une voie, une région..." 
+                               style="border: none; font-size: 1.1rem;">
+                        <select name="difficulty" class="form-select" style="max-width: 150px; border: none; border-left: 1px solid var(--gray-300);">
+                            <option value="">Difficulté</option>
+                            <option value="3">3a - 3c</option>
+                            <option value="4">4a - 4c</option>
+                            <option value="5">5a - 5c</option>
+                            <option value="6">6a - 6c</option>
+                            <option value="7">7a - 7c</option>
+                            <option value="8">8a+</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-lg" style="border: none;">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="popular-searches mt-4 text-center">
+                    <p class="mb-2"><small class="text-muted">Recherches populaires :</small></p>
+                    <div class="search-tags">
+                        <a href="{{ url('/search?q=Jura') }}" class="search-tag">Jura</a>
+                        <a href="{{ url('/search?q=Valais') }}" class="search-tag">Valais</a>
+                        <a href="{{ url('/search?q=Salève') }}" class="search-tag">Salève</a>
+                        <a href="{{ url('/search?q=dalle') }}" class="search-tag">Dalle</a>
+                        <a href="{{ url('/search?q=dévers') }}" class="search-tag">Dévers</a>
+                        <a href="{{ url('/search?q=5c') }}" class="search-tag">5c</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Fonctionnalités Principales -->
+<section style="padding: 4rem 0;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2>Pourquoi choisir TopoclimbCH ?</h2>
+            <p class="text-muted">Tout ce dont vous avez besoin pour grimper en Suisse</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="info-card text-center hover-lift transition-modern">
+                    <div class="mb-4">
+                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--secondary-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                    </div>
+                    <h4>Base de données complète</h4>
+                    <p class="text-muted">Plus de 1200 secteurs répertoriés dans toute la Suisse avec informations détaillées, coordonnées GPS et photos.</p>
+                    <a href="{{ url('/sectors') }}" class="btn btn-outline-primary">
+                        Explorer les secteurs
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="info-card text-center hover-lift transition-modern">
+                    <div class="mb-4">
+                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--success-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
+                            <i class="fas fa-route"></i>
+                        </div>
+                    </div>
+                    <h4>Voies détaillées</h4>
+                    <p class="text-muted">Descriptions précises avec cotations, longueurs, types d'escalade et commentaires de la communauté.</p>
+                    <a href="{{ url('/routes') }}" class="btn btn-outline-primary">
+                        Voir les voies
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="info-card text-center hover-lift transition-modern">
+                    <div class="mb-4">
+                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--warning-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
+                            <i class="fas fa-cloud-sun"></i>
+                        </div>
+                    </div>
+                    <h4>Conditions en temps réel</h4>
+                    <p class="text-muted">Météo, état des voies et fermetures saisonnières mis à jour par la communauté.</p>
+                    <a href="{{ url('/conditions') }}" class="btn btn-outline-primary">
+                        Conditions actuelles
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="info-card text-center hover-lift transition-modern">
+                    <div class="mb-4">
+                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--danger-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <h4>Communauté active</h4>
+                    <p class="text-muted">Partagez vos ascensions, organisez des sorties et échangez avec d'autres grimpeurs passionnés.</p>
+                    <a href="{{ url('/community') }}" class="btn btn-outline-primary">
+                        Rejoindre
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="info-card text-center hover-lift transition-modern">
+                    <div class="mb-4">
+                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--info-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                    </div>
+                    <h4>Application mobile</h4>
+                    <p class="text-muted">Accédez à toutes les informations même hors ligne grâce à notre application mobile dédiée.</p>
+                    <a href="{{ url('/mobile') }}" class="btn btn-outline-primary">
+                        Télécharger
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="info-card text-center hover-lift transition-modern">
+                    <div class="mb-4">
+                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--primary-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                    </div>
+                    <h4>Sécurité prioritaire</h4>
+                    <p class="text-muted">Alertes de sécurité, guides pratiques et informations sur les risques pour grimper en toute sécurité.</p>
+                    <a href="{{ url('/safety') }}" class="btn btn-outline-primary">
+                        Guide sécurité
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Secteurs Populaires -->
+{% if popular_sectors is defined and popular_sectors|length > 0 %}
+<section style="padding: 4rem 0; background: var(--gray-50);">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h2>Secteurs populaires</h2>
+                <p class="text-muted mb-0">Les destinations favorites de notre communauté</p>
+            </div>
+            <a href="{{ url('/sectors') }}" class="btn btn-outline-primary">
+                Voir tous les secteurs
+                <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+        
+        <div class="row g-4">
+            {% for sector in popular_sectors|slice(0, 6) %}
+                <div class="col-lg-4 col-md-6">
+                    <div class="card card-modern">
+                        {% if sector.image %}
+                            <div style="height: 200px; background: url('{{ url('/uploads/' ~ sector.image) }}') center/cover; position: relative;">
+                                <div style="position: absolute; top: 1rem; right: 1rem;">
+                                    <span class="badge-modern badge-primary">{{ sector.routes_count }} voies</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">
+                                    {{ sector.name }}
+                                </a>
+                            </h5>
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {{ sector.region.name ?? 'Région non spécifiée' }}
+                                {% if sector.altitude %}
+                                    • {{ sector.altitude }}m
+                                {% endif %}
+                            </p>
+                            <p class="text-muted">{{ sector.description|slice(0, 120) }}...</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="difficulty-range">
+                                    {% if sector.min_difficulty and sector.max_difficulty %}
+                                        <small class="text-muted">{{ sector.min_difficulty }} - {{ sector.max_difficulty }}</small>
+                                    {% endif %}
+                                </div>
+                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-primary">
+                                    Découvrir
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Call-to-Action -->
+{% if not auth() %}
+<section style="padding: 4rem 0; background: var(--primary-gradient); color: white;">
+    <div class="container text-center">
+        <h2 style="color: white;">Rejoignez la communauté TopoclimbCH</h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; max-width: 600px; margin: 0 auto 2rem;">
+            Créez votre compte gratuit pour logger vos ascensions, participer aux événements et contribuer à la base de données.
+        </p>
+        <div class="cta-actions">
+            <a href="{{ url('/register') }}" class="btn btn-lg me-3" style="background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
+                <i class="fas fa-user-plus me-2"></i>
+                S'inscrire gratuitement
+            </a>
+            <a href="{{ url('/login') }}" class="btn btn-lg btn-outline-light">
+                <i class="fas fa-sign-in-alt me-2"></i>
+                Se connecter
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Actualités et Blog -->
+{% if recent_posts is defined and recent_posts|length > 0 %}
+<section style="padding: 4rem 0;">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h2>Actualités et conseils</h2>
+                <p class="text-muted mb-0">Restez informé des dernières nouvelles de l'escalade suisse</p>
+            </div>
+            <a href="{{ url('/blog') }}" class="btn btn-outline-primary">
+                Voir tous les articles
+                <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+        
+        <div class="row g-4">
+            {% for post in recent_posts|slice(0, 3) %}
+                <div class="col-lg-4">
+                    <article class="card card-modern">
+                        {% if post.featured_image %}
+                            <div style="height: 200px; background: url('{{ post.featured_image }}') center/cover;"></div>
+                        {% endif %}
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ post.created_at|date('d/m/Y') }}
+                                    {% if post.category %}
+                                        • <span class="badge badge-secondary">{{ post.category }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <h5 class="card-title">
+                                <a href="{{ url('/blog/' ~ post.slug) }}" class="text-decoration-none">
+                                    {{ post.title }}
+                                </a>
+                            </h5>
+                            <p class="text-muted">{{ post.excerpt|slice(0, 150) }}...</p>
+                            <a href="{{ url('/blog/' ~ post.slug) }}" class="btn btn-sm btn-outline-primary">
+                                Lire la suite
+                            </a>
+                        </div>
+                    </article>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des éléments au scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('fade-in');
+            }
+        });
+    }, observerOptions);
+    
+    // Observer tous les éléments qui doivent s'animer
+    document.querySelectorAll('.info-card, .card-modern').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Effet parallax léger sur le hero
+    window.addEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
+        const hero = document.querySelector('.hero-modern');
+        if (hero) {
+            hero.style.transform = `translateY(${scrolled * 0.3}px)`;
+        }
+    });
+    
+    // Animation des stats au scroll
+    const statsObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const statValue = entry.target.querySelector('.stat-value');
+                if (statValue && !statValue.hasAttribute('data-animated')) {
+                    statValue.setAttribute('data-animated', 'true');
+                    animateNumber(statValue);
+                }
+            }
+        });
+    }, observerOptions);
+    
+    document.querySelectorAll('.stat-item').forEach(stat => {
+        statsObserver.observe(stat);
+    });
+    
+    function animateNumber(element) {
+        const text = element.textContent;
+        const number = parseInt(text.replace(/[^0-9]/g, ''));
+        
+        if (isNaN(number)) return;
+        
+        const duration = 2000;
+        const step = number / (duration / 16);
+        let current = 0;
+        
+        const timer = setInterval(() => {
+            current += step;
+            if (current >= number) {
+                current = number;
+                clearInterval(timer);
+            }
+            
+            // Préserver le format original (avec +, etc.)
+            const formatted = text.replace(/[0-9,]+/, Math.floor(current).toLocaleString());
+            element.textContent = formatted;
+        }, 16);
+    }
+});
+</script>
 {% endblock %}
