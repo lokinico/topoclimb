@@ -83,15 +83,37 @@ class RegionController extends BaseController
 
                 // Test 3: Ajouter les informations pays si ça marche
                 if (count($regions) > 0) {
-                    error_log("RegionController::index - Test ajout des pays");
-                    foreach ($regions as &$region) {
+                    error_log("RegionController::index - Test ajout des pays pour " . count($regions) . " régions");
+
+                    foreach ($regions as $index => &$region) {
+                        error_log("RegionController::index - Traitement région " . ($index + 1) . ": " . ($region['name'] ?? 'SANS_NOM'));
+
                         if (isset($region['country_id']) && $region['country_id']) {
-                            $country = $this->db->fetchOne("SELECT name, code FROM climbing_countries WHERE id = ?", [$region['country_id']]);
-                            $region['country_name'] = $country['name'] ?? null;
-                            $region['country_code'] = $country['code'] ?? null;
+                            error_log("RegionController::index - Country ID trouvé: " . $region['country_id']);
+                            try {
+                                $country = $this->db->fetchOne("SELECT name, code FROM climbing_countries WHERE id = ?", [$region['country_id']]);
+                                if ($country) {
+                                    $region['country_name'] = $country['name'];
+                                    $region['country_code'] = $country['code'];
+                                    error_log("RegionController::index - Pays ajouté: " . $country['name']);
+                                } else {
+                                    error_log("RegionController::index - Pays non trouvé pour ID: " . $region['country_id']);
+                                    $region['country_name'] = null;
+                                    $region['country_code'] = null;
+                                }
+                            } catch (\Exception $countryError) {
+                                error_log("RegionController::index - Erreur récupération pays: " . $countryError->getMessage());
+                                $region['country_name'] = null;
+                                $region['country_code'] = null;
+                            }
+                        } else {
+                            error_log("RegionController::index - Pas de country_id pour cette région");
+                            $region['country_name'] = null;
+                            $region['country_code'] = null;
                         }
                     }
-                    unset($region);
+                    unset($region); // Libérer la référence
+                    error_log("RegionController::index - Finition ajout des pays");
                 }
             } catch (\Exception $e) {
                 error_log("Erreur requête régions: " . $e->getMessage());
