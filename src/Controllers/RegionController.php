@@ -64,33 +64,38 @@ class RegionController extends BaseController
 
             error_log("RegionController::index - Filtres appliqués: " . json_encode($cleanFilters));
 
-            // Récupération directe des régions via requête SQL pour éviter les problèmes de service
+            // Test simple d'abord - récupération basique des régions
             try {
-                $sql = "SELECT r.*, c.name as country_name, c.code as country_code
-                        FROM climbing_regions r 
-                        LEFT JOIN climbing_countries c ON r.country_id = c.id 
-                        WHERE r.active = 1";
-                $params = [];
+                error_log("RegionController::index - Test de connexion DB");
 
-                // Appliquer les filtres
-                if (!empty($cleanFilters['country_id'])) {
-                    $sql .= " AND r.country_id = ?";
-                    $params[] = $cleanFilters['country_id'];
+                // Test 1: Vérifier si la table existe
+                $tableTest = $this->db->fetchOne("SHOW TABLES LIKE 'climbing_regions'");
+                error_log("RegionController::index - Table climbing_regions existe: " . ($tableTest ? 'OUI' : 'NON'));
+
+                if (!$tableTest) {
+                    throw new \Exception("Table climbing_regions n'existe pas");
                 }
 
-                if (!empty($cleanFilters['search'])) {
-                    $sql .= " AND (r.name LIKE ? OR r.description LIKE ?)";
-                    $searchTerm = '%' . $cleanFilters['search'] . '%';
-                    $params[] = $searchTerm;
-                    $params[] = $searchTerm;
+                // Test 2: Requête très simple
+                error_log("RegionController::index - Test requête simple");
+                $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+                error_log("RegionController::index - Récupéré " . count($regions) . " régions via fetchAll");
+
+                // Test 3: Ajouter les informations pays si ça marche
+                if (count($regions) > 0) {
+                    error_log("RegionController::index - Test ajout des pays");
+                    foreach ($regions as &$region) {
+                        if (isset($region['country_id']) && $region['country_id']) {
+                            $country = $this->db->fetchOne("SELECT name, code FROM climbing_countries WHERE id = ?", [$region['country_id']]);
+                            $region['country_name'] = $country['name'] ?? null;
+                            $region['country_code'] = $country['code'] ?? null;
+                        }
+                    }
+                    unset($region);
                 }
-
-                $sql .= " ORDER BY r.name ASC";
-
-                $regions = $this->db->query($sql, $params);
-                error_log("RegionController::index - Récupéré " . count($regions) . " régions via SQL directe");
             } catch (\Exception $e) {
                 error_log("Erreur requête régions: " . $e->getMessage());
+                error_log("Stack trace: " . $e->getTraceAsString());
                 $regions = [];
             }
 
