@@ -72,42 +72,30 @@ class RegionController extends BaseController
      */
     public function index(Request $request): Response
     {
-        error_log("=== STEP 1: Début méthode index ===");
+        // Version normale avec tous les services
+        $filters = [
+            'country_id' => $request->query->get('country_id'),
+            'difficulty' => $request->query->get('difficulty'),
+            'season' => $request->query->get('season'),
+            'style' => $request->query->get('style'),
+            'search' => $request->query->get('search'),
+            'sort' => $request->query->get('sort', 'name'),
+            'order' => $request->query->get('order', 'asc')
+        ];
 
-        try {
-            error_log("STEP 2: Test simple");
+        $regions = $this->regionService->getRegionsWithFilters($filters);
+        $countries = $this->regionService->getActiveCountries();
+        $totalStats = $this->regionService->getOverallStatistics();
+        $popularRegions = $this->regionService->getPopularRegions(5);
 
-            // Test 1 : Créer une réponse simple pour vérifier que tout fonctionne
-            error_log("STEP 3: Test création réponse simple");
-
-            // Au lieu d'utiliser les services, testons la vue directement
-            error_log("STEP 4: Test rendu vue");
-
-            return $this->render('regions/index', [
-                'regions' => [],
-                'countries' => [],
-                'filters' => [],
-                'totalStats' => [
-                    'total_regions' => 0,
-                    'total_sectors' => 0,
-                    'total_routes' => 0,
-                    'total_countries' => 0
-                ],
-                'popularRegions' => [],
-                'title' => 'Régions d\'escalade'
-            ]);
-        } catch (\Exception $e) {
-            error_log("ERREUR DÉTAILLÉE: " . $e->getMessage());
-            error_log("FICHIER: " . $e->getFile() . " LIGNE: " . $e->getLine());
-            error_log("TRACE: " . $e->getTraceAsString());
-
-            $errorResponse = new \TopoclimbCH\Core\Response();
-            $errorResponse->setContent('<html><body><h1>Erreur</h1><pre>' .
-                htmlspecialchars($e->getMessage() . "\n" . $e->getFile() . ":" . $e->getLine()) .
-                '</pre></body></html>');
-            $errorResponse->setStatusCode(500);
-            return $errorResponse;
-        }
+        return $this->render('regions/index', [
+            'regions' => $regions,
+            'countries' => $countries,
+            'filters' => $filters,
+            'totalStats' => $totalStats,
+            'popularRegions' => $popularRegions,
+            'title' => $this->buildPageTitle($filters)
+        ]);
     }
 
     /**
