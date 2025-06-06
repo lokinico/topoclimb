@@ -301,15 +301,4 @@ class RegionController extends BaseController
             return $this->redirect('/regions');
         }
     }
-
-    /**
-     * Helper method pour redirection
-     */
-    protected function redirect(string $url): Response
-    {
-        $response = new Response();
-        $response->setStatusCode(302);
-        $response->setHeader('Location', $url);
-        return $response;
-    }
 }
