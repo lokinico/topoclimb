@@ -221,14 +221,18 @@ class RegionController extends BaseController
      */
     public function show(Request $request): Response
     {
-        $id = $request->attributes->get('id');
-
-        if (!$id) {
-            $this->session->flash('error', 'ID de la région non spécifié');
-            return Response::redirect('/regions');
-        }
-
         try {
+            $id = $request->attributes->get('id');
+            error_log("RegionController::show - ID reçu: " . ($id ?? 'NULL'));
+
+            if (!$id) {
+                error_log("RegionController::show - Pas d'ID, redirection");
+                $this->session->flash('error', 'ID de la région non spécifié');
+                return Response::redirect('/regions');
+            }
+
+            error_log("RegionController::show - Récupération région ID: " . $id);
+
             // Récupération directe de la région
             $region = $this->db->fetchOne(
                 "SELECT r.*, c.name as country_name, c.code as country_code 
@@ -237,12 +241,15 @@ class RegionController extends BaseController
                  WHERE r.id = ? AND r.active = 1",
                 [(int) $id]
             );
+            error_log("RegionController::show - Région trouvée: " . ($region ? 'OUI' : 'NON'));
 
             if (!$region) {
+                error_log("RegionController::show - Région non trouvée, redirection");
                 $this->session->flash('error', 'Région non trouvée');
                 return Response::redirect('/regions');
             }
 
+            error_log("RegionController::show - Récupération des secteurs");
             // Récupération des secteurs
             $sectors = $this->db->query(
                 "SELECT s.*, COUNT(r.id) as routes_count 
@@ -253,13 +260,16 @@ class RegionController extends BaseController
                  ORDER BY s.name",
                 [(int) $id]
             );
+            error_log("RegionController::show - Secteurs récupérés: " . count($sectors));
 
             // Stats simples
             $stats = [
                 'sectors_count' => count($sectors),
                 'routes_count' => array_sum(array_column($sectors, 'routes_count'))
             ];
+            error_log("RegionController::show - Stats calculées");
 
+            error_log("RegionController::show - Appel du render");
             return $this->render('regions/show', [
                 'title' => $region['name'],
                 'region' => $region,
@@ -268,6 +278,7 @@ class RegionController extends BaseController
             ]);
         } catch (\Exception $e) {
             error_log('Erreur dans RegionController::show: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
             return Response::redirect('/regions');
         }
