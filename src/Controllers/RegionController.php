@@ -21,18 +21,20 @@ class RegionController extends BaseController
     protected MediaService $mediaService;
     protected WeatherService $weatherService;
     protected Database $db;
+    protected ?Auth $auth;
 
     public function __construct(
         View $view,
         Session $session,
         CsrfManager $csrfManager,
-        RegionService $regionService = null,
-        MediaService $mediaService = null,
-        WeatherService $weatherService = null
+        ?RegionService $regionService = null,
+        ?MediaService $mediaService = null,
+        ?WeatherService $weatherService = null,
+        ?Database $db = null  // Ajout du paramètre Database manquant
     ) {
         parent::__construct($view, $session, $csrfManager);
 
-        $this->db = Database::getInstance();
+        $this->db = $db ?? Database::getInstance();
         $this->regionService = $regionService ?? new RegionService($this->db);
         $this->mediaService = $mediaService ?? new MediaService($this->db);
         $this->weatherService = $weatherService ?? new WeatherService();
@@ -82,60 +84,71 @@ class RegionController extends BaseController
      */
     public function show(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        try {
+            $id = (int) $request->attributes->get('id');
+            if (!$id) {
+                throw new \InvalidArgumentException('ID invalide');
+            }
 
-        $region = $this->regionService->getRegionWithAllRelations($id);
+            $region = $this->regionService->getRegionWithAllRelations($id);
+            if (!$region) {
+                throw new \RuntimeException('Région non trouvée');
+            }
 
-        if (!$region) {
-            $this->flash('error', 'Région non trouvée');
+            if (!$region) {
+                $this->flash('error', 'Région non trouvée');
+                return $this->redirect('/regions');
+            }
+
+            // Get sectors with enhanced data
+            $sectors = $this->regionService->getRegionSectorsWithStats($id);
+
+            // Get comprehensive statistics
+            $stats = $this->regionService->getRegionDetailedStatistics($id);
+
+            // Get photos and media
+            $photos = $this->mediaService->getRegionMedia($id, 'gallery');
+            $coverImage = $this->mediaService->getRegionCoverImage($id);
+
+            // Get upcoming events in this region
+            $upcomingEvents = $this->regionService->getUpcomingEvents($id);
+
+            // Get access information and parking
+            $parkingAreas = $this->regionService->getRegionParking($id);
+
+            // Get weather data if coordinates are available
+            $weatherData = null;
+            if ($region->coordinates_lat && $region->coordinates_lng) {
+                try {
+                    $weatherData = $this->weatherService->getCurrentWeather(
+                        $region->coordinates_lat,
+                        $region->coordinates_lng
+                    );
+                } catch (\Exception $e) {
+                    // Weather data is optional, continue without it
+                    error_log("Weather API error: " . $e->getMessage());
+                }
+            }
+
+            // Get related regions (same country, similar characteristics)
+            $relatedRegions = $this->regionService->getRelatedRegions($region, 4);
+
+            return $this->render('regions/show', [
+                'region' => $region,
+                'sectors' => $sectors,
+                'stats' => $stats,
+                'photos' => $photos,
+                'coverImage' => $coverImage,
+                'upcomingEvents' => $upcomingEvents,
+                'parkingAreas' => $parkingAreas,
+                'weatherData' => $weatherData,
+                'relatedRegions' => $relatedRegions,
+                'title' => $region->name
+            ]);
+        } catch (\Exception $e) {
+            $this->flash('error', $e->getMessage());
             return $this->redirect('/regions');
         }
-
-        // Get sectors with enhanced data
-        $sectors = $this->regionService->getRegionSectorsWithStats($id);
-
-        // Get comprehensive statistics
-        $stats = $this->regionService->getRegionDetailedStatistics($id);
-
-        // Get photos and media
-        $photos = $this->mediaService->getRegionMedia($id, 'gallery');
-        $coverImage = $this->mediaService->getRegionCoverImage($id);
-
-        // Get upcoming events in this region
-        $upcomingEvents = $this->regionService->getUpcomingEvents($id);
-
-        // Get access information and parking
-        $parkingAreas = $this->regionService->getRegionParking($id);
-
-        // Get weather data if coordinates are available
-        $weatherData = null;
-        if ($region->coordinates_lat && $region->coordinates_lng) {
-            try {
-                $weatherData = $this->weatherService->getCurrentWeather(
-                    $region->coordinates_lat,
-                    $region->coordinates_lng
-                );
-            } catch (\Exception $e) {
-                // Weather data is optional, continue without it
-                error_log("Weather API error: " . $e->getMessage());
-            }
-        }
-
-        // Get related regions (same country, similar characteristics)
-        $relatedRegions = $this->regionService->getRelatedRegions($region, 4);
-
-        return $this->render('regions/show', [
-            'region' => $region,
-            'sectors' => $sectors,
-            'stats' => $stats,
-            'photos' => $photos,
-            'coverImage' => $coverImage,
-            'upcomingEvents' => $upcomingEvents,
-            'parkingAreas' => $parkingAreas,
-            'weatherData' => $weatherData,
-            'relatedRegions' => $relatedRegions,
-            'title' => $region->name
-        ]);
     }
 
     /**
@@ -259,6 +272,10 @@ class RegionController extends BaseController
      */
     public function update(Request $request): Response
     {
+        if (!$this->validateCsrfToken($request)) {
+            $this->flash('error', 'Token CSRF invalide');
+            return $this->redirect('/regions');
+        }
         $this->requirePermission('manage-climbing-data');
 
         $id = (int) $request->attributes->get('id');
@@ -543,6 +560,14 @@ class RegionController extends BaseController
 
     protected function validateCoordinates(array $data): void
     {
+        if (empty($data['coordinates_lat']) && empty($data['coordinates_lng'])) {
+            return;
+        }
+
+        if (!is_numeric($data['coordinates_lat']) || !is_numeric($data['coordinates_lng'])) {
+            throw new \InvalidArgumentException('Les coordonnées doivent être numériques');
+        }
+
         $lat = $data['coordinates_lat'] ?? null;
         $lng = $data['coordinates_lng'] ?? null;
 
