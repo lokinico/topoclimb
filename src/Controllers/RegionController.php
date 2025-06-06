@@ -123,23 +123,26 @@ class RegionController extends BaseController
 
             // Récupération des pays pour les filtres
             try {
-                $countries = $this->db->query("SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC");
-                error_log("RegionController::index - Récupéré " . count($countries) . " pays");
+                error_log("RegionController::index - Début récupération pays pour filtres");
+                $countries = $this->db->fetchAll("SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC");
+                error_log("RegionController::index - Récupéré " . count($countries) . " pays pour filtres");
             } catch (\Exception $e) {
                 error_log("Erreur requête pays: " . $e->getMessage());
                 $countries = [];
             }
 
             // Stats simples
-            $totalStats = [
-                'total_regions' => count($regions),
-                'total_sectors' => 0,
-                'total_routes' => 0,
-                'total_countries' => count($countries)
-            ];
-
-            // Compter secteurs et voies si nécessaire
             try {
+                error_log("RegionController::index - Début calcul stats");
+                $totalStats = [
+                    'total_regions' => count($regions),
+                    'total_sectors' => 0,
+                    'total_routes' => 0,
+                    'total_countries' => count($countries)
+                ];
+                error_log("RegionController::index - Stats de base calculées");
+
+                // Compter secteurs et voies si nécessaire
                 $stats = $this->db->fetchOne("
                     SELECT 
                         COUNT(DISTINCT s.id) as total_sectors,
@@ -148,17 +151,26 @@ class RegionController extends BaseController
                     LEFT JOIN climbing_routes r ON s.id = r.sector_id AND r.active = 1
                     WHERE s.active = 1
                 ");
+                error_log("RegionController::index - Stats détaillées récupérées");
+
                 if ($stats) {
                     $totalStats['total_sectors'] = $stats['total_sectors'];
                     $totalStats['total_routes'] = $stats['total_routes'];
                 }
+                error_log("RegionController::index - Stats finales calculées");
             } catch (\Exception $e) {
                 error_log("Erreur stats: " . $e->getMessage());
+                $totalStats = [
+                    'total_regions' => count($regions),
+                    'total_sectors' => 0,
+                    'total_routes' => 0,
+                    'total_countries' => count($countries)
+                ];
             }
 
-            error_log("RegionController::index - Préparation de la vue");
+            error_log("RegionController::index - Préparation des données pour la vue");
 
-            return $this->render('regions/index', [
+            $viewData = [
                 'regions' => $regions,
                 'countries' => $countries,
                 'filters' => $filters,
@@ -173,7 +185,11 @@ class RegionController extends BaseController
                 'total_sectors' => $totalStats['total_sectors'],
                 'total_routes' => $totalStats['total_routes'],
                 'total_countries' => $totalStats['total_countries']
-            ]);
+            ];
+
+            error_log("RegionController::index - Données préparées, appel du render");
+
+            return $this->render('regions/index', $viewData);
         } catch (\Exception $e) {
             error_log('Erreur fatale dans RegionController::index: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
