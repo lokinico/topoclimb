@@ -302,5 +302,152 @@ return [
         'path' => '/403',
         'controller' => \TopoclimbCH\Controllers\ErrorController::class,
         'action' => 'forbidden'
-    ]
+    ],
+
+    // Routes CRUD pour les régions (avec permissions)
+    [
+        'method' => 'GET',
+        'path' => '/regions/create',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-climbing-data']
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/regions',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-climbing-data']
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'edit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-climbing-data']
+        ]
+    ],
+    [
+        'method' => 'PUT',
+        'path' => '/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'update',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-climbing-data']
+        ]
+    ],
+    [
+        'method' => 'DELETE',
+        'path' => '/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'destroy',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-climbing-data']
+        ]
+    ],
+
+    // Routes API pour AJAX et intégrations
+    [
+        'method' => 'GET',
+        'path' => '/api/regions',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'apiIndex'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/regions/search',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'search'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/weather',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'weather'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/events',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'events'
+    ],
+
+    // Routes d'export
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/export',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'export'
+    ],
+
+    // Routes spécifiques pour fonctionnalités avancées
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/sectors',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'sectors'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/statistics',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'statistics'
+    ],
+
+    // Routes pour l'administration (si nécessaire)
+    [
+        'method' => 'GET',
+        'path' => '/admin/regions',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'regions',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+
+    // Routes pour les médias des régions (upload/suppression)
+    [
+        'method' => 'POST',
+        'path' => '/regions/{id}/media',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'uploadMedia',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'DELETE',
+        'path' => '/regions/{id}/media/{mediaId}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'deleteMedia',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+
+    // Route pour tester l'API météo (développement)
+    [
+        'method' => 'GET',
+        'path' => '/debug/weather-test',
+        'controller' => \TopoclimbCH\Controllers\DebugController::class,
+        'action' => 'weatherTest'
+    ],
+
+
 ];

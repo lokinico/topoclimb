@@ -4,6 +4,7 @@ namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
@@ -14,6 +15,7 @@ use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Services\WeatherService;
 use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Validation\Validator;
+
 
 class RegionController extends BaseController
 {
