@@ -1,0 +1,497 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ region.name }} - Région d'escalade - TopoclimbCH{% endblock %}
+
+{% block additional_css %}
+<link rel="stylesheet" href="{{ asset('css/pages/regions/show.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
+<link rel="stylesheet" href="https://unpkg.com/swiper@10/swiper-bundle.min.css">
+{% endblock %}
+
+{% block content %}
+<!-- Region Hero -->
+<section class="region-hero">
+    <div class="hero-background">
+        {% if region.cover_image %}
+            <img src="{{ region.cover_image }}" alt="{{ region.name }}" class="hero-bg-image">
+        {% endif %}
+        <div class="hero-overlay"></div>
+    </div>
+    
+    <div class="container">
+        <div class="hero-content">
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb-nav">
+                <a href="{{ url('/') }}">Accueil</a>
+                <span class="separator">/</span>
+                <a href="{{ url('/regions') }}">Régions</a>
+                <span class="separator">/</span>
+                <span class="current">{{ region.name }}</span>
+            </nav>
+            
+            <div class="region-header">
+                <div class="region-title-section">
+                    <h1 class="region-title">{{ region.name }}</h1>
+                    {% if region.country %}
+                        <span class="region-country">{{ region.country.name }}</span>
+                    {% endif %}
+                    
+                    <div class="region-meta">
+                        {% if region.altitude %}
+                            <span class="meta-item">
+                                <i class="fas fa-mountain"></i>
+                                {{ region.altitude }}m d'altitude
+                            </span>
+                        {% endif %}
+                        
+                        <span class="meta-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ stats.sectors_count ?? 0 }} secteurs
+                        </span>
+                        
+                        <span class="meta-item">
+                            <i class="fas fa-route"></i>
+                            {{ stats.routes_count ?? 0 }} voies
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Weather Widget -->
+                <div class="weather-widget" id="weather-widget">
+                    <div class="weather-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Chargement météo...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Region Stats -->
+            <div class="region-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">{{ stats.avg_difficulty ?? 'N/A' }}</span>
+                        <span class="stat-label">Difficulté moyenne</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">{{ region.rating ?? 'N/A' }}</span>
+                        <span class="stat-label">Note moyenne</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">{{ region.avg_access_time ?? 'N/A' }}</span>
+                        <span class="stat-label">Temps d'accès moyen</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">{{ region.best_season ?? 'Toute l\'année' }}</span>
+                        <span class="stat-label">Meilleure saison</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<div class="region-content">
+    <div class="container">
+        <div class="content-grid">
+            <!-- Left Column -->
+            <div class="content-main">
+                <!-- Description -->
+                {% if region.description %}
+                    <section class="info-section">
+                        <h2 class="section-title">Description</h2>
+                        <div class="description-content">
+                            {{ region.description|nl2br }}
+                        </div>
+                    </section>
+                {% endif %}
+                
+                <!-- Interactive Map -->
+                <section class="info-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Carte interactive</h2>
+                        <div class="map-controls-header">
+                            <button class="map-btn active" id="btn-sectors" onclick="showMapLayer('sectors')">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Secteurs
+                            </button>
+                            <button class="map-btn" id="btn-hiking" onclick="showMapLayer('hiking')">
+                                <i class="fas fa-hiking"></i>
+                                Sentiers
+                            </button>
+                            <button class="map-btn" id="btn-parking" onclick="showMapLayer('parking')">
+                                <i class="fas fa-parking"></i>
+                                Parkings
+                            </button>
+                            <button class="map-btn" id="btn-route" onclick="toggleRouting()">
+                                <i class="fas fa-route"></i>
+                                Itinéraire
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="map-container">
+                        <div id="region-map" class="region-map"></div>
+                        
+                        <!-- Map Info Panel -->
+                        <div class="map-info-overlay" id="map-info-overlay">
+                            <div class="info-panel">
+                                <div class="panel-header">
+                                    <h4 id="info-title">Informations</h4>
+                                    <button class="panel-close" onclick="closeMapInfo()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="panel-content" id="info-content">
+                                    <!-- Content loaded dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Routing Panel -->
+                        <div class="routing-panel" id="routing-panel">
+                            <div class="routing-header">
+                                <h4>Calculer un itinéraire</h4>
+                                <button class="panel-close" onclick="closeRouting()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="routing-content">
+                                <div class="input-group">
+                                    <label>Point de départ</label>
+                                    <input type="text" id="route-start" placeholder="Adresse ou cliquer sur la carte">
+                                    <button onclick="useCurrentLocation()" class="btn-location">
+                                        <i class="fas fa-crosshairs"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group">
+                                    <label>Destination</label>
+                                    <select id="route-destination">
+                                        <option value="">Sélectionner un secteur</option>
+                                        {% for sector in sectors %}
+                                            <option value="{{ sector.coordinates_lat }},{{ sector.coordinates_lng }}">
+                                                {{ sector.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="routing-options">
+                                    <label>
+                                        <input type="radio" name="route-type" value="driving" checked>
+                                        <i class="fas fa-car"></i> Voiture
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="route-type" value="walking">
+                                        <i class="fas fa-walking"></i> À pied
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="route-type" value="cycling">
+                                        <i class="fas fa-bicycle"></i> Vélo
+                                    </label>
+                                </div>
+                                <button class="btn-calculate" onclick="calculateRoute()">
+                                    <i class="fas fa-route"></i>
+                                    Calculer l'itinéraire
+                                </button>
+                                <div id="route-results" class="route-results">
+                                    <!-- Results loaded dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Sectors List -->
+                <section class="info-section">
+                    <h2 class="section-title">Secteurs ({{ sectors|length }})</h2>
+                    
+                    {% if sectors|length > 0 %}
+                        <div class="sectors-grid">
+                            {% for sector in sectors %}
+                                <div class="sector-card" data-sector-id="{{ sector.id }}">
+                                    <div class="sector-header">
+                                        <h3 class="sector-name">
+                                            <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a>
+                                        </h3>
+                                        <div class="sector-meta">
+                                            {% if sector.altitude %}
+                                                <span class="meta-item">{{ sector.altitude }}m</span>
+                                            {% endif %}
+                                            {% if sector.exposure %}
+                                                <span class="meta-item exposure-{{ sector.exposure|lower }}">
+                                                    {{ sector.exposure }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    {% if sector.description %}
+                                        <p class="sector-description">
+                                            {{ sector.description|slice(0, 100) ~ (sector.description|length > 100 ? '...' : '') }}
+                                        </p>
+                                    {% endif %}
+                                    
+                                    <div class="sector-stats">
+                                        <div class="stat-mini">
+                                            <i class="fas fa-route"></i>
+                                            <span>{{ sector.routes_count ?? 0 }} voies</span>
+                                        </div>
+                                        {% if sector.access_time %}
+                                            <div class="stat-mini">
+                                                <i class="fas fa-clock"></i>
+                                                <span>{{ sector.access_time }}min</span>
+                                            </div>
+                                        {% endif %}
+                                        {% if sector.difficulty_range %}
+                                            <div class="stat-mini">
+                                                <i class="fas fa-chart-line"></i>
+                                                <span>{{ sector.difficulty_range }}</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="sector-actions">
+                                        <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn-primary-small">
+                                            Voir les voies
+                                        </a>
+                                        <button onclick="showSectorOnMap({{ sector.id }})" class="btn-secondary-small">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </button>
+                                        <button onclick="showSectorWeather({{ sector.id }})" class="btn-weather-small">
+                                            <i class="fas fa-cloud-sun"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <p>Aucun secteur disponible pour cette région.</p>
+                        </div>
+                    {% endif %}
+                </section>
+                
+                <!-- Photo Gallery -->
+                <section class="info-section">
+                    <h2 class="section-title">Galerie photos</h2>
+                    
+                    {% if region.photos and region.photos|length > 0 %}
+                        <div class="photo-gallery">
+                            <div class="swiper gallery-swiper">
+                                <div class="swiper-wrapper">
+                                    {% for photo in region.photos %}
+                                        <div class="swiper-slide">
+                                            <div class="photo-item" onclick="openPhotoModal({{ loop.index0 }})">
+                                                <img src="{{ photo.thumbnail_url }}" alt="{{ photo.title ?? region.name }}" loading="lazy">
+                                                <div class="photo-overlay">
+                                                    <i class="fas fa-expand"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="swiper-pagination"></div>
+                                <div class="swiper-button-next"></div>
+                                <div class="swiper-button-prev"></div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-camera"></i>
+                            <p>Aucune photo disponible pour cette région.</p>
+                            {% if auth() %}
+                                <button class="btn-upload" onclick="openPhotoUpload()">
+                                    <i class="fas fa-plus"></i>
+                                    Ajouter des photos
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </section>
+            </div>
+            
+            <!-- Right Sidebar -->
+            <div class="content-sidebar">
+                <!-- Quick Actions -->
+                <div class="sidebar-card">
+                    <h3 class="card-title">Actions rapides</h3>
+                    <div class="quick-actions">
+                        <button class="action-btn" onclick="showFullWeather()">
+                            <i class="fas fa-cloud-sun"></i>
+                            <span>Météo détaillée</span>
+                        </button>
+                        <button class="action-btn" onclick="downloadTopoGuide()">
+                            <i class="fas fa-download"></i>
+                            <span>Télécharger le topo</span>
+                        </button>
+                        <button class="action-btn" onclick="shareRegion()">
+                            <i class="fas fa-share"></i>
+                            <span>Partager</span>
+                        </button>
+                        <button class="action-btn" onclick="addToFavorites()">
+                            <i class="fas fa-heart"></i>
+                            <span>Ajouter aux favoris</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Access Information -->
+                <div class="sidebar-card">
+                    <h3 class="card-title">Informations d'accès</h3>
+                    <div class="access-info">
+                        {% if region.access_info %}
+                            <div class="info-item">
+                                <i class="fas fa-route"></i>
+                                <div>
+                                    <strong>Accès</strong>
+                                    <p>{{ region.access_info }}</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if region.parking_info %}
+                            <div class="info-item">
+                                <i class="fas fa-parking"></i>
+                                <div>
+                                    <strong>Parking</strong>
+                                    <p>{{ region.parking_info }}</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if region.coordinates_lat and region.coordinates_lng %}
+                            <div class="info-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <div>
+                                    <strong>Coordonnées GPS</strong>
+                                    <p>{{ region.coordinates_lat }}, {{ region.coordinates_lng }}</p>
+                                    <button class="btn-copy" onclick="copyCoordinates()">
+                                        <i class="fas fa-copy"></i> Copier
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Upcoming Events -->
+                <div class="sidebar-card">
+                    <h3 class="card-title">Événements à venir</h3>
+                    <div class="events-list" id="upcoming-events">
+                        <!-- Events loaded dynamically -->
+                        <div class="loading-events">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Chargement des événements...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Emergency Contacts -->
+                <div class="sidebar-card emergency-card">
+                    <h3 class="card-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Contacts d'urgence
+                    </h3>
+                    <div class="emergency-contacts">
+                        <div class="contact-item">
+                            <strong>Secours en montagne</strong>
+                            <a href="tel:1414" class="contact-phone">📞 1414</a>
+                        </div>
+                        <div class="contact-item">
+                            <strong>Police</strong>
+                            <a href="tel:117" class="contact-phone">📞 117</a>
+                        </div>
+                        <div class="contact-item">
+                            <strong>Urgences médicales</strong>
+                            <a href="tel:144" class="contact-phone">📞 144</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Modal -->
+<div class="modal" id="photo-modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3 id="photo-modal-title">Photo</h3>
+            <button class="modal-close" onclick="closePhotoModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="photo-viewer">
+                <img id="photo-modal-image" src="" alt="">
+                <div class="photo-nav">
+                    <button class="photo-nav-btn" id="photo-prev" onclick="previousPhoto()">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="photo-nav-btn" id="photo-next" onclick="nextPhoto()">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weather Modal -->
+<div class="modal" id="weather-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Météo détaillée - {{ region.name }}</h3>
+            <button class="modal-close" onclick="closeWeatherModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="weather-modal-content">
+            <!-- Weather content loaded dynamically -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/proj4@2.9.0/dist/proj4.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<script src="https://unpkg.com/swiper@10/swiper-bundle.min.js"></script>
+<script src="{{ asset('js/pages/regions/show.js') }}"></script>
+<script>
+// Pass data to JavaScript
+window.regionData = {
+    region: {{ region|json_encode|raw }},
+    sectors: {{ sectors|json_encode|raw }},
+    stats: {{ stats|json_encode|raw }},
+    photos: {{ region.photos|json_encode|raw ?? '[]' }},
+    weatherApiKey: '{{ env('WEATHER_API_KEY') }}',
+    swisstopoApiKey: '{{ env('SWISSTOPO_API_KEY') }}',
+    routingApiKey: '{{ env('OPENROUTE_API_KEY') }}'
+};
+</script>
+{% endblock %}

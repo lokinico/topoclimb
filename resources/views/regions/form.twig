@@ -1,0 +1,392 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ region.id ? 'Modifier' : 'Créer' }} une région - TopoclimbCH{% endblock %}
+
+{% block additional_css %}
+<link rel="stylesheet" href="{{ asset('css/pages/regions/form.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="breadcrumb-nav">
+            <a href="{{ url('/') }}">Accueil</a>
+            <span class="separator">/</span>
+            <a href="{{ url('/regions') }}">Régions</a>
+            <span class="separator">/</span>
+            {% if region.id %}
+                <a href="{{ url('/regions/' ~ region.id) }}">{{ region.name }}</a>
+                <span class="separator">/</span>
+                <span class="current">Modifier</span>
+            {% else %}
+                <span class="current">Créer</span>
+            {% endif %}
+        </div>
+        
+        <div class="header-content">
+            <h1 class="page-title">
+                {% if region.id %}
+                    <i class="fas fa-edit"></i>
+                    Modifier la région : {{ region.name }}
+                {% else %}
+                    <i class="fas fa-plus"></i>
+                    Créer une nouvelle région
+                {% endif %}
+            </h1>
+            <p class="page-subtitle">
+                {% if region.id %}
+                    Modifiez les informations de cette région d'escalade
+                {% else %}
+                    Ajoutez une nouvelle région d'escalade à la base de données
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="form-container">
+        <form method="POST" action="{{ region.id ? url('/regions/' ~ region.id) : url('/regions') }}" 
+              class="region-form" id="region-form" enctype="multipart/form-data">
+            
+            {% if region.id %}
+                <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            
+            <div class="form-grid">
+                <!-- Left Column - Basic Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-info-circle"></i>
+                            Informations générales
+                        </h2>
+                        <p class="section-description">Les informations de base de la région</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="country_id" class="form-label required">Pays</label>
+                        <select name="country_id" id="country_id" class="form-select" required>
+                            <option value="">Sélectionner un pays</option>
+                            {% for country in countries %}
+                                <option value="{{ country.id }}" 
+                                    {% if (region.country_id and region.country_id == country.id) or (not region.id and country.code == 'CH') %}selected{% endif %}>
+                                    {{ country.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-help">Pays dans lequel se trouve cette région</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="name" class="form-label required">Nom de la région</label>
+                        <input type="text" name="name" id="name" class="form-input" 
+                               value="{{ region.name ?? '' }}" required maxlength="100"
+                               placeholder="Ex: Valais, Grisons, Ticino...">
+                        <div class="form-help">Nom officiel de la région d'escalade</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea name="description" id="description" class="form-textarea" rows="6"
+                                  placeholder="Décrivez cette région d'escalade, ses caractéristiques, son style...">{{ region.description ?? '' }}</textarea>
+                        <div class="form-help">Description détaillée de la région (optionnel)</div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="altitude" class="form-label">Altitude moyenne</label>
+                            <div class="input-group">
+                                <input type="number" name="altitude" id="altitude" class="form-input" 
+                                       value="{{ region.altitude ?? '' }}" min="0" max="5000" step="1">
+                                <span class="input-suffix">m</span>
+                            </div>
+                            <div class="form-help">Altitude moyenne de la région en mètres</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="best_season" class="form-label">Meilleure saison</label>
+                            <select name="best_season" id="best_season" class="form-select">
+                                <option value="">Non spécifiée</option>
+                                <option value="spring" {% if region.best_season == 'spring' %}selected{% endif %}>Printemps</option>
+                                <option value="summer" {% if region.best_season == 'summer' %}selected{% endif %}>Été</option>
+                                <option value="autumn" {% if region.best_season == 'autumn' %}selected{% endif %}>Automne</option>
+                                <option value="winter" {% if region.best_season == 'winter' %}selected{% endif %}>Hiver</option>
+                                <option value="year-round" {% if region.best_season == 'year-round' %}selected{% endif %}>Toute l'année</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="active" value="1" 
+                                   {% if not region.id or region.active %}checked{% endif %}>
+                            <span class="checkbox-indicator"></span>
+                            Région active et visible publiquement
+                        </label>
+                        <div class="form-help">Décochez pour masquer temporairement cette région</div>
+                    </div>
+                </div>
+                
+                <!-- Right Column - Location & Media -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Localisation
+                        </h2>
+                        <p class="section-description">Positionnement géographique de la région</p>
+                    </div>
+                    
+                    <!-- Coordinates -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="coordinates_lat" class="form-label">Latitude</label>
+                            <input type="number" name="coordinates_lat" id="coordinates_lat" 
+                                   class="form-input" value="{{ region.coordinates_lat ?? '' }}" 
+                                   step="0.000001" min="-90" max="90"
+                                   placeholder="46.123456">
+                            <div class="form-help">Coordonnée latitude (WGS84)</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="coordinates_lng" class="form-label">Longitude</label>
+                            <input type="number" name="coordinates_lng" id="coordinates_lng" 
+                                   class="form-input" value="{{ region.coordinates_lng ?? '' }}" 
+                                   step="0.000001" min="-180" max="180"
+                                   placeholder="7.123456">
+                            <div class="form-help">Coordonnée longitude (WGS84)</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map for coordinate selection -->
+                    <div class="form-group">
+                        <label class="form-label">Sélectionner sur la carte</label>
+                        <div class="map-container">
+                            <div id="coordinate-map" class="coordinate-map"></div>
+                            <div class="map-help">
+                                <i class="fas fa-mouse-pointer"></i>
+                                Cliquez sur la carte pour définir les coordonnées
+                            </div>
+                        </div>
+                        <div class="coordinate-actions">
+                            <button type="button" class="btn-secondary" onclick="getCurrentLocation()">
+                                <i class="fas fa-crosshairs"></i>
+                                Utiliser ma position
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="searchLocation()">
+                                <i class="fas fa-search"></i>
+                                Rechercher une adresse
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="clearCoordinates()">
+                                <i class="fas fa-eraser"></i>
+                                Effacer
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Access Information -->
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-route"></i>
+                            Accès et parking
+                        </h2>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="access_info" class="form-label">Informations d'accès</label>
+                        <textarea name="access_info" id="access_info" class="form-textarea" rows="4"
+                                  placeholder="Décrivez comment accéder à cette région...">{{ region.access_info ?? '' }}</textarea>
+                        <div class="form-help">Instructions pour accéder à la région</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="parking_info" class="form-label">Informations de parking</label>
+                        <textarea name="parking_info" id="parking_info" class="form-textarea" rows="3"
+                                  placeholder="Où se garer, tarifs, restrictions...">{{ region.parking_info ?? '' }}</textarea>
+                        <div class="form-help">Informations sur les parkings disponibles</div>
+                    </div>
+                    
+                    <!-- Media Upload -->
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-images"></i>
+                            Images
+                        </h2>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="cover_image" class="form-label">Image de couverture</label>
+                        <div class="file-upload-area" id="cover-upload">
+                            <input type="file" name="cover_image" id="cover_image" accept="image/*" class="file-input">
+                            <div class="upload-content">
+                                {% if region.cover_image %}
+                                    <img src="{{ region.cover_image }}" alt="Couverture actuelle" class="current-image">
+                                    <div class="upload-overlay">
+                                        <i class="fas fa-camera"></i>
+                                        <span>Changer l'image de couverture</span>
+                                    </div>
+                                {% else %}
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Cliquez ou glissez pour ajouter une image de couverture</span>
+                                    <small>JPG, PNG, max 5MB</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-help">Image principale qui représente cette région</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="gallery_images" class="form-label">Galerie d'images</label>
+                        <div class="file-upload-area" id="gallery-upload">
+                            <input type="file" name="gallery_images[]" id="gallery_images" accept="image/*" multiple class="file-input">
+                            <div class="upload-content">
+                                <i class="fas fa-images"></i>
+                                <span>Ajouter des images à la galerie</span>
+                                <small>Sélectionnez plusieurs fichiers (JPG, PNG, max 5MB chacun)</small>
+                            </div>
+                        </div>
+                        <div class="form-help">Images additionnelles pour la galerie de la région</div>
+                        
+                        {% if region.gallery_images and region.gallery_images|length > 0 %}
+                            <div class="current-gallery">
+                                <h4>Images actuelles</h4>
+                                <div class="gallery-grid">
+                                    {% for image in region.gallery_images %}
+                                        <div class="gallery-item" data-image-id="{{ image.id }}">
+                                            <img src="{{ image.thumbnail_url }}" alt="Image {{ loop.index }}">
+                                            <div class="gallery-actions">
+                                                <button type="button" class="btn-delete" onclick="removeGalleryImage({{ image.id }})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <div class="actions-left">
+                    {% if region.id %}
+                        <button type="button" class="btn-danger" onclick="confirmDelete()">
+                            <i class="fas fa-trash"></i>
+                            Supprimer la région
+                        </button>
+                    {% endif %}
+                </div>
+                
+                <div class="actions-right">
+                    <a href="{{ region.id ? url('/regions/' ~ region.id) : url('/regions') }}" class="btn-secondary">
+                        <i class="fas fa-times"></i>
+                        Annuler
+                    </a>
+                    
+                    <button type="button" class="btn-outline" onclick="saveDraft()" id="save-draft">
+                        <i class="fas fa-save"></i>
+                        Enregistrer brouillon
+                    </button>
+                    
+                    <button type="submit" class="btn-primary" id="submit-btn">
+                        <i class="fas fa-check"></i>
+                        {% if region.id %}Mettre à jour{% else %}Créer la région{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Location Search Modal -->
+<div class="modal" id="location-search-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Rechercher une localisation</h3>
+            <button class="modal-close" onclick="closeLocationSearch()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="search-container">
+                <input type="text" id="location-search" class="form-input" 
+                       placeholder="Tapez une adresse, ville ou lieu...">
+                <button class="btn-primary" onclick="performLocationSearch()">
+                    <i class="fas fa-search"></i>
+                    Rechercher
+                </button>
+            </div>
+            <div id="search-results" class="search-results">
+                <!-- Results loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+{% if region.id %}
+<div class="modal" id="delete-modal">
+    <div class="modal-content modal-danger">
+        <div class="modal-header">
+            <h3>
+                <i class="fas fa-exclamation-triangle"></i>
+                Supprimer la région
+            </h3>
+            <button class="modal-close" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>Êtes-vous sûr de vouloir supprimer la région <strong>{{ region.name }}</strong> ?</p>
+            <p class="warning-text">
+                <i class="fas fa-exclamation-triangle"></i>
+                Cette action est irréversible et supprimera également tous les secteurs et voies associés.
+            </p>
+            <div class="confirmation-input">
+                <label>Tapez "{{ region.name }}" pour confirmer :</label>
+                <input type="text" id="delete-confirmation" class="form-input" 
+                       placeholder="Nom de la région">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeDeleteModal()">Annuler</button>
+            <button class="btn-danger" onclick="executeDelete()" id="confirm-delete-btn" disabled>
+                <i class="fas fa-trash"></i>
+                Supprimer définitivement
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+        <div class="loading-spinner">
+            <i class="fas fa-mountain rotating"></i>
+        </div>
+        <p id="loading-text">Enregistrement en cours...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/proj4@2.9.0/dist/proj4.js"></script>
+<script src="{{ asset('js/pages/regions/form.js') }}"></script>
+<script>
+// Pass data to JavaScript
+window.formData = {
+    region: {{ region|json_encode|raw ?? 'null' }},
+    countries: {{ countries|json_encode|raw }},
+    swisstopoApiKey: '{{ env('SWISSTOPO_API_KEY') }}',
+    nominatimApiUrl: 'https://nominatim.openstreetmap.org',
+    csrfToken: '{{ csrf_token }}'
+};
+</script>
+{% endblock %}

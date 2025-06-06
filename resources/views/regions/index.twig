@@ -2,47 +2,292 @@
 
 {% block title %}Régions d'escalade - TopoclimbCH{% endblock %}
 
+{% block additional_css %}
+<link rel="stylesheet" href="{{ asset('css/pages/regions/index.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <h1>Régions d'escalade en Suisse</h1>
+<!-- Hero Section -->
+<section class="hero-modern">
+    <div class="hero-background">
+        <div class="hero-overlay"></div>
     </div>
-    
-    <div class="row g-4">
-        {% if regions is defined and regions|length > 0 %}
-            {% for region in regions %}
-                <div class="col-md-4">
-                    <div class="card h-100">
-                        {% if region.image %}
-                            <img src="{{ region.image }}" class="card-img-top" alt="{{ region.name }}">
-                        {% else %}
-                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 140px;">
-                                <i class="icon-mountain" style="font-size: 48px;"></i>
-                            </div>
-                        {% endif %}
-                        <div class="card-body">
-                            <h2 class="card-title h5">{{ region.name }}</h2>
-                            {% if region.description %}
-                                <p class="card-text">{{ region.description|slice(0, 120) ~ (region.description|length > 120 ? '...' : '') }}</p>
-                            {% endif %}
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">{{ region.sector_count ?? 0 }} secteurs</span>
-                                <a href="{{ url('/sites?region_id=' ~ region.id) }}" class="btn btn-outline-primary">Voir les sites</a>
-                            </div>
-                        </div>
-                    </div>
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">Régions d'escalade</h1>
+            <p class="hero-subtitle">Découvrez les plus beaux sites d'escalade de Suisse</p>
+            
+            <!-- Search Bar -->
+            <div class="search-section">
+                <div class="search-container">
+                    <input type="text" id="region-search" class="search-input" placeholder="Rechercher une région...">
+                    <button class="search-btn" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
-            {% endfor %}
-        {% else %}
-            <div class="col-12">
-                <div class="alert alert-info">
-                    Aucune région n'a été trouvée. 
-                    {% if auth() %}
-                        <a href="{{ url('/admin/regions/create') }}">Ajouter une région</a>.
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-overview">
+                <div class="stat-item">
+                    <span class="stat-number">{{ regions|length }}</span>
+                    <span class="stat-label">Régions</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ total_sectors ?? 0 }}</span>
+                    <span class="stat-label">Secteurs</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ total_routes ?? 0 }}</span>
+                    <span class="stat-label">Voies</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Filters Section -->
+<section class="filters-section">
+    <div class="container">
+        <div class="filters-container">
+            <div class="filters-header">
+                <h3>Filtrer les régions</h3>
+                <button class="toggle-view-btn" id="toggle-view">
+                    <i class="fas fa-map"></i>
+                    <span>Vue carte</span>
+                </button>
+            </div>
+            
+            <div class="filters-grid">
+                <!-- Country Filter -->
+                <div class="filter-group">
+                    <label for="country-filter">Pays</label>
+                    <select id="country-filter" class="filter-select">
+                        <option value="">Tous les pays</option>
+                        {% for country in countries %}
+                            <option value="{{ country.id }}" {% if currentCountryId == country.id %}selected{% endif %}>
+                                {{ country.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Difficulty Filter -->
+                <div class="filter-group">
+                    <label for="difficulty-filter">Difficulté</label>
+                    <select id="difficulty-filter" class="filter-select">
+                        <option value="">Toutes difficultés</option>
+                        <option value="beginner">Débutant (3-5)</option>
+                        <option value="intermediate">Intermédiaire (5-6)</option>
+                        <option value="advanced">Avancé (6+)</option>
+                    </select>
+                </div>
+
+                <!-- Season Filter -->
+                <div class="filter-group">
+                    <label for="season-filter">Saison</label>
+                    <select id="season-filter" class="filter-select">
+                        <option value="">Toute l'année</option>
+                        <option value="spring">Printemps</option>
+                        <option value="summer">Été</option>
+                        <option value="autumn">Automne</option>
+                        <option value="winter">Hiver</option>
+                    </select>
+                </div>
+
+                <!-- Style Filter -->
+                <div class="filter-group">
+                    <label for="style-filter">Style</label>
+                    <select id="style-filter" class="filter-select">
+                        <option value="">Tous styles</option>
+                        <option value="sport">Sportive</option>
+                        <option value="trad">Traditionnelle</option>
+                        <option value="boulder">Bloc</option>
+                        <option value="multipitch">Grande voie</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filters-actions">
+                <button class="btn-clear-filters" id="clear-filters">
+                    <i class="fas fa-times"></i>
+                    Effacer les filtres
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<section class="main-content">
+    <div class="container">
+        <!-- View Toggle -->
+        <div class="view-container">
+            <!-- Grid View -->
+            <div class="grid-view active" id="grid-view">
+                <div class="regions-grid" id="regions-grid">
+                    {% if regions is defined and regions|length > 0 %}
+                        {% for region in regions %}
+                            <div class="card-modern region-card" data-region-id="{{ region.id }}" data-country-id="{{ region.country_id }}">
+                                <div class="card-image">
+                                    {% if region.image %}
+                                        <img src="{{ region.image }}" alt="{{ region.name }}" loading="lazy">
+                                    {% else %}
+                                        <div class="card-placeholder">
+                                            <i class="fas fa-mountain"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="card-overlay">
+                                        <div class="card-badges">
+                                            {% if region.difficulty_level %}
+                                                <span class="badge badge-difficulty">{{ region.difficulty_level }}</span>
+                                            {% endif %}
+                                            {% if region.season_best %}
+                                                <span class="badge badge-season">{{ region.season_best }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-content">
+                                    <div class="card-header">
+                                        <h3 class="card-title">{{ region.name }}</h3>
+                                        {% if region.country %}
+                                            <span class="card-country">{{ region.country.name }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if region.description %}
+                                        <p class="card-description">
+                                            {{ region.description|slice(0, 120) ~ (region.description|length > 120 ? '...' : '') }}
+                                        </p>
+                                    {% endif %}
+                                    
+                                    <div class="card-stats">
+                                        <div class="stat-mini">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span>{{ region.sectors_count ?? 0 }} secteurs</span>
+                                        </div>
+                                        <div class="stat-mini">
+                                            <i class="fas fa-route"></i>
+                                            <span>{{ region.routes_count ?? 0 }} voies</span>
+                                        </div>
+                                        {% if region.altitude %}
+                                            <div class="stat-mini">
+                                                <i class="fas fa-mountain"></i>
+                                                <span>{{ region.altitude }}m</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="card-actions">
+                                        <a href="{{ url('/regions/' ~ region.id) }}" class="btn-primary">
+                                            <i class="fas fa-eye"></i>
+                                            Découvrir
+                                        </a>
+                                        <button class="btn-secondary" onclick="showRegionOnMap({{ region.id }})">
+                                            <i class="fas fa-map"></i>
+                                            Carte
+                                        </button>
+                                        {% if region.weather_station %}
+                                            <button class="btn-weather" onclick="showWeather({{ region.id }})">
+                                                <i class="fas fa-cloud-sun"></i>
+                                                Météo
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-mountain"></i>
+                            <h3>Aucune région trouvée</h3>
+                            <p>Aucune région ne correspond à vos critères de recherche.</p>
+                            {% if auth() and auth().can('manage-climbing-data') %}
+                                <a href="{{ url('/regions/create') }}" class="btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Ajouter une région
+                                </a>
+                            {% endif %}
+                        </div>
                     {% endif %}
                 </div>
             </div>
-        {% endif %}
+            
+            <!-- Map View -->
+            <div class="map-view" id="map-view">
+                <div class="map-container">
+                    <div id="regions-map" class="map-canvas"></div>
+                    <div class="map-controls">
+                        <button class="map-control-btn" onclick="centerMapOnSwitzerland()">
+                            <i class="fas fa-home"></i>
+                            <span>Centrer sur la Suisse</span>
+                        </button>
+                        <button class="map-control-btn" onclick="toggleMapLayers()">
+                            <i class="fas fa-layers"></i>
+                            <span>Couches</span>
+                        </button>
+                        <button class="map-control-btn" onclick="toggleHikingPaths()">
+                            <i class="fas fa-hiking"></i>
+                            <span>Sentiers</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Map Info Panel -->
+                <div class="map-info-panel" id="map-info-panel">
+                    <div class="panel-header">
+                        <h4>Informations de la région</h4>
+                        <button class="panel-close" onclick="closeMapInfo()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="panel-content" id="panel-content">
+                        <!-- Content loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Weather Modal -->
+<div class="modal" id="weather-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Conditions météorologiques</h3>
+            <button class="modal-close" onclick="closeWeatherModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="weather-content">
+            <!-- Weather content loaded dynamically -->
+        </div>
     </div>
 </div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner">
+        <i class="fas fa-mountain rotating"></i>
+        <p>Chargement...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/proj4@2.9.0/dist/proj4.js"></script>
+<script src="{{ asset('js/pages/regions/index.js') }}"></script>
+<script>
+// Pass data to JavaScript
+window.regionsData = {
+    regions: {{ regions|json_encode|raw }},
+    currentCountryId: {{ currentCountryId ?? 'null' }},
+    weatherApiKey: '{{ env('WEATHER_API_KEY') }}',
+    swisstopoApiKey: '{{ env('SWISSTOPO_API_KEY') }}'
+};
+</script>
 {% endblock %}
