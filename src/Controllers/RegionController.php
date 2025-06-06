@@ -75,32 +75,26 @@ class RegionController extends BaseController
         error_log("=== STEP 1: Début méthode index ===");
 
         try {
-            error_log("STEP 2: Test RegionService exists");
-            if (!$this->regionService) {
-                throw new \Exception("RegionService is null");
-            }
-            error_log("STEP 3: RegionService OK");
+            error_log("STEP 2: Test RegionService");
 
-            error_log("STEP 4: Test Database object");
-            if (!$this->regionService->db) {
-                throw new \Exception("Database is null");
-            }
-            error_log("STEP 5: Database object OK");
+            // Test direct de la méthode getActiveCountries (même si vide)
+            error_log("STEP 3: Test getActiveCountries directement");
+            $countries = $this->regionService->getActiveCountries();
+            error_log("STEP 4: Countries result: " . json_encode($countries));
 
-            error_log("STEP 6: Test simple query");
-            $testQuery = $this->regionService->db->fetchOne("SELECT 1 as test");
-            error_log("STEP 7: Simple query result: " . json_encode($testQuery));
-
-            error_log("STEP 8: Test if climbing_countries table exists");
-            $tableCheck = $this->regionService->db->fetchOne("SHOW TABLES LIKE 'climbing_countries'");
-            error_log("STEP 9: Table check result: " . json_encode($tableCheck));
+            // Test des autres statistiques
+            error_log("STEP 5: Test getOverallStatistics");
+            $stats = $this->regionService->getOverallStatistics();
+            error_log("STEP 6: Stats result: " . json_encode($stats));
 
             // Retour de succès
             $response = new \TopoclimbCH\Core\Response();
             $response->setContent(json_encode([
                 'success' => true,
-                'simple_query' => $testQuery,
-                'table_exists' => $tableCheck ? true : false,
+                'countries_count' => count($countries),
+                'countries' => $countries,
+                'stats' => $stats,
+                'message' => 'Services fonctionnent même avec tables vides!'
             ]));
             $response->headers->set('Content-Type', 'application/json');
             return $response;
