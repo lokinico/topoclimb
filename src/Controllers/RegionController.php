@@ -75,35 +75,45 @@ class RegionController extends BaseController
         error_log("=== STEP 1: Début méthode index ===");
 
         try {
-            error_log("STEP 2: Avant création Response");
+            error_log("STEP 2: Test des services");
 
-            // Test le plus simple possible : Response manuelle
+            // Test 1 : RegionService
+            $countries = $this->regionService->getActiveCountries();
+            error_log("STEP 3: Countries loaded: " . count($countries));
+
+            // Test 2 : Statistiques
+            $stats = $this->regionService->getOverallStatistics();
+            error_log("STEP 4: Stats loaded: " . json_encode($stats));
+
+            // Test 3 : Régions
+            $regions = $this->regionService->getRegionsForApi(['limit' => 5]);
+            error_log("STEP 5: Regions loaded: " . count($regions));
+
+            // Retour JSON avec les données
             $response = new \TopoclimbCH\Core\Response();
-            error_log("STEP 3: Response créée");
-
-            $response->setContent('<html><body><h1>Test RegionController</h1><p>Si vous voyez ceci, le contrôleur fonctionne !</p></body></html>');
-            error_log("STEP 4: Content défini");
-
+            $response->setContent(json_encode([
+                'success' => true,
+                'countries_count' => count($countries),
+                'stats' => $stats,
+                'regions_count' => count($regions),
+                'message' => 'Services fonctionnent !'
+            ]));
+            $response->headers->set('Content-Type', 'application/json');
             $response->setStatusCode(200);
-            error_log("STEP 5: Status code défini");
 
-            error_log("STEP 6: Retour de la response");
             return $response;
         } catch (\Exception $e) {
-            error_log("ERREUR CATCHÉE: " . $e->getMessage());
+            error_log("ERREUR SERVICE: " . $e->getMessage());
             error_log("FICHIER: " . $e->getFile() . " LIGNE: " . $e->getLine());
 
-            // Response d'erreur manuelle
             $errorResponse = new \TopoclimbCH\Core\Response();
-            $errorResponse->setContent('<html><body><h1>Erreur détectée</h1><pre>' . htmlspecialchars($e->getMessage()) . '</pre></body></html>');
-            $errorResponse->setStatusCode(500);
-            return $errorResponse;
-        } catch (\Throwable $t) {
-            error_log("THROWABLE CATCHÉE: " . $t->getMessage());
-            error_log("FICHIER: " . $t->getFile() . " LIGNE: " . $t->getLine());
-
-            $errorResponse = new \TopoclimbCH\Core\Response();
-            $errorResponse->setContent('<html><body><h1>Throwable détectée</h1><pre>' . htmlspecialchars($t->getMessage()) . '</pre></body></html>');
+            $errorResponse->setContent(json_encode([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]));
+            $errorResponse->headers->set('Content-Type', 'application/json');
             $errorResponse->setStatusCode(500);
             return $errorResponse;
         }
