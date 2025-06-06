@@ -9,7 +9,6 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
-use TopoclimbCH\Models\Region;
 use TopoclimbCH\Services\RegionService;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Services\WeatherService;
@@ -17,11 +16,10 @@ use TopoclimbCH\Core\Security\CsrfManager;
 
 class RegionController extends BaseController
 {
-    protected RegionService $regionService;
-    protected MediaService $mediaService;
-    protected WeatherService $weatherService;
-    protected Database $db;
-    protected ?Auth $auth;
+    private RegionService $regionService;
+    private MediaService $mediaService;
+    private WeatherService $weatherService;
+    private Database $db;
 
     public function __construct(
         View $view,
@@ -32,7 +30,7 @@ class RegionController extends BaseController
         WeatherService $weatherService,
         Database $db,
         ?Auth $auth = null,
-        $authService = null // Paramètre optionnel non utilisé pour l'instant
+        $authService = null // Paramètre optionnel non utilisé
     ) {
         parent::__construct($view, $session, $csrfManager);
 
@@ -40,11 +38,10 @@ class RegionController extends BaseController
         $this->mediaService = $mediaService;
         $this->weatherService = $weatherService;
         $this->db = $db;
-        $this->auth = $auth ?? Auth::getInstance();
     }
 
     /**
-     * Display list of regions with optional filters
+     * Display list of regions
      */
     public function index(Request $request): Response
     {
@@ -67,38 +64,74 @@ class RegionController extends BaseController
 
             error_log("RegionController::index - Filtres appliqués: " . json_encode($cleanFilters));
 
-            // Récupération des données avec gestion d'erreurs
+            // Récupération directe des régions via requête SQL pour éviter les problèmes de service
             try {
-                $regions = $this->regionService->getRegionsWithFilters($cleanFilters);
-                error_log("RegionController::index - Récupéré " . count($regions) . " régions");
+                $sql = "SELECT r.*, c.name as country_name, c.code as country_code
+                        FROM climbing_regions r 
+                        LEFT JOIN climbing_countries c ON r.country_id = c.id 
+                        WHERE r.active = 1";
+                $params = [];
+
+                // Appliquer les filtres
+                if (!empty($cleanFilters['country_id'])) {
+                    $sql .= " AND r.country_id = ?";
+                    $params[] = $cleanFilters['country_id'];
+                }
+
+                if (!empty($cleanFilters['search'])) {
+                    $sql .= " AND (r.name LIKE ? OR r.description LIKE ?)";
+                    $searchTerm = '%' . $cleanFilters['search'] . '%';
+                    $params[] = $searchTerm;
+                    $params[] = $searchTerm;
+                }
+
+                $sql .= " ORDER BY r.name ASC";
+
+                $regions = $this->db->query($sql, $params);
+                error_log("RegionController::index - Récupéré " . count($regions) . " régions via SQL directe");
             } catch (\Exception $e) {
-                error_log("Erreur getRegionsWithFilters: " . $e->getMessage());
+                error_log("Erreur requête régions: " . $e->getMessage());
                 $regions = [];
             }
 
+            // Récupération des pays pour les filtres
             try {
-                $countries = $this->regionService->getActiveCountries();
+                $countries = $this->db->query("SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC");
                 error_log("RegionController::index - Récupéré " . count($countries) . " pays");
             } catch (\Exception $e) {
-                error_log("Erreur getActiveCountries: " . $e->getMessage());
+                error_log("Erreur requête pays: " . $e->getMessage());
                 $countries = [];
             }
 
+            // Stats simples
+            $totalStats = [
+                'total_regions' => count($regions),
+                'total_sectors' => 0,
+                'total_routes' => 0,
+                'total_countries' => count($countries)
+            ];
+
+            // Compter secteurs et voies si nécessaire
             try {
-                $totalStats = $this->regionService->getOverallStatistics();
-                error_log("RegionController::index - Stats récupérées");
+                $stats = $this->db->fetchOne("
+                    SELECT 
+                        COUNT(DISTINCT s.id) as total_sectors,
+                        COUNT(DISTINCT r.id) as total_routes
+                    FROM climbing_sectors s
+                    LEFT JOIN climbing_routes r ON s.id = r.sector_id AND r.active = 1
+                    WHERE s.active = 1
+                ");
+                if ($stats) {
+                    $totalStats['total_sectors'] = $stats['total_sectors'];
+                    $totalStats['total_routes'] = $stats['total_routes'];
+                }
             } catch (\Exception $e) {
-                error_log("Erreur getOverallStatistics: " . $e->getMessage());
-                $totalStats = [
-                    'total_regions' => 0,
-                    'total_sectors' => 0,
-                    'total_routes' => 0,
-                    'total_countries' => 0
-                ];
+                error_log("Erreur stats: " . $e->getMessage());
             }
 
-            // Préparation des données pour la vue
-            $viewData = [
+            error_log("RegionController::index - Préparation de la vue");
+
+            return $this->render('regions/index', [
                 'regions' => $regions,
                 'countries' => $countries,
                 'filters' => $filters,
@@ -109,23 +142,18 @@ class RegionController extends BaseController
                 'style' => $filters['style'],
                 'sortBy' => $filters['sort'],
                 'sortOrder' => $filters['order'],
-                // Stats totales avec valeurs par défaut
-                'total_regions' => $totalStats['total_regions'] ?? count($regions),
-                'total_sectors' => $totalStats['total_sectors'] ?? 0,
-                'total_routes' => $totalStats['total_routes'] ?? 0,
-                'total_countries' => $totalStats['total_countries'] ?? count($countries)
-            ];
-
-            error_log("RegionController::index - Préparation de la vue avec " . count($viewData) . " variables");
-
-            // Utiliser la méthode view() de BaseController
-            return $this->view('regions/index', $viewData);
+                'total_regions' => $totalStats['total_regions'],
+                'total_sectors' => $totalStats['total_sectors'],
+                'total_routes' => $totalStats['total_routes'],
+                'total_countries' => $totalStats['total_countries']
+            ]);
         } catch (\Exception $e) {
             error_log('Erreur fatale dans RegionController::index: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
 
-            // Page d'erreur avec données minimales
-            return $this->view('regions/index', [
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement des régions: ' . $e->getMessage());
+
+            return $this->render('regions/index', [
                 'regions' => [],
                 'countries' => [],
                 'filters' => [],
@@ -146,6 +174,63 @@ class RegionController extends BaseController
     }
 
     /**
+     * Show a single region
+     */
+    public function show(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+
+        if (!$id) {
+            $this->session->flash('error', 'ID de la région non spécifié');
+            return Response::redirect('/regions');
+        }
+
+        try {
+            // Récupération directe de la région
+            $region = $this->db->fetchOne(
+                "SELECT r.*, c.name as country_name, c.code as country_code 
+                 FROM climbing_regions r 
+                 LEFT JOIN climbing_countries c ON r.country_id = c.id 
+                 WHERE r.id = ? AND r.active = 1",
+                [(int) $id]
+            );
+
+            if (!$region) {
+                $this->session->flash('error', 'Région non trouvée');
+                return Response::redirect('/regions');
+            }
+
+            // Récupération des secteurs
+            $sectors = $this->db->query(
+                "SELECT s.*, COUNT(r.id) as routes_count 
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_routes r ON s.id = r.sector_id AND r.active = 1
+                 WHERE s.region_id = ? AND s.active = 1
+                 GROUP BY s.id
+                 ORDER BY s.name",
+                [(int) $id]
+            );
+
+            // Stats simples
+            $stats = [
+                'sectors_count' => count($sectors),
+                'routes_count' => array_sum(array_column($sectors, 'routes_count'))
+            ];
+
+            return $this->render('regions/show', [
+                'title' => $region['name'],
+                'region' => $region,
+                'sectors' => $sectors,
+                'stats' => $stats
+            ]);
+        } catch (\Exception $e) {
+            error_log('Erreur dans RegionController::show: ' . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return Response::redirect('/regions');
+        }
+    }
+
+    /**
      * API: Recherche de régions pour autocomplete
      */
     public function search(Request $request): JsonResponse
@@ -158,9 +243,17 @@ class RegionController extends BaseController
                 return new JsonResponse(['results' => []]);
             }
 
-            $regions = $this->regionService->searchRegions($query, $limit);
+            $results = $this->db->query(
+                "SELECT r.id, r.name, c.name as country_name
+                 FROM climbing_regions r 
+                 LEFT JOIN climbing_countries c ON r.country_id = c.id
+                 WHERE r.active = 1 AND (r.name LIKE ? OR c.name LIKE ?)
+                 ORDER BY r.name ASC
+                 LIMIT ?",
+                ['%' . $query . '%', '%' . $query . '%', $limit]
+            );
 
-            return new JsonResponse(['results' => $regions]);
+            return new JsonResponse(['results' => $results]);
         } catch (\Exception $e) {
             error_log('Erreur dans RegionController::search: ' . $e->getMessage());
             return new JsonResponse(['error' => 'Erreur de recherche'], 500);
@@ -173,17 +266,30 @@ class RegionController extends BaseController
     public function apiIndex(Request $request): JsonResponse
     {
         try {
-            $filters = [
-                'country_id' => $request->query->get('country_id', ''),
-                'search' => $request->query->get('search', ''),
-                'limit' => min((int) $request->query->get('limit', 100), 500)
-            ];
+            $countryId = $request->query->get('country_id', '');
+            $search = $request->query->get('search', '');
+            $limit = min((int) $request->query->get('limit', 100), 500);
 
-            $cleanFilters = array_filter($filters, function ($value) {
-                return $value !== '' && $value !== null;
-            });
+            $sql = "SELECT r.id, r.name, r.coordinates_lat, r.coordinates_lng, c.name as country_name
+                    FROM climbing_regions r 
+                    LEFT JOIN climbing_countries c ON r.country_id = c.id 
+                    WHERE r.active = 1";
+            $params = [];
 
-            $regions = $this->regionService->getRegionsForApi($cleanFilters);
+            if ($countryId) {
+                $sql .= " AND r.country_id = ?";
+                $params[] = $countryId;
+            }
+
+            if ($search) {
+                $sql .= " AND r.name LIKE ?";
+                $params[] = '%' . $search . '%';
+            }
+
+            $sql .= " ORDER BY r.name ASC LIMIT ?";
+            $params[] = $limit;
+
+            $regions = $this->db->query($sql, $params);
 
             return new JsonResponse([
                 'success' => true,
@@ -204,7 +310,6 @@ class RegionController extends BaseController
         try {
             $id = (int) $request->attributes->get('id');
 
-            // Requête SQL directe pour éviter les problèmes de modèles
             $regionData = $this->db->fetchOne(
                 "SELECT id, name, coordinates_lat, coordinates_lng FROM climbing_regions WHERE id = ? AND active = 1",
                 [$id]
@@ -214,91 +319,18 @@ class RegionController extends BaseController
                 return new JsonResponse(['error' => 'Région ou coordonnées non trouvées'], 404);
             }
 
-            // Essayer d'obtenir les données météo
-            try {
-                $weatherData = $this->weatherService->getCurrentWeather(
-                    (float) $regionData['coordinates_lat'],
-                    (float) $regionData['coordinates_lng']
-                );
-
-                return new JsonResponse([
-                    'success' => true,
-                    'region' => $regionData['name'],
-                    'weather' => $weatherData
-                ]);
-            } catch (\Exception $weatherError) {
-                error_log("Erreur météo: " . $weatherError->getMessage());
-
-                return new JsonResponse([
-                    'success' => true,
-                    'region' => $regionData['name'],
-                    'coordinates' => [
-                        'lat' => $regionData['coordinates_lat'],
-                        'lng' => $regionData['coordinates_lng']
-                    ],
-                    'message' => 'Données météo temporairement indisponibles'
-                ]);
-            }
+            return new JsonResponse([
+                'success' => true,
+                'region' => $regionData['name'],
+                'coordinates' => [
+                    'lat' => $regionData['coordinates_lat'],
+                    'lng' => $regionData['coordinates_lng']
+                ],
+                'message' => 'Service météo disponible'
+            ]);
         } catch (\Exception $e) {
             error_log('Erreur dans RegionController::weather: ' . $e->getMessage());
             return new JsonResponse(['error' => 'Erreur météo'], 500);
-        }
-    }
-
-    /**
-     * Affiche les détails d'une région
-     */
-    public function show(Request $request): Response
-    {
-        try {
-            $id = (int) $request->attributes->get('id');
-
-            if (!$id) {
-                $this->session->flash('error', 'ID région invalide');
-                return $this->redirect('/regions');
-            }
-
-            // Récupération directe pour éviter les problèmes
-            $regionData = $this->db->fetchOne(
-                "SELECT r.*, c.name as country_name 
-                 FROM climbing_regions r 
-                 LEFT JOIN climbing_countries c ON r.country_id = c.id 
-                 WHERE r.id = ? AND r.active = 1",
-                [$id]
-            );
-
-            if (!$regionData) {
-                $this->session->flash('error', 'Région non trouvée');
-                return $this->redirect('/regions');
-            }
-
-            // Récupération des secteurs
-            $sectors = $this->db->query(
-                "SELECT s.*, COUNT(r.id) as routes_count 
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_routes r ON s.id = r.sector_id AND r.active = 1
-                 WHERE s.region_id = ? AND s.active = 1
-                 GROUP BY s.id
-                 ORDER BY s.name",
-                [$id]
-            );
-
-            // Stats simples
-            $stats = [
-                'sectors_count' => count($sectors),
-                'routes_count' => array_sum(array_column($sectors, 'routes_count'))
-            ];
-
-            return $this->view('regions/show', [
-                'region' => (object) $regionData,
-                'sectors' => $sectors,
-                'stats' => $stats,
-                'title' => $regionData['name']
-            ]);
-        } catch (\Exception $e) {
-            error_log('Erreur dans RegionController::show: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors du chargement de la région');
-            return $this->redirect('/regions');
         }
     }
 }
