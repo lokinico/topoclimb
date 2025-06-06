@@ -14,9 +14,9 @@ use TopoclimbCH\Services\RegionService;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Services\CountryService;
 use TopoclimbCH\Services\WeatherService;
+use TopoclimbCH\Services\AuthService; // ← CORRECTION: Import correct
 use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Validation\Validator;
-
 
 class RegionController extends BaseController
 {
@@ -55,7 +55,7 @@ class RegionController extends BaseController
         WeatherService $weatherService,
         Database $db,
         ?Auth $auth = null,
-        ?AuthService $authService = null
+        ?AuthService $authService = null // ← CORRECTION: Type hint correct maintenant
     ) {
         parent::__construct($view, $session, $csrfManager);
 
