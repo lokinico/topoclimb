@@ -17,90 +17,138 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     
+    <!-- Libs externes optionnelles -->
+    {% block map_styles %}{% endblock %}
+    
     <!-- Styles spécifiques aux pages -->
     {% block styles %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+    <!-- Navigation moderne -->
+    <nav class="navbar navbar-expand-lg navbar-modern sticky-top">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ url('/') }}">
-                <i class="fas fa-mountain me-2"></i>TopoclimbCH
+            <a class="navbar-brand brand-modern" href="{{ url('/') }}">
+                <div class="brand-icon">
+                    <i class="fas fa-mountain"></i>
+                </div>
+                <span class="brand-text">TopoclimbCH</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-                <span class="navbar-toggler-icon"></span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
             </button>
             
             <div class="collapse navbar-collapse" id="navbarMain">
-                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav nav-modern me-auto">
                     <li class="nav-item">
                         <a class="nav-link {{ is_active('/') ? 'active' : '' }}" href="{{ url('/') }}">
-                            <i class="fas fa-home me-1"></i>Accueil
+                            <i class="fas fa-home me-2"></i>
+                            <span>Accueil</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ is_active('/regions') ? 'active' : '' }}" href="{{ url('/regions') }}">
-                            <i class="fas fa-map me-1"></i>Régions
+                            <i class="fas fa-map me-2"></i>
+                            <span>Régions</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ is_active('/sites') ? 'active' : '' }}" href="{{ url('/sites') }}">
-                            <i class="fas fa-book me-1"></i>Sites
+                            <i class="fas fa-book me-2"></i>
+                            <span>Sites</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ is_active('/sectors') ? 'active' : '' }}" href="{{ url('/sectors') }}">
-                            <i class="fas fa-location-dot me-1"></i>Secteurs
+                            <i class="fas fa-location-dot me-2"></i>
+                            <span>Secteurs</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ is_active('/routes') ? 'active' : '' }}" href="{{ url('/routes') }}">
-                            <i class="fas fa-route me-1"></i>Voies
+                            <i class="fas fa-route me-2"></i>
+                            <span>Voies</span>
                         </a>
                     </li>
                 </ul>
                 
+                <!-- Actions rapides -->
+                <div class="navbar-actions me-3">
+                    <button class="btn btn-action" data-bs-toggle="modal" data-bs-target="#searchModal" title="Recherche rapide">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    {% if auth() %}
+                        <button class="btn btn-action" data-bs-toggle="modal" data-bs-target="#quickAddModal" title="Ajout rapide">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    {% endif %}
+                </div>
+                
+                <!-- Menu utilisateur -->
                 <ul class="navbar-nav">
                     {% if auth() %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                                <i class="fas fa-user-circle me-1"></i>
-                                {{ auth_user().prenom }} {{ auth_user().nom }}
+                        <li class="nav-item dropdown user-dropdown">
+                            <a class="nav-link dropdown-toggle user-menu" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="user-avatar">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <div class="user-info d-none d-lg-block">
+                                    <span class="user-name">{{ auth_user().prenom }}</span>
+                                    <small class="user-role">Grimpeur</small>
+                                </div>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-modern dropdown-menu-end">
+                                <li class="dropdown-header">
+                                    <div class="user-dropdown-info">
+                                        <strong>{{ auth_user().prenom }} {{ auth_user().nom }}</strong>
+                                        <small class="text-muted">{{ auth_user().mail }}</small>
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url('/profile') }}">
-                                        <i class="fas fa-user me-2"></i>Mon profil
+                                        <i class="fas fa-user me-3"></i>Mon profil
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url('/ascents') }}">
-                                        <i class="fas fa-chart-line me-2"></i>Mes ascensions
+                                        <i class="fas fa-chart-line me-3"></i>Mes ascensions
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url('/settings') }}">
-                                        <i class="fas fa-cog me-2"></i>Paramètres
+                                    <a class="dropdown-item" href="{{ url('/favorites') }}">
+                                        <i class="fas fa-heart me-3"></i>Mes favoris
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('/events') }}">
+                                        <i class="fas fa-calendar me-3"></i>Mes événements
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url('/logout') }}">
-                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                    <a class="dropdown-item" href="{{ url('/settings') }}">
+                                        <i class="fas fa-cog me-3"></i>Paramètres
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{{ url('/logout') }}">
+                                        <i class="fas fa-sign-out-alt me-3"></i>Déconnexion
                                     </a>
                                 </li>
                             </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link {{ is_active('/login') ? 'active' : '' }}" href="{{ url('/login') }}">
+                            <a class="btn btn-outline-light me-2" href="{{ url('/login') }}">
                                 <i class="fas fa-sign-in-alt me-1"></i>Connexion
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ is_active('/register') ? 'active' : '' }}" href="{{ url('/register') }}">
-                                <i class="fas fa-user-plus me-1"></i>Inscription
+                            <a class="btn btn-light" href="{{ url('/register') }}">
+                                <i class="fas fa-user-plus me-1"></i>S'inscrire
                             </a>
                         </li>
                     {% endif %}
@@ -109,101 +157,258 @@
         </div>
     </nav>
     
-    <!-- Contenu principal -->
-    <main class="flex-grow-1">
-        {% block breadcrumb %}{% endblock %}
-        
-        <div class="container py-4">
-            {% include 'partials/flash.twig' %}
-            {% block content %}{% endblock %}
-        </div>
-    </main>
-    
-    <!-- Footer -->
-    <footer class="py-5 bg-dark text-light mt-auto">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <h5 class="mb-3">
-                        <i class="fas fa-mountain me-2"></i>TopoclimbCH
-                    </h5>
-                    <p class="text-muted">
-                        La référence pour les sites d'escalade en Suisse. 
-                        Découvrez, partagez et grimpez !
-                    </p>
-                    <div class="social-links mt-3">
-                        <a href="#" class="text-muted me-3" title="Facebook">
-                            <i class="fab fa-facebook fa-lg"></i>
-                        </a>
-                        <a href="#" class="text-muted me-3" title="Instagram">
-                            <i class="fab fa-instagram fa-lg"></i>
-                        </a>
-                        <a href="#" class="text-muted" title="YouTube">
-                            <i class="fab fa-youtube fa-lg"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="col-md-4 mb-4">
-                    <h5 class="mb-3">Liens rapides</h5>
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <a href="{{ url('/about') }}" class="text-muted text-decoration-none">
-                                <i class="fas fa-angle-right me-1"></i>À propos
-                            </a>
-                        </li>
-                        <li class="mb-2">
-                            <a href="{{ url('/contact') }}" class="text-muted text-decoration-none">
-                                <i class="fas fa-angle-right me-1"></i>Contact
-                            </a>
-                        </li>
-                        <li class="mb-2">
-                            <a href="{{ url('/privacy') }}" class="text-muted text-decoration-none">
-                                <i class="fas fa-angle-right me-1"></i>Confidentialité
-                            </a>
-                        </li>
-                        <li class="mb-2">
-                            <a href="{{ url('/terms') }}" class="text-muted text-decoration-none">
-                                <i class="fas fa-angle-right me-1"></i>Conditions d'utilisation
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                
-                <div class="col-md-4 mb-4">
-                    <h5 class="mb-3">Newsletter</h5>
-                    <p class="text-muted">
-                        Restez informé des nouveaux sites et fonctionnalités
-                    </p>
-                    <form class="mt-3" method="post" action="{{ url('/newsletter') }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        <div class="input-group">
-                            <input type="email" class="form-control" placeholder="Votre email" name="email" required>
-                            <button class="btn btn-primary" type="submit">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </form>
+    <!-- Breadcrumbs modernes -->
+    {% block breadcrumb %}
+        {% if breadcrumbs is defined and breadcrumbs|length > 1 %}
+            <div class="breadcrumb-section">
+                <div class="container">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb breadcrumb-modern">
+                            {% for crumb in breadcrumbs %}
+                                {% if loop.last %}
+                                    <li class="breadcrumb-item active" aria-current="page">{{ crumb.title }}</li>
+                                {% else %}
+                                    <li class="breadcrumb-item">
+                                        <a href="{{ crumb.url }}">{{ crumb.title }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ol>
+                    </nav>
                 </div>
             </div>
-            
-            <hr class="my-4 border-secondary">
-            
-            <div class="text-center text-muted">
-                <p class="mb-0">
-                    &copy; {{ "now"|date("Y") }} TopoclimbCH. Tous droits réservés.
-                    <br>
-                    <small>Développé avec <i class="fas fa-heart text-danger"></i> en Suisse</small>
-                </p>
+        {% endif %}
+    {% endblock %}
+    
+    <!-- Contenu principal -->
+    <main class="flex-grow-1 main-content">
+        <!-- Messages flash modernes -->
+        {% include 'partials/flash.twig' %}
+        
+        <!-- Zone de contenu -->
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer moderne -->
+    <footer class="footer-modern mt-auto">
+        <div class="footer-content">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-4 mb-4">
+                        <div class="footer-brand">
+                            <div class="brand-icon">
+                                <i class="fas fa-mountain"></i>
+                            </div>
+                            <h5>TopoclimbCH</h5>
+                        </div>
+                        <p class="footer-description">
+                            La référence pour les sites d'escalade en Suisse. 
+                            Découvrez, partagez et grimpez en toute sécurité.
+                        </p>
+                        <div class="social-links">
+                            <a href="#" class="social-link" title="Facebook" aria-label="Page Facebook">
+                                <i class="fab fa-facebook"></i>
+                            </a>
+                            <a href="#" class="social-link" title="Instagram" aria-label="Compte Instagram">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                            <a href="#" class="social-link" title="YouTube" aria-label="Chaîne YouTube">
+                                <i class="fab fa-youtube"></i>
+                            </a>
+                            <a href="#" class="social-link" title="GitHub" aria-label="Repository GitHub">
+                                <i class="fab fa-github"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-2 col-md-6 mb-4">
+                        <h6 class="footer-title">Exploration</h6>
+                        <ul class="footer-links">
+                            <li><a href="{{ url('/regions') }}">Régions</a></li>
+                            <li><a href="{{ url('/sites') }}">Sites</a></li>
+                            <li><a href="{{ url('/sectors') }}">Secteurs</a></li>
+                            <li><a href="{{ url('/routes') }}">Voies</a></li>
+                            <li><a href="{{ url('/events') }}">Événements</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-lg-2 col-md-6 mb-4">
+                        <h6 class="footer-title">Communauté</h6>
+                        <ul class="footer-links">
+                            <li><a href="{{ url('/forum') }}">Forum</a></li>
+                            <li><a href="{{ url('/blog') }}">Blog</a></li>
+                            <li><a href="{{ url('/guides') }}">Guides</a></li>
+                            <li><a href="{{ url('/weather') }}">Météo</a></li>
+                            <li><a href="{{ url('/safety') }}">Sécurité</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-lg-2 col-md-6 mb-4">
+                        <h6 class="footer-title">Support</h6>
+                        <ul class="footer-links">
+                            <li><a href="{{ url('/help') }}">Aide</a></li>
+                            <li><a href="{{ url('/contact') }}">Contact</a></li>
+                            <li><a href="{{ url('/about') }}">À propos</a></li>
+                            <li><a href="{{ url('/privacy') }}">Confidentialité</a></li>
+                            <li><a href="{{ url('/terms') }}">CGU</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-lg-2 col-md-6 mb-4">
+                        <h6 class="footer-title">Newsletter</h6>
+                        <p class="footer-newsletter-text">
+                            Nouveaux sites, événements et conseils.
+                        </p>
+                        <form class="newsletter-form" method="post" action="{{ url('/newsletter') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div class="input-group input-group-modern">
+                                <input type="email" class="form-control" placeholder="Email" name="email" required aria-label="Adresse email">
+                                <button class="btn btn-newsletter" type="submit" aria-label="S'abonner">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="copyright">
+                            &copy; {{ "now"|date("Y") }} TopoclimbCH. Tous droits réservés.
+                        </p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="made-with-love">
+                            Développé avec <i class="fas fa-heart text-danger"></i> en Suisse
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>
     
+    <!-- Modales globales -->
+    
+    <!-- Modale de recherche rapide -->
+    <div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content modal-modern">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="searchModalLabel">
+                        <i class="fas fa-search me-2"></i>Recherche rapide
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url('/search') }}" method="get">
+                        <div class="search-input-group">
+                            <input type="text" class="form-control form-control-lg" name="q" placeholder="Rechercher un secteur, une voie, un site..." autocomplete="off" autofocus>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="search-suggestions mt-3">
+                        <h6>Recherches populaires</h6>
+                        <div class="search-tags">
+                            <a href="{{ url('/search?q=Jura') }}" class="search-tag">Jura</a>
+                            <a href="{{ url('/search?q=Valais') }}" class="search-tag">Valais</a>
+                            <a href="{{ url('/search?q=5c') }}" class="search-tag">5c</a>
+                            <a href="{{ url('/search?q=dalle') }}" class="search-tag">Dalle</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if auth() %}
+    <!-- Modale d'ajout rapide -->
+    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content modal-modern">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="quickAddModalLabel">
+                        <i class="fas fa-plus me-2"></i>Ajout rapide
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="quick-add-options">
+                        <a href="{{ url('/routes/create') }}" class="quick-add-item">
+                            <i class="fas fa-route"></i>
+                            <span>Nouvelle voie</span>
+                        </a>
+                        <a href="{{ url('/sectors/create') }}" class="quick-add-item">
+                            <i class="fas fa-location-dot"></i>
+                            <span>Nouveau secteur</span>
+                        </a>
+                        <a href="{{ url('/events/create') }}" class="quick-add-item">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span>Nouvel événement</span>
+                        </a>
+                        <a href="{{ url('/ascents/log') }}" class="quick-add-item">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Logger ascension</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner-modern"></div>
+            <p>Chargement...</p>
+        </div>
+    </div>
+    
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Libs externes optionnelles -->
+    {% block map_scripts %}{% endblock %}
+    
+    <!-- Scripts de l'application -->
+    <script src="{{ asset('js/components/common.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
     
-    <!-- Scripts additionnels -->
+    <!-- Scripts spécifiques aux pages -->
     {% block scripts %}{% endblock %}
+    
+    <!-- Script d'initialisation -->
+    <script>
+        // Initialisation globale de l'application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Smooth scrolling pour les ancres
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+            
+            // Auto-fermeture des alertes
+            setTimeout(() => {
+                document.querySelectorAll('.alert[data-auto-dismiss]').forEach(alert => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+        });
+    </script>
 </body>
 </html>
