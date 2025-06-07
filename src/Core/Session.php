@@ -9,6 +9,21 @@ class Session
 {
     private bool $started = false;
 
+    // ===== NOUVEAU - Instance singleton pour compatibilité =====
+    private static ?Session $instance = null;
+
+    /**
+     * NOUVEAU - Méthode getInstance() pour compatibilité
+     */
+    public static function getInstance(): Session
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    // ===== FIN NOUVEAU =====
+
     public function __construct()
     {
         if (session_status() === PHP_SESSION_NONE) {
