@@ -8,17 +8,18 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Request;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Auth;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class AdminController extends BaseController
 {
     private Database $db;
-    private Auth $auth;
+    // Supprimer la redéclaration de $auth - elle est déjà dans BaseController
 
-    public function __construct(View $view, Session $session, Database $db, Auth $auth)
+    public function __construct(View $view, Session $session, CsrfManager $csrfManager, Database $db, Auth $auth)
     {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager);
         $this->db = $db;
-        $this->auth = $auth;
+        $this->auth = $auth; // Assigner à la propriété héritée
     }
 
     /**
