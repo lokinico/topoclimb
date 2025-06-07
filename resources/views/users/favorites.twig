@@ -1,0 +1,362 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Mes Favoris - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-heart text-danger me-2"></i>
+                    Mes Favoris
+                </h1>
+                <a href="{{ url('/ascents') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-chart-line me-2"></i>Toutes mes ascensions
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="difficulty" class="form-label">Difficulté</label>
+                    <select class="form-select" id="difficulty" name="difficulty">
+                        <option value="">Toutes</option>
+                        {% if difficulties is defined %}
+                            {% for diff in difficulties %}
+                                <option value="{{ diff }}" {{ filters.difficulty == diff ? 'selected' : '' }}>
+                                    {{ diff }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="style" class="form-label">Style d'escalade</label>
+                    <select class="form-select" id="style" name="style">
+                        <option value="">Tous</option>
+                        {% if styles is defined %}
+                            {% for style in styles %}
+                                <option value="{{ style }}" {{ filters.style == style ? 'selected' : '' }}>
+                                    {{ style|title }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="region" class="form-label">Région</label>
+                    <select class="form-select" id="region" name="region">
+                        <option value="">Toutes</option>
+                        {% if regions is defined %}
+                            {% for region in regions %}
+                                <option value="{{ region.id }}" {{ filters.region == region.id ? 'selected' : '' }}>
+                                    {{ region.name }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Recherche</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="Nom de voie..." value="{{ filters.search|default('') }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>Filtrer
+                    </button>
+                    <a href="{{ url('/favorites') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    {% if favorites is defined and favorites|length > 0 %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card bg-danger text-white text-center">
+                    <div class="card-body py-3">
+                        <div class="h4 mb-0">{{ favorites|length }}</div>
+                        <small>Voies favorites</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-primary text-white text-center">
+                    <div class="card-body py-3">
+                        <div class="h4 mb-0">
+                            {% set unique_sectors = [] %}
+                            {% for favorite in favorites %}
+                                {% if favorite.sector_details is defined and favorite.sector_details.id not in unique_sectors %}
+                                    {% set unique_sectors = unique_sectors|merge([favorite.sector_details.id]) %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ unique_sectors|length }}
+                        </div>
+                        <small>Secteurs différents</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white text-center">
+                    <div class="card-body py-3">
+                        <div class="h4 mb-0">
+                            {% set unique_regions = [] %}
+                            {% for favorite in favorites %}
+                                {% if favorite.region_details is defined and favorite.region_details.id not in unique_regions %}
+                                    {% set unique_regions = unique_regions|merge([favorite.region_details.id]) %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ unique_regions|length }}
+                        </div>
+                        <small>Régions différentes</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white text-center">
+                    <div class="card-body py-3">
+                        <div class="h4 mb-0">
+                            {% if favorites|length > 0 %}
+                                {% set max_diff = favorites|first.difficulty %}
+                                {% for favorite in favorites %}
+                                    {% if favorite.difficulty > max_diff %}
+                                        {% set max_diff = favorite.difficulty %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ max_diff }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                        <small>Difficulté max</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Liste des favoris -->
+    {% if favorites is defined and favorites|length > 0 %}
+        <div class="row g-4">
+            {% for favorite in favorites %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 favorite-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ favorite.route_name }}</h6>
+                                {% if favorite.sector_details is defined %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-location-dot me-1"></i>
+                                        {{ favorite.sector_details.name }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger remove-favorite" 
+                                    data-ascent-id="{{ favorite.id }}" title="Retirer des favoris">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <span class="badge bg-secondary w-100">{{ favorite.difficulty }}</span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="badge bg-info w-100">{{ favorite.getClimbingTypeLabel() }}</span>
+                                </div>
+                            </div>
+                            
+                            {% if favorite.quality_rating %}
+                                <div class="mb-2">
+                                    <small class="text-muted">Note qualité :</small>
+                                    <div class="text-warning">
+                                        {% for i in 1..5 %}
+                                            <i class="fas fa-star{{ i <= favorite.quality_rating ? '' : ' text-muted' }}"></i>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">Grimpée le :</small>
+                                <div>{{ favorite.ascent_date|date('d/m/Y') }}</div>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">Type :</small>
+                                <span class="badge bg-primary">{{ favorite.getAscentTypeLabel() }}</span>
+                            </div>
+                            
+                            {% if favorite.comment %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Commentaire :</small>
+                                    <p class="small text-muted mb-0">{{ favorite.comment|slice(0, 100) }}{% if favorite.comment|length > 100 %}...{% endif %}</p>
+                                </div>
+                            {% endif %}
+                            
+                            {% if favorite.region_details is defined %}
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-map me-1"></i>
+                                        {{ favorite.region_details.name }}
+                                    </small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100">
+                                {% if favorite.route_details is defined %}
+                                    <a href="{{ url('/routes/' ~ favorite.route_id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Voir la voie
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url('/ascents/' ~ favorite.id ~ '/edit') }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-edit me-1"></i>Modifier
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination is defined and pagination.last_page > 1 %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Pagination des favoris">
+                    <ul class="pagination">
+                        {% if pagination.current_page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.current_page - 1 }}">Précédent</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page in 1..pagination.last_page %}
+                            {% if page == pagination.current_page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page }}</span>
+                                </li>
+                            {% elseif page == 1 or page == pagination.last_page or (page >= pagination.current_page - 2 and page <= pagination.current_page + 2) %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page }}">{{ page }}</a>
+                                </li>
+                            {% elseif page == pagination.current_page - 3 or page == pagination.current_page + 3 %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if pagination.current_page < pagination.last_page %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.current_page + 1 }}">Suivant</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-heart text-muted" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-muted">Aucune voie favorite</h4>
+                <p class="text-muted mb-4">
+                    {% if filters is defined and (filters.difficulty or filters.style or filters.search) %}
+                        Aucune voie favorite ne correspond à vos critères de recherche.
+                    {% else %}
+                        Vous n'avez pas encore ajouté de voies à vos favoris.
+                    {% endif %}
+                </p>
+                <div>
+                    {% if filters is defined and (filters.difficulty or filters.style or filters.search) %}
+                        <a href="{{ url('/favorites') }}" class="btn btn-outline-primary me-2">
+                            Voir tous mes favoris
+                        </a>
+                    {% endif %}
+                    <a href="{{ url('/ascents') }}" class="btn btn-primary">
+                        <i class="fas fa-chart-line me-2"></i>Voir mes ascensions
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.favorite-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.favorite-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Remove favorite
+    document.querySelectorAll('.remove-favorite').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const ascentId = this.dataset.ascentId;
+            
+            if (confirm('Êtes-vous sûr de vouloir retirer cette voie de vos favoris ?')) {
+                fetch(`/api/ascents/${ascentId}/toggle-favorite`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && !data.favorite) {
+                        // Anim de suppression
+                        const card = this.closest('.col-md-6');
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.8)';
+                        setTimeout(() => {
+                            card.remove();
+                            // Recharger si plus de favoris
+                            if (document.querySelectorAll('.favorite-card').length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors de la suppression du favori');
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

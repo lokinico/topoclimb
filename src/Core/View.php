@@ -1,263 +1,342 @@
 <?php
-// src/Core/View.php
 
 namespace TopoclimbCH\Core;
 
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
-use Twig\TwigFunction;
-use Twig\TwigFilter;
-use Twig\Extension\DebugExtension;
-use TopoclimbCH\Core\Database;
-use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\TwigHelpers;
 
 class View
 {
     private Environment $twig;
-    private array $globalData = [];
-    private ?CsrfManager $csrfManager = null;
+    private array $globalVars = [];
 
-    public function __construct(string $viewsPath = null, string $cachePath = null, CsrfManager $csrfManager = null)
+    public function __construct(string $templatesPath = 'resources/views')
     {
-        $viewsPath = $viewsPath ?? BASE_PATH . '/resources/views';
-        $cachePath = $cachePath ?? BASE_PATH . '/cache/views';
-
-        // Pour la compatibilité descendante, CsrfManager peut être null
-        $this->csrfManager = $csrfManager;
-
-        $loader = new FilesystemLoader($viewsPath);
-        $debug = env('APP_ENV', 'production') === 'development';
-
+        $loader = new FilesystemLoader($templatesPath);
         $this->twig = new Environment($loader, [
-            'cache' => $debug ? false : $cachePath,
-            'debug' => $debug,
-            'auto_reload' => $debug,
+            'cache' => false, // Désactiver le cache en développement
+            'debug' => $_ENV['APP_DEBUG'] ?? true,
+            'strict_variables' => false
         ]);
 
-        if ($debug) {
-            $this->twig->addExtension(new DebugExtension());
+        // Ajouter l'extension de debug si activé
+        if ($_ENV['APP_DEBUG'] ?? true) {
+            $this->twig->addExtension(new \Twig\Extension\DebugExtension());
         }
 
-        $this->registerFunctions();
-        $this->registerFilters();
+        // Enregistrer nos helpers personnalisés
+        $this->registerHelpers();
+
+        // Ajouter les variables globales par défaut
+        $this->addGlobalDefaults();
     }
 
     /**
-     * Setter pour CsrfManager (utile si injecté après construction)
+     * Enregistre les helpers Twig personnalisés
      */
-    public function setCsrfManager(CsrfManager $csrfManager): void
+    private function registerHelpers(): void
     {
-        $this->csrfManager = $csrfManager;
-    }
-
-    private function registerFunctions(): void
-    {
-        // URL helper
-        $this->twig->addFunction(new TwigFunction('url', function (string $path = '') {
-            if (strpos($path, '://') !== false) {
-                return $path;
+        // Récupérer l'instance Auth si disponible
+        $auth = null;
+        try {
+            if (isset($_SESSION) && !empty($_SESSION)) {
+                $session = Session::getInstance();
+                $db = Database::getInstance();
+                $auth = Auth::getInstance($session, $db);
             }
-            return url($path);
-        }));
-
-        // Component helper
-        $this->twig->addFunction(new TwigFunction('component', function (string $name, array $data = []) {
-            foreach ($data as $key => $value) {
-                if (is_string($value) && !isset($data[$key . '_raw'])) {
-                    $data[$key] = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-                }
-            }
-            return $this->renderComponent($name, $data);
-        }, ['is_safe' => ['html']]));
-
-        // Asset helper
-        $this->twig->addFunction(new TwigFunction('asset', function (string $path) {
-            return '/' . ltrim($path, '/');
-        }));
-
-        // Auth helpers
-        $this->twig->addFunction(new TwigFunction('auth', function () {
-            return isset($_SESSION['auth_user_id']) ? true : false;
-        }));
-
-        $this->twig->addFunction(new TwigFunction('auth_user', function () {
-            if (!isset($_SESSION['auth_user_id'])) {
-                return null;
-            }
-
-            global $db;
-
-            if (!isset($db) || $db === null) {
-                try {
-                    $container = Container::getInstance();
-                    if ($container && $container->has(Database::class)) {
-                        $db = $container->get(Database::class);
-                    }
-                } catch (\Throwable $e) {
-                    error_log("View::auth_user - Erreur récupération DB: " . $e->getMessage());
-                    return null;
-                }
-            }
-
-            if (!isset($db) || $db === null) {
-                error_log("View::auth_user - Base de données non disponible, retour objet minimal");
-                return (object) [
-                    'id' => $_SESSION['auth_user_id'],
-                    'prenom' => 'Utilisateur',
-                    'nom' => 'Connecté'
-                ];
-            }
-
-            try {
-                $userId = $_SESSION['auth_user_id'];
-                $query = "SELECT * FROM users WHERE id = ? LIMIT 1";
-                $result = $db->query($query, [$userId])->fetch();
-
-                if (!$result) {
-                    error_log("View::auth_user - Utilisateur non trouvé: " . $userId);
-                    return null;
-                }
-
-                return (object) $result;
-            } catch (\Throwable $e) {
-                error_log("View::auth_user - Erreur récupération utilisateur: " . $e->getMessage());
-                return null;
-            }
-        }));
-
-        // Navigation helper
-        $this->twig->addFunction(new TwigFunction('is_active', function (string $path) {
-            $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-            return $currentPath === $path ? 'active' : '';
-        }));
-
-        // ========== FONCTIONS CSRF CENTRALISÉES ==========
-
-        // Token CSRF principal - utilise CsrfManager si disponible
-        $this->twig->addFunction(new TwigFunction('csrf_token', function () {
-            if ($this->csrfManager) {
-                return $this->csrfManager->getToken();
-            }
-
-            // Fallback pour compatibilité
-            if (!isset($_SESSION['csrf_token'])) {
-                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            }
-            return $_SESSION['csrf_token'];
-        }));
-
-        // Champ caché CSRF complet
-        $this->twig->addFunction(new TwigFunction('csrf_field', function () {
-            if ($this->csrfManager) {
-                return $this->csrfManager->getHiddenField();
-            }
-
-            // Fallback
-            $token = $this->csrf_token();
-            return sprintf(
-                '<input type="hidden" name="csrf_token" value="%s">',
-                htmlspecialchars($token, ENT_QUOTES, 'UTF-8')
-            );
-        }, ['is_safe' => ['html']]));
-
-        // Meta tag pour AJAX
-        $this->twig->addFunction(new TwigFunction('csrf_meta', function () {
-            if ($this->csrfManager) {
-                return $this->csrfManager->getMetaTag();
-            }
-
-            // Fallback
-            $token = $this->csrf_token();
-            return sprintf(
-                '<meta name="csrf-token" content="%s">',
-                htmlspecialchars($token, ENT_QUOTES, 'UTF-8')
-            );
-        }, ['is_safe' => ['html']]));
-
-        // ========== FONCTIONS FLASH ==========
-
-        $this->twig->addFunction(new TwigFunction('flash', function () {
-            $messages = $_SESSION['_flashes'] ?? [];
-            return $messages;
-        }));
-
-        $this->twig->addFunction(new TwigFunction('clear_flash', function () {
-            unset($_SESSION['_flashes']);
-            return true;
-        }));
-
-        // Route helper (placeholder - nécessite implémentation Router)
-        $this->twig->addFunction(new TwigFunction('route', function (string $name, array $params = []) {
-            // return Router::generateUrl($name, $params);
-            return '#'; // Placeholder
-        }));
-    }
-
-    private function registerFilters(): void
-    {
-        // Filtre d'échappement HTML
-        $this->twig->addFilter(new TwigFilter('e', function ($string) {
-            return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
-        }));
-
-        // Formatage de date
-        $this->twig->addFilter(new TwigFilter('format_date', function ($date, $format = 'd/m/Y') {
-            if ($date instanceof \DateTime) {
-                return $date->format($format);
-            }
-            return $date ? date($format, strtotime($date)) : '';
-        }));
-
-        // Formatage difficulté escalade
-        $this->twig->addFilter(new TwigFilter('format_difficulty', function ($difficulty) {
-            return $difficulty ?: 'Non spécifié';
-        }));
-
-        // Formatage beauté (étoiles)
-        $this->twig->addFilter(new TwigFilter('format_beauty', function ($beauty) {
-            $beauty = (int) $beauty;
-            return str_repeat('★', $beauty) . str_repeat('☆', 5 - $beauty);
-        }));
-
-        // Répétition de chaîne
-        $this->twig->addFilter(new TwigFilter('repeat', function ($string, $times) {
-            return str_repeat($string, $times);
-        }));
-    }
-
-    public function render(string $view, array $data = []): string
-    {
-        if (!str_ends_with($view, '.twig')) {
-            $view .= '.twig';
+        } catch (\Exception $e) {
+            // Auth pas encore disponible, ce n'est pas grave
+            error_log("View: Auth not available during initialization: " . $e->getMessage());
         }
 
-        $data = array_merge($this->globalData, $data);
-
-        return $this->twig->render($view, $data);
+        // Ajouter l'extension des helpers
+        $this->twig->addExtension(new TwigHelpers($auth));
     }
 
-    public function addGlobal(string $key, mixed $value): void
+    /**
+     * Ajoute les variables globales par défaut
+     */
+    private function addGlobalDefaults(): void
     {
-        $this->twig->addGlobal($key, $value);
-        $this->globalData[$key] = $value;
-    }
+        $this->addGlobal('app_name', $_ENV['APP_NAME'] ?? 'TopoclimbCH');
+        $this->addGlobal('app_env', $_ENV['APP_ENV'] ?? 'development');
+        $this->addGlobal('app_url', $_ENV['APP_URL'] ?? 'http://localhost');
+        $this->addGlobal('app_locale', 'fr');
 
-    public function addGlobals(array $data): void
-    {
-        foreach ($data as $key => $value) {
-            $this->addGlobal($key, $value);
+        // Ajouter la date actuelle
+        $this->addGlobal('now', new \DateTime());
+
+        // Ajouter les messages flash si la session existe
+        try {
+            if (isset($_SESSION)) {
+                $session = Session::getInstance();
+                $this->addGlobal('flash_messages', $session->getFlashes());
+            }
+        } catch (\Exception $e) {
+            // Session pas encore disponible
         }
     }
 
-    public function getTwig(): Environment
+    /**
+     * Ajoute une variable globale
+     */
+    public function addGlobal(string $name, $value): void
+    {
+        $this->globalVars[$name] = $value;
+        $this->twig->addGlobal($name, $value);
+    }
+
+    /**
+     * Render un template avec des variables
+     */
+    public function render(string $template, array $variables = []): string
+    {
+        // Fusionner avec les variables globales
+        $allVariables = array_merge($this->globalVars, $variables);
+
+        // Ajouter le token CSRF si disponible
+        if (!isset($allVariables['csrf_token'])) {
+            $allVariables['csrf_token'] = $this->getCsrfToken();
+        }
+
+        // Ajouter les informations d'authentification actualisées
+        $this->updateAuthInfo($allVariables);
+
+        return $this->twig->render($template, $allVariables);
+    }
+
+    /**
+     * Met à jour les informations d'authentification
+     */
+    private function updateAuthInfo(array &$variables): void
+    {
+        try {
+            if (isset($_SESSION) && !empty($_SESSION)) {
+                $session = Session::getInstance();
+                $db = Database::getInstance();
+                $auth = Auth::getInstance($session, $db);
+
+                if ($auth->check()) {
+                    $variables['auth_user'] = $auth->user();
+                    $variables['auth_id'] = $auth->id();
+                    $variables['auth_role'] = $auth->role();
+                    $variables['is_admin'] = $auth->isAdmin();
+                    $variables['is_moderator'] = $auth->isModerator();
+                    $variables['is_accepted'] = $auth->isAccepted();
+                    $variables['is_pending'] = $auth->isPending();
+                    $variables['is_banned'] = $auth->isBanned();
+                } else {
+                    $variables['auth_user'] = null;
+                    $variables['auth_id'] = null;
+                    $variables['auth_role'] = 4; // Nouveau membre par défaut
+                    $variables['is_admin'] = false;
+                    $variables['is_moderator'] = false;
+                    $variables['is_accepted'] = false;
+                    $variables['is_pending'] = false;
+                    $variables['is_banned'] = false;
+                }
+            }
+        } catch (\Exception $e) {
+            error_log("View: Error updating auth info: " . $e->getMessage());
+            // Valeurs par défaut si erreur
+            $variables['auth_user'] = null;
+            $variables['auth_id'] = null;
+            $variables['auth_role'] = 4;
+            $variables['is_admin'] = false;
+            $variables['is_moderator'] = false;
+            $variables['is_accepted'] = false;
+            $variables['is_pending'] = false;
+            $variables['is_banned'] = false;
+        }
+    }
+
+    /**
+     * Récupère le token CSRF
+     */
+    private function getCsrfToken(): string
+    {
+        try {
+            if (isset($_SESSION['csrf_token'])) {
+                return $_SESSION['csrf_token'];
+            }
+
+            // Générer un nouveau token si pas existant
+            $token = bin2hex(random_bytes(32));
+            $_SESSION['csrf_token'] = $token;
+            return $token;
+        } catch (\Exception $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Ajoute un filtre personnalisé
+     */
+    public function addFilter(string $name, callable $callback): void
+    {
+        $filter = new \Twig\TwigFilter($name, $callback);
+        $this->twig->addFilter($filter);
+    }
+
+    /**
+     * Ajoute une fonction personnalisée
+     */
+    public function addFunction(string $name, callable $callback): void
+    {
+        $function = new \Twig\TwigFunction($name, $callback);
+        $this->twig->addFunction($function);
+    }
+
+    /**
+     * Récupère l'environnement Twig (pour usage avancé)
+     */
+    public function getEnvironment(): Environment
     {
         return $this->twig;
     }
 
-    private function renderComponent(string $name, array $data = []): string
+    /**
+     * Vérifie si un template existe
+     */
+    public function exists(string $template): bool
     {
-        $componentPath = "components/{$name}.twig";
-        return $this->twig->render($componentPath, $data);
+        return $this->twig->getLoader()->exists($template);
+    }
+
+    /**
+     * Render un template et l'écrit directement
+     */
+    public function display(string $template, array $variables = []): void
+    {
+        echo $this->render($template, $variables);
+    }
+
+    /**
+     * Ajoute des breadcrumbs automatiques
+     */
+    public function addBreadcrumb(string $title, string $url = ''): void
+    {
+        if (!isset($this->globalVars['breadcrumbs'])) {
+            $this->globalVars['breadcrumbs'] = [];
+        }
+
+        $this->globalVars['breadcrumbs'][] = [
+            'title' => $title,
+            'url' => $url
+        ];
+
+        $this->addGlobal('breadcrumbs', $this->globalVars['breadcrumbs']);
+    }
+
+    /**
+     * Efface les breadcrumbs
+     */
+    public function clearBreadcrumbs(): void
+    {
+        $this->globalVars['breadcrumbs'] = [];
+        $this->addGlobal('breadcrumbs', []);
+    }
+
+    /**
+     * Ajoute une métadonnée pour le SEO
+     */
+    public function addMeta(string $name, string $content): void
+    {
+        if (!isset($this->globalVars['meta'])) {
+            $this->globalVars['meta'] = [];
+        }
+
+        $this->globalVars['meta'][$name] = $content;
+        $this->addGlobal('meta', $this->globalVars['meta']);
+    }
+
+    /**
+     * Méthodes utilitaires pour les contrôleurs
+     */
+
+    /**
+     * Render une page avec layout automatique
+     */
+    public function page(string $template, array $variables = [], string $layout = 'layouts/app.twig'): string
+    {
+        // Si le template ne spécifie pas d'extension, on ajoute automatiquement
+        if (!str_ends_with($template, '.twig')) {
+            $template .= '.twig';
+        }
+
+        return $this->render($template, $variables);
+    }
+
+    /**
+     * Render une réponse JSON avec un template
+     */
+    public function json(array $data, string $template = null): string
+    {
+        if ($template) {
+            $data['html'] = $this->render($template, $data);
+        }
+
+        return json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * Render un fragment HTML (pour AJAX)
+     */
+    public function fragment(string $template, array $variables = []): string
+    {
+        return $this->render($template, $variables);
+    }
+
+    /**
+     * Gestion des erreurs de rendu
+     */
+    public function renderError(int $statusCode, string $message = '', array $variables = []): string
+    {
+        $errorTemplates = [
+            403 => 'errors/403.twig',
+            404 => 'errors/404.twig',
+            500 => 'errors/500.twig'
+        ];
+
+        $template = $errorTemplates[$statusCode] ?? 'errors/500.twig';
+
+        $variables = array_merge([
+            'status_code' => $statusCode,
+            'message' => $message,
+            'title' => "Erreur $statusCode"
+        ], $variables);
+
+        if ($this->exists($template)) {
+            return $this->render($template, $variables);
+        }
+
+        // Template d'erreur de base si le fichier n'existe pas
+        return $this->renderBasicError($statusCode, $message);
+    }
+
+    /**
+     * Template d'erreur basique en cas de problème avec les fichiers Twig
+     */
+    private function renderBasicError(int $statusCode, string $message): string
+    {
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erreur $statusCode</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                .error { background: #f8f8f8; padding: 20px; margin: 20px; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class='error'>
+                <h1>Erreur $statusCode</h1>
+                <p>" . htmlspecialchars($message ?: 'Une erreur est survenue') . "</p>
+                <a href='/'>Retour à l'accueil</a>
+            </div>
+        </body>
+        </html>";
     }
 }

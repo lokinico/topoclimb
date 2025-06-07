@@ -1,0 +1,364 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Mes Ascensions - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- En-tête avec statistiques -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Mes Ascensions</h1>
+                <a href="{{ url('/ascents/create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Ajouter une ascension
+                </a>
+            </div>
+            
+            <!-- Statistiques -->
+            {% if ascentStats is defined %}
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card bg-primary text-white text-center">
+                        <div class="card-body py-3">
+                            <div class="h4 mb-0">{{ ascentStats.total_ascents|default('0') }}</div>
+                            <small>Ascensions totales</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card bg-success text-white text-center">
+                        <div class="card-body py-3">
+                            <div class="h4 mb-0">{{ ascentStats.climbing_days|default('0') }}</div>
+                            <small>Jours d'escalade</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card bg-warning text-white text-center">
+                        <div class="card-body py-3">
+                            <div class="h4 mb-0">{{ ascentStats.max_difficulty|default('-') }}</div>
+                            <small>Cotation max</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card bg-info text-white text-center">
+                        <div class="card-body py-3">
+                            <div class="h4 mb-0">{{ ascentStats.favorites_count|default('0') }}</div>
+                            <small>Favoris</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="difficulty" class="form-label">Difficulté</label>
+                    <select class="form-select" id="difficulty" name="difficulty">
+                        <option value="">Toutes</option>
+                        {% if difficulties is defined %}
+                            {% for diff in difficulties %}
+                                <option value="{{ diff }}" {{ filters.difficulty == diff ? 'selected' : '' }}>
+                                    {{ diff }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="ascent_type" class="form-label">Type d'ascension</label>
+                    <select class="form-select" id="ascent_type" name="ascent_type">
+                        <option value="">Tous</option>
+                        {% if ascentTypes is defined %}
+                            {% for key, label in ascentTypes %}
+                                <option value="{{ key }}" {{ filters.ascent_type == key ? 'selected' : '' }}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="climbing_type" class="form-label">Type d'escalade</label>
+                    <select class="form-select" id="climbing_type" name="climbing_type">
+                        <option value="">Tous</option>
+                        {% if climbingTypes is defined %}
+                            {% for key, label in climbingTypes %}
+                                <option value="{{ key }}" {{ filters.climbing_type == key ? 'selected' : '' }}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Recherche</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="Nom de voie..." value="{{ filters.search|default('') }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="date_from" class="form-label">Du</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from" 
+                           value="{{ filters.date_from|default('') }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="date_to" class="form-label">Au</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to" 
+                           value="{{ filters.date_to|default('') }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>Filtrer
+                    </button>
+                    <a href="{{ url('/ascents') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des ascensions -->
+    {% if ascents is defined and ascents|length > 0 %}
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Voie</th>
+                                <th>Difficulté</th>
+                                <th>Type</th>
+                                <th>Style</th>
+                                <th>Note</th>
+                                <th>Favoris</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ascent in ascents %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">{{ ascent.ascent_date|date('d/m/Y') }}</small>
+                                    </td>
+                                    <td>
+                                        {% if ascent.route_details is defined %}
+                                            <a href="{{ url('/routes/' ~ ascent.route_id) }}" class="text-decoration-none">
+                                                <strong>{{ ascent.route_name }}</strong>
+                                            </a>
+                                            {% if ascent.sector_details is defined %}
+                                                <br><small class="text-muted">
+                                                    <i class="fas fa-location-dot me-1"></i>
+                                                    {{ ascent.sector_details.name }}
+                                                </small>
+                                            {% endif %}
+                                        {% else %}
+                                            <strong>{{ ascent.route_name }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ ascent.difficulty }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ ascent.getAscentTypeLabel() }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ ascent.getClimbingTypeLabel() }}</span>
+                                    </td>
+                                    <td>
+                                        {% if ascent.quality_rating %}
+                                            <div class="text-warning">
+                                                {% for i in 1..5 %}
+                                                    <i class="fas fa-star{{ i <= ascent.quality_rating ? '' : ' text-muted' }}"></i>
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger toggle-favorite" 
+                                                data-ascent-id="{{ ascent.id }}"
+                                                data-favorite="{{ ascent.favorite ? 'true' : 'false' }}">
+                                            <i class="fas fa-heart{{ ascent.favorite ? '' : '-o' }}"></i>
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url('/ascents/' ~ ascent.id ~ '/edit') }}" 
+                                               class="btn btn-outline-primary" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-outline-danger delete-ascent" 
+                                                    data-ascent-id="{{ ascent.id }}" title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% if ascent.comment %}
+                                    <tr class="table-secondary">
+                                        <td colspan="8">
+                                            <small>
+                                                <i class="fas fa-comment me-2"></i>
+                                                {{ ascent.comment }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination is defined and pagination.last_page > 1 %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Pagination des ascensions">
+                    <ul class="pagination">
+                        {% if pagination.current_page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.current_page - 1 }}">Précédent</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page in 1..pagination.last_page %}
+                            {% if page == pagination.current_page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page }}</span>
+                                </li>
+                            {% elseif page == 1 or page == pagination.last_page or (page >= pagination.current_page - 2 and page <= pagination.current_page + 2) %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page }}">{{ page }}</a>
+                                </li>
+                            {% elseif page == pagination.current_page - 3 or page == pagination.current_page + 3 %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if pagination.current_page < pagination.last_page %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.current_page + 1 }}">Suivant</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+
+        <!-- Résumé pagination -->
+        {% if pagination is defined %}
+            <div class="text-center text-muted mt-2">
+                <small>
+                    Affichage de {{ pagination.from }} à {{ pagination.to }} 
+                    sur {{ pagination.total }} ascensions
+                </small>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-chart-line text-muted" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="text-muted">Aucune ascension trouvée</h4>
+                <p class="text-muted mb-4">
+                    {% if filters is defined and (filters.difficulty or filters.ascent_type or filters.search) %}
+                        Aucune ascension ne correspond à vos critères de recherche.
+                    {% else %}
+                        Vous n'avez pas encore enregistré d'ascension.
+                    {% endif %}
+                </p>
+                <div>
+                    {% if filters is defined and (filters.difficulty or filters.ascent_type or filters.search) %}
+                        <a href="{{ url('/ascents') }}" class="btn btn-outline-primary me-2">
+                            Voir toutes mes ascensions
+                        </a>
+                    {% endif %}
+                    <a href="{{ url('/ascents/create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Ajouter ma première ascension
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle favorite
+    document.querySelectorAll('.toggle-favorite').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const ascentId = this.dataset.ascentId;
+            const isFavorite = this.dataset.favorite === 'true';
+            
+            fetch(`/api/ascents/${ascentId}/toggle-favorite`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const icon = this.querySelector('i');
+                    if (data.favorite) {
+                        icon.className = 'fas fa-heart';
+                        this.dataset.favorite = 'true';
+                    } else {
+                        icon.className = 'fas fa-heart-o';
+                        this.dataset.favorite = 'false';
+                    }
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+        });
+    });
+    
+    // Delete ascent
+    document.querySelectorAll('.delete-ascent').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const ascentId = this.dataset.ascentId;
+            
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette ascension ?')) {
+                fetch(`/api/ascents/${ascentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Erreur lors de la suppression');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors de la suppression');
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

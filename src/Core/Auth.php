@@ -124,6 +124,67 @@ class Auth
     }
 
     /**
+     * Récupère le rôle de l'utilisateur connecté
+     */
+    public function role(): int
+    {
+        if (!$this->check()) {
+            return 4; // Nouveau membre par défaut
+        }
+
+        // Récupérer l'autorisation depuis le cache ou l'utilisateur
+        $userAutorisation = null;
+
+        if ($this->userDataCache && isset($this->userDataCache['autorisation'])) {
+            $userAutorisation = $this->userDataCache['autorisation'];
+        } elseif ($this->user && isset($this->user->autorisation)) {
+            $userAutorisation = $this->user->autorisation;
+        }
+
+        return (int)($userAutorisation ?? 4);
+    }
+
+    /**
+     * Vérifie si l'utilisateur est admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role() === 0;
+    }
+
+    /**
+     * Vérifie si l'utilisateur est modérateur ou plus
+     */
+    public function isModerator(): bool
+    {
+        return in_array($this->role(), [0, 1]);
+    }
+
+    /**
+     * Vérifie si l'utilisateur est accepté (niveau 2 ou plus)
+     */
+    public function isAccepted(): bool
+    {
+        return in_array($this->role(), [0, 1, 2]);
+    }
+
+    /**
+     * Vérifie si l'utilisateur est en attente
+     */
+    public function isPending(): bool
+    {
+        return $this->role() === 4;
+    }
+
+    /**
+     * Vérifie si l'utilisateur est banni
+     */
+    public function isBanned(): bool
+    {
+        return $this->role() === 5;
+    }
+
+    /**
      * Authentifie un utilisateur avec username/email et mot de passe
      */
     public function attempt(string $username, string $password, bool $remember = false): bool
@@ -247,7 +308,7 @@ class Auth
 
     /**
      * Vérifie si l'utilisateur a une permission spécifique
-     * Gestion complète des niveaux 0-5
+     * Système de rôles mis à jour selon les spécifications
      */
     public function can(string $ability, $model = null): bool
     {
@@ -256,119 +317,118 @@ class Auth
             return false;
         }
 
-        // Récupérer l'autorisation depuis le cache ou l'utilisateur
-        $userAutorisation = null;
+        $userRole = $this->role();
 
-        // D'abord essayer le cache
-        if ($this->userDataCache && isset($this->userDataCache['autorisation'])) {
-            $userAutorisation = $this->userDataCache['autorisation'];
-        }
-        // Ensuite essayer l'objet User
-        elseif ($this->user) {
-            if (isset($this->user->autorisation)) {
-                $userAutorisation = $this->user->autorisation;
-            } elseif (method_exists($this->user, 'getAttribute')) {
-                $userAutorisation = $this->user->getAttribute('autorisation');
-            }
-        }
+        error_log("Auth::can - Utilisateur ID=" . $this->id() . ", rôle=$userRole, ability='$ability'");
 
-        // Si toujours pas trouvé, recharger depuis la DB
-        if ($userAutorisation === null || $userAutorisation === '') {
-            $userId = $this->id();
-            if ($userId) {
-                $query = "SELECT autorisation FROM users WHERE id = ? LIMIT 1";
-                $result = $this->db->query($query, [$userId])->fetch();
-                if ($result && isset($result['autorisation'])) {
-                    $userAutorisation = $result['autorisation'];
-                    // Mettre à jour le cache
-                    if ($this->userDataCache) {
-                        $this->userDataCache['autorisation'] = $userAutorisation;
-                    }
-                }
-            }
-        }
-
-        error_log("Auth::can - Utilisateur ID=" . $this->id() . ", autorisation='" . $userAutorisation . "', ability='" . $ability . "'");
-
-        if ($userAutorisation === null || $userAutorisation === '') {
-            error_log("Auth::can - Autorisation vide ou inaccessible");
-            return false;
-        }
-
-        // Convertir en entier pour comparaison
-        $authLevel = (int)$userAutorisation;
-
-        // Niveau 5 (banni) - aucune permission
-        if ($authLevel === 5) {
+        // Utilisateur banni - aucune permission
+        if ($userRole === 5) {
             error_log("Auth::can - Utilisateur banni, accès refusé");
             return false;
         }
 
-        // Définition des capacités par niveau
+        // Définition des permissions par rôle
         $permissions = [
             0 => [ // Admin - toutes permissions
+                'view-content',
+                'view-details',
+                'view-sector',
+                'view-route',
+                'view-region',
+                'view-profile',
+                'view-ascents',
+                'view-favorites',
                 'create-sector',
+                'create-route',
+                'create-region',
+                'create-content',
                 'update-sector',
+                'update-route',
+                'update-region',
+                'edit-content',
                 'delete-sector',
-                'create-route',
-                'update-route',
                 'delete-route',
+                'delete-region',
+                'delete-content',
                 'manage-users',
-                'manage-site',
+                'ban-users',
+                'validate-users',
+                'admin-panel',
+                'create-ascent',
+                'edit-ascent',
+                'create-comment'
+            ],
+            1 => [ // Modérateur/Éditeur
+                'view-content',
+                'view-details',
                 'view-sector',
                 'view-route',
+                'view-region',
                 'view-profile',
-                'create-comment',
-                'view-details',
-                'view-sample-sector',
-                'view-sample-route',
-                'view-public-content'
-            ],
-            1 => [ // Rédacteur/Modérateur
+                'view-ascents',
+                'view-favorites',
                 'create-sector',
-                'update-sector',
                 'create-route',
+                'create-region',
+                'create-content',
+                'update-sector',
                 'update-route',
+                'update-region',
+                'edit-content',
+                'delete-sector',
+                'delete-route',
+                'delete-region',
+                'delete-content',
+                'validate-users',
+                'ban-users',
+                'create-ascent',
+                'edit-ascent',
+                'create-comment'
+            ],
+            2 => [ // Utilisateur accepté (abonnement complet)
+                'view-content',
+                'view-details',
                 'view-sector',
                 'view-route',
+                'view-region',
                 'view-profile',
-                'create-comment',
-                'view-details',
+                'view-ascents',
+                'view-favorites',
+                'create-ascent',
+                'edit-own-ascent',
+                'create-comment'
+            ],
+            3 => [ // Accès restreint (selon achat)
+                'view-content-limited',
                 'view-sample-sector',
                 'view-sample-route',
-                'view-public-content'
-            ],
-            2 => [ // Viewer/Membre actif
-                'view-sector',
-                'view-route',
                 'view-profile',
-                'create-comment',
-                'view-details',
-                'view-sample-sector',
-                'view-sample-route',
-                'view-public-content'
+                'view-ascents',
+                'view-favorites',
+                'create-ascent',
+                'edit-own-ascent',
+                'create-comment'
             ],
-            3 => [ // Accès restreint (compte d'essai)
-                'view-sample-sector',
-                'view-sample-route',
-                'view-public-content'
-            ],
-            4 => [ // Nouveau membre (avec restrictions)
-                'view-public-content',
-                'view-profile'
+            4 => [ // Nouveau membre (en attente)
+                'view-profile-own',
+                'view-pending'
             ]
         ];
 
         // Vérifier si l'utilisateur a la permission
-        if (isset($permissions[$authLevel]) && in_array($ability, $permissions[$authLevel])) {
-            error_log("Auth::can - Accès accordé (niveau $authLevel)");
+        if (isset($permissions[$userRole]) && in_array($ability, $permissions[$userRole])) {
+            error_log("Auth::can - Accès accordé (rôle $userRole)");
             return true;
         }
 
         // Vérification spéciale pour l'édition de contenu personnel
-        if (in_array($ability, ['update-route', 'delete-route', 'update-sector', 'delete-sector'])) {
+        if (in_array($ability, ['update-route', 'delete-route', 'update-sector', 'delete-sector', 'edit-own-ascent'])) {
             if ($model && isset($model->created_by) && $model->created_by == $this->id()) {
                 error_log("Auth::can - Accès accordé pour édition de contenu personnel");
+                return true;
+            }
+            if ($model && isset($model->user_id) && $model->user_id == $this->id()) {
+                error_log("Auth::can - Accès accordé pour édition de contenu personnel (user_id)");
                 return true;
             }
         }

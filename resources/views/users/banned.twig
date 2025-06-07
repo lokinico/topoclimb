@@ -1,0 +1,185 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Compte suspendu - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="text-center mb-5">
+                <div class="banned-icon mb-4">
+                    <i class="fas fa-ban text-danger" style="font-size: 4rem;"></i>
+                </div>
+                <h1 class="h2 mb-3 text-danger">Compte suspendu</h1>
+                <p class="lead text-muted">
+                    Votre compte a été temporairement suspendu.
+                </p>
+            </div>
+
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Suspension active
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger border-0" role="alert">
+                        <h6 class="alert-heading">Accès restreint</h6>
+                        <p class="mb-0">
+                            Votre compte a été suspendu en raison d'une violation des conditions d'utilisation 
+                            ou des règles de la communauté TopoclimbCH.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6 class="mb-3">Motifs de suspension courants :</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Contenu inapproprié ou offensant
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Spam ou publicité non autorisée
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Fausses informations sur les sites d'escalade
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Comportement irrespectueux envers la communauté
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Utilisation abusive de la plateforme
+                            </li>
+                        </ul>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <h6 class="mb-3">Faire appel de la décision</h6>
+                        <p class="text-muted mb-4">
+                            Si vous pensez que cette suspension est injustifiée, 
+                            vous pouvez contacter notre équipe de modération.
+                        </p>
+                        
+                        <div class="d-grid gap-2 d-md-block">
+                            <a href="mailto:moderation@topoclimb.ch?subject=Appel suspension compte" 
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-envelope me-2"></i>
+                                Contacter la modération
+                            </a>
+                            <a href="{{ url('/terms') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-file-text me-2"></i>
+                                Relire les CGU
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-info-circle me-2 text-info"></i>
+                        Informations importantes
+                    </h6>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 text-warning">
+                                    <i class="fas fa-clock fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Durée de suspension</h6>
+                                    <p class="text-muted small mb-0">
+                                        La durée dépend de la gravité de l'infraction. 
+                                        Vous serez notifié par email de toute évolution.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 text-success">
+                                    <i class="fas fa-undo fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Réactivation</h6>
+                                    <p class="text-muted small mb-0">
+                                        Après la période de suspension, votre compte 
+                                        sera automatiquement réactivé.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning border-0 mt-4" role="alert">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <h6 class="alert-heading">Suspension répétée</h6>
+                                <p class="mb-0">
+                                    En cas de violations répétées, votre compte pourrait être 
+                                    définitivement supprimé. Nous vous encourageons à respecter 
+                                    nos règles communautaires.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <p class="text-muted mb-3">
+                    <i class="fas fa-heart me-2"></i>
+                    TopoclimbCH s'engage à maintenir une communauté respectueuse et bienveillante
+                </p>
+                
+                <div class="d-grid gap-2 d-md-block">
+                    <a href="{{ url('/') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-home me-2"></i>
+                        Retour à l'accueil
+                    </a>
+                    <a href="{{ url('/logout') }}" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Se déconnecter
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .banned-icon {
+        animation: shake 0.5s ease-in-out infinite alternate;
+    }
+    
+    @keyframes shake {
+        from { transform: rotate(-2deg); }
+        to { transform: rotate(2deg); }
+    }
+    
+    .card-header.bg-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    }
+    
+    .border-danger {
+        border-color: #dc3545 !important;
+    }
+    
+    .alert-danger {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        border: 1px solid #f5c6cb;
+    }
+</style>
+{% endblock %}
