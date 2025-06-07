@@ -1,0 +1,354 @@
+{% extends 'admin/layout.twig' %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Statistiques principales -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card text-center">
+            <div class="stats-number">{{ stats.total_users|number_format }}</div>
+            <div class="text-muted">Utilisateurs</div>
+            <div class="mt-2">
+                <small class="text-success">
+                    <i class="bi bi-arrow-up"></i>
+                    +{{ stats.today_registrations }} aujourd'hui
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card text-center">
+            <div class="stats-number">{{ stats.total_regions|number_format }}</div>
+            <div class="text-muted">Régions</div>
+            <div class="mt-2">
+                <small class="text-info">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    {{ stats.total_sectors }} secteurs
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card text-center">
+            <div class="stats-number">{{ stats.total_routes|number_format }}</div>
+            <div class="text-muted">Voies</div>
+            <div class="mt-2">
+                <small class="text-primary">
+                    <i class="bi bi-diagram-3"></i>
+                    Base complète
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card text-center">
+            <div class="stats-number">{{ stats.total_ascents|number_format }}</div>
+            <div class="text-muted">Ascensions</div>
+            <div class="mt-2">
+                <small class="text-warning">
+                    <i class="bi bi-trophy"></i>
+                    Communauté active
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertes et éléments en attente -->
+{% if stats.pending_users > 0 or stats.banned_users > 0 %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <h5 class="alert-heading">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Actions requises
+            </h5>
+            <div class="row">
+                {% if stats.pending_users > 0 %}
+                <div class="col-md-6">
+                    <p class="mb-2">
+                        <strong>{{ stats.pending_users }} utilisateur(s) en attente</strong> de validation
+                    </p>
+                    <a href="/admin/users?role=4" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-people"></i>
+                        Valider les comptes
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if stats.banned_users > 0 %}
+                <div class="col-md-6">
+                    <p class="mb-2">
+                        <strong>{{ stats.banned_users }} utilisateur(s) banni(s)</strong>
+                    </p>
+                    <a href="/admin/users?role=5" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-person-slash"></i>
+                        Gérer les bannis
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Activité récente -->
+    <div class="col-lg-8 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity text-primary"></i>
+                    Activité récente
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Nouveaux utilisateurs -->
+                <div class="mb-4">
+                    <h6 class="text-muted mb-3">
+                        <i class="bi bi-person-plus"></i>
+                        Nouvelles inscriptions
+                    </h6>
+                    {% if recent_activity.new_users|length > 0 %}
+                        {% for user in recent_activity.new_users %}
+                        <div class="d-flex align-items-center mb-2 p-2 bg-light rounded">
+                            <div class="avatar-placeholder bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                {{ user.prenom|first }}{{ user.nom|first }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-medium">{{ user.prenom }} {{ user.nom }}</div>
+                                <small class="text-muted">
+                                    {{ user.date_registered|format_date('d/m/Y H:i') }}
+                                </small>
+                            </div>
+                            <div>
+                                <a href="/admin/users/{{ user.id }}/edit" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Aucune nouvelle inscription récente.</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Nouvelles ascensions -->
+                <div>
+                    <h6 class="text-muted mb-3">
+                        <i class="bi bi-trophy"></i>
+                        Dernières ascensions
+                    </h6>
+                    {% if recent_activity.new_ascents|length > 0 %}
+                        {% for ascent in recent_activity.new_ascents %}
+                        <div class="d-flex align-items-center mb-2 p-2 bg-light rounded">
+                            <div class="avatar-placeholder bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <i class="bi bi-mountain"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-medium">{{ ascent.route_name }}</div>
+                                <small class="text-muted">
+                                    par {{ ascent.username }} - {{ ascent.difficulty }}
+                                    <br>{{ ascent.created_at|format_date('d/m/Y H:i') }}
+                                </small>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary">{{ ascent.ascent_type }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Aucune ascension récente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions rapides et info système -->
+    <div class="col-lg-4 mb-4">
+        <!-- Actions rapides -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning text-warning"></i>
+                    Actions rapides
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/admin/users" class="btn btn-outline-primary">
+                        <i class="bi bi-people"></i>
+                        Gérer utilisateurs
+                    </a>
+                    <a href="/admin/content" class="btn btn-outline-success">
+                        <i class="bi bi-geo-alt"></i>
+                        Modérer contenu
+                    </a>
+                    <a href="/admin/media" class="btn btn-outline-info">
+                        <i class="bi bi-images"></i>
+                        Gérer médias
+                    </a>
+                    <a href="/admin/reports" class="btn btn-outline-warning">
+                        <i class="bi bi-graph-up"></i>
+                        Voir rapports
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations système -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle text-info"></i>
+                    Système
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 border-end">
+                        <div class="h5 text-success mb-1">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                        <small class="text-muted">Système</small><br>
+                        <small class="fw-medium text-success">Opérationnel</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 text-primary mb-1">{{ app_env|upper }}</div>
+                        <small class="text-muted">Environnement</small>
+                    </div>
+                </div>
+                
+                <hr class="my-3">
+                
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Version PHP:</span>
+                        <span class="fw-medium">{{ constant('PHP_VERSION') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Serveur:</span>
+                        <span class="fw-medium">{{ _SERVER.SERVER_SOFTWARE|split(' ')|first }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Dernière connexion:</span>
+                        <span class="fw-medium">{{ now|format_date('d/m H:i') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques de tendances -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up text-primary"></i>
+                    Évolution des inscriptions
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="registrationsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart text-success"></i>
+                    Répartition des rôles
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="rolesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Graphique des inscriptions (exemple avec données fictives)
+const registrationsCtx = document.getElementById('registrationsChart').getContext('2d');
+new Chart(registrationsCtx, {
+    type: 'line',
+    data: {
+        labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
+        datasets: [{
+            label: 'Nouvelles inscriptions',
+            data: [12, 19, 8, 15, 26, 22],
+            borderColor: 'rgb(102, 126, 234)',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    borderDash: [2, 2]
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// Graphique des rôles
+const rolesCtx = document.getElementById('rolesChart').getContext('2d');
+new Chart(rolesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Utilisateurs acceptés', 'Nouveaux membres', 'Modérateurs', 'Bannis'],
+        datasets: [{
+            data: [{{ stats.total_users - stats.pending_users - stats.banned_users }}, {{ stats.pending_users }}, 5, {{ stats.banned_users }}],
+            backgroundColor: [
+                'rgba(40, 167, 69, 0.8)',
+                'rgba(255, 193, 7, 0.8)', 
+                'rgba(0, 123, 255, 0.8)',
+                'rgba(220, 53, 69, 0.8)'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

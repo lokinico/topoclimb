@@ -1,0 +1,463 @@
+{% extends 'admin/layout.twig' %}
+
+{% block page_title %}Gestion des utilisateurs{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+        <li class="breadcrumb-item active">Utilisateurs</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="bi bi-download"></i>
+        Exporter
+    </button>
+    <a href="/admin/users/create" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i>
+        Nouvel utilisateur
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filtres et recherche -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="/admin/users" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Rechercher</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Nom, email, username...">
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="role" class="form-label">Rôle</label>
+                <select class="form-select" id="role" name="role">
+                    <option value="">Tous les rôles</option>
+                    {% for role_id, role_name in roles %}
+                        <option value="{{ role_id }}" {{ role == role_id ? 'selected' : '' }}>
+                            {{ role_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-filter"></i>
+                        Filtrer
+                    </button>
+                    <a href="/admin/users" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Reset
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label">Total</label>
+                <div class="fw-bold text-primary">{{ total|number_format }} utilisateur{{ total > 1 ? 's' : '' }}</div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des utilisateurs -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if users|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        <th>Utilisateur</th>
+                        <th>Email</th>
+                        <th>Rôle</th>
+                        <th>Inscription</th>
+                        <th>Statut</th>
+                        <th style="width: 150px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input user-checkbox" value="{{ user.id }}">
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-placeholder bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                    {{ user.prenom|first }}{{ user.nom|first }}
+                                </div>
+                                <div>
+                                    <div class="fw-medium">{{ user.prenom }} {{ user.nom }}</div>
+                                    <small class="text-muted">@{{ user.username }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="mailto:{{ user.mail }}" class="text-decoration-none">
+                                {{ user.mail }}
+                            </a>
+                            {% if user.ville %}
+                                <br><small class="text-muted">
+                                    <i class="bi bi-geo-alt"></i>
+                                    {{ user.ville }}
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set role_class = {
+                                '0': 'danger',
+                                '1': 'warning', 
+                                '2': 'success',
+                                '3': 'primary',
+                                '4': 'secondary',
+                                '5': 'dark'
+                            } %}
+                            <span class="badge bg-{{ role_class[user.autorisation] ?? 'secondary' }}">
+                                {{ roles[user.autorisation] ?? 'Inconnu' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div>{{ user.date_registered|format_date('d/m/Y') }}</div>
+                            <small class="text-muted">{{ user.date_registered|format_date('H:i') }}</small>
+                        </td>
+                        <td>
+                            {% if user.autorisation == '5' %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-person-slash"></i>
+                                    Banni
+                                </span>
+                            {% elseif user.autorisation == '4' %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-clock"></i>
+                                    En attente
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i>
+                                    Actif
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="/admin/users/{{ user.id }}/edit" class="btn btn-sm btn-outline-primary" title="Éditer">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                
+                                {% if user.autorisation != '5' %}
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="toggleUserBan({{ user.id }}, 'ban')" 
+                                            title="Bannir">
+                                        <i class="bi bi-person-slash"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-success" 
+                                            onclick="toggleUserBan({{ user.id }}, 'unban')" 
+                                            title="Débannir">
+                                        <i class="bi bi-person-check"></i>
+                                    </button>
+                                {% endif %}
+                                
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                        data-bs-toggle="dropdown" title="Plus d'actions">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="/admin/users/{{ user.id }}/ascents">
+                                            <i class="bi bi-trophy"></i>
+                                            Voir ascensions
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="/admin/users/{{ user.id }}/login-as">
+                                            <i class="bi bi-person-circle"></i>
+                                            Se connecter en tant que
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger confirm-action" 
+                                           href="/admin/users/{{ user.id }}/delete" 
+                                           data-confirm="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.">
+                                            <i class="bi bi-trash"></i>
+                                            Supprimer
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-people display-1 text-muted"></i>
+            </div>
+            <h5 class="text-muted">Aucun utilisateur trouvé</h5>
+            <p class="text-muted">Aucun utilisateur ne correspond aux critères de recherche.</p>
+            <a href="/admin/users" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i>
+                Réinitialiser les filtres
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav aria-label="Pagination des utilisateurs" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}&search={{ search }}&role={{ role }}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for p in range(max(1, page - 2), min(total_pages, page + 2) + 1) %}
+            <li class="page-item {{ p == page ? 'active' : '' }}">
+                <a class="page-link" href="?page={{ p }}&search={{ search }}&role={{ role }}">{{ p }}</a>
+            </li>
+        {% endfor %}
+        
+        {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}&search={{ search }}&role={{ role }}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Actions en masse -->
+<div class="card border-0 shadow-sm mt-4" id="bulkActions" style="display: none;">
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <strong><span id="selectedCount">0</span> utilisateur(s) sélectionné(s)</strong>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline-warning" onclick="bulkAction('validate')">
+                    <i class="bi bi-check-circle"></i>
+                    Valider
+                </button>
+                <button class="btn btn-outline-danger" onclick="bulkAction('ban')">
+                    <i class="bi bi-person-slash"></i>
+                    Bannir
+                </button>
+                <button class="btn btn-outline-primary" onclick="bulkAction('export')">
+                    <i class="bi bi-download"></i>
+                    Exporter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'export -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exporter les utilisateurs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/users/export" method="POST">
+                {{ csrf_field() }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Format d'export</label>
+                        <select class="form-select" name="format">
+                            <option value="csv">CSV</option>
+                            <option value="xlsx">Excel</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Champs à inclure</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fields[]" value="nom" checked>
+                                    <label class="form-check-label">Nom</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fields[]" value="prenom" checked>
+                                    <label class="form-check-label">Prénom</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fields[]" value="mail" checked>
+                                    <label class="form-check-label">Email</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fields[]" value="ville">
+                                    <label class="form-check-label">Ville</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fields[]" value="autorisation">
+                                    <label class="form-check-label">Rôle</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fields[]" value="date_registered">
+                                    <label class="form-check-label">Date inscription</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-download"></i>
+                        Exporter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Gestion des sélections multiples
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    updateBulkActions();
+});
+
+document.querySelectorAll('.user-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateBulkActions);
+});
+
+function updateBulkActions() {
+    const selected = document.querySelectorAll('.user-checkbox:checked');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (selected.length > 0) {
+        bulkActions.style.display = 'block';
+        selectedCount.textContent = selected.length;
+    } else {
+        bulkActions.style.display = 'none';
+    }
+    
+    // Update "Select All" checkbox state
+    const selectAll = document.getElementById('selectAll');
+    const allCheckboxes = document.querySelectorAll('.user-checkbox');
+    selectAll.indeterminate = selected.length > 0 && selected.length < allCheckboxes.length;
+    selectAll.checked = selected.length === allCheckboxes.length;
+}
+
+// Toggle ban/unban user
+function toggleUserBan(userId, action) {
+    const confirmMessage = action === 'ban' 
+        ? 'Êtes-vous sûr de vouloir bannir cet utilisateur ?' 
+        : 'Êtes-vous sûr de vouloir débannir cet utilisateur ?';
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    adminAjax(`/admin/users/${userId}/toggle-ban`, {
+        method: 'POST',
+        body: JSON.stringify({ action: action })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Une erreur est survenue');
+    });
+}
+
+// Actions en masse
+function bulkAction(action) {
+    const selected = Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        alert('Veuillez sélectionner au moins un utilisateur');
+        return;
+    }
+    
+    let confirmMessage = '';
+    switch (action) {
+        case 'validate':
+            confirmMessage = `Valider ${selected.length} utilisateur(s) ?`;
+            break;
+        case 'ban':
+            confirmMessage = `Bannir ${selected.length} utilisateur(s) ?`;
+            break;
+        case 'export':
+            // Trigger export modal with selected users
+            const form = document.querySelector('#exportModal form');
+            selected.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'user_ids[]';
+                input.value = id;
+                form.appendChild(input);
+            });
+            return;
+    }
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    adminAjax(`/admin/users/bulk-action`, {
+        method: 'POST',
+        body: JSON.stringify({ 
+            action: action,
+            user_ids: selected
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Une erreur est survenue');
+    });
+}
+</script>
+{% endblock %}
