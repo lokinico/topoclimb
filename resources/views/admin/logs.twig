@@ -1,0 +1,511 @@
+{% extends 'admin/layout.twig' %}
+
+{% block page_title %}Logs système{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+        <li class="breadcrumb-item active">Logs</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button class="btn btn-outline-warning confirm-action" 
+            onclick="clearLogs()" 
+            data-confirm="Êtes-vous sûr de vouloir vider tous les logs ? Cette action est irréversible.">
+        <i class="bi bi-trash"></i>
+        Vider les logs
+    </button>
+    <a href="/admin/logs/download" class="btn btn-outline-primary">
+        <i class="bi bi-download"></i>
+        Télécharger
+    </a>
+    <button class="btn btn-primary" onclick="refreshLogs()">
+        <i class="bi bi-arrow-clockwise"></i>
+        Actualiser
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filtres et statistiques -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="GET" action="/admin/logs" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="level" class="form-label">Niveau</label>
+                        <select class="form-select" id="level" name="level">
+                            <option value="">Tous les niveaux</option>
+                            <option value="emergency" {{ level == 'emergency' ? 'selected' : '' }}>
+                                🔴 Emergency
+                            </option>
+                            <option value="alert" {{ level == 'alert' ? 'selected' : '' }}>
+                                🟠 Alert
+                            </option>
+                            <option value="critical" {{ level == 'critical' ? 'selected' : '' }}>
+                                🟠 Critical
+                            </option>
+                            <option value="error" {{ level == 'error' ? 'selected' : '' }}>
+                                🔴 Error
+                            </option>
+                            <option value="warning" {{ level == 'warning' ? 'selected' : '' }}>
+                                🟡 Warning
+                            </option>
+                            <option value="notice" {{ level == 'notice' ? 'selected' : '' }}>
+                                🔵 Notice
+                            </option>
+                            <option value="info" {{ level == 'info' ? 'selected' : '' }}>
+                                🔵 Info
+                            </option>
+                            <option value="debug" {{ level == 'debug' ? 'selected' : '' }}>
+                                ⚪ Debug
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">Date début</label>
+                        <input type="date" class="form-control" id="date_from" name="date_from" 
+                               value="{{ date_from ?? '' }}">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label">Date fin</label>
+                        <input type="date" class="form-control" id="date_to" name="date_to" 
+                               value="{{ date_to ?? '' }}">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-filter"></i>
+                                Filtrer
+                            </button>
+                            <a href="/admin/logs" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise"></i>
+                                Reset
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-bar-chart text-primary"></i>
+                    Statistiques
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 border-end">
+                        <div class="h5 text-danger mb-1">{{ logs.error_count ?? 0 }}</div>
+                        <small class="text-muted">Erreurs<br>24h</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 text-warning mb-1">{{ logs.warning_count ?? 0 }}</div>
+                        <small class="text-muted">Warnings<br>24h</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logs en temps réel -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-terminal text-success"></i>
+                Logs système
+                {% if level %}
+                    <span class="badge bg-secondary">{{ level|title }}</span>
+                {% endif %}
+            </h5>
+            
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoRefresh">
+                <label class="form-check-label" for="autoRefresh">
+                    <small>Auto-refresh</small>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if logs.data|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0" id="logsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 140px;">Timestamp</th>
+                        <th style="width: 80px;">Niveau</th>
+                        <th style="width: 120px;">Channel</th>
+                        <th>Message</th>
+                        <th style="width: 60px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.data %}
+                    <tr class="log-entry log-{{ log.level|lower }}">
+                        <td class="small text-nowrap">
+                            <span title="{{ log.datetime }}">
+                                {{ log.datetime|format_date('d/m H:i:s') }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-log-{{ log.level|lower }}">
+                                {% set level_icons = {
+                                    'emergency': '🚨',
+                                    'alert': '🔴',
+                                    'critical': '🟠',
+                                    'error': '❌',
+                                    'warning': '⚠️',
+                                    'notice': '📢',
+                                    'info': 'ℹ️',
+                                    'debug': '🔧'
+                                } %}
+                                {{ level_icons[log.level|lower] ?? '📝' }}
+                                {{ log.level|title }}
+                            </span>
+                        </td>
+                        <td class="small">
+                            <span class="text-muted">{{ log.channel ?? 'app' }}</span>
+                        </td>
+                        <td>
+                            <div class="log-message">
+                                <span class="message-preview">{{ log.message|truncate(100) }}</span>
+                                {% if log.context %}
+                                    <button class="btn btn-link btn-sm p-0 ms-1" 
+                                            onclick="toggleContext(this)" 
+                                            title="Voir le contexte">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                    <div class="log-context mt-2" style="display: none;">
+                                        <div class="bg-light p-2 rounded small">
+                                            <strong>Contexte:</strong>
+                                            <pre class="mb-0">{{ log.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" 
+                                        onclick="copyLogEntry(this)" 
+                                        title="Copier">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-file-text display-1 text-muted"></i>
+            </div>
+            <h5 class="text-muted">Aucun log trouvé</h5>
+            <p class="text-muted">
+                {% if level %}
+                    Aucun log de niveau "{{ level }}" trouvé pour la période sélectionnée.
+                {% else %}
+                    Aucun log trouvé pour la période sélectionnée.
+                {% endif %}
+            </p>
+            <a href="/admin/logs" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i>
+                Réinitialiser les filtres
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav aria-label="Pagination des logs" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}&level={{ level }}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for p in range(max(1, page - 2), min(total_pages, page + 2) + 1) %}
+            <li class="page-item {{ p == page ? 'active' : '' }}">
+                <a class="page-link" href="?page={{ p }}&level={{ level }}">{{ p }}</a>
+            </li>
+        {% endfor %}
+        
+        {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}&level={{ level }}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Console en temps réel (optionnel) -->
+<div class="card border-0 shadow-sm mt-4" id="liveConsole" style="display: none;">
+    <div class="card-header bg-dark text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-terminal"></i>
+                Console en temps réel
+            </h6>
+            <button class="btn btn-outline-light btn-sm" onclick="toggleLiveConsole()">
+                <i class="bi bi-x"></i>
+                Fermer
+            </button>
+        </div>
+    </div>
+    <div class="card-body bg-dark text-white p-0">
+        <div id="liveLogOutput" style="height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; padding: 15px;">
+            <!-- Logs en temps réel via WebSocket ou SSE -->
+            <div class="text-muted">En attente de nouveaux logs...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Styles pour les niveaux de logs */
+.badge-log-emergency { background-color: #dc3545; }
+.badge-log-alert { background-color: #fd7e14; }
+.badge-log-critical { background-color: #fd7e14; }
+.badge-log-error { background-color: #dc3545; }
+.badge-log-warning { background-color: #ffc107; color: #000; }
+.badge-log-notice { background-color: #0dcaf0; }
+.badge-log-info { background-color: #0d6efd; }
+.badge-log-debug { background-color: #6c757d; }
+
+/* Surbrillance des lignes selon le niveau */
+.log-emergency { border-left: 4px solid #dc3545; background-color: rgba(220, 53, 69, 0.05); }
+.log-alert { border-left: 4px solid #fd7e14; background-color: rgba(253, 126, 20, 0.05); }
+.log-critical { border-left: 4px solid #fd7e14; background-color: rgba(253, 126, 20, 0.05); }
+.log-error { border-left: 4px solid #dc3545; background-color: rgba(220, 53, 69, 0.05); }
+.log-warning { border-left: 4px solid #ffc107; background-color: rgba(255, 193, 7, 0.05); }
+.log-notice { border-left: 4px solid #0dcaf0; }
+.log-info { border-left: 4px solid #0d6efd; }
+.log-debug { border-left: 4px solid #6c757d; background-color: rgba(108, 117, 125, 0.05); }
+
+.log-message pre {
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.table-dark th {
+    border-color: #495057;
+}
+
+#liveLogOutput {
+    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
+}
+
+#liveLogOutput .log-line {
+    padding: 2px 0;
+    border-bottom: 1px solid #333;
+}
+
+#liveLogOutput .log-line:hover {
+    background-color: #2d2d30;
+}
+
+.message-preview {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let autoRefreshInterval;
+let liveConsoleOpen = false;
+
+// Auto-refresh des logs
+document.getElementById('autoRefresh').addEventListener('change', function() {
+    if (this.checked) {
+        autoRefreshInterval = setInterval(refreshLogs, 10000); // 10 secondes
+    } else {
+        clearInterval(autoRefreshInterval);
+    }
+});
+
+function refreshLogs() {
+    // Recharger la page en conservant les filtres
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUrl = window.location.pathname + '?' + urlParams.toString();
+    
+    fetch(currentUrl, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Mettre à jour uniquement le tableau des logs
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newTable = doc.querySelector('#logsTable');
+        const currentTable = document.querySelector('#logsTable');
+        
+        if (newTable && currentTable) {
+            currentTable.innerHTML = newTable.innerHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors du refresh:', error);
+    });
+}
+
+function clearLogs() {
+    adminAjax('/admin/logs/clear', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function toggleContext(button) {
+    const context = button.parentElement.querySelector('.log-context');
+    const icon = button.querySelector('i');
+    
+    if (context.style.display === 'none') {
+        context.style.display = 'block';
+        icon.className = 'bi bi-chevron-up';
+    } else {
+        context.style.display = 'none';
+        icon.className = 'bi bi-chevron-down';
+    }
+}
+
+function copyLogEntry(button) {
+    const row = button.closest('tr');
+    const timestamp = row.querySelector('td:first-child').textContent.trim();
+    const level = row.querySelector('.badge-log-error, .badge-log-warning, .badge-log-info, .badge-log-debug').textContent.trim();
+    const message = row.querySelector('.message-preview').textContent.trim();
+    
+    const logText = `[${timestamp}] ${level}: ${message}`;
+    
+    navigator.clipboard.writeText(logText).then(() => {
+        // Feedback visuel
+        const originalIcon = button.querySelector('i').className;
+        button.querySelector('i').className = 'bi bi-check';
+        button.classList.add('btn-success');
+        button.classList.remove('btn-outline-secondary');
+        
+        setTimeout(() => {
+            button.querySelector('i').className = originalIcon;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 1000);
+    });
+}
+
+function toggleLiveConsole() {
+    const console = document.getElementById('liveConsole');
+    
+    if (liveConsoleOpen) {
+        console.style.display = 'none';
+        liveConsoleOpen = false;
+    } else {
+        console.style.display = 'block';
+        liveConsoleOpen = true;
+        startLiveConsole();
+    }
+}
+
+function startLiveConsole() {
+    // Simuler des logs en temps réel (à remplacer par WebSocket/SSE)
+    const output = document.getElementById('liveLogOutput');
+    
+    // Exemple de log en temps réel
+    setInterval(() => {
+        if (liveConsoleOpen && Math.random() < 0.3) { // 30% de chance d'avoir un nouveau log
+            const now = new Date().toLocaleString();
+            const levels = ['info', 'warning', 'error', 'debug'];
+            const level = levels[Math.floor(Math.random() * levels.length)];
+            const messages = [
+                'User login attempt from IP 192.168.1.100',
+                'Database query executed successfully',
+                'Cache cleared by administrator',
+                'New media uploaded by user',
+                'Route created: Bataille sector'
+            ];
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line';
+            logLine.innerHTML = `<span class="text-muted">[${now}]</span> <span class="badge-log-${level}">${level.toUpperCase()}</span>: ${message}`;
+            
+            output.appendChild(logLine);
+            
+            // Garder seulement les 100 dernières lignes
+            while (output.children.length > 100) {
+                output.removeChild(output.firstChild);
+            }
+            
+            // Scroll automatique vers le bas
+            output.scrollTop = output.scrollHeight;
+        }
+    }, 2000);
+}
+
+// Raccourcis clavier
+document.addEventListener('keydown', function(e) {
+    // Ctrl+R pour refresh
+    if (e.ctrlKey && e.key === 'r') {
+        e.preventDefault();
+        refreshLogs();
+    }
+    
+    // Ctrl+Shift+C pour console live
+    if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        toggleLiveConsole();
+    }
+});
+
+// Nettoyage au déchargement de la page
+window.addEventListener('beforeunload', function() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+});
+</script>
+{% endblock %}

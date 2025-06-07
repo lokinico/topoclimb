@@ -1,0 +1,550 @@
+{% extends 'admin/layout.twig' %}
+
+{% block page_title %}Configuration{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+        <li class="breadcrumb-item active">Configuration</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button type="button" class="btn btn-outline-danger" onclick="toggleMaintenanceMode()">
+        <i class="bi bi-tools"></i>
+        Mode maintenance
+    </button>
+    <button type="button" class="btn btn-outline-warning" onclick="clearCache()">
+        <i class="bi bi-arrow-clockwise"></i>
+        Vider le cache
+    </button>
+    <button type="submit" form="settingsForm" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i>
+        Sauvegarder
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Configuration principale -->
+    <div class="col-lg-8">
+        <form id="settingsForm" method="POST" action="/admin/settings">
+            {{ csrf_field() }}
+            
+            <!-- Paramètres généraux -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear text-primary"></i>
+                        Paramètres généraux
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="app_name" class="form-label">Nom de l'application</label>
+                            <input type="text" class="form-control" id="app_name" name="app_name" 
+                                   value="{{ settings.app_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="app_url" class="form-label">URL de l'application</label>
+                            <input type="url" class="form-control" id="app_url" name="app_url" 
+                                   value="{{ settings.app_url }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="admin_email" class="form-label">Email administrateur</label>
+                            <input type="email" class="form-control" id="admin_email" name="admin_email" 
+                                   value="{{ settings.admin_email ?? 'admin@topoclimb.ch' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="contact_email" class="form-label">Email de contact</label>
+                            <input type="email" class="form-control" id="contact_email" name="contact_email" 
+                                   value="{{ settings.contact_email ?? 'contact@topoclimb.ch' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="app_description" class="form-label">Description du site</label>
+                        <textarea class="form-control" id="app_description" name="app_description" rows="3" 
+                                  placeholder="Description pour les moteurs de recherche et les réseaux sociaux">{{ settings.app_description ?? '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Paramètres utilisateurs -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people text-success"></i>
+                        Gestion des utilisateurs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="registration_enabled" 
+                                       name="registration_enabled" {{ settings.registration_enabled ? 'checked' : '' }}>
+                                <label class="form-check-label" for="registration_enabled">
+                                    Autoriser les nouvelles inscriptions
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="email_verification" 
+                                       name="email_verification" {{ settings.email_verification ?? true ? 'checked' : '' }}>
+                                <label class="form-check-label" for="email_verification">
+                                    Vérification email obligatoire
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="default_user_role" class="form-label">Rôle par défaut</label>
+                            <select class="form-select" id="default_user_role" name="default_user_role">
+                                <option value="4" {{ (settings.default_user_role ?? '4') == '4' ? 'selected' : '' }}>Nouveau membre (validation requise)</option>
+                                <option value="3" {{ (settings.default_user_role ?? '4') == '3' ? 'selected' : '' }}>Utilisateur standard</option>
+                                <option value="2" {{ (settings.default_user_role ?? '4') == '2' ? 'selected' : '' }}>Utilisateur accepté</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="session_lifetime" class="form-label">Durée de session (minutes)</label>
+                            <input type="number" class="form-control" id="session_lifetime" name="session_lifetime" 
+                                   value="{{ settings.session_lifetime ?? 120 }}" min="15" max="43200">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Paramètres de contenu -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-file-earmark text-warning"></i>
+                        Gestion du contenu
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="max_upload_size" class="form-label">Taille max upload (MB)</label>
+                            <input type="number" class="form-control" id="max_upload_size" name="max_upload_size" 
+                                   value="{{ settings.max_upload_size|replace({'MB': ''}) ?? 5 }}" min="1" max="50">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="allowed_file_types" class="form-label">Types de fichiers autorisés</label>
+                            <input type="text" class="form-control" id="allowed_file_types" name="allowed_file_types" 
+                                   value="{{ settings.allowed_file_types ?? 'jpg,jpeg,png,gif,pdf,mp4' }}"
+                                   placeholder="jpg,jpeg,png,gif,pdf,mp4">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="content_moderation" 
+                                       name="content_moderation" {{ settings.content_moderation ?? true ? 'checked' : '' }}>
+                                <label class="form-check-label" for="content_moderation">
+                                    Modération du contenu
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="auto_approve_media" 
+                                       name="auto_approve_media" {{ settings.auto_approve_media ?? false ? 'checked' : '' }}>
+                                <label class="form-check-label" for="auto_approve_media">
+                                    Validation automatique des médias
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Paramètres SEO -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-search text-info"></i>
+                        SEO & Analytics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="google_analytics_id" class="form-label">Google Analytics ID</label>
+                            <input type="text" class="form-control" id="google_analytics_id" name="google_analytics_id" 
+                                   value="{{ settings.google_analytics_id ?? '' }}" placeholder="G-XXXXXXXXXX">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="google_search_console" class="form-label">Google Search Console</label>
+                            <input type="text" class="form-control" id="google_search_console" name="google_search_console" 
+                                   value="{{ settings.google_search_console ?? '' }}" placeholder="Code de vérification">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="meta_keywords" class="form-label">Mots-clés par défaut</label>
+                        <input type="text" class="form-control" id="meta_keywords" name="meta_keywords" 
+                               value="{{ settings.meta_keywords ?? 'escalade,suisse,topo,grimpe,voies' }}"
+                               placeholder="escalade,suisse,topo,grimpe,voies">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Paramètres email -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-envelope text-danger"></i>
+                        Configuration email
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Les paramètres SMTP sont configurés dans le fichier .env pour des raisons de sécurité.
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="mail_from_name" class="form-label">Nom expéditeur</label>
+                            <input type="text" class="form-control" id="mail_from_name" name="mail_from_name" 
+                                   value="{{ settings.mail_from_name ?? 'TopoclimbCH' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mail_from_address" class="form-label">Email expéditeur</label>
+                            <input type="email" class="form-control" id="mail_from_address" name="mail_from_address" 
+                                   value="{{ settings.mail_from_address ?? 'noreply@topoclimb.ch' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-outline-primary" onclick="testEmailConfiguration()">
+                            <i class="bi bi-envelope-check"></i>
+                            Tester la configuration email
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Sidebar avec infos système -->
+    <div class="col-lg-4">
+        <!-- Informations système -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle text-info"></i>
+                    Informations système
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Version PHP:</span>
+                        <span class="fw-medium">{{ constant('PHP_VERSION') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Serveur web:</span>
+                        <span class="fw-medium">{{ _SERVER.SERVER_SOFTWARE|split(' ')|first }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Base de données:</span>
+                        <span class="fw-medium">MySQL</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Environnement:</span>
+                        <span class="badge bg-{{ app_env == 'production' ? 'success' : 'warning' }}">
+                            {{ app_env|upper }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Debug mode:</span>
+                        <span class="badge bg-{{ app_env == 'development' ? 'danger' : 'success' }}">
+                            {{ app_env == 'development' ? 'ON' : 'OFF' }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Maintenance:</span>
+                        <span class="badge bg-{{ settings.maintenance_mode ?? false ? 'warning' : 'success' }}">
+                            {{ settings.maintenance_mode ?? false ? 'ACTIVE' : 'INACTIVE' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions système -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-tools text-warning"></i>
+                    Actions système
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-warning" onclick="clearCache()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Vider le cache
+                    </button>
+                    
+                    <button class="btn btn-outline-info" onclick="optimizeDatabase()">
+                        <i class="bi bi-database"></i>
+                        Optimiser la BDD
+                    </button>
+                    
+                    <button class="btn btn-outline-primary" onclick="generateSitemap()">
+                        <i class="bi bi-map"></i>
+                        Générer sitemap
+                    </button>
+                    
+                    <button class="btn btn-outline-secondary" onclick="downloadBackup()">
+                        <i class="bi bi-download"></i>
+                        Backup base
+                    </button>
+                </div>
+                
+                <hr class="my-3">
+                
+                <div class="d-grid">
+                    <button class="btn btn-outline-danger" onclick="toggleMaintenanceMode()">
+                        <i class="bi bi-tools"></i>
+                        {{ settings.maintenance_mode ?? false ? 'Désactiver' : 'Activer' }} maintenance
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sauvegarde de configuration -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-cloud-download text-success"></i>
+                    Sauvegarde
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Dernière sauvegarde des paramètres
+                </p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-success btn-sm" onclick="exportSettings()">
+                        <i class="bi bi-download"></i>
+                        Exporter la config
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="bi bi-upload"></i>
+                        Importer config
+                    </button>
+                </div>
+                
+                <div class="mt-3 small text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    Les modifications sont automatiquement sauvegardées
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'import de configuration -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-upload"></i>
+                    Importer configuration
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="importForm" enctype="multipart/form-data">
+                {{ csrf_field() }}
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Attention :</strong> L'import remplacera tous les paramètres actuels.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="configFile" class="form-label">Fichier de configuration</label>
+                        <input type="file" class="form-control" id="configFile" name="config_file" accept=".json,.txt" required>
+                        <div class="form-text">Formats acceptés: JSON, TXT</div>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="backupBeforeImport" checked>
+                        <label class="form-check-label" for="backupBeforeImport">
+                            Créer une sauvegarde avant import
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i>
+                        Importer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Actions système
+function clearCache() {
+    if (!confirm('Vider le cache du système ?')) return;
+    
+    adminAjax('/admin/cache/clear', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Cache vidé avec succès');
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function toggleMaintenanceMode() {
+    const isActive = {{ settings.maintenance_mode ?? false ? 'true' : 'false' }};
+    const action = isActive ? 'désactiver' : 'activer';
+    
+    if (!confirm(`Êtes-vous sûr de vouloir ${action} le mode maintenance ?`)) return;
+    
+    adminAjax('/admin/maintenance/toggle', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function optimizeDatabase() {
+    if (!confirm('Optimiser la base de données ? Cette opération peut prendre quelques minutes.')) return;
+    
+    adminAjax('/admin/database/optimize', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Base de données optimisée avec succès');
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function generateSitemap() {
+    adminAjax('/admin/sitemap/generate', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Sitemap généré avec succès');
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function downloadBackup() {
+    window.location.href = '/admin/backup/download';
+}
+
+function testEmailConfiguration() {
+    adminAjax('/admin/email/test', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Email de test envoyé avec succès !');
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function exportSettings() {
+    adminAjax('/admin/settings/export')
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `topoclimb-config-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    });
+}
+
+// Import de configuration
+document.getElementById('importForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('/admin/settings/import', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Configuration importée avec succès');
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erreur lors de l\'import: ' + error.message);
+    });
+});
+
+// Validation du formulaire
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    const maxUploadSize = document.getElementById('max_upload_size').value;
+    
+    if (maxUploadSize > 50) {
+        e.preventDefault();
+        alert('La taille maximum d\'upload ne peut pas dépasser 50 MB');
+        return false;
+    }
+    
+    // Autres validations...
+});
+</script>
+{% endblock %}

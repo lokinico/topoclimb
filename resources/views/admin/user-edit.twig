@@ -1,0 +1,423 @@
+{% extends 'admin/layout.twig' %}
+
+{% block page_title %}Éditer utilisateur - {{ user.prenom }} {{ user.nom }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/admin/users">Utilisateurs</a></li>
+        <li class="breadcrumb-item active">{{ user.prenom }} {{ user.nom }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <a href="/admin/users" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+        Retour
+    </a>
+    <button type="submit" form="userForm" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i>
+        Sauvegarder
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Informations principales -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-circle text-primary"></i>
+                    Informations personnelles
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="userForm" method="POST" action="/admin/users/{{ user.id }}/edit">
+                    {{ csrf_field() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="prenom" name="prenom" 
+                                   value="{{ user.prenom }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nom" name="nom" 
+                                   value="{{ user.nom }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Nom d'utilisateur <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   value="{{ user.username }}" required>
+                            <div class="form-text">Doit être unique sur la plateforme</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mail" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="mail" name="mail" 
+                                   value="{{ user.mail }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="ville" class="form-label">Ville</label>
+                            <input type="text" class="form-control" id="ville" name="ville" 
+                                   value="{{ user.ville }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="autorisation" class="form-label">Rôle <span class="text-danger">*</span></label>
+                            <select class="form-select" id="autorisation" name="autorisation" required>
+                                {% for role_id, role_name in roles %}
+                                    <option value="{{ role_id }}" {{ user.autorisation == role_id ? 'selected' : '' }}>
+                                        {{ role_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h6 class="mb-3">
+                        <i class="bi bi-key text-warning"></i>
+                        Mot de passe
+                    </h6>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Laissez vide pour conserver le mot de passe actuel
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Nouveau mot de passe</label>
+                            <input type="password" class="form-control" id="password" name="password">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password_confirm" class="form-label">Confirmer le mot de passe</label>
+                            <input type="password" class="form-control" id="password_confirm" name="password_confirm">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Activité récente -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity text-success"></i>
+                    Activité récente
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if ascents|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Voie</th>
+                                    <th>Difficulté</th>
+                                    <th>Type</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ascent in ascents %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">{{ ascent.route_name }}</div>
+                                        <small class="text-muted">{{ ascent.topo_item }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ ascent.difficulty }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ ascent.ascent_type }}</span>
+                                    </td>
+                                    <td>
+                                        <small>{{ ascent.ascent_date|format_date('d/m/Y') }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center">
+                        <a href="/admin/users/{{ user.id }}/ascents" class="btn btn-outline-primary btn-sm">
+                            Voir toutes les ascensions
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-trophy display-6 text-muted"></i>
+                        <p class="mt-2">Aucune ascension enregistrée</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar avec infos et actions -->
+    <div class="col-lg-4">
+        <!-- Informations générales -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle text-info"></i>
+                    Informations
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-12 mb-3">
+                        <div class="avatar-placeholder bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px; font-size: 2rem;">
+                            {{ user.prenom|first }}{{ user.nom|first }}
+                        </div>
+                        <div class="mt-2">
+                            <div class="fw-medium">{{ user.prenom }} {{ user.nom }}</div>
+                            <small class="text-muted">@{{ user.username }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">ID:</span>
+                        <span class="fw-medium">#{{ user.id }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Inscription:</span>
+                        <span class="fw-medium">{{ user.date_registered|format_date('d/m/Y') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Statut:</span>
+                        <span>
+                            {% if user.autorisation == '5' %}
+                                <span class="badge bg-danger">Banni</span>
+                            {% elseif user.autorisation == '4' %}
+                                <span class="badge bg-warning">En attente</span>
+                            {% else %}
+                                <span class="badge bg-success">Actif</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Rôle:</span>
+                        <span class="fw-medium">{{ roles[user.autorisation] ?? 'Inconnu' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions rapides -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning text-warning"></i>
+                    Actions rapides
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user.autorisation == '4' %}
+                        <button class="btn btn-success" onclick="validateUser({{ user.id }})">
+                            <i class="bi bi-check-circle"></i>
+                            Valider le compte
+                        </button>
+                    {% endif %}
+                    
+                    {% if user.autorisation != '5' %}
+                        <button class="btn btn-danger" onclick="banUser({{ user.id }})">
+                            <i class="bi bi-person-slash"></i>
+                            Bannir l'utilisateur
+                        </button>
+                    {% else %}
+                        <button class="btn btn-success" onclick="unbanUser({{ user.id }})">
+                            <i class="bi bi-person-check"></i>
+                            Débannir l'utilisateur
+                        </button>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-primary" onclick="sendPasswordReset({{ user.id }})">
+                        <i class="bi bi-key"></i>
+                        Reset mot de passe
+                    </button>
+                    
+                    <a href="/admin/users/{{ user.id }}/login-as" class="btn btn-outline-secondary">
+                        <i class="bi bi-person-circle"></i>
+                        Se connecter en tant que
+                    </a>
+                </div>
+                
+                <hr class="my-3">
+                
+                <div class="d-grid">
+                    <button class="btn btn-outline-danger confirm-action" 
+                            onclick="deleteUser({{ user.id }})"
+                            data-confirm="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible et supprimera toutes ses données (ascensions, commentaires, etc.)">
+                        <i class="bi bi-trash"></i>
+                        Supprimer le compte
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistiques -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up text-success"></i>
+                    Statistiques
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 border-end">
+                        <div class="h4 text-primary mb-1">{{ ascents|length }}</div>
+                        <small class="text-muted">Ascensions<br>récentes</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 text-success mb-1">
+                            {% set total_ascents = 0 %}
+                            {# Cette valeur devrait venir de la base de données #}
+                            --
+                        </div>
+                        <small class="text-muted">Total<br>ascensions</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Validation du formulaire
+document.getElementById('userForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password_confirm').value;
+    
+    if (password && password !== passwordConfirm) {
+        e.preventDefault();
+        alert('Les mots de passe ne correspondent pas');
+        return false;
+    }
+    
+    if (password && password.length < 6) {
+        e.preventDefault();
+        alert('Le mot de passe doit contenir au moins 6 caractères');
+        return false;
+    }
+});
+
+// Actions utilisateur
+function validateUser(userId) {
+    if (!confirm('Valider ce compte utilisateur ?')) {
+        return;
+    }
+    
+    adminAjax(`/admin/users/${userId}/validate`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function banUser(userId) {
+    if (!confirm('Êtes-vous sûr de vouloir bannir cet utilisateur ?')) {
+        return;
+    }
+    
+    adminAjax(`/admin/users/${userId}/toggle-ban`, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'ban' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function unbanUser(userId) {
+    if (!confirm('Débannir cet utilisateur ?')) {
+        return;
+    }
+    
+    adminAjax(`/admin/users/${userId}/toggle-ban`, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'unban' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function sendPasswordReset(userId) {
+    if (!confirm('Envoyer un email de réinitialisation de mot de passe ?')) {
+        return;
+    }
+    
+    adminAjax(`/admin/users/${userId}/reset-password`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Email de réinitialisation envoyé avec succès');
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+function deleteUser(userId) {
+    const confirmText = prompt('Pour confirmer la suppression, tapez "SUPPRIMER" en majuscules:');
+    
+    if (confirmText !== 'SUPPRIMER') {
+        alert('Suppression annulée');
+        return;
+    }
+    
+    adminAjax(`/admin/users/${userId}/delete`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Utilisateur supprimé avec succès');
+            window.location.href = '/admin/users';
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+</script>
+{% endblock %}

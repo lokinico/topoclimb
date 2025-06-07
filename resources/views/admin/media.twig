@@ -1,0 +1,616 @@
+{% extends 'admin/layout.twig' %}
+
+{% block page_title %}Gestion des médias{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+        <li class="breadcrumb-item active">Médias</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button class="btn btn-outline-danger" id="bulkDeleteBtn" style="display: none;">
+        <i class="bi bi-trash"></i>
+        Supprimer sélection
+    </button>
+    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+        <i class="bi bi-cloud-upload"></i>
+        Upload
+    </button>
+    <div class="btn-group">
+        <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-funnel"></i>
+            Vue
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="changeView('grid')">
+                <i class="bi bi-grid-3x3-gap"></i> Grille
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="changeView('list')">
+                <i class="bi bi-list"></i> Liste
+            </a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filtres -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="/admin/media" class="row g-3">
+            <div class="col-md-3">
+                <label for="type" class="form-label">Type de média</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">Tous les types</option>
+                    <option value="image" {{ type == 'image' ? 'selected' : '' }}>Images</option>
+                    <option value="video" {{ type == 'video' ? 'selected' : '' }}>Vidéos</option>
+                    <option value="pdf" {{ type == 'pdf' ? 'selected' : '' }}>Documents PDF</option>
+                    <option value="topo" {{ type == 'topo' ? 'selected' : '' }}>Topos</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="size" class="form-label">Taille</label>
+                <select class="form-select" id="size" name="size">
+                    <option value="">Toutes tailles</option>
+                    <option value="small">< 1 MB</option>
+                    <option value="medium">1-5 MB</option>
+                    <option value="large">> 5 MB</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="uploader" class="form-label">Uploadé par</label>
+                <input type="text" class="form-control" id="uploader" name="uploader" 
+                       placeholder="Nom d'utilisateur...">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-filter"></i>
+                        Filtrer
+                    </button>
+                    <a href="/admin/media" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+        
+        <div class="mt-3 d-flex justify-content-between align-items-center">
+            <div class="small text-muted">
+                <strong>{{ total|number_format }}</strong> média(s) au total
+                {% if type %}
+                    • Filtré par type: <strong>{{ type }}</strong>
+                {% endif %}
+            </div>
+            
+            <div id="selectedCount" class="badge bg-primary" style="display: none;">
+                <span class="count">0</span> sélectionné(s)
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Galerie de médias -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if media|length > 0 %}
+        
+        <!-- Vue grille (par défaut) -->
+        <div id="gridView" class="p-3">
+            <div class="row g-3">
+                {% for item in media %}
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="media-card position-relative">
+                        <div class="card border-0 shadow-sm h-100">
+                            <!-- Checkbox de sélection -->
+                            <div class="position-absolute top-0 start-0 p-2" style="z-index: 10;">
+                                <input type="checkbox" class="form-check-input media-checkbox" value="{{ item.id }}">
+                            </div>
+                            
+                            <!-- Type de média badge -->
+                            <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
+                                <span class="badge bg-{{ item.media_type == 'image' ? 'success' : (item.media_type == 'video' ? 'danger' : 'primary') }}">
+                                    {{ item.media_type|upper }}
+                                </span>
+                            </div>
+                            
+                            <!-- Prévisualisation -->
+                            <div class="media-preview" style="height: 180px; overflow: hidden;">
+                                {% if item.media_type == 'image' %}
+                                    <img src="{{ asset(item.file_path) }}" 
+                                         class="w-100 h-100" 
+                                         style="object-fit: cover;"
+                                         alt="{{ item.title }}"
+                                         loading="lazy">
+                                {% elseif item.media_type == 'video' %}
+                                    <div class="d-flex align-items-center justify-content-center h-100 bg-dark text-white">
+                                        <i class="bi bi-play-circle display-4"></i>
+                                    </div>
+                                {% elseif item.media_type == 'pdf' %}
+                                    <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                                        <i class="bi bi-file-pdf text-danger display-4"></i>
+                                    </div>
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                                        <i class="bi bi-file-earmark display-4 text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Informations -->
+                            <div class="card-body p-2">
+                                <div class="small">
+                                    <div class="fw-medium text-truncate" title="{{ item.title }}">
+                                        {{ item.title ?: item.filename }}
+                                    </div>
+                                    <div class="text-muted">
+                                        {% if item.file_size %}
+                                            {{ (item.file_size / 1024 / 1024)|round(1) }} MB
+                                        {% endif %}
+                                        {% if item.uploader_name %}
+                                            • {{ item.uploader_name }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted">
+                                        {{ item.created_at|format_date('d/m/Y') }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="card-footer p-2 bg-transparent border-0">
+                                <div class="btn-group w-100" size="sm">
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            onclick="viewMedia({{ item.id }})" 
+                                            title="Voir">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" 
+                                            onclick="editMedia({{ item.id }})" 
+                                            title="Éditer">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            onclick="deleteMedia({{ item.id }})" 
+                                            title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Vue liste -->
+        <div id="listView" class="table-responsive" style="display: none;">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        <th style="width: 80px;">Aperçu</th>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Taille</th>
+                        <th>Uploader</th>
+                        <th>Date</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in media %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input media-checkbox" value="{{ item.id }}">
+                        </td>
+                        <td>
+                            <div class="media-thumbnail" style="width: 60px; height: 40px; overflow: hidden;">
+                                {% if item.media_type == 'image' %}
+                                    <img src="{{ asset(item.file_path) }}" 
+                                         class="w-100 h-100" 
+                                         style="object-fit: cover;"
+                                         alt="{{ item.title }}">
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                                        <i class="bi bi-file-earmark text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-medium">{{ item.title ?: item.filename }}</div>
+                            {% if item.description %}
+                                <small class="text-muted">{{ item.description|truncate(50) }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ item.media_type == 'image' ? 'success' : (item.media_type == 'video' ? 'danger' : 'primary') }}">
+                                {{ item.media_type|upper }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.file_size %}
+                                {{ (item.file_size / 1024 / 1024)|round(1) }} MB
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.uploader_name %}
+                                <a href="/admin/users/{{ item.created_by }}/edit" class="text-decoration-none">
+                                    {{ item.uploader_name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">Inconnu</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>{{ item.created_at|format_date('d/m/Y') }}</div>
+                            <small class="text-muted">{{ item.created_at|format_date('H:i') }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="viewMedia({{ item.id }})" title="Voir">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="editMedia({{ item.id }})" title="Éditer">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteMedia({{ item.id }})" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-images display-1 text-muted"></i>
+            </div>
+            <h5 class="text-muted">Aucun média trouvé</h5>
+            <p class="text-muted">Aucun média ne correspond aux critères de recherche.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="bi bi-cloud-upload"></i>
+                Uploader des médias
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav aria-label="Pagination des médias" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}&type={{ type }}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for p in range(max(1, page - 2), min(total_pages, page + 2) + 1) %}
+            <li class="page-item {{ p == page ? 'active' : '' }}">
+                <a class="page-link" href="?page={{ p }}&type={{ type }}">{{ p }}</a>
+            </li>
+        {% endfor %}
+        
+        {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}&type={{ type }}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Modal d'upload -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-cloud-upload"></i>
+                    Uploader des médias
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area border border-dashed border-2 rounded p-5 text-center" 
+                     ondrop="dropHandler(event)" 
+                     ondragover="dragOverHandler(event)"
+                     ondragenter="dragEnterHandler(event)"
+                     ondragleave="dragLeaveHandler(event)">
+                    <i class="bi bi-cloud-upload display-1 text-muted mb-3"></i>
+                    <h5>Glissez et déposez vos fichiers ici</h5>
+                    <p class="text-muted">ou <button type="button" class="btn btn-link p-0" onclick="document.getElementById('fileInput').click()">parcourez vos fichiers</button></p>
+                    <small class="text-muted">
+                        Formats supportés: JPG, PNG, GIF, PDF, MP4<br>
+                        Taille maximum: 10 MB par fichier
+                    </small>
+                    <input type="file" id="fileInput" multiple accept="image/*,video/*,.pdf" style="display: none;" onchange="handleFileSelect(event)">
+                </div>
+                
+                <div id="uploadProgress" class="mt-3" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted mt-1">Upload en cours...</small>
+                </div>
+                
+                <div id="uploadResults" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" id="startUpload" style="display: none;">
+                    <i class="bi bi-upload"></i>
+                    Commencer l'upload
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de visualisation -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewModalTitle">Visualisation du média</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center" id="viewModalBody">
+                <!-- Contenu dynamique -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <a href="#" class="btn btn-primary" id="downloadBtn" target="_blank">
+                    <i class="bi bi-download"></i>
+                    Télécharger
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedFiles = [];
+
+// Gestion des vues
+function changeView(viewType) {
+    if (viewType === 'grid') {
+        document.getElementById('gridView').style.display = 'block';
+        document.getElementById('listView').style.display = 'none';
+    } else {
+        document.getElementById('gridView').style.display = 'none';
+        document.getElementById('listView').style.display = 'block';
+    }
+    localStorage.setItem('adminMediaView', viewType);
+}
+
+// Restaurer la vue préférée
+const savedView = localStorage.getItem('adminMediaView') || 'grid';
+changeView(savedView);
+
+// Gestion des sélections
+document.querySelectorAll('.media-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelection);
+});
+
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    document.querySelectorAll('.media-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+    });
+    updateSelection();
+});
+
+function updateSelection() {
+    const selected = document.querySelectorAll('.media-checkbox:checked');
+    const selectedCount = document.getElementById('selectedCount');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    
+    if (selected.length > 0) {
+        selectedCount.style.display = 'inline-block';
+        selectedCount.querySelector('.count').textContent = selected.length;
+        bulkDeleteBtn.style.display = 'inline-block';
+    } else {
+        selectedCount.style.display = 'none';
+        bulkDeleteBtn.style.display = 'none';
+    }
+}
+
+// Actions sur les médias
+function viewMedia(mediaId) {
+    adminAjax(`/admin/media/${mediaId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const media = data.media;
+                const modal = new bootstrap.Modal(document.getElementById('viewModal'));
+                const title = document.getElementById('viewModalTitle');
+                const body = document.getElementById('viewModalBody');
+                const downloadBtn = document.getElementById('downloadBtn');
+                
+                title.textContent = media.title || media.filename;
+                downloadBtn.href = '{{ asset("") }}' + media.file_path;
+                
+                if (media.media_type === 'image') {
+                    body.innerHTML = `<img src="{{ asset("") }}${media.file_path}" class="img-fluid" alt="${media.title}">`;
+                } else if (media.media_type === 'video') {
+                    body.innerHTML = `<video controls class="w-100"><source src="{{ asset("") }}${media.file_path}" type="video/mp4"></video>`;
+                } else {
+                    body.innerHTML = `<div class="text-center py-5">
+                        <i class="bi bi-file-earmark display-1 text-muted"></i>
+                        <h5 class="mt-3">${media.filename}</h5>
+                        <p class="text-muted">Aperçu non disponible pour ce type de fichier</p>
+                    </div>`;
+                }
+                
+                modal.show();
+            }
+        });
+}
+
+function editMedia(mediaId) {
+    // Rediriger vers la page d'édition ou ouvrir un modal d'édition
+    window.location.href = `/admin/media/${mediaId}/edit`;
+}
+
+function deleteMedia(mediaId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce média ? Cette action est irréversible.')) {
+        return;
+    }
+    
+    adminAjax(`/admin/media/${mediaId}/delete`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+}
+
+// Suppression en masse
+document.getElementById('bulkDeleteBtn')?.addEventListener('click', function() {
+    const selected = Array.from(document.querySelectorAll('.media-checkbox:checked')).map(cb => cb.value);
+    
+    if (!confirm(`Supprimer ${selected.length} média(s) sélectionné(s) ? Cette action est irréversible.`)) {
+        return;
+    }
+    
+    adminAjax('/admin/media/bulk-action', {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'delete',
+            media_ids: selected
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    });
+});
+
+// ===== UPLOAD DE FICHIERS =====
+
+function dragOverHandler(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.add('border-primary', 'bg-light');
+}
+
+function dragEnterHandler(ev) {
+    ev.preventDefault();
+}
+
+function dragLeaveHandler(ev) {
+    ev.currentTarget.classList.remove('border-primary', 'bg-light');
+}
+
+function dropHandler(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.remove('border-primary', 'bg-light');
+    
+    const files = ev.dataTransfer.files;
+    handleFiles(files);
+}
+
+function handleFileSelect(ev) {
+    const files = ev.target.files;
+    handleFiles(files);
+}
+
+function handleFiles(files) {
+    selectedFiles = Array.from(files);
+    
+    if (selectedFiles.length > 0) {
+        document.getElementById('startUpload').style.display = 'inline-block';
+        
+        const resultsDiv = document.getElementById('uploadResults');
+        resultsDiv.innerHTML = `
+            <h6>Fichiers sélectionnés (${selectedFiles.length}):</h6>
+            <ul class="list-group">
+                ${selectedFiles.map(file => `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${file.name}</strong>
+                            <small class="text-muted">(${(file.size / 1024 / 1024).toFixed(2)} MB)</small>
+                        </div>
+                        <span class="badge bg-secondary">${file.type}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+}
+
+document.getElementById('startUpload')?.addEventListener('click', async function() {
+    if (selectedFiles.length === 0) return;
+    
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    progressDiv.style.display = 'block';
+    
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
+        
+        try {
+            const response = await fetch('/admin/media/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            // Mettre à jour la barre de progression
+            const progress = ((i + 1) / selectedFiles.length) * 100;
+            progressBar.style.width = progress + '%';
+            
+        } catch (error) {
+            console.error('Erreur upload:', error);
+        }
+    }
+    
+    // Upload terminé
+    setTimeout(() => {
+        progressDiv.style.display = 'none';
+        alert('Upload terminé avec succès !');
+        location.reload();
+    }, 500);
+});
+</script>
+{% endblock %}
