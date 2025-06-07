@@ -8,6 +8,34 @@
 window.TopoclimbCH = window.TopoclimbCH || {};
 window.TopoclimbCH.components = {};
 
+
+// Protection contre les doubles chargements
+if (window.TopoclimbCommonLoaded) {
+    console.warn('⚠️ common.js already loaded, skipping...');
+    return;
+}
+window.TopoclimbCommonLoaded = true;
+
+// Protection pour ModalManager
+if (typeof window.ModalManager !== 'undefined') {
+    console.warn('⚠️ ModalManager already exists, skipping declaration...');
+} else {
+    // Déclarer ModalManager seulement s'il n'existe pas
+    class ModalManager {
+        // ... votre code existant
+    }
+    window.ModalManager = ModalManager;
+}
+
+// Protection pour les autres classes similaires
+if (typeof window.showToast === 'undefined') {
+    window.showToast = function (message, type = 'info') {
+        console.log(`Toast [${type}]: ${message}`);
+        // Votre implémentation de toast
+    };
+}
+
+console.log('✅ common.js loaded safely');
 /**
  * Gestionnaire de modales modernes
  */

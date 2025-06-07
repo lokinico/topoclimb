@@ -225,17 +225,23 @@
                 <div id="routes-container">
                     {% if routes and routes|length > 0 %}
                         <div class="row" id="routes-list">
-                            {% for route in routes %}
-                                <div class="col-12 route-item" data-style="{{ route.style }}" data-difficulty="{{ route.difficulty }}">
-                                    <div class="route-card card">
-                                        <div class="card-body">
-                                            <div class="row align-items-center">
-                                                <div class="col-md-4">
-                                                    <h5 class="card-title mb-1">
-                                                        <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none">
-                                                            {{ route.name }}
-                                                        </a>
-                                                    </h5>
+                        {% for route in routes %}
+                            <div class="col-12 route-item" 
+                                data-style="{{ route.style|default('') }}" 
+                                data-difficulty="{{ route.difficulty|default('') }}"
+                                data-route-id="{{ route.id }}"
+                                data-length="{{ route.length|default('') }}"
+                                data-beauty="{{ route.beauty|default('0') }}"
+                                data-equipment="{{ route.equipment|default('') }}">
+                                <div class="route-card card">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-4">
+                                                <h5 class="card-title mb-1">
+                                                    <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none">
+                                                        {{ route.name }}
+                                                    </a>
+                                                </h5>
                                                     <div class="d-flex align-items-center">
                                                         <span class="difficulty-badge me-2">{{ route.difficulty }}</span>
                                                         {% if route.beauty > 0 %}
