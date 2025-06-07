@@ -724,7 +724,6 @@ class SectorController extends BaseController
             return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
         }
     }
-
     /**
      * API endpoint pour récupérer les voies d'un secteur
      *
@@ -745,7 +744,7 @@ class SectorController extends BaseController
         try {
             // Vérifier que le secteur existe
             $sector = $this->sectorService->getSectorById((int) $id);
-            if (!sector) {
+            if (!$sector) { // ✅ CORRECTION: Ajout du $
                 return Response::json([
                     'success' => false,
                     'error' => 'Secteur non trouvé'
@@ -755,31 +754,34 @@ class SectorController extends BaseController
             // Récupérer les routes du secteur
             $routes = Route::where(['sector_id' => $id, 'active' => 1]);
 
-            // Enrichir les données des voies
+            // Enrichir les données des voies (version simplifiée)
             $enrichedRoutes = [];
             foreach ($routes as $route) {
                 $enrichedRoutes[] = [
                     'id' => $route['id'],
                     'name' => $route['name'],
-                    'number' => $route['number'],
-                    'difficulty' => $route['difficulty'],
-                    'beauty' => $route['beauty'],
-                    'style' => $route['style'],
-                    'length' => $route['length'],
-                    'equipment' => $route['equipment'],
-                    'comment' => $route['comment'],
-                    'styleFormatted' => $this->formatStyle($route['style']),
-                    'beautyStars' => $this->formatBeauty($route['beauty']),
-                    'equipmentFormatted' => $this->formatEquipment($route['equipment']),
-                    'lengthFormatted' => $route['length'] ? $route['length'] . 'm' : null,
-                    // Ajouter les statistiques d'ascensions si disponibles
-                    'ascents_count' => $this->getRouteAscentsCount($route['id']),
-                    'last_ascent' => $this->getLastAscent($route['id'])
+                    'number' => $route['number'] ?? null,
+                    'difficulty' => $route['difficulty'] ?? null,
+                    'beauty' => $route['beauty'] ?? '0',
+                    'style' => $route['style'] ?? null,
+                    'length' => $route['length'] ?? null,
+                    'equipment' => $route['equipment'] ?? null,
+                    'comment' => $route['comment'] ?? null,
+                    'styleFormatted' => $this->formatStyle($route['style'] ?? null),
+                    'beautyStars' => (int) ($route['beauty'] ?? 0),
+                    'equipmentFormatted' => $this->formatEquipment($route['equipment'] ?? null),
+                    'lengthFormatted' => isset($route['length']) ? $route['length'] . 'm' : null,
+                    'ascents_count' => $this->getRouteAscentsCount((int)$route['id'])
                 ];
             }
 
-            // Calculer les statistiques
-            $stats = $this->calculateSectorStats($routes);
+            // Calculer les statistiques basiques
+            $stats = [
+                'total_routes' => count($routes),
+                'min_difficulty' => $this->getMinDifficulty($routes),
+                'max_difficulty' => $this->getMaxDifficulty($routes),
+                'avg_length' => $this->getAverageLength($routes)
+            ];
 
             return Response::json([
                 'success' => true,
@@ -790,7 +792,8 @@ class SectorController extends BaseController
                 ]
             ]);
         } catch (\Exception $e) {
-            error_log("API getRoutes error: " . $e->getMessage());
+            error_log("API getRoutes error for sector $id: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             return Response::json([
                 'success' => false,
                 'error' => 'Erreur lors du chargement des voies'
@@ -803,6 +806,8 @@ class SectorController extends BaseController
      */
     private function formatStyle(?string $style): string
     {
+        if (!$style) return '';
+
         $styles = [
             'sport' => 'Sportive',
             'trad' => 'Traditionnelle',
@@ -813,20 +818,7 @@ class SectorController extends BaseController
             'other' => 'Autre'
         ];
 
-        return $styles[$style] ?? ucfirst($style ?? '');
-    }
-
-    /**
-     * Formater la beauté en étoiles
-     */
-    private function formatBeauty(?string $beauty): array
-    {
-        $rating = (int) ($beauty ?? 0);
-        return [
-            'rating' => $rating,
-            'stars' => $rating,
-            'max_stars' => 5
-        ];
+        return $styles[$style] ?? ucfirst($style);
     }
 
     /**
@@ -834,6 +826,8 @@ class SectorController extends BaseController
      */
     private function formatEquipment(?string $equipment): string
     {
+        if (!$equipment) return '';
+
         $equipments = [
             'poor' => 'Mauvais',
             'adequate' => 'Engagé',
@@ -841,7 +835,7 @@ class SectorController extends BaseController
             'excellent' => 'Excellent'
         ];
 
-        return $equipments[$equipment] ?? ucfirst($equipment ?? '');
+        return $equipments[$equipment] ?? ucfirst($equipment);
     }
 
     /**
@@ -861,32 +855,31 @@ class SectorController extends BaseController
     }
 
     /**
-     * Récupérer la dernière ascension d'une voie
+     * Obtenir la difficulté minimale
      */
-    private function getLastAscent(int $routeId): ?array
+    private function getMinDifficulty(array $routes): ?string
     {
-        try {
-            $ascent = $this->db->fetchOne(
-                "SELECT ua.*, u.username, u.prenom, u.nom 
-             FROM user_ascents ua 
-             JOIN users u ON ua.user_id = u.id 
-             WHERE ua.route_id = ? 
-             ORDER BY ua.ascent_date DESC 
-             LIMIT 1",
-                [$routeId]
-            );
+        $difficulties = array_filter(array_column($routes, 'difficulty'));
+        return !empty($difficulties) ? min($difficulties) : null;
+    }
 
-            if ($ascent) {
-                return [
-                    'date' => $ascent['ascent_date'],
-                    'type' => $ascent['ascent_type'],
-                    'user' => $ascent['prenom'] . ' ' . $ascent['nom']
-                ];
-            }
+    /**
+     * Obtenir la difficulté maximale  
+     */
+    private function getMaxDifficulty(array $routes): ?string
+    {
+        $difficulties = array_filter(array_column($routes, 'difficulty'));
+        return !empty($difficulties) ? max($difficulties) : null;
+    }
 
-            return null;
-        } catch (\Exception $e) {
-            return null;
-        }
+    /**
+     * Calculer la longueur moyenne
+     */
+    private function getAverageLength(array $routes): ?int
+    {
+        $lengths = array_filter(array_column($routes, 'length'));
+        if (empty($lengths)) return null;
+
+        return (int) round(array_sum($lengths) / count($lengths));
     }
 }
