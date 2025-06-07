@@ -171,7 +171,13 @@ return [
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'delete',
     ],
-
+    // Routes API pour AJAX et intégrations
+    [
+        'method' => 'GET',
+        'path' => '/api/sectors/{id}/routes',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'getRoutes'
+    ],
     // Routes pour les voies
     [
         'method' => 'GET',

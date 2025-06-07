@@ -724,4 +724,169 @@ class SectorController extends BaseController
             return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
         }
     }
+
+    /**
+     * API endpoint pour récupérer les voies d'un secteur
+     *
+     * @param Request $request
+     * @return Response
+     */
+    public function getRoutes(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+
+        if (!$id) {
+            return Response::json([
+                'success' => false,
+                'error' => 'ID du secteur non spécifié'
+            ], 400);
+        }
+
+        try {
+            // Vérifier que le secteur existe
+            $sector = $this->sectorService->getSectorById((int) $id);
+            if (!sector) {
+                return Response::json([
+                    'success' => false,
+                    'error' => 'Secteur non trouvé'
+                ], 404);
+            }
+
+            // Récupérer les routes du secteur
+            $routes = Route::where(['sector_id' => $id, 'active' => 1]);
+
+            // Enrichir les données des voies
+            $enrichedRoutes = [];
+            foreach ($routes as $route) {
+                $enrichedRoutes[] = [
+                    'id' => $route['id'],
+                    'name' => $route['name'],
+                    'number' => $route['number'],
+                    'difficulty' => $route['difficulty'],
+                    'beauty' => $route['beauty'],
+                    'style' => $route['style'],
+                    'length' => $route['length'],
+                    'equipment' => $route['equipment'],
+                    'comment' => $route['comment'],
+                    'styleFormatted' => $this->formatStyle($route['style']),
+                    'beautyStars' => $this->formatBeauty($route['beauty']),
+                    'equipmentFormatted' => $this->formatEquipment($route['equipment']),
+                    'lengthFormatted' => $route['length'] ? $route['length'] . 'm' : null,
+                    // Ajouter les statistiques d'ascensions si disponibles
+                    'ascents_count' => $this->getRouteAscentsCount($route['id']),
+                    'last_ascent' => $this->getLastAscent($route['id'])
+                ];
+            }
+
+            // Calculer les statistiques
+            $stats = $this->calculateSectorStats($routes);
+
+            return Response::json([
+                'success' => true,
+                'data' => [
+                    'routes' => $enrichedRoutes,
+                    'stats' => $stats,
+                    'total_count' => count($routes)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log("API getRoutes error: " . $e->getMessage());
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors du chargement des voies'
+            ], 500);
+        }
+    }
+
+    /**
+     * Formater le style de voie
+     */
+    private function formatStyle(?string $style): string
+    {
+        $styles = [
+            'sport' => 'Sportive',
+            'trad' => 'Traditionnelle',
+            'mix' => 'Mixte',
+            'boulder' => 'Bloc',
+            'aid' => 'Artificielle',
+            'ice' => 'Glace',
+            'other' => 'Autre'
+        ];
+
+        return $styles[$style] ?? ucfirst($style ?? '');
+    }
+
+    /**
+     * Formater la beauté en étoiles
+     */
+    private function formatBeauty(?string $beauty): array
+    {
+        $rating = (int) ($beauty ?? 0);
+        return [
+            'rating' => $rating,
+            'stars' => $rating,
+            'max_stars' => 5
+        ];
+    }
+
+    /**
+     * Formater l'équipement
+     */
+    private function formatEquipment(?string $equipment): string
+    {
+        $equipments = [
+            'poor' => 'Mauvais',
+            'adequate' => 'Engagé',
+            'good' => 'Bien équipé',
+            'excellent' => 'Excellent'
+        ];
+
+        return $equipments[$equipment] ?? ucfirst($equipment ?? '');
+    }
+
+    /**
+     * Compter les ascensions d'une voie
+     */
+    private function getRouteAscentsCount(int $routeId): int
+    {
+        try {
+            $result = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM user_ascents WHERE route_id = ?",
+                [$routeId]
+            );
+            return (int) ($result['count'] ?? 0);
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Récupérer la dernière ascension d'une voie
+     */
+    private function getLastAscent(int $routeId): ?array
+    {
+        try {
+            $ascent = $this->db->fetchOne(
+                "SELECT ua.*, u.username, u.prenom, u.nom 
+             FROM user_ascents ua 
+             JOIN users u ON ua.user_id = u.id 
+             WHERE ua.route_id = ? 
+             ORDER BY ua.ascent_date DESC 
+             LIMIT 1",
+                [$routeId]
+            );
+
+            if ($ascent) {
+                return [
+                    'date' => $ascent['ascent_date'],
+                    'type' => $ascent['ascent_type'],
+                    'user' => $ascent['prenom'] . ' ' . $ascent['nom']
+                ];
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
 }
