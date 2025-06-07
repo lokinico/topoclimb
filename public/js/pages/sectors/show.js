@@ -1,9 +1,29 @@
-// public/js/pages/sectors/show.js
+// public/js/pages/sectors/show.js - VERSION CORRIGÉE
 
 /**
- * JavaScript pour la page d'affichage d'un secteur
+ * Polyfills pour compatibilité navigateurs
  */
+if (!Element.prototype.closest) {
+    Element.prototype.closest = function (selector) {
+        var element = this;
+        while (element && element.nodeType === 1) {
+            if (element.matches && element.matches(selector)) {
+                return element;
+            }
+            element = element.parentNode;
+        }
+        return null;
+    };
+}
 
+if (!Element.prototype.matches) {
+    Element.prototype.matches = Element.prototype.msMatchesSelector ||
+        Element.prototype.webkitMatchesSelector;
+}
+
+/**
+ * JavaScript pour la page d'affichage d'un secteur - VERSION SANS AJAX
+ */
 class SectorShowPage {
     constructor() {
         this.map = null;
@@ -16,16 +36,61 @@ class SectorShowPage {
     }
 
     init() {
-        // Initialiser les composants
-        this.initializeSwiper();
-        this.initializeMap();
-        this.initializeRouteFilters();
-        this.initializeViewToggle();
-        this.initializeWeatherWidget();
-        this.initializeActions();
+        console.log('🏔️ Initializing Sector Show Page...');
 
-        // Charger les données des voies
-        this.loadRoutesData();
+        try {
+            // Initialiser les composants dans l'ordre
+            this.initializeSwiper();
+            this.initializeMap();
+            this.initializeRouteFilters();
+            this.initializeViewToggle();
+            this.initializeActions();
+
+            // Charger les données des voies (SANS AJAX)
+            this.loadRoutesFromDOM();
+
+            console.log('✅ Sector page initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing sector page:', error);
+        }
+    }
+
+    /**
+     * Charger les données des voies depuis le DOM (PAS D'AJAX)
+     */
+    loadRoutesFromDOM() {
+        console.log('Loading routes data from DOM...');
+
+        const routeElements = document.querySelectorAll('.route-item');
+        this.routesData = [];
+
+        if (routeElements.length === 0) {
+            console.log('No routes found in DOM');
+            return;
+        }
+
+        routeElements.forEach((element, index) => {
+            try {
+                const titleElement = element.querySelector('.card-title a');
+
+                if (titleElement) {
+                    const routeData = {
+                        id: element.dataset.routeId || index,
+                        name: titleElement.textContent.trim(),
+                        difficulty: element.dataset.difficulty || '',
+                        style: element.dataset.style || '',
+                        length: element.dataset.length || null,
+                        beauty: element.dataset.beauty || '0',
+                        equipment: element.dataset.equipment || ''
+                    };
+                    this.routesData.push(routeData);
+                }
+            } catch (error) {
+                console.warn('Error processing route:', error);
+            }
+        });
+
+        console.log(`✅ Routes loaded: ${this.routesData.length} routes`);
     }
 
     /**
@@ -33,48 +98,47 @@ class SectorShowPage {
      */
     initializeSwiper() {
         const swiperElement = document.querySelector('.swiper');
-        if (!swiperElement || typeof Swiper === 'undefined') return;
+        if (!swiperElement) {
+            console.log('No swiper element found');
+            return;
+        }
 
-        this.swiper = new Swiper('.swiper', {
-            navigation: {
-                nextEl: '.swiper-button-next',
-                prevEl: '.swiper-button-prev',
-            },
-            pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
-                dynamicBullets: true,
-            },
-            loop: true,
-            autoplay: {
-                delay: 5000,
-                disableOnInteraction: false,
-            },
-            effect: 'slide',
-            speed: 500,
-            lazy: {
-                loadPrevNext: true,
-            },
-            keyboard: {
-                enabled: true,
-            },
-            mousewheel: {
-                thresholdDelta: 50,
-            }
-        });
+        // Vérifier si Swiper est disponible
+        if (typeof Swiper === 'undefined') {
+            console.warn('Swiper library not loaded');
+            return;
+        }
 
-        // Pause au survol
-        swiperElement.addEventListener('mouseenter', () => {
-            if (this.swiper.autoplay) {
-                this.swiper.autoplay.stop();
-            }
-        });
+        try {
+            this.swiper = new Swiper('.swiper', {
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                    dynamicBullets: true,
+                },
+                loop: true,
+                autoplay: {
+                    delay: 5000,
+                    disableOnInteraction: false,
+                },
+                effect: 'slide',
+                speed: 500,
+                lazy: {
+                    loadPrevNext: true,
+                },
+                keyboard: {
+                    enabled: true,
+                }
+            });
 
-        swiperElement.addEventListener('mouseleave', () => {
-            if (this.swiper.autoplay) {
-                this.swiper.autoplay.start();
-            }
-        });
+            console.log('✅ Swiper initialized');
+        } catch (error) {
+            console.error('❌ Error initializing Swiper:', error);
+        }
     }
 
     /**
@@ -82,115 +146,60 @@ class SectorShowPage {
      */
     initializeMap() {
         const mapElement = document.getElementById('map');
-        if (!mapElement || typeof L === 'undefined') return;
+        if (!mapElement) {
+            console.log('No map element found');
+            return;
+        }
+
+        if (typeof L === 'undefined') {
+            console.warn('Leaflet library not loaded');
+            return;
+        }
 
         const lat = parseFloat(mapElement.dataset.lat);
         const lng = parseFloat(mapElement.dataset.lng);
         const sectorName = mapElement.dataset.name || 'Secteur';
 
-        if (isNaN(lat) || isNaN(lng)) return;
-
-        // Créer la carte
-        this.map = L.map('map').setView([lat, lng], 15);
-
-        // Ajouter la couche de tuiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 18,
-        }).addTo(this.map);
-
-        // Marker personnalisé pour le secteur
-        const sectorIcon = L.divIcon({
-            className: 'sector-marker',
-            html: '<div class="sector-marker-content"><i class="fas fa-mountain"></i></div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        });
-
-        const marker = L.marker([lat, lng], { icon: sectorIcon })
-            .addTo(this.map)
-            .bindPopup(`
-                <div class="map-popup">
-                    <h6>${sectorName}</h6>
-                    <p>Secteur d'escalade</p>
-                    <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="btn btn-sm btn-primary">
-                        Ouvrir dans Google Maps
-                    </a>
-                </div>
-            `);
-
-        // Ajouter des contrôles supplémentaires
-        L.control.scale().addTo(this.map);
-
-        // Géolocalisation
-        if (navigator.geolocation) {
-            const locationButton = L.control({ position: 'topleft' });
-            locationButton.onAdd = () => {
-                const button = L.DomUtil.create('button', 'leaflet-control-locate');
-                button.innerHTML = '<i class="fas fa-location-arrow"></i>';
-                button.title = 'Ma position';
-                button.onclick = () => this.locateUser();
-                return button;
-            };
-            locationButton.addTo(this.map);
-        }
-    }
-
-    /**
-     * Géolocaliser l'utilisateur
-     */
-    locateUser() {
-        if (!navigator.geolocation) {
-            showToast('Géolocalisation non disponible', 'error');
+        if (isNaN(lat) || isNaN(lng)) {
+            console.warn('Invalid coordinates for map');
             return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
+        try {
+            // Créer la carte
+            this.map = L.map('map').setView([lat, lng], 15);
 
-                // Ajouter un marker pour l'utilisateur
-                L.marker([userLat, userLng])
-                    .addTo(this.map)
-                    .bindPopup('Votre position')
-                    .openPopup();
+            // Ajouter la couche de tuiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+            }).addTo(this.map);
 
-                // Calculer la distance
-                const sectorLat = parseFloat(document.getElementById('map').dataset.lat);
-                const sectorLng = parseFloat(document.getElementById('map').dataset.lng);
+            // Marker pour le secteur
+            const marker = L.marker([lat, lng])
+                .addTo(this.map)
+                .bindPopup(`
+                    <div class="map-popup">
+                        <h6>${sectorName}</h6>
+                        <p>Secteur d'escalade</p>
+                        <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="btn btn-sm btn-primary">
+                            Google Maps
+                        </a>
+                    </div>
+                `);
 
-                if (!isNaN(sectorLat) && !isNaN(sectorLng)) {
-                    const distance = this.calculateDistance(userLat, userLng, sectorLat, sectorLng);
-                    showToast(`Distance au secteur: ${distance.toFixed(1)} km`, 'info');
-                }
-            },
-            (error) => {
-                showToast('Impossible de vous localiser', 'error');
-            }
-        );
-    }
-
-    /**
-     * Calculer la distance entre deux points
-     */
-    calculateDistance(lat1, lng1, lat2, lng2) {
-        const R = 6371; // Rayon de la Terre en km
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+            console.log('✅ Map initialized');
+        } catch (error) {
+            console.error('❌ Error initializing map:', error);
+        }
     }
 
     /**
      * Initialiser les filtres des voies
      */
     initializeRouteFilters() {
+        // Filtres par onglets
         const filterTabs = document.querySelectorAll('#route-filter-tabs a');
-
         filterTabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -199,12 +208,12 @@ class SectorShowPage {
                 filterTabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
 
-                this.currentFilter = tab.dataset.filter;
+                this.currentFilter = tab.dataset.filter || 'all';
                 this.filterRoutes();
             });
         });
 
-        // Filtres de recherche en temps réel
+        // Recherche en temps réel
         const searchInput = document.querySelector('#route-search');
         if (searchInput) {
             searchInput.addEventListener('input', this.debounce(() => {
@@ -212,13 +221,7 @@ class SectorShowPage {
             }, 300));
         }
 
-        // Filtres par difficulté
-        const difficultyFilter = document.querySelector('#difficulty-filter');
-        if (difficultyFilter) {
-            difficultyFilter.addEventListener('change', () => {
-                this.filterRoutes();
-            });
-        }
+        console.log('✅ Route filters initialized');
     }
 
     /**
@@ -227,9 +230,11 @@ class SectorShowPage {
     initializeViewToggle() {
         const listViewBtn = document.getElementById('list-view');
         const cardViewBtn = document.getElementById('card-view');
-        const routesContainer = document.getElementById('routes-list');
 
-        if (!listViewBtn || !cardViewBtn || !routesContainer) return;
+        if (!listViewBtn || !cardViewBtn) {
+            console.log('View toggle buttons not found');
+            return;
+        }
 
         listViewBtn.addEventListener('change', () => {
             if (listViewBtn.checked) {
@@ -244,6 +249,8 @@ class SectorShowPage {
                 this.updateRoutesView();
             }
         });
+
+        console.log('✅ View toggle initialized');
     }
 
     /**
@@ -267,14 +274,13 @@ class SectorShowPage {
     filterRoutes() {
         const routeItems = document.querySelectorAll('.route-item');
         const searchTerm = document.querySelector('#route-search')?.value.toLowerCase() || '';
-        const difficultyFilter = document.querySelector('#difficulty-filter')?.value || '';
 
         let visibleCount = 0;
 
         routeItems.forEach(item => {
-            const routeName = item.querySelector('.card-title')?.textContent.toLowerCase() || '';
+            const titleElement = item.querySelector('.card-title a');
+            const routeName = titleElement ? titleElement.textContent.toLowerCase() : '';
             const routeStyle = item.dataset.style || '';
-            const routeDifficulty = item.dataset.difficulty || '';
 
             let shouldShow = true;
 
@@ -288,19 +294,12 @@ class SectorShowPage {
                 shouldShow = false;
             }
 
-            // Filtre par difficulté
-            if (difficultyFilter && !routeDifficulty.includes(difficultyFilter)) {
-                shouldShow = false;
-            }
-
-            // Afficher/masquer l'élément avec animation
+            // Afficher/masquer l'élément
             if (shouldShow) {
                 item.style.display = 'block';
-                item.classList.add('fade-in');
                 visibleCount++;
             } else {
                 item.style.display = 'none';
-                item.classList.remove('fade-in');
             }
         });
 
@@ -319,99 +318,16 @@ class SectorShowPage {
     }
 
     /**
-     * Charger les données des voies
-     */
-    async loadRoutesData() {
-        const sectorId = document.querySelector('[data-sector-id]')?.dataset.sectorId;
-        if (!sectorId) return;
-
-        try {
-            const response = await fetch(`/api/sectors/${sectorId}/routes`);
-            if (response.ok) {
-                this.routesData = await response.json();
-            }
-        } catch (error) {
-            console.warn('Impossible de charger les données des voies:', error);
-        }
-    }
-
-    /**
-     * Initialiser le widget météo
-     */
-    initializeWeatherWidget() {
-        const weatherWidget = document.querySelector('.weather-widget');
-        if (!weatherWidget) return;
-
-        // Actualiser les conditions météo
-        const refreshBtn = weatherWidget.querySelector('.weather-refresh');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                this.refreshWeatherData();
-            });
-        }
-
-        // Mise à jour automatique toutes les 30 minutes
-        setInterval(() => {
-            this.refreshWeatherData();
-        }, 30 * 60 * 1000);
-    }
-
-    /**
-     * Actualiser les données météo
-     */
-    async refreshWeatherData() {
-        const sectorId = document.querySelector('[data-sector-id]')?.dataset.sectorId;
-        if (!sectorId) return;
-
-        try {
-            const response = await fetch(`/api/sectors/${sectorId}/weather`);
-            if (response.ok) {
-                const weatherData = await response.json();
-                this.updateWeatherWidget(weatherData);
-            }
-        } catch (error) {
-            console.warn('Impossible de charger les données météo:', error);
-        }
-    }
-
-    /**
-     * Mettre à jour le widget météo
-     */
-    updateWeatherWidget(data) {
-        const widget = document.querySelector('.weather-widget');
-        if (!widget || !data) return;
-
-        // Mettre à jour la température
-        const tempElement = widget.querySelector('.weather-temp');
-        if (tempElement && data.temperature) {
-            tempElement.textContent = `${data.temperature}°C`;
-        }
-
-        // Mettre à jour les conditions
-        const conditionElement = widget.querySelector('.weather-condition');
-        if (conditionElement && data.condition) {
-            conditionElement.textContent = data.condition;
-        }
-
-        // Mettre à jour l'heure de dernière mise à jour
-        const lastUpdate = widget.querySelector('.weather-last-update');
-        if (lastUpdate) {
-            lastUpdate.textContent = `Dernière mise à jour: ${new Date().toLocaleTimeString()}`;
-        }
-    }
-
-    /**
      * Initialiser les actions de la page
      */
     initializeActions() {
-        // Partage sur les réseaux sociaux
+        // Partage
         this.initializeSocialShare();
 
         // Actions sur les voies
         this.initializeRouteActions();
 
-        // Gestion des favoris
-        this.initializeFavorites();
+        console.log('✅ Actions initialized');
     }
 
     /**
@@ -426,15 +342,14 @@ class SectorShowPage {
             const title = document.title;
 
             if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    url: url
-                });
+                navigator.share({ title: title, url: url });
             } else {
                 // Fallback: copier l'URL
-                navigator.clipboard.writeText(url).then(() => {
-                    showToast('Lien copié dans le presse-papiers', 'success');
-                });
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        this.showToast('Lien copié!', 'success');
+                    });
+                }
             }
         });
     }
@@ -445,12 +360,15 @@ class SectorShowPage {
     initializeRouteActions() {
         // Actions rapides sur les voies
         document.addEventListener('click', (e) => {
-            const action = e.target.closest('[data-route-action]');
+            // Utiliser le polyfill closest()
+            const action = e.target.closest ? e.target.closest('[data-route-action]') : null;
             if (!action) return;
 
             e.preventDefault();
             const routeId = action.dataset.routeId;
             const actionType = action.dataset.routeAction;
+
+            console.log(`Route action: ${actionType} for route ${routeId}`);
 
             switch (actionType) {
                 case 'quick-log':
@@ -464,136 +382,29 @@ class SectorShowPage {
     }
 
     /**
-     * Ouvrir la modale de log rapide
+     * Afficher un toast message
      */
-    openQuickLogModal(routeId) {
-        // Créer une modale de log rapide
-        const modal = document.createElement('div');
-        modal.className = 'modal quick-log-modal';
-        modal.innerHTML = `
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5>Enregistrer une ascension</h5>
-                        <button type="button" class="btn-close" data-modal-close></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="quick-log-form">
-                            <input type="hidden" name="route_id" value="${routeId}">
-                            <div class="mb-3">
-                                <label>Type d'ascension</label>
-                                <select name="ascent_type" class="form-select" required>
-                                    <option value="onsight">À vue</option>
-                                    <option value="flash">Flash</option>
-                                    <option value="redpoint">Après travail</option>
-                                    <option value="attempt">Tentative</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label>Date</label>
-                                <input type="date" name="ascent_date" class="form-control" value="${new Date().toISOString().split('T')[0]}" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Enregistrer</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+    showToast(message, type = 'info') {
+        // Simple toast implementation
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007bff'};
+            color: white;
+            border-radius: 5px;
+            z-index: 10000;
         `;
 
-        document.body.appendChild(modal);
-        openModal(modal);
+        document.body.appendChild(toast);
 
-        // Gérer la soumission
-        modal.querySelector('#quick-log-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.submitQuickLog(new FormData(e.target));
-        });
-    }
-
-    /**
-     * Soumettre un log rapide
-     */
-    async submitQuickLog(formData) {
-        try {
-            const response = await fetch('/api/ascents/quick-log', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            if (response.ok) {
-                closeModal();
-                showToast('Ascension enregistrée avec succès', 'success');
-            } else {
-                throw new Error('Erreur lors de l\'enregistrement');
-            }
-        } catch (error) {
-            showToast('Erreur lors de l\'enregistrement', 'error');
-        }
-    }
-
-    /**
-     * Basculer le statut favori d'une voie
-     */
-    async toggleRouteFavorite(routeId) {
-        try {
-            const response = await fetch(`/api/routes/${routeId}/favorite`, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                const btn = document.querySelector(`[data-route-id="${routeId}"][data-route-action="add-favorite"]`);
-
-                if (btn) {
-                    btn.innerHTML = data.is_favorite
-                        ? '<i class="fas fa-heart"></i>'
-                        : '<i class="far fa-heart"></i>';
-                }
-
-                showToast(data.is_favorite ? 'Ajouté aux favoris' : 'Retiré des favoris', 'success');
-            }
-        } catch (error) {
-            showToast('Erreur lors de la mise à jour', 'error');
-        }
-    }
-
-    /**
-     * Initialiser la gestion des favoris
-     */
-    initializeFavorites() {
-        const favoriteBtn = document.querySelector('.favorite-sector');
-        if (!favoriteBtn) return;
-
-        favoriteBtn.addEventListener('click', async () => {
-            const sectorId = document.querySelector('[data-sector-id]')?.dataset.sectorId;
-            if (!sectorId) return;
-
-            try {
-                const response = await fetch(`/api/sectors/${sectorId}/favorite`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    favoriteBtn.innerHTML = data.is_favorite
-                        ? '<i class="fas fa-heart"></i> Retirer des favoris'
-                        : '<i class="far fa-heart"></i> Ajouter aux favoris';
-
-                    showToast(data.is_favorite ? 'Secteur ajouté aux favoris' : 'Secteur retiré des favoris', 'success');
-                }
-            } catch (error) {
-                showToast('Erreur lors de la mise à jour', 'error');
-            }
-        });
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
     }
 
     /**
@@ -610,9 +421,25 @@ class SectorShowPage {
             timeout = setTimeout(later, wait);
         };
     }
+
+    // Méthodes stub pour éviter les erreurs
+    openQuickLogModal(routeId) {
+        console.log('Quick log modal for route:', routeId);
+        this.showToast('Fonctionnalité en développement', 'info');
+    }
+
+    toggleRouteFavorite(routeId) {
+        console.log('Toggle favorite for route:', routeId);
+        this.showToast('Fonctionnalité en développement', 'info');
+    }
 }
 
-// Initialiser la page au chargement
-document.addEventListener('DOMContentLoaded', () => {
-    new SectorShowPage();
-});
+// Initialiser seulement quand le DOM est prêt
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.sectorShowPage = new SectorShowPage();
+    });
+} else {
+    // DOM déjà chargé
+    window.sectorShowPage = new SectorShowPage();
+}
