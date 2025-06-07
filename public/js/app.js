@@ -1035,3 +1035,11 @@ function addDynamicStyles() {
 window.TopoclimbCH = TopoclimbCH;
 window.validateFieldModern = validateFieldModern;
 window.showModernConfirm = showModernConfirm;
+
+// Masquer le loader global quand la page est chargée
+document.addEventListener('DOMContentLoaded', function () {
+  const loader = document.getElementById('loadingOverlay');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+});
