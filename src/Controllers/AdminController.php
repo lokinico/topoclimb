@@ -5,7 +5,7 @@ namespace TopoclimbCH\Controllers;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Response;
-use TopoclimbCH\Core\Request;
+use Symfony\Component\HttpFoundation\Request; // ← CORRECTION : utiliser Symfony Request
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Security\CsrfManager;
@@ -13,13 +13,12 @@ use TopoclimbCH\Core\Security\CsrfManager;
 class AdminController extends BaseController
 {
     private Database $db;
-    // Supprimer la redéclaration de $auth - elle est déjà dans BaseController
 
     public function __construct(View $view, Session $session, CsrfManager $csrfManager, Database $db, Auth $auth)
     {
         parent::__construct($view, $session, $csrfManager);
         $this->db = $db;
-        $this->auth = $auth; // Assigner à la propriété héritée
+        $this->auth = $auth;
     }
 
     /**
@@ -44,9 +43,9 @@ class AdminController extends BaseController
      */
     public function users(Request $request): Response
     {
-        $page = (int)$request->getQuery('page', 1);
-        $search = $request->getQuery('search', '');
-        $role = $request->getQuery('role', '');
+        $page = (int)$request->query->get('page', 1);
+        $search = $request->query->get('search', '');
+        $role = $request->query->get('role', '');
         $perPage = 20;
 
         // Construction de la requête
@@ -92,8 +91,10 @@ class AdminController extends BaseController
     /**
      * Détail/Édition d'un utilisateur
      */
-    public function userEdit(Request $request, int $id): Response
+    public function userEdit(Request $request): Response
     {
+        $id = (int)$request->attributes->get('id');
+
         $user = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$id]);
 
         if (!$user) {
@@ -101,7 +102,7 @@ class AdminController extends BaseController
             return Response::redirect('/admin/users');
         }
 
-        if ($request->isPost()) {
+        if ($request->isMethod('POST')) {
             return $this->userUpdate($request, $id);
         }
 
@@ -125,12 +126,12 @@ class AdminController extends BaseController
     private function userUpdate(Request $request, int $id): Response
     {
         $data = [
-            'nom' => $request->getPost('nom'),
-            'prenom' => $request->getPost('prenom'),
-            'ville' => $request->getPost('ville'),
-            'mail' => $request->getPost('mail'),
-            'username' => $request->getPost('username'),
-            'autorisation' => $request->getPost('autorisation')
+            'nom' => $request->request->get('nom'),
+            'prenom' => $request->request->get('prenom'),
+            'ville' => $request->request->get('ville'),
+            'mail' => $request->request->get('mail'),
+            'username' => $request->request->get('username'),
+            'autorisation' => $request->request->get('autorisation')
         ];
 
         // Validation
@@ -151,7 +152,7 @@ class AdminController extends BaseController
         }
 
         // Nouveau mot de passe si fourni
-        $newPassword = $request->getPost('password');
+        $newPassword = $request->request->get('password');
         if ($newPassword) {
             $data['password'] = password_hash($newPassword, PASSWORD_BCRYPT);
         }
@@ -169,8 +170,10 @@ class AdminController extends BaseController
     /**
      * Bannir/Débannir un utilisateur
      */
-    public function userToggleBan(Request $request, int $id): Response
+    public function userToggleBan(Request $request): Response
     {
+        $id = (int)$request->attributes->get('id');
+
         $user = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$id]);
 
         if (!$user) {
@@ -199,8 +202,8 @@ class AdminController extends BaseController
      */
     public function content(Request $request): Response
     {
-        $type = $request->getQuery('type', 'all');
-        $search = $request->getQuery('search', '');
+        $type = $request->query->get('type', 'all');
+        $search = $request->query->get('search', '');
 
         $content = [];
 
@@ -229,8 +232,8 @@ class AdminController extends BaseController
      */
     public function media(Request $request): Response
     {
-        $page = (int)$request->getQuery('page', 1);
-        $type = $request->getQuery('type', '');
+        $page = (int)$request->query->get('page', 1);
+        $type = $request->query->get('type', '');
         $perPage = 24;
 
         $where = [];
@@ -272,8 +275,10 @@ class AdminController extends BaseController
     /**
      * Supprimer un média
      */
-    public function mediaDelete(Request $request, int $id): Response
+    public function mediaDelete(Request $request): Response
     {
+        $id = (int)$request->attributes->get('id');
+
         $media = $this->db->fetchOne("SELECT * FROM climbing_media WHERE id = ?", [$id]);
 
         if (!$media) {
@@ -302,7 +307,7 @@ class AdminController extends BaseController
      */
     public function settings(Request $request): Response
     {
-        if ($request->isPost()) {
+        if ($request->isMethod('POST')) {
             return $this->updateSettings($request);
         }
 
@@ -319,8 +324,8 @@ class AdminController extends BaseController
      */
     public function logs(Request $request): Response
     {
-        $page = (int)$request->getQuery('page', 1);
-        $level = $request->getQuery('level', '');
+        $page = (int)$request->query->get('page', 1);
+        $level = $request->query->get('level', '');
         $perPage = 50;
 
         // Lire les logs (adapter selon votre système de logs)
@@ -341,7 +346,7 @@ class AdminController extends BaseController
      */
     public function reports(Request $request): Response
     {
-        $period = $request->getQuery('period', '30'); // 7, 30, 90 jours
+        $period = $request->query->get('period', '30'); // 7, 30, 90 jours
 
         $reports = [
             'users' => $this->getUsersReport($period),
