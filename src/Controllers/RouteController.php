@@ -46,23 +46,23 @@ class RouteController extends BaseController
     private Database $db;
 
     /**
-     * Constructor - MÊME ORDRE QUE SectorController
+     * Constructor - EXACTEMENT le même ordre que SectorController
      */
     public function __construct(
         View $view,
         Session $session,
-        RouteService $routeService,
+        SectorService $sectorService,
         MediaService $mediaService,
         Database $db,
         CsrfManager $csrfManager
     ) {
         parent::__construct($view, $session, $csrfManager);
-        $this->routeService = $routeService;
+        $this->sectorService = $sectorService;
         $this->mediaService = $mediaService;
         $this->db = $db;
 
-        // Initialiser les autres services via les méthodes statiques ou le container
-        $this->sectorService = new SectorService($db);
+        // Initialiser les autres services manuellement
+        $this->routeService = new RouteService($db);
         $this->authService = new AuthService($session, $db);
     }
 
