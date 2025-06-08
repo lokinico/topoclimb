@@ -518,6 +518,8 @@ class RegionController extends BaseController
             return Response::redirect('/regions/create');
         }
     }
+    // À ajouter dans src/Controllers/RegionController.php
+    // Ajoute cette méthode après la méthode apiIndex()
 
     /**
      * API: Récupère les secteurs d'une région
@@ -547,7 +549,7 @@ class RegionController extends BaseController
                 ], 404);
             }
 
-            // Récupérer les secteurs via SectorService (qui existe déjà)
+            // Récupérer les secteurs
             $sectors = $this->db->fetchAll(
                 "SELECT s.id, s.name, s.altitude, s.access_time, s.coordinates_lat, s.coordinates_lng,
                     COUNT(r.id) as routes_count
@@ -564,7 +566,6 @@ class RegionController extends BaseController
                 return [
                     'id' => (int) $sector['id'],
                     'name' => $sector['name'],
-                    'region_id' => (int) $sector['region_id'] ?? null,
                     'routes_count' => (int) ($sector['routes_count'] ?? 0),
                     'altitude' => $sector['altitude'] ? (int) $sector['altitude'] : null,
                     'access_time' => $sector['access_time'] ? (int) $sector['access_time'] : null,
