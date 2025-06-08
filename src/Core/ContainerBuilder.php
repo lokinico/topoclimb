@@ -230,12 +230,13 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\AuthService',
                 Database::class
             ],
+            // CORRECTION: AdminController avec le bon ordre correspondant au constructeur
             'TopoclimbCH\\Controllers\\AdminController' => [
-                View::class,
-                Session::class,
-                Auth::class,
-                Database::class,
-                CsrfManager::class
+                View::class,           // Position 1: View $view
+                Session::class,        // Position 2: Session $session  
+                CsrfManager::class,    // Position 3: CsrfManager $csrfManager
+                Database::class,       // Position 4: Database $db
+                Auth::class            // Position 5: Auth $auth
             ]
         ];
 
@@ -269,6 +270,10 @@ class ContainerBuilder
                 Database::class
             ],
             'TopoclimbCH\\Middleware\\ModeratorMiddleware' => [
+                Session::class,
+                Database::class
+            ],
+            'TopoclimbCH\\Middleware\\PermissionMiddleware' => [
                 Session::class,
                 Database::class
             ],

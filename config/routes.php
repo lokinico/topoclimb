@@ -3,7 +3,6 @@
 /**
  * Configuration des routes de l'application avec sécurisation par rôles
  */
-$adminMiddlewares = ['auth', 'admin'];
 
 return [
     // Routes publiques (accessibles à tous)
@@ -98,7 +97,7 @@ return [
         'action' => 'ascents',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-ascents']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -110,7 +109,7 @@ return [
         'action' => 'favorites',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-favorites']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -176,7 +175,7 @@ return [
         'action' => 'index',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -188,7 +187,7 @@ return [
         'action' => 'show',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -200,7 +199,7 @@ return [
         'action' => 'create',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -211,7 +210,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -223,7 +222,7 @@ return [
         'action' => 'edit',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -234,7 +233,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -247,7 +246,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['delete-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -263,7 +262,7 @@ return [
         'action' => 'index',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -275,7 +274,7 @@ return [
         'action' => 'show',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -287,7 +286,7 @@ return [
         'action' => 'create',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -303,7 +302,7 @@ return [
         'action' => 'index',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -315,7 +314,7 @@ return [
         'action' => 'show',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -327,7 +326,7 @@ return [
         'action' => 'create',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -338,7 +337,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -350,7 +349,7 @@ return [
         'action' => 'edit',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -361,7 +360,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -373,7 +372,7 @@ return [
         'action' => 'delete',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['delete-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -384,7 +383,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['delete-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -400,7 +399,7 @@ return [
         'action' => 'index',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -412,7 +411,7 @@ return [
         'action' => 'show',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -424,7 +423,7 @@ return [
         'action' => 'create',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -435,7 +434,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -447,7 +446,7 @@ return [
         'action' => 'edit',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -458,7 +457,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -470,7 +469,7 @@ return [
         'action' => 'delete',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['delete-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -481,7 +480,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['delete-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -493,7 +492,7 @@ return [
         'action' => 'logAscent',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-ascent']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -504,15 +503,13 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-ascent']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
     // ========================================
     // ROUTES ASCENSIONS (CRUD complet)
     // ========================================
-
-    // Liste ascensions (déjà définie plus haut)
 
     // Création ascension
     [
@@ -522,7 +519,7 @@ return [
         'action' => 'create',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-ascent']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -533,7 +530,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['create-ascent']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -545,7 +542,7 @@ return [
         'action' => 'edit',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-ascent']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -556,7 +553,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-ascent']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -568,7 +565,7 @@ return [
         'action' => 'export',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-ascents']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -584,7 +581,7 @@ return [
         'action' => 'getRoutes',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -596,7 +593,7 @@ return [
         'action' => 'apiIndex',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -606,7 +603,7 @@ return [
         'action' => 'search',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -618,7 +615,7 @@ return [
         'action' => 'weather',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -630,7 +627,7 @@ return [
         'action' => 'toggleFavorite',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-ascents']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
     [
@@ -640,7 +637,7 @@ return [
         'action' => 'deleteAscent',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-ascent']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -653,7 +650,7 @@ return [
         'method' => 'GET',
         'path' => '/admin',
         'controller' => \TopoclimbCH\Controllers\AdminController::class,
-        'action' => 'dashboard',
+        'action' => 'index',
         'middlewares' => [\TopoclimbCH\Middleware\AdminMiddleware::class]
     ],
 
@@ -665,34 +662,110 @@ return [
         'action' => 'users',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-users']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
-    // Validation utilisateur - Accès : 0,1
+    // Édition d'un utilisateur (GET)
+    [
+        'method' => 'GET',
+        'path' => '/admin/users/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'userEdit',
+        'middlewares' => [\TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+
+    // Mise à jour d'un utilisateur (POST)
     [
         'method' => 'POST',
-        'path' => '/admin/users/{id}/validate',
+        'path' => '/admin/users/{id}/edit',
         'controller' => \TopoclimbCH\Controllers\AdminController::class,
-        'action' => 'validateUser',
+        'action' => 'userEdit',
         'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['validate-users']
+            \TopoclimbCH\Middleware\AdminMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
         ]
     ],
 
-    // Bannir utilisateur - Accès : 0,1
+    // Toggle ban/unban utilisateur
     [
         'method' => 'POST',
-        'path' => '/admin/users/{id}/ban',
+        'path' => '/admin/users/{id}/toggle-ban',
         'controller' => \TopoclimbCH\Controllers\AdminController::class,
-        'action' => 'banUser',
+        'action' => 'userToggleBan',
         'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['ban-users']
+            \TopoclimbCH\Middleware\AdminMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
         ]
+    ],
+
+    // Gestion du contenu (régions, secteurs, voies)
+    [
+        'method' => 'GET',
+        'path' => '/admin/content',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'content',
+        'middlewares' => [\TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+
+    // Gestion des médias
+    [
+        'method' => 'GET',
+        'path' => '/admin/media',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'media',
+        'middlewares' => [\TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+
+    // Supprimer un média
+    [
+        'method' => 'DELETE',
+        'path' => '/admin/media/{id}/delete',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'mediaDelete',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AdminMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+
+    // Page des rapports
+    [
+        'method' => 'GET',
+        'path' => '/admin/reports',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'reports',
+        'middlewares' => [\TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+
+    // Page de configuration
+    [
+        'method' => 'GET',
+        'path' => '/admin/settings',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'settings',
+        'middlewares' => [\TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+
+    // Mise à jour configuration
+    [
+        'method' => 'POST',
+        'path' => '/admin/settings',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'settings',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AdminMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+
+    // Page des logs
+    [
+        'method' => 'GET',
+        'path' => '/admin/logs',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'logs',
+        'middlewares' => [\TopoclimbCH\Middleware\AdminMiddleware::class]
     ],
 
     // ========================================
@@ -708,7 +781,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -721,7 +794,7 @@ return [
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['edit-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -737,7 +810,7 @@ return [
         'action' => 'export',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['view-content']
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
 
@@ -770,15 +843,6 @@ return [
         'action' => 'terms'
     ],
 
-    // Newsletter
-    [
-        'method' => 'POST',
-        'path' => '/newsletter',
-        'controller' => \TopoclimbCH\Controllers\NewsletterController::class,
-        'action' => 'subscribe',
-        'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
-    ],
-
     // ========================================
     // ROUTES ERREURS
     // ========================================
@@ -794,306 +858,5 @@ return [
         'path' => '/403',
         'controller' => \TopoclimbCH\Controllers\ErrorController::class,
         'action' => 'forbidden'
-    ],
-
-    // ========================================
-    // ROUTES DEBUG (Développement seulement)
-    // ========================================
-
-    [
-        'method' => 'GET',
-        'path' => '/debug/weather-test',
-        'controller' => \TopoclimbCH\Controllers\DebugController::class,
-        'action' => 'weatherTest'
-    ],
-
-
-
-    // ===== ADMINISTRATION =====
-
-    // Dashboard admin
-    [
-        'method' => 'GET',
-        'path' => '/admin',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'index',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // ===== GESTION UTILISATEURS =====
-
-    // Liste des utilisateurs
-    [
-        'method' => 'GET',
-        'path' => '/admin/users',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'users',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Édition d'un utilisateur (GET)
-    [
-        'method' => 'GET',
-        'path' => '/admin/users/{id}/edit',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userEdit',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Mise à jour d'un utilisateur (POST)
-    [
-        'method' => 'POST',
-        'path' => '/admin/users/{id}/edit',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userEdit',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Toggle ban/unban utilisateur
-    [
-        'method' => 'POST',
-        'path' => '/admin/users/{id}/toggle-ban',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userToggleBan',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Valider un utilisateur
-    [
-        'method' => 'POST',
-        'path' => '/admin/users/{id}/validate',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userValidate',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Reset mot de passe utilisateur
-    [
-        'method' => 'POST',
-        'path' => '/admin/users/{id}/reset-password',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userResetPassword',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Se connecter en tant qu'utilisateur
-    [
-        'method' => 'GET',
-        'path' => '/admin/users/{id}/login-as',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userLoginAs',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Supprimer utilisateur
-    [
-        'method' => 'DELETE',
-        'path' => '/admin/users/{id}/delete',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userDelete',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Actions en masse sur utilisateurs
-    [
-        'method' => 'POST',
-        'path' => '/admin/users/bulk-action',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'usersBulkAction',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Export utilisateurs
-    [
-        'method' => 'POST',
-        'path' => '/admin/users/export',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'usersExport',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Voir toutes les ascensions d'un utilisateur
-    [
-        'method' => 'GET',
-        'path' => '/admin/users/{id}/ascents',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'userAscents',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // ===== GESTION CONTENU =====
-
-    // Gestion du contenu (régions, secteurs, voies)
-    [
-        'method' => 'GET',
-        'path' => '/admin/content',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'content',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Supprimer un élément de contenu
-    [
-        'method' => 'DELETE',
-        'path' => '/admin/content/{type}/{id}/delete',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'contentDelete',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Modérer un élément de contenu
-    [
-        'method' => 'POST',
-        'path' => '/admin/content/{type}/{id}/moderate',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'contentModerate',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // ===== GESTION MÉDIAS =====
-
-    // Liste des médias
-    [
-        'method' => 'GET',
-        'path' => '/admin/media',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'media',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Supprimer un média
-    [
-        'method' => 'DELETE',
-        'path' => '/admin/media/{id}/delete',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'mediaDelete',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Actions en masse sur médias
-    [
-        'method' => 'POST',
-        'path' => '/admin/media/bulk-action',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'mediaBulkAction',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // ===== RAPPORTS & ANALYTICS =====
-
-    // Page des rapports
-    [
-        'method' => 'GET',
-        'path' => '/admin/reports',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'reports',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Export de rapport
-    [
-        'method' => 'POST',
-        'path' => '/admin/reports/export',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'reportsExport',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // ===== CONFIGURATION =====
-
-    // Page de configuration
-    [
-        'method' => 'GET',
-        'path' => '/admin/settings',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'settings',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Mise à jour configuration
-    [
-        'method' => 'POST',
-        'path' => '/admin/settings',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'settings',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // ===== LOGS SYSTÈME =====
-
-    // Page des logs
-    [
-        'method' => 'GET',
-        'path' => '/admin/logs',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'logs',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Vider les logs
-    [
-        'method' => 'POST',
-        'path' => '/admin/logs/clear',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'logsClear',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Download logs
-    [
-        'method' => 'GET',
-        'path' => '/admin/logs/download',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'logsDownload',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // ===== MAINTENANCE =====
-
-    // Mode maintenance
-    [
-        'method' => 'POST',
-        'path' => '/admin/maintenance/toggle',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'maintenanceToggle',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // Cache clear
-    [
-        'method' => 'POST',
-        'path' => '/admin/cache/clear',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'cacheClear',
-        'middlewares' => array_merge($adminMiddlewares, ['csrf'])
-    ],
-
-    // ===== API ADMIN (AJAX) =====
-
-    // Stats en temps réel pour dashboard
-    [
-        'method' => 'GET',
-        'path' => '/admin/api/stats',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'apiStats',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Recherche utilisateurs (autocomplete)
-    [
-        'method' => 'GET',
-        'path' => '/admin/api/users/search',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'apiUsersSearch',
-        'middlewares' => $adminMiddlewares
-    ],
-
-    // Informations système en temps réel
-    [
-        'method' => 'GET',
-        'path' => '/admin/api/system-info',
-        'controller' => 'TopoclimbCH\\Controllers\\AdminController',
-        'action' => 'apiSystemInfo',
-        'middlewares' => $adminMiddlewares
     ]
 ];
