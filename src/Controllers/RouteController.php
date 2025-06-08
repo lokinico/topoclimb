@@ -3,38 +3,60 @@
 
 namespace TopoclimbCH\Controllers;
 
-use TopoclimbCH\Core\Database;
+use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
-use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\Database;
 use TopoclimbCH\Services\RouteService;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\Filtering\RouteFilter;
 use TopoclimbCH\Models\Route;
 use TopoclimbCH\Models\Sector;
 use TopoclimbCH\Models\DifficultySystem;
-use TopoclimbCH\Core\Filtering\RouteFilter;
-use Symfony\Component\HttpFoundation\Request;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class RouteController extends BaseController
 {
-    protected RouteService $routeService;
-    protected MediaService $mediaService;
-    protected SectorService $sectorService;
-    protected AuthService $authService;
-    protected Database $db;
+    /**
+     * @var RouteService
+     */
+    private RouteService $routeService;
 
+    /**
+     * @var MediaService
+     */
+    private MediaService $mediaService;
+
+    /**
+     * @var SectorService
+     */
+    private SectorService $sectorService;
+
+    /**
+     * @var AuthService
+     */
+    private AuthService $authService;
+
+    /**
+     * @var Database
+     */
+    private Database $db;
+
+    /**
+     * Constructor
+     */
     public function __construct(
         View $view,
         Session $session,
-        CsrfManager $csrfManager,
         RouteService $routeService,
         MediaService $mediaService,
         SectorService $sectorService,
         AuthService $authService,
-        Database $db
+        Database $db,
+        CsrfManager $csrfManager
     ) {
         parent::__construct($view, $session, $csrfManager);
         $this->routeService = $routeService;
@@ -57,24 +79,39 @@ class RouteController extends BaseController
             $page = (int) $request->query->get('page', 1);
             $perPage = (int) $request->query->get('per_page', 30);
 
-            // Utiliser le service pour récupérer les routes paginées
-            $paginatedRoutes = $this->routeService->getRoutesWithFilters($filter, $page, $perPage);
+            // Obtenir le champ et la direction de tri
+            $sortBy = $request->query->get('sort_by', 'name');
+            $sortDir = $request->query->get('sort_dir', 'ASC');
+
+            // Paginer les résultats filtrés
+            $paginatedRoutes = Route::filterAndPaginate(
+                $filter,
+                $page,
+                $perPage,
+                $sortBy,
+                $sortDir
+            );
 
             // Récupérer les données pour les filtres
-            $sectors = $this->getSectorsForFilter();
-            $diffSystems = $this->getDifficultySystemsForFilter();
+            $sectors = $this->db->fetchAll("SELECT id, name FROM climbing_sectors WHERE active = 1 ORDER BY name ASC");
+            $diffSystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
 
             return $this->render('routes/index', [
                 'routes' => $paginatedRoutes,
                 'filter' => $filter,
                 'sectors' => $sectors,
                 'diffSystems' => $diffSystems,
-                'currentUrl' => $request->getPathInfo()
+                'currentUrl' => $request->getPathInfo(),
+                'sort_by' => $sortBy,
+                'sort_dir' => $sortDir
             ]);
         } catch (\Exception $e) {
             error_log('RouteController::index error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors du chargement des voies');
-            return Response::redirect('/');
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement des voies: ' . $e->getMessage());
+            return $this->render('routes/index', [
+                'routes' => [],
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
@@ -83,30 +120,49 @@ class RouteController extends BaseController
      */
     public function show(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $id = $request->attributes->get('id');
+        error_log("DEBUG show() - ID reçu: " . ($id ?? 'NULL'));
 
-        if ($id <= 0) {
-            $this->session->flash('error', 'ID de voie invalide');
+        if (!$id) {
+            error_log("DEBUG show() - Pas d'ID, redirection");
+            $this->session->flash('error', 'ID de la voie non spécifié');
             return Response::redirect('/routes');
         }
 
         try {
-            // Récupérer la voie avec ses relations
-            $route = $this->routeService->getRouteById($id);
+            error_log("DEBUG show() - Appel getRouteById pour ID: " . $id);
+            $route = $this->db->fetchOne(
+                "SELECT r.*, s.name as sector_name, s.region_id 
+                 FROM climbing_routes r 
+                 LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
+                 WHERE r.id = ? AND r.active = 1",
+                [(int) $id]
+            );
+            error_log("DEBUG show() - Voie trouvée: " . ($route ? 'OUI' : 'NON'));
 
             if (!$route) {
+                error_log("DEBUG show() - Voie non trouvée, redirection");
                 $this->session->flash('error', 'Voie non trouvée');
                 return Response::redirect('/routes');
             }
 
-            // Récupérer les informations supplémentaires
-            $sector = $this->sectorService->getSectorById($route->sector_id);
-            $media = $this->getRouteMedia($id);
-            $comments = $this->getRouteComments($id);
+            // Récupérer le secteur
+            $sector = $this->db->fetchOne("SELECT * FROM climbing_sectors WHERE id = ?", [$route['sector_id']]);
+
+            // Récupérer les médias
+            $media = $this->mediaService->getMediaForEntity('route', (int)$id);
+
+            // Récupérer les commentaires
+            $comments = $this->getRouteComments((int)$id);
+
+            // Récupérer les voies similaires
             $similarRoutes = $this->getSimilarRoutes($route, 5);
-            $ascentStats = $this->getAscentStatistics($id);
+
+            // Calculer les statistiques d'ascension
+            $ascentStats = $this->getAscentStatistics((int)$id);
 
             return $this->render('routes/show', [
+                'title' => $route['name'],
                 'route' => $route,
                 'sector' => $sector,
                 'media' => $media,
@@ -115,8 +171,8 @@ class RouteController extends BaseController
                 'ascentStats' => $ascentStats
             ]);
         } catch (\Exception $e) {
-            error_log('RouteController::show error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors du chargement de la voie');
+            error_log("DEBUG show() - Exception: " . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
             return Response::redirect('/routes');
         }
     }
@@ -128,36 +184,50 @@ class RouteController extends BaseController
     {
         try {
             // Vérification des permissions
-            if (!$this->authService->check()) {
+            if (!$this->session->get('auth_user_id')) {
                 $this->session->flash('error', 'Vous devez être connecté pour créer une voie');
                 return Response::redirect('/login');
             }
 
             // Récupérer les données pour le formulaire
-            $sectors = $this->getSectorsForDropdown();
-            $difficultySystems = $this->getDifficultySystemsForDropdown();
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name 
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name, s.name"
+            );
+            $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
 
             // Vérifier si un secteur spécifique est passé en paramètre
             $sectorId = $request->query->get('sector_id');
             $selectedSector = null;
             if ($sectorId) {
-                $selectedSector = $this->sectorService->getSectorById((int)$sectorId);
+                $selectedSector = $this->db->fetchOne("SELECT * FROM climbing_sectors WHERE id = ? AND active = 1", [(int)$sectorId]);
             }
 
-            // Créer un token CSRF
-            $csrfToken = $this->csrfManager->generateToken();
+            // Précharger des valeurs par défaut
+            $route = [
+                'beauty' => '0',
+                'active' => 1,
+                'difficulty_system_id' => 1
+            ];
+
+            if ($selectedSector) {
+                $route['sector_id'] = $selectedSector['id'];
+            }
 
             return $this->render('routes/form', [
-                'route' => null, // Nouveau
+                'title' => 'Créer une nouvelle voie',
+                'route' => $route,
                 'sectors' => $sectors,
                 'difficulty_systems' => $difficultySystems,
                 'selected_sector' => $selectedSector,
-                'csrf_token' => $csrfToken,
-                'title' => 'Créer une nouvelle voie'
+                'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
             error_log('RouteController::create error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors du chargement du formulaire');
+            $this->session->flash('error', 'Erreur lors du chargement du formulaire : ' . $e->getMessage());
             return Response::redirect('/routes');
         }
     }
@@ -167,40 +237,93 @@ class RouteController extends BaseController
      */
     public function store(Request $request): Response
     {
-        try {
-            // Vérification des permissions
-            if (!$this->authService->check()) {
-                $this->session->flash('error', 'Vous devez être connecté pour créer une voie');
-                return Response::redirect('/login');
-            }
+        // Validate CSRF token
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/routes/create');
+        }
 
-            // Valider le token CSRF
-            if (!$this->csrfManager->validateToken($request->request->get('csrf_token'))) {
-                $this->session->flash('error', 'Token de sécurité invalide');
+        // Get form data
+        $data = $request->request->all();
+
+        // Basic validation
+        if (empty($data['sector_id']) || empty($data['name'])) {
+            $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires');
+            return Response::redirect('/routes/create');
+        }
+
+        try {
+            // Add the current user ID
+            $data['created_by'] = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? 1;
+
+            // Start transaction
+            if (!$this->db->beginTransaction()) {
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
                 return Response::redirect('/routes/create');
             }
 
-            // Récupérer et valider les données
-            $data = $this->validateRouteData($request->request->all());
+            // Préparer les données pour insertion
+            $routeData = [
+                'sector_id' => (int)$data['sector_id'],
+                'name' => $data['name'],
+                'difficulty' => $data['difficulty'] ?? null,
+                'difficulty_system_id' => (int)($data['difficulty_system_id'] ?? 1),
+                'style' => $data['style'] ?? null,
+                'beauty' => (int)($data['beauty'] ?? 0),
+                'length' => !empty($data['length']) ? (float)$data['length'] : null,
+                'equipment' => $data['equipment'] ?? null,
+                'rappel' => $data['rappel'] ?? null,
+                'comment' => $data['comment'] ?? null,
+                'active' => isset($data['active']) ? 1 : 1,
+                'created_by' => $data['created_by'],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
 
-            // Ajouter les métadonnées
-            $data['created_by'] = $this->authService->id();
-            $data['created_at'] = date('Y-m-d H:i:s');
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // Générer le numéro de voie automatiquement
+            $maxNumber = $this->db->fetchOne(
+                "SELECT MAX(number) as max_num FROM climbing_routes WHERE sector_id = ?",
+                [$routeData['sector_id']]
+            );
+            $routeData['number'] = ((int)($maxNumber['max_num'] ?? 0)) + 1;
 
-            // Créer la voie via le service
-            $route = $this->routeService->createRoute($data);
+            // Insérer la voie
+            $routeId = $this->db->insert('climbing_routes', $routeData);
 
-            if (!$route) {
-                throw new \Exception('Erreur lors de la création de la voie');
+            if (!$routeId) {
+                $this->db->rollBack();
+                $this->session->flash('error', 'Erreur lors de la création de la voie');
+                return Response::redirect('/routes/create');
             }
 
-            // Gérer l'upload d'images
-            $this->handleMediaUploads($request, $route->id);
+            // Traiter le média si présent
+            $mediaFile = $_FILES['media_file'] ?? null;
+            if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name']) && $mediaFile['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $this->mediaService->uploadMedia($mediaFile, [
+                        'title' => $data['media_title'] ?? $data['name'],
+                        'description' => "Image pour la voie: {$data['name']}",
+                        'is_public' => 1,
+                        'media_type' => 'image',
+                        'entity_type' => 'route',
+                        'entity_id' => $routeId,
+                        'relationship_type' => $data['media_relationship_type'] ?? 'main'
+                    ], $data['created_by']);
+                } catch (\Exception $e) {
+                    error_log('Erreur upload image route: ' . $e->getMessage());
+                }
+            }
+
+            if (!$this->db->commit()) {
+                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+            }
 
             $this->session->flash('success', 'Voie créée avec succès !');
-            return Response::redirect('/routes/' . $route->id);
+            return Response::redirect('/routes/' . $routeId);
         } catch (\Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             error_log('RouteController::store error: ' . $e->getMessage());
             $this->session->flash('error', 'Erreur lors de la création : ' . $e->getMessage());
             return Response::redirect('/routes/create');
@@ -212,44 +335,46 @@ class RouteController extends BaseController
      */
     public function edit(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $id = $request->attributes->get('id');
 
-        if ($id <= 0) {
-            $this->session->flash('error', 'ID de voie invalide');
+        if (!$id) {
+            $this->session->flash('error', 'ID de la voie non spécifié');
             return Response::redirect('/routes');
         }
 
         try {
-            $route = $this->routeService->getRouteById($id);
+            $route = $this->db->fetchOne("SELECT * FROM climbing_routes WHERE id = ? AND active = 1", [(int) $id]);
 
             if (!$route) {
                 $this->session->flash('error', 'Voie non trouvée');
                 return Response::redirect('/routes');
             }
 
-            // Vérifier les permissions
-            if (!$this->canEditRoute($route)) {
-                $this->session->flash('error', 'Vous n\'avez pas les permissions pour modifier cette voie');
-                return Response::redirect('/routes/' . $id);
-            }
-
             // Récupérer les données pour le formulaire
-            $sectors = $this->getSectorsForDropdown();
-            $difficultySystems = $this->getDifficultySystemsForDropdown();
-            $media = $this->getRouteMedia($id);
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name 
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name, s.name"
+            );
+            $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
+
+            // Récupérer les médias associés
+            $media = $this->mediaService->getMediaForEntity('route', (int) $id);
 
             return $this->render('routes/form', [
+                'title' => 'Modifier la voie ' . $route['name'],
                 'route' => $route,
                 'sectors' => $sectors,
                 'difficulty_systems' => $difficultySystems,
                 'media' => $media,
-                'csrf_token' => $this->csrfManager->generateToken(),
-                'title' => 'Modifier ' . $route->name
+                'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
             error_log('RouteController::edit error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors du chargement du formulaire');
-            return Response::redirect('/routes/' . $id);
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return Response::redirect('/routes');
         }
     }
 
@@ -258,52 +383,107 @@ class RouteController extends BaseController
      */
     public function update(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $id = $request->attributes->get('id');
 
-        if ($id <= 0) {
-            $this->session->flash('error', 'ID de voie invalide');
+        if (!$id) {
+            $this->session->flash('error', 'ID de la voie non spécifié');
             return Response::redirect('/routes');
         }
 
+        // Validate CSRF token
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/routes/' . $id . '/edit');
+        }
+
+        // Get form data
+        $data = $request->request->all();
+
+        // Basic validation
+        if (empty($data['sector_id']) || empty($data['name'])) {
+            $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires');
+            return Response::redirect('/routes/' . $id . '/edit');
+        }
+
         try {
-            $route = $this->routeService->getRouteById($id);
+            // IMPORTANT: Obtenir l'ID utilisateur directement de $_SESSION
+            $data['updated_by'] = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? 1;
 
-            if (!$route) {
-                $this->session->flash('error', 'Voie non trouvée');
-                return Response::redirect('/routes');
-            }
-
-            // Vérifier les permissions
-            if (!$this->canEditRoute($route)) {
-                $this->session->flash('error', 'Vous n\'avez pas les permissions pour modifier cette voie');
-                return Response::redirect('/routes/' . $id);
-            }
-
-            // Valider le token CSRF
-            if (!$this->csrfManager->validateToken($request->request->get('csrf_token'))) {
-                $this->session->flash('error', 'Token de sécurité invalide');
+            // Begin transaction
+            if (!$this->db->beginTransaction()) {
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
                 return Response::redirect('/routes/' . $id . '/edit');
             }
 
-            // Valider les données
-            $data = $this->validateRouteData($request->request->all());
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // Mise à jour principale de la table climbing_routes
+            $updateData = [
+                'sector_id' => (int)$data['sector_id'],
+                'name' => $data['name'],
+                'difficulty' => $data['difficulty'] ?? null,
+                'difficulty_system_id' => (int)($data['difficulty_system_id'] ?? 1),
+                'style' => $data['style'] ?? null,
+                'beauty' => (int)($data['beauty'] ?? 0),
+                'length' => !empty($data['length']) ? (float)$data['length'] : null,
+                'equipment' => $data['equipment'] ?? null,
+                'rappel' => $data['rappel'] ?? null,
+                'comment' => $data['comment'] ?? null,
+                'active' => isset($data['active']) ? 1 : 1,
+                'updated_at' => date('Y-m-d H:i:s'),
+                'updated_by' => $data['updated_by']
+            ];
 
-            // Mettre à jour via le service
-            $updatedRoute = $this->routeService->updateRoute($id, $data);
+            // Mise à jour directe via Database
+            $success = $this->db->update('climbing_routes', $updateData, 'id = ?', [(int)$id]);
 
-            if (!$updatedRoute) {
-                throw new \Exception('Erreur lors de la mise à jour');
+            if (!$success) {
+                throw new \Exception("Échec de la mise à jour de la voie");
             }
 
-            // Gérer l'upload d'images
-            $this->handleMediaUploads($request, $id);
+            // Traitement des médias
+            try {
+                $mediaFile = $_FILES['media_file'] ?? null;
+                if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name']) && $mediaFile['error'] === UPLOAD_ERR_OK) {
+                    $mediaTitle = $data['media_title'] ?? null;
+                    $relationshipType = $data['media_relationship_type'] ?? 'gallery';
 
+                    $mediaId = $this->mediaService->uploadMedia($mediaFile, [
+                        'title' => $mediaTitle ?? $data['name'],
+                        'description' => "Image pour la voie: {$data['name']}",
+                        'is_public' => 1,
+                        'media_type' => 'image',
+                        'entity_type' => 'route',
+                        'entity_id' => (int)$id,
+                        'relationship_type' => $relationshipType
+                    ], $data['updated_by']);
+
+                    if ($mediaId && $relationshipType === 'main') {
+                        $this->db->update(
+                            'climbing_media_relationships',
+                            ['relationship_type' => 'gallery'],
+                            'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
+                            ['route', (int)$id, 'main', $mediaId]
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("RouteUpdate: Erreur lors du traitement de l'image: " . $e->getMessage());
+            }
+
+            // Commit de la transaction
+            if (!$this->db->commit()) {
+                error_log("RouteUpdate: Échec commit transaction");
+                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+            }
+
+            error_log("RouteUpdate: Mise à jour réussie de la voie #" . $id);
             $this->session->flash('success', 'Voie mise à jour avec succès');
             return Response::redirect('/routes/' . $id);
         } catch (\Exception $e) {
-            error_log('RouteController::update error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
+            if ($this->db->inTransaction()) {
+                $this->db->rollback();
+            }
+            error_log("RouteUpdate - Exception: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
             return Response::redirect('/routes/' . $id . '/edit');
         }
     }
@@ -313,76 +493,169 @@ class RouteController extends BaseController
      */
     public function delete(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $id = $request->attributes->get('id');
 
-        if ($id <= 0) {
-            $this->session->flash('error', 'ID de voie invalide');
+        if (!$id) {
+            $this->session->flash('error', 'ID de la voie non spécifié');
             return Response::redirect('/routes');
         }
 
-        try {
-            $route = $this->routeService->getRouteById($id);
+        // Check if it's a POST request with confirmation
+        if ($request->getMethod() !== 'POST') {
+            try {
+                $route = $this->db->fetchOne("SELECT * FROM climbing_routes WHERE id = ? AND active = 1", [(int) $id]);
 
+                if (!$route) {
+                    $this->session->flash('error', 'Voie non trouvée');
+                    return Response::redirect('/routes');
+                }
+
+                // Get ascents count
+                $ascentsCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM user_ascents WHERE route_id = ?", [(int) $id])['count'] ?? 0;
+                $mediaCount = count($this->mediaService->getMediaForEntity('route', (int) $id));
+
+                // Show confirmation page
+                return $this->render('routes/delete', [
+                    'title' => 'Supprimer la voie ' . $route['name'],
+                    'route' => $route,
+                    'ascentsCount' => $ascentsCount,
+                    'mediaCount' => $mediaCount,
+                    'csrf_token' => $this->createCsrfToken()
+                ]);
+            } catch (\Exception $e) {
+                $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+                return Response::redirect('/routes');
+            }
+        }
+
+        // It's a POST request, proceed with deletion
+
+        // Validate CSRF token
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/routes/' . $id . '/delete');
+        }
+
+        try {
+            // Vérifier si la voie existe
+            $route = $this->db->fetchOne("SELECT * FROM climbing_routes WHERE id = ? AND active = 1", [(int) $id]);
             if (!$route) {
                 $this->session->flash('error', 'Voie non trouvée');
                 return Response::redirect('/routes');
             }
 
-            // Vérifier les permissions
-            if (!$this->canDeleteRoute($route)) {
-                $this->session->flash('error', 'Vous n\'avez pas les permissions pour supprimer cette voie');
-                return Response::redirect('/routes/' . $id);
+            $sectorId = $route['sector_id'];
+
+            if (!$this->db->beginTransaction()) {
+                error_log("RouteDelete: Erreur démarrage transaction");
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
+                return Response::redirect('/routes/' . $id . '/delete');
             }
 
-            $sectorId = $route->sector_id;
+            // Supprimer les ascensions associées
+            $this->db->delete('user_ascents', 'route_id = ?', [(int)$id]);
 
-            // Supprimer via le service
-            $this->routeService->deleteRoute($id);
+            // Supprimer les commentaires
+            $this->db->delete('comments', 'route_id = ?', [(int)$id]);
+
+            // Récupérer et supprimer les relations média
+            $mediaRelations = $this->db->fetchAll("SELECT media_id FROM climbing_media_relationships WHERE entity_type = 'route' AND entity_id = ?", [(int)$id]);
+            foreach ($mediaRelations as $relation) {
+                $this->db->delete('climbing_media_annotations', 'media_id = ?', [(int)$relation['media_id']]);
+                $this->db->delete('climbing_media_relationships', 'media_id = ?', [(int)$relation['media_id']]);
+                $this->db->delete('climbing_media_tags', 'media_id = ?', [(int)$relation['media_id']]);
+                $this->db->delete('climbing_media', 'id = ?', [(int)$relation['media_id']]);
+            }
+
+            // Supprimer la voie elle-même
+            $success = $this->db->delete('climbing_routes', 'id = ?', [(int)$id]);
+
+            if (!$success) {
+                $this->db->rollBack();
+                $this->session->flash('error', 'Erreur lors de la suppression de la voie');
+                return Response::redirect('/routes/' . $id . '/delete');
+            }
+
+            if (!$this->db->commit()) {
+                error_log("RouteDelete: Échec commit transaction");
+                throw new \Exception("Échec lors de la suppression finale");
+            }
 
             $this->session->flash('success', 'Voie supprimée avec succès');
             return Response::redirect('/sectors/' . $sectorId);
         } catch (\Exception $e) {
-            error_log('RouteController::delete error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors de la suppression');
-            return Response::redirect('/routes/' . $id);
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log("RouteDelete: Exception: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la suppression de la voie: ' . $e->getMessage());
+            return Response::redirect('/routes/' . $id . '/delete');
         }
     }
 
     /**
-     * Enregistre une ascension
+     * Enregistre une ascension (AJAX)
      */
     public function recordAscent(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $id = $request->attributes->get('id');
 
-        if ($id <= 0) {
-            return $this->jsonResponse(['error' => 'ID de voie invalide'], 400);
+        if (!$id) {
+            return Response::json(['error' => 'ID de voie invalide'], 400);
         }
 
         try {
-            if (!$this->authService->check()) {
-                return $this->jsonResponse(['error' => 'Vous devez être connecté'], 401);
+            if (!$this->session->get('auth_user_id')) {
+                return Response::json(['error' => 'Vous devez être connecté'], 401);
             }
 
-            $route = $this->routeService->getRouteById($id);
+            $route = $this->db->fetchOne("SELECT * FROM climbing_routes WHERE id = ? AND active = 1", [(int) $id]);
             if (!$route) {
-                return $this->jsonResponse(['error' => 'Voie non trouvée'], 404);
+                return Response::json(['error' => 'Voie non trouvée'], 404);
             }
 
-            $data = $this->validateAscentData($request->request->all());
-            $data['user_id'] = $this->authService->id();
-            $data['route_id'] = $id;
+            $data = $request->request->all();
 
-            $ascent = $this->routeService->recordAscent($data);
+            // Validation basique
+            if (empty($data['ascent_type']) || empty($data['ascent_date'])) {
+                return Response::json(['error' => 'Type et date d\'ascension obligatoires'], 400);
+            }
 
-            return $this->jsonResponse([
+            $ascentData = [
+                'user_id' => $this->session->get('auth_user_id'),
+                'route_id' => (int) $id,
+                'topo_item' => $route['legacy_topo_item'] ?? '',
+                'route_name' => $route['name'],
+                'difficulty' => $route['difficulty'] ?? '',
+                'ascent_type' => $data['ascent_type'],
+                'climbing_type' => $route['style'] ?? 'sport',
+                'with_user' => $data['with_user'] ?? null,
+                'ascent_date' => $data['ascent_date'],
+                'quality_rating' => isset($data['quality_rating']) ? (int) $data['quality_rating'] : null,
+                'difficulty_comment' => $data['difficulty_comment'] ?? null,
+                'attempts' => isset($data['attempts']) ? (int) $data['attempts'] : 1,
+                'comment' => $data['comment'] ?? null,
+                'favorite' => isset($data['favorite']) ? 1 : 0,
+                'style' => $data['style'] ?? null,
+                'tags' => $data['tags'] ?? null,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $ascentId = $this->db->insert('user_ascents', $ascentData);
+
+            if (!$ascentId) {
+                return Response::json(['error' => 'Erreur lors de l\'enregistrement'], 500);
+            }
+
+            return Response::json([
                 'success' => true,
                 'message' => 'Ascension enregistrée avec succès',
-                'ascent' => $ascent
+                'ascent_id' => $ascentId
             ]);
         } catch (\Exception $e) {
             error_log('RouteController::recordAscent error: ' . $e->getMessage());
-            return $this->jsonResponse(['error' => 'Erreur lors de l\'enregistrement'], 500);
+            return Response::json(['error' => 'Erreur lors de l\'enregistrement'], 500);
         }
     }
 
@@ -391,22 +664,22 @@ class RouteController extends BaseController
      */
     public function comments(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $id = $request->attributes->get('id');
 
-        if ($id <= 0) {
-            return $this->jsonResponse(['error' => 'ID de voie invalide'], 400);
+        if (!$id) {
+            return Response::json(['error' => 'ID de voie invalide'], 400);
         }
 
         try {
-            $comments = $this->getRouteComments($id);
-            return $this->jsonResponse([
+            $comments = $this->getRouteComments((int)$id);
+            return Response::json([
                 'success' => true,
                 'comments' => $comments,
                 'count' => count($comments)
             ]);
         } catch (\Exception $e) {
             error_log('RouteController::comments error: ' . $e->getMessage());
-            return $this->jsonResponse(['error' => 'Erreur lors du chargement des commentaires'], 500);
+            return Response::json(['error' => 'Erreur lors du chargement des commentaires'], 500);
         }
     }
 
@@ -415,137 +688,59 @@ class RouteController extends BaseController
      */
     public function storeComment(Request $request): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $id = $request->attributes->get('id');
 
-        if ($id <= 0) {
-            return $this->jsonResponse(['error' => 'ID de voie invalide'], 400);
+        if (!$id) {
+            return Response::json(['error' => 'ID de voie invalide'], 400);
         }
 
         try {
-            if (!$this->authService->check()) {
-                return $this->jsonResponse(['error' => 'Vous devez être connecté'], 401);
+            if (!$this->session->get('auth_user_id')) {
+                return Response::json(['error' => 'Vous devez être connecté'], 401);
             }
 
             $comment = trim($request->request->get('comment', ''));
             if (empty($comment)) {
-                return $this->jsonResponse(['error' => 'Le commentaire ne peut pas être vide'], 400);
+                return Response::json(['error' => 'Le commentaire ne peut pas être vide'], 400);
             }
 
             $commentData = [
-                'route_id' => $id,
-                'user_id' => $this->authService->id(),
+                'route_id' => (int) $id,
+                'user_id' => $this->session->get('auth_user_id'),
                 'comment' => $comment,
                 'created_at' => date('Y-m-d H:i:s')
             ];
 
-            $newComment = $this->addRouteComment($commentData);
+            $commentId = $this->db->insert('comments', $commentData);
 
-            return $this->jsonResponse([
+            if (!$commentId) {
+                return Response::json(['error' => 'Erreur lors de l\'ajout'], 500);
+            }
+
+            $newComment = $this->db->fetchOne(
+                "SELECT c.*, u.username, u.prenom, u.nom 
+                 FROM comments c 
+                 LEFT JOIN users u ON c.user_id = u.id 
+                 WHERE c.id = ?",
+                [$commentId]
+            );
+
+            return Response::json([
                 'success' => true,
                 'comment' => $newComment,
                 'message' => 'Commentaire ajouté avec succès'
             ]);
         } catch (\Exception $e) {
             error_log('RouteController::storeComment error: ' . $e->getMessage());
-            return $this->jsonResponse(['error' => 'Erreur lors de l\'ajout du commentaire'], 500);
+            return Response::json(['error' => 'Erreur lors de l\'ajout du commentaire'], 500);
         }
     }
 
     // ========== MÉTHODES PRIVÉES ==========
 
-    private function validateRouteData(array $data): array
-    {
-        $validated = [];
-
-        // Validation des champs obligatoires
-        if (empty($data['sector_id']) || !is_numeric($data['sector_id'])) {
-            throw new \Exception('Le secteur est obligatoire');
-        }
-        $validated['sector_id'] = (int) $data['sector_id'];
-
-        if (empty($data['name'])) {
-            throw new \Exception('Le nom de la voie est obligatoire');
-        }
-        $validated['name'] = trim($data['name']);
-
-        // Validation des champs optionnels
-        $validated['difficulty'] = $data['difficulty'] ?? null;
-        $validated['difficulty_system_id'] = (int) ($data['difficulty_system_id'] ?? 1);
-        $validated['style'] = $data['style'] ?? null;
-        $validated['beauty'] = (int) ($data['beauty'] ?? 0);
-        $validated['length'] = !empty($data['length']) ? (float) $data['length'] : null;
-        $validated['equipment'] = $data['equipment'] ?? null;
-        $validated['rappel'] = $data['rappel'] ?? null;
-        $validated['comment'] = $data['comment'] ?? null;
-        $validated['active'] = 1;
-
-        return $validated;
-    }
-
-    private function validateAscentData(array $data): array
-    {
-        $validated = [];
-
-        if (empty($data['ascent_type'])) {
-            throw new \Exception('Le type d\'ascension est obligatoire');
-        }
-        $validated['ascent_type'] = $data['ascent_type'];
-
-        if (empty($data['ascent_date'])) {
-            throw new \Exception('La date d\'ascension est obligatoire');
-        }
-        $validated['ascent_date'] = $data['ascent_date'];
-
-        $validated['quality_rating'] = isset($data['quality_rating']) ? (int) $data['quality_rating'] : null;
-        $validated['difficulty_comment'] = $data['difficulty_comment'] ?? null;
-        $validated['attempts'] = isset($data['attempts']) ? (int) $data['attempts'] : 1;
-        $validated['comment'] = $data['comment'] ?? null;
-        $validated['favorite'] = isset($data['favorite']) ? 1 : 0;
-
-        return $validated;
-    }
-
-    private function getSectorsForDropdown(): array
-    {
-        return $this->db->fetchAll(
-            "SELECT s.id, s.name, r.name as region_name 
-             FROM climbing_sectors s 
-             LEFT JOIN climbing_regions r ON s.region_id = r.id 
-             WHERE s.active = 1 
-             ORDER BY r.name, s.name"
-        );
-    }
-
-    private function getSectorsForFilter(): array
-    {
-        return $this->db->fetchAll(
-            "SELECT id, name FROM climbing_sectors WHERE active = 1 ORDER BY name"
-        );
-    }
-
-    private function getDifficultySystemsForDropdown(): array
-    {
-        return $this->db->fetchAll(
-            "SELECT id, name FROM climbing_difficulty_systems ORDER BY name"
-        );
-    }
-
-    private function getDifficultySystemsForFilter(): array
-    {
-        return $this->getDifficultySystemsForDropdown();
-    }
-
-    private function getRouteMedia(int $routeId): array
-    {
-        return $this->db->fetchAll(
-            "SELECT m.* FROM climbing_media m 
-             JOIN climbing_media_relationships mr ON m.id = mr.media_id 
-             WHERE mr.entity_type = 'route' AND mr.entity_id = ? 
-             ORDER BY mr.sort_order, m.created_at",
-            [$routeId]
-        );
-    }
-
+    /**
+     * Récupère les commentaires d'une voie
+     */
     private function getRouteComments(int $routeId): array
     {
         return $this->db->fetchAll(
@@ -558,30 +753,23 @@ class RouteController extends BaseController
         );
     }
 
-    private function addRouteComment(array $data): array
-    {
-        $id = $this->db->insert('comments', $data);
-
-        return $this->db->fetchOne(
-            "SELECT c.*, u.username, u.prenom, u.nom 
-             FROM comments c 
-             LEFT JOIN users u ON c.user_id = u.id 
-             WHERE c.id = ?",
-            [$id]
-        );
-    }
-
-    private function getSimilarRoutes(object $route, int $limit = 5): array
+    /**
+     * Récupère les voies similaires
+     */
+    private function getSimilarRoutes(array $route, int $limit = 5): array
     {
         return $this->db->fetchAll(
             "SELECT * FROM climbing_routes 
-             WHERE sector_id = ? AND id != ? 
+             WHERE sector_id = ? AND id != ? AND active = 1
              ORDER BY ABS(beauty - ?) ASC, name ASC 
              LIMIT ?",
-            [$route->sector_id, $route->id, $route->beauty, $limit]
+            [$route['sector_id'], $route['id'], (int)($route['beauty'] ?? 0), $limit]
         );
     }
 
+    /**
+     * Récupère les statistiques d'ascension
+     */
     private function getAscentStatistics(int $routeId): array
     {
         $stats = $this->db->fetchOne(
@@ -603,61 +791,5 @@ class RouteController extends BaseController
             'onsight_count' => 0,
             'redpoint_count' => 0
         ];
-    }
-
-    private function handleMediaUploads(Request $request, int $routeId): void
-    {
-        $files = $request->files->get('media', []);
-
-        foreach ($files as $file) {
-            if ($file && $file->getError() === UPLOAD_ERR_OK) {
-                try {
-                    $this->mediaService->uploadRouteMedia($file, $routeId, [
-                        'title' => 'Route media',
-                        'is_public' => 1
-                    ]);
-                } catch (\Exception $e) {
-                    error_log('Erreur upload media route: ' . $e->getMessage());
-                }
-            }
-        }
-    }
-
-    private function canEditRoute(object $route): bool
-    {
-        if (!$this->authService->check()) {
-            return false;
-        }
-
-        $user = $this->authService->user();
-
-        // Admin/modérateur peuvent tout modifier
-        if (in_array($user->autorisation, ['1', '2'])) {
-            return true;
-        }
-
-        // Créateur peut modifier sa voie
-        return $route->created_by == $user->id;
-    }
-
-    private function canDeleteRoute(object $route): bool
-    {
-        if (!$this->authService->check()) {
-            return false;
-        }
-
-        $user = $this->authService->user();
-
-        // Seuls admin/modérateur peuvent supprimer
-        return in_array($user->autorisation, ['1', '2']);
-    }
-
-    private function jsonResponse(array $data, int $status = 200): Response
-    {
-        return new Response(
-            json_encode($data),
-            $status,
-            ['Content-Type' => 'application/json']
-        );
     }
 }
