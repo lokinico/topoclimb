@@ -162,6 +162,16 @@ return [
             \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ],
+    [
+        'method' => 'GET',
+        'path' => '/api/regions/{id}/sectors',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'apiSectors',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
 
     // ========================================
     // ROUTES SECTEURS - ORDRE CORRIGÉ

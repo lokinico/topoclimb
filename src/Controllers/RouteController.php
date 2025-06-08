@@ -190,21 +190,36 @@ class RouteController extends BaseController
                 return Response::redirect('/login');
             }
 
-            // Récupérer les données pour le formulaire
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, r.name as region_name 
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 WHERE s.active = 1 
-                 ORDER BY r.name, s.name"
+            // Récupérer les régions pour le sélecteur cascade
+            $regions = $this->db->fetchAll(
+                "SELECT r.id, r.name, c.name as country_name
+             FROM climbing_regions r 
+             LEFT JOIN climbing_countries c ON r.country_id = c.id 
+             WHERE r.active = 1 
+             ORDER BY c.name, r.name"
             );
+
+            // Récupérer les secteurs (pour le cas où JS est désactivé)
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, s.region_id, r.name as region_name 
+             FROM climbing_sectors s 
+             LEFT JOIN climbing_regions r ON s.region_id = r.id 
+             WHERE s.active = 1 
+             ORDER BY r.name, s.name"
+            );
+
             $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
 
             // Vérifier si un secteur spécifique est passé en paramètre
             $sectorId = $request->query->get('sector_id');
             $selectedSector = null;
+            $selectedRegion = null;
+
             if ($sectorId) {
                 $selectedSector = $this->db->fetchOne("SELECT * FROM climbing_sectors WHERE id = ? AND active = 1", [(int)$sectorId]);
+                if ($selectedSector && $selectedSector['region_id']) {
+                    $selectedRegion = $this->db->fetchOne("SELECT * FROM climbing_regions WHERE id = ?", [$selectedSector['region_id']]);
+                }
             }
 
             // Précharger des valeurs par défaut
@@ -216,14 +231,17 @@ class RouteController extends BaseController
 
             if ($selectedSector) {
                 $route['sector_id'] = $selectedSector['id'];
+                $route['region_id'] = $selectedSector['region_id'];
             }
 
             return $this->render('routes/form', [
                 'title' => 'Créer une nouvelle voie',
                 'route' => $route,
+                'regions' => $regions,
                 'sectors' => $sectors,
                 'difficulty_systems' => $difficultySystems,
                 'selected_sector' => $selectedSector,
+                'selected_region' => $selectedRegion,
                 'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
@@ -330,54 +348,81 @@ class RouteController extends BaseController
             return Response::redirect('/routes/create');
         }
     }
+<?php
+// Remplace la méthode edit() dans src/Controllers/RouteController.php
 
-    /**
-     * Affiche le formulaire d'édition d'une voie
-     */
-    public function edit(Request $request): Response
-    {
-        $id = $request->attributes->get('id');
+/**
+ * Affiche le formulaire d'édition d'une voie
+ */
+public function edit(Request $request): Response
+{
+    $id = $request->attributes->get('id');
 
-        if (!$id) {
-            $this->session->flash('error', 'ID de la voie non spécifié');
-            return Response::redirect('/routes');
-        }
-
-        try {
-            $route = $this->db->fetchOne("SELECT * FROM climbing_routes WHERE id = ? AND active = 1", [(int) $id]);
-
-            if (!$route) {
-                $this->session->flash('error', 'Voie non trouvée');
-                return Response::redirect('/routes');
-            }
-
-            // Récupérer les données pour le formulaire
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, r.name as region_name 
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 WHERE s.active = 1 
-                 ORDER BY r.name, s.name"
-            );
-            $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
-
-            // Récupérer les médias associés
-            $media = $this->mediaService->getMediaForEntity('route', (int) $id);
-
-            return $this->render('routes/form', [
-                'title' => 'Modifier la voie ' . $route['name'],
-                'route' => $route,
-                'sectors' => $sectors,
-                'difficulty_systems' => $difficultySystems,
-                'media' => $media,
-                'csrf_token' => $this->createCsrfToken()
-            ]);
-        } catch (\Exception $e) {
-            error_log('RouteController::edit error: ' . $e->getMessage());
-            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/routes');
-        }
+    if (!$id) {
+        $this->session->flash('error', 'ID de la voie non spécifié');
+        return Response::redirect('/routes');
     }
+
+    try {
+        $route = $this->db->fetchOne("SELECT * FROM climbing_routes WHERE id = ? AND active = 1", [(int) $id]);
+
+        if (!$route) {
+            $this->session->flash('error', 'Voie non trouvée');
+            return Response::redirect('/routes');
+        }
+
+        // Récupérer les régions pour le sélecteur cascade
+        $regions = $this->db->fetchAll(
+            "SELECT r.id, r.name, c.name as country_name
+             FROM climbing_regions r 
+             LEFT JOIN climbing_countries c ON r.country_id = c.id 
+             WHERE r.active = 1 
+             ORDER BY c.name, r.name"
+        );
+
+        // Récupérer les secteurs
+        $sectors = $this->db->fetchAll(
+            "SELECT s.id, s.name, s.region_id, r.name as region_name 
+             FROM climbing_sectors s 
+             LEFT JOIN climbing_regions r ON s.region_id = r.id 
+             WHERE s.active = 1 
+             ORDER BY r.name, s.name"
+        );
+
+        $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
+
+        // Récupérer le secteur actuel et sa région
+        $currentSector = null;
+        $currentRegion = null;
+        if ($route['sector_id']) {
+            $currentSector = $this->db->fetchOne("SELECT * FROM climbing_sectors WHERE id = ?", [$route['sector_id']]);
+            if ($currentSector && $currentSector['region_id']) {
+                $currentRegion = $this->db->fetchOne("SELECT * FROM climbing_regions WHERE id = ?", [$currentSector['region_id']]);
+                // Ajouter l'ID de région à la route pour le formulaire
+                $route['region_id'] = $currentSector['region_id'];
+            }
+        }
+
+        // Récupérer les médias associés
+        $media = $this->mediaService->getMediaForEntity('route', (int) $id);
+
+        return $this->render('routes/form', [
+            'title' => 'Modifier la voie ' . $route['name'],
+            'route' => $route,
+            'regions' => $regions,
+            'sectors' => $sectors,
+            'difficulty_systems' => $difficultySystems,
+            'selected_sector' => $currentSector,
+            'selected_region' => $currentRegion,
+            'media' => $media,
+            'csrf_token' => $this->createCsrfToken()
+        ]);
+    } catch (\Exception $e) {
+        error_log('RouteController::edit error: ' . $e->getMessage());
+        $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+        return Response::redirect('/routes');
+    }
+}
 
     /**
      * Met à jour une voie

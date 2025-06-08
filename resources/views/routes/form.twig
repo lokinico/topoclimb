@@ -40,25 +40,51 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-body">
-                    <form method="post" action="{{ route.id ? url('/routes/' ~ route.id ~ '/edit') : url('/routes/create') }}" enctype="multipart/form-data">
+                    <form method="post" action="{{ route.id ? url('/routes/' ~ route.id ~ '/edit') : url('/routes') }}" enctype="multipart/form-data" id="route-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        
                         {% if not sector %}
-                            <div class="mb-3">
-                                <label for="sector_id" class="form-label">Secteur</label>
-                                <select class="form-select" id="sector_id" name="sector_id" required>
-                                    <option value="">Sélectionnez un secteur</option>
-                                    {% if sectors is defined %}
-                                        {% for sector_item in sectors %}
-                                            <option value="{{ sector_item.id }}" {% if route.sector_id == sector_item.id %}selected{% endif %}>
-                                                {{ sector_item.name }}
-                                            </option>
-                                        {% endfor %}
-                                    {% endif %}
-                                </select>
+                            <!-- SÉLECTEUR CASCADE RÉGION → SECTEUR -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="region_id" class="form-label required">Région</label>
+                                        <select class="form-select" id="region_id" name="region_id" required>
+                                            <option value="">Sélectionnez une région...</option>
+                                            {% for region in regions %}
+                                                <option value="{{ region.id }}" 
+                                                    {{ (selected_region and selected_region.id == region.id) or (route.region_id and route.region_id == region.id) ? 'selected' : '' }}>
+                                                    {{ region.name }}{% if region.country_name %} ({{ region.country_name }}){% endif %}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="invalid-feedback"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="sector_id" class="form-label required">Secteur</label>
+                                        <div class="position-relative">
+                                            <select class="form-select" id="sector_id" name="sector_id" required disabled>
+                                                <option value="">Choisissez d'abord une région...</option>
+                                                {% if selected_sector %}
+                                                    <option value="{{ selected_sector.id }}" selected>{{ selected_sector.name }}</option>
+                                                {% endif %}
+                                            </select>
+                                            <div class="loading-spinner d-none">
+                                                <i class="fas fa-spinner fa-spin"></i>
+                                            </div>
+                                        </div>
+                                        <div class="invalid-feedback"></div>
+                                        <small class="form-text text-muted" id="sector-info"></small>
+                                    </div>
+                                </div>
                             </div>
                         {% else %}
                             <input type="hidden" name="sector_id" value="{{ sector.id }}">
+                            <div class="mb-3">
+                                <label class="form-label">Secteur</label>
+                                <div class="form-control-plaintext">{{ sector.name }}</div>
+                            </div>
                         {% endif %}
                         
                         <div class="mb-3">
@@ -205,4 +231,11 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block styles %}
+    <link rel="stylesheet" href="{{ asset('css/pages/routes/form.css') }}">
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ asset('js/pages/routes/form.js') }}"></script>
 {% endblock %}

@@ -518,4 +518,76 @@ class RegionController extends BaseController
             return Response::redirect('/regions/create');
         }
     }
+
+    /**
+     * API: Récupère les secteurs d'une région
+     */
+    public function apiSectors(Request $request): JsonResponse
+    {
+        try {
+            $regionId = $request->attributes->get('id');
+
+            if (!$regionId) {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => 'ID de région requis'
+                ], 400);
+            }
+
+            // Vérifier que la région existe
+            $region = $this->db->fetchOne(
+                "SELECT id, name FROM climbing_regions WHERE id = ? AND active = 1",
+                [(int) $regionId]
+            );
+
+            if (!$region) {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => 'Région non trouvée'
+                ], 404);
+            }
+
+            // Récupérer les secteurs via SectorService (qui existe déjà)
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, s.altitude, s.access_time, s.coordinates_lat, s.coordinates_lng,
+                    COUNT(r.id) as routes_count
+             FROM climbing_sectors s 
+             LEFT JOIN climbing_routes r ON s.id = r.sector_id AND r.active = 1
+             WHERE s.region_id = ? AND s.active = 1
+             GROUP BY s.id
+             ORDER BY s.name ASC",
+                [(int) $regionId]
+            );
+
+            // Formatter les données pour le frontend
+            $data = array_map(function ($sector) {
+                return [
+                    'id' => (int) $sector['id'],
+                    'name' => $sector['name'],
+                    'region_id' => (int) $sector['region_id'] ?? null,
+                    'routes_count' => (int) ($sector['routes_count'] ?? 0),
+                    'altitude' => $sector['altitude'] ? (int) $sector['altitude'] : null,
+                    'access_time' => $sector['access_time'] ? (int) $sector['access_time'] : null,
+                    'coordinates_lat' => $sector['coordinates_lat'] ? (float) $sector['coordinates_lat'] : null,
+                    'coordinates_lng' => $sector['coordinates_lng'] ? (float) $sector['coordinates_lng'] : null
+                ];
+            }, $sectors);
+
+            return new JsonResponse([
+                'success' => true,
+                'data' => $data,
+                'region' => [
+                    'id' => (int) $region['id'],
+                    'name' => $region['name']
+                ],
+                'count' => count($data)
+            ]);
+        } catch (\Exception $e) {
+            error_log('Erreur dans RegionController::apiSectors: ' . $e->getMessage());
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération des secteurs'
+            ], 500);
+        }
+    }
 }
