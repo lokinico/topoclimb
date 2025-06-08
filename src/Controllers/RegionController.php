@@ -387,4 +387,135 @@ class RegionController extends BaseController
             return new JsonResponse(['error' => 'Erreur météo'], 500);
         }
     }
+
+
+    /**
+     * Affiche le formulaire de création d'une nouvelle région - VERSION CORRIGÉE
+     */
+    public function create(Request $request): Response
+    {
+        try {
+            // Vérification simple des permissions
+            if (!$this->session->get('auth_user_id')) {
+                $this->session->flash('error', 'Vous devez être connecté pour créer une région');
+                return Response::redirect('/login');
+            }
+
+            // Récupérer les pays
+            $countries = $this->db->fetchAll("SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC");
+
+            return $this->render('regions/form', [
+                'region' => (object)[], // Objet vide pour le formulaire de création
+                'countries' => $countries,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            error_log('RegionController::create error: ' . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors du chargement du formulaire : ' . $e->getMessage());
+            return Response::redirect('/regions');
+        }
+    }
+
+    /**
+     * Enregistre une nouvelle région - VERSION CORRIGÉE
+     */
+    public function store(Request $request): Response
+    {
+        try {
+            // Vérification simple des permissions
+            if (!$this->session->get('auth_user_id')) {
+                $this->session->flash('error', 'Vous devez être connecté pour créer une région');
+                return Response::redirect('/login');
+            }
+
+            // Valider le token CSRF
+            if (!$this->validateCsrfToken($request)) {
+                $this->session->flash('error', 'Token de sécurité invalide');
+                return Response::redirect('/regions/create');
+            }
+
+            // Récupérer les données du formulaire
+            $data = $request->request->all();
+
+            // Validation basique
+            if (empty($data['country_id']) || empty($data['name'])) {
+                $this->session->flash('error', 'Le pays et le nom de la région sont obligatoires');
+                return Response::redirect('/regions/create');
+            }
+
+            // Préparer les données pour insertion
+            $regionData = [
+                'country_id' => (int)$data['country_id'],
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
+                'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+                'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
+                'best_season' => $data['best_season'] ?? null,
+                'access_info' => $data['access_info'] ?? null,
+                'parking_info' => $data['parking_info'] ?? null,
+                'active' => isset($data['active']) ? 1 : 1, // Par défaut actif
+                'created_by' => $this->session->get('auth_user_id'),
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Insérer la région
+            $regionId = $this->db->insert('climbing_regions', $regionData);
+
+            if (!$regionId) {
+                throw new \Exception('Erreur lors de la création de la région');
+            }
+
+            // Gérer l'upload d'image de couverture
+            if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $this->mediaService->uploadMedia($_FILES['cover_image'], [
+                        'entity_type' => 'region',
+                        'entity_id' => $regionId,
+                        'relationship_type' => 'cover',
+                        'title' => $data['name'],
+                        'is_public' => 1
+                    ], $this->session->get('auth_user_id'));
+                } catch (\Exception $e) {
+                    // Log l'erreur mais continue
+                    error_log('Erreur upload image région: ' . $e->getMessage());
+                }
+            }
+
+            // Gérer l'upload d'images de galerie (multiple)
+            if (isset($_FILES['gallery_images']) && is_array($_FILES['gallery_images']['name'])) {
+                try {
+                    for ($i = 0; $i < count($_FILES['gallery_images']['name']); $i++) {
+                        if ($_FILES['gallery_images']['error'][$i] === UPLOAD_ERR_OK) {
+                            $file = [
+                                'name' => $_FILES['gallery_images']['name'][$i],
+                                'type' => $_FILES['gallery_images']['type'][$i],
+                                'tmp_name' => $_FILES['gallery_images']['tmp_name'][$i],
+                                'error' => $_FILES['gallery_images']['error'][$i],
+                                'size' => $_FILES['gallery_images']['size'][$i]
+                            ];
+                            $this->mediaService->uploadMedia($file, [
+                                'entity_type' => 'region',
+                                'entity_id' => $regionId,
+                                'relationship_type' => 'gallery',
+                                'title' => $data['name'] . ' - Image ' . ($i + 1),
+                                'is_public' => 1
+                            ], $this->session->get('auth_user_id'));
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log l'erreur mais continue
+                    error_log('Erreur upload galerie région: ' . $e->getMessage());
+                }
+            }
+
+            $this->session->flash('success', 'Région créée avec succès !');
+            return Response::redirect('/regions/' . $regionId);
+        } catch (\Exception $e) {
+            error_log('RegionController::store error: ' . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la création : ' . $e->getMessage());
+            return Response::redirect('/regions/create');
+        }
+    }
 }

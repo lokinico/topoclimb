@@ -1,0 +1,191 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Créer une nouvelle voie - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header mb-4">
+        <div class="breadcrumbs mb-2">
+            <a href="{{ url('/') }}">Accueil</a> &raquo;
+            <a href="{{ url('/routes') }}">Voies</a> &raquo;
+            {% if sector %}
+                <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a> &raquo;
+            {% endif %}
+            <span>Nouvelle voie</span>
+        </div>
+        
+        <h1>Ajouter une nouvelle voie</h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <!-- CORRECTION: action pointe vers /routes au lieu de /routes/create -->
+                    <form method="post" action="{{ url('/routes') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        {% if not sector %}
+                            <div class="mb-3">
+                                <label for="sector_id" class="form-label required">Secteur</label>
+                                <select class="form-select" id="sector_id" name="sector_id" required>
+                                    <option value="">Sélectionnez un secteur</option>
+                                    {% for sector_item in sectors %}
+                                        <option value="{{ sector_item.id }}">
+                                            {{ sector_item.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Secteur dans lequel créer cette voie</div>
+                            </div>
+                        {% else %}
+                            <input type="hidden" name="sector_id" value="{{ sector.id }}">
+                            <div class="mb-3">
+                                <label class="form-label">Secteur</label>
+                                <div class="form-control-plaintext">{{ sector.name }}</div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label required">Nom de la voie</label>
+                            <input type="text" class="form-control" id="name" name="name" required maxlength="255">
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="difficulty" class="form-label">Difficulté</label>
+                                <input type="text" class="form-control" id="difficulty" name="difficulty" maxlength="10"
+                                       placeholder="Ex: 6a, 7b+, 8c">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="difficulty_system_id" class="form-label">Système</label>
+                                <select class="form-select" id="difficulty_system_id" name="difficulty_system_id">
+                                    {% for system in difficulty_systems %}
+                                        <option value="{{ system.id }}" {% if loop.first %}selected{% endif %}>
+                                            {{ system.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="style" class="form-label">Style</label>
+                                <select class="form-select" id="style" name="style">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="sport">Sportif</option>
+                                    <option value="trad">Traditionnel</option>
+                                    <option value="mix">Mixte</option>
+                                    <option value="boulder">Bloc</option>
+                                    <option value="aid">Artificiel</option>
+                                    <option value="ice">Glace</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="beauty" class="form-label">Beauté</label>
+                                <select class="form-select" id="beauty" name="beauty">
+                                    <option value="0">Non évalué</option>
+                                    <option value="1">★☆☆☆☆</option>
+                                    <option value="2">★★☆☆☆</option>
+                                    <option value="3">★★★☆☆</option>
+                                    <option value="4">★★★★☆</option>
+                                    <option value="5">★★★★★</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="length" class="form-label">Longueur (m)</label>
+                                <input type="number" class="form-control" id="length" name="length" 
+                                       step="0.1" min="0" max="2000">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="equipment" class="form-label">Équipement</label>
+                                <select class="form-select" id="equipment" name="equipment">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="poor">Mauvais</option>
+                                    <option value="adequate">Adéquat/Engagé</option>
+                                    <option value="good">Bon</option>
+                                    <option value="excellent">Excellent</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="rappel" class="form-label">Rappel</label>
+                            <input type="text" class="form-control" id="rappel" name="rappel" maxlength="50"
+                                   placeholder="Ex: 30m, 2x25m, sur ancrage">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Commentaire</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="4"
+                                      placeholder="Description de la voie, conseils, remarques..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="image" class="form-label">Image principale</label>
+                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                            <div class="form-text">JPG, PNG, max 5MB</div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="active" name="active" value="1" checked>
+                            <label class="form-check-label" for="active">
+                                Voie active et visible publiquement
+                            </label>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ sector ? url('/sectors/' ~ sector.id) : url('/routes') }}" class="btn btn-outline-secondary">
+                                Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i>
+                                Créer la voie
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Aide</h2>
+                </div>
+                <div class="card-body">
+                    <h3 class="h6">Difficulté</h3>
+                    <p class="small">Utilisez le format adapté au système choisi. Exemple: "6a+" pour la cotation française.</p>
+                    
+                    <h3 class="h6">Équipement</h3>
+                    <ul class="small">
+                        <li><strong>Excellent</strong>: Très bien équipé, tous les 2-3m</li>
+                        <li><strong>Bon</strong>: Bien équipé, tous les 3-4m</li>
+                        <li><strong>Adéquat</strong>: Engagé</li>
+                        <li><strong>Mauvais</strong>: Équipement vétuste ou insuffisant</li>
+                    </ul>
+                    
+                    <h3 class="h6">Beauté</h3>
+                    <p class="small">Évaluez la qualité esthétique de la voie, de 1 à 5 étoiles.</p>
+                    
+                    <h3 class="h6">Style</h3>
+                    <ul class="small">
+                        <li><strong>Sportif</strong>: Points d'ancrage fixes</li>
+                        <li><strong>Traditionnel</strong>: Protection mobile</li>
+                        <li><strong>Mixte</strong>: Combinaison des deux</li>
+                        <li><strong>Bloc</strong>: Escalade de blocs</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

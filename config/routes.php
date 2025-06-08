@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Configuration des routes de l'application avec sécurisation par rôles
+ * Configuration des routes corrigée - les routes /create DOIVENT être AVANT les routes /{id}
  */
 
 return [
@@ -13,7 +13,7 @@ return [
         'action' => 'index'
     ],
 
-    // Routes d'authentification
+    // Routes d'authentification (unchanged)
     [
         'method' => 'GET',
         'path' => '/login',
@@ -48,7 +48,7 @@ return [
         'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
     ],
 
-    // Routes pour la récupération de mot de passe
+    // Routes pour la récupération de mot de passe (unchanged)
     [
         'method' => 'GET',
         'path' => '/forgot-password',
@@ -77,7 +77,348 @@ return [
     ],
 
     // ========================================
-    // ROUTES UTILISATEURS (Authentification requise)
+    // ROUTES RÉGIONS - ORDRE CORRIGÉ
+    // ========================================
+
+    // Liste des régions
+    [
+        'method' => 'GET',
+        'path' => '/regions',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'index',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // CRÉATION RÉGION - AVANT /{id}
+    [
+        'method' => 'GET',
+        'path' => '/regions/create',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/regions', // CORRECTION: pas /regions/create
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Détail région - APRÈS /create
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'show',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Édition région
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'edit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'PUT',
+        'path' => '/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'update',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Suppression région
+    [
+        'method' => 'DELETE',
+        'path' => '/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'destroy',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // ROUTES SECTEURS - ORDRE CORRIGÉ
+    // ========================================
+
+    // Liste des secteurs
+    [
+        'method' => 'GET',
+        'path' => '/sectors',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'index',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // CRÉATION SECTEUR - AVANT /{id}
+    [
+        'method' => 'GET',
+        'path' => '/sectors/create',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/sectors', // CORRECTION: pas /sectors/create
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Détail secteur - APRÈS /create
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'show',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Édition secteur
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'edit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/sectors/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'update',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Suppression secteur
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}/delete',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'delete',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/sectors/{id}/delete',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'delete',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // ROUTES VOIES - ORDRE CORRIGÉ
+    // ========================================
+
+    // Liste des voies
+    [
+        'method' => 'GET',
+        'path' => '/routes',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'index',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // CRÉATION VOIE - AVANT /{id}
+    [
+        'method' => 'GET',
+        'path' => '/routes/create',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes', // CORRECTION: pas /routes/create
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Détail voie - APRÈS /create
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'show',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Édition voie
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'edit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'update',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Suppression voie
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/delete',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'delete',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/delete',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'delete',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Logger une ascension
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/log-ascent',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'logAscent',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/log-ascent',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'storeAscent',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // ROUTES SITES
+    // ========================================
+
+    [
+        'method' => 'GET',
+        'path' => '/sites',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'index',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    [
+        'method' => 'GET',
+        'path' => '/sites/create',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    [
+        'method' => 'GET',
+        'path' => '/sites/{id}',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'show',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // SUITE DES ROUTES (ascensions, utilisateurs, admin, etc.)
     // ========================================
 
     // Profil utilisateur - Accès : 0,1,2,3,4 (tous connectés)
@@ -161,350 +502,6 @@ return [
         'path' => '/banned',
         'controller' => \TopoclimbCH\Controllers\UserController::class,
         'action' => 'banned'
-    ],
-
-    // ========================================
-    // ROUTES RÉGIONS (Accès selon rôle)
-    // ========================================
-
-    // Liste des régions - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/regions',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'index',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Détail région - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/regions/{id}',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'show',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Création région - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/regions/create',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'create',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/regions',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'store',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Édition région - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/regions/{id}/edit',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'edit',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'PUT',
-        'path' => '/regions/{id}',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'update',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Suppression région - Accès : 0,1 seulement
-    [
-        'method' => 'DELETE',
-        'path' => '/regions/{id}',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'destroy',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // ========================================
-    // ROUTES SITES (Accès selon rôle)
-    // ========================================
-
-    // Liste des sites - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/sites',
-        'controller' => \TopoclimbCH\Controllers\SiteController::class,
-        'action' => 'index',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Détail site - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/sites/{id}',
-        'controller' => \TopoclimbCH\Controllers\SiteController::class,
-        'action' => 'show',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Création site - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/sites/create',
-        'controller' => \TopoclimbCH\Controllers\SiteController::class,
-        'action' => 'create',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // ========================================
-    // ROUTES SECTEURS (Accès selon rôle)
-    // ========================================
-
-    // Liste des secteurs - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/sectors',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'index',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Détail secteur - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/sectors/{id}',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'show',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Création secteur - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/sectors/create',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'create',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/sectors/create',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'store',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Édition secteur - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/sectors/{id}/edit',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'edit',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/sectors/{id}/edit',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'update',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Suppression secteur - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/sectors/{id}/delete',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/sectors/{id}/delete',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // ========================================
-    // ROUTES VOIES (Accès selon rôle)
-    // ========================================
-
-    // Liste des voies - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/routes',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'index',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Détail voie - Accès : 0,1,2 + partiellement 3
-    [
-        'method' => 'GET',
-        'path' => '/routes/{id}',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'show',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Création voie - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/routes/create',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'create',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/routes/create',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'store',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Édition voie - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/routes/{id}/edit',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'edit',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/routes/{id}/edit',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'update',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Suppression voie - Accès : 0,1 seulement
-    [
-        'method' => 'GET',
-        'path' => '/routes/{id}/delete',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/routes/{id}/delete',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'delete',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-
-    // Logger une ascension - Accès : 0,1,2,3 (pas les nouveaux membres)
-    [
-        'method' => 'GET',
-        'path' => '/routes/{id}/log-ascent',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'logAscent',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
-    ],
-    [
-        'method' => 'POST',
-        'path' => '/routes/{id}/log-ascent',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'storeAscent',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\CsrfMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
     ],
 
     // ========================================

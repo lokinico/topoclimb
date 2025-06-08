@@ -1,0 +1,229 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Créer un nouveau secteur - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header mb-4">
+        <div class="breadcrumbs mb-2">
+            <a href="{{ url('/') }}">Accueil</a> &raquo;
+            <a href="{{ url('/sectors') }}">Secteurs</a> &raquo;
+            <span>Nouveau secteur</span>
+        </div>
+        
+        <h1>Ajouter un nouveau secteur</h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <!-- CORRECTION: action pointe vers /sectors au lieu de /sectors/create -->
+                    <form method="post" action="{{ url('/sectors') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="book_id" class="form-label required">Site/Livre</label>
+                                <select class="form-select" id="book_id" name="book_id" required>
+                                    <option value="">Sélectionnez un site</option>
+                                    {% for book in books %}
+                                        <option value="{{ book.id }}">{{ book.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Site d'escalade auquel appartient ce secteur</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="region_id" class="form-label">Région</label>
+                                <select class="form-select" id="region_id" name="region_id">
+                                    <option value="">Sélectionnez une région</option>
+                                    {% for region in regions %}
+                                        <option value="{{ region.id }}">{{ region.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Région géographique du secteur</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="name" class="form-label required">Nom du secteur</label>
+                                <input type="text" class="form-control" id="name" name="name" required maxlength="255">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="code" class="form-label required">Code</label>
+                                <input type="text" class="form-control" id="code" name="code" required maxlength="50"
+                                       placeholder="Ex: VAL01, GRI-A">
+                                <div class="form-text">Identifiant unique</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4"
+                                      placeholder="Description du secteur, style de grimpe, caractéristiques..."></textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="color" class="form-label">Couleur</label>
+                                <input type="color" class="form-control form-control-color" id="color" name="color" value="#FF0000">
+                                <div class="form-text">Couleur d'identification sur la carte</div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="altitude" class="form-label">Altitude (m)</label>
+                                <input type="number" class="form-control" id="altitude" name="altitude" 
+                                       min="0" max="9000" placeholder="1200">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="access_time" class="form-label">Temps d'accès (min)</label>
+                                <input type="number" class="form-control" id="access_time" name="access_time" 
+                                       min="0" max="1440" placeholder="15">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="access_info" class="form-label">Informations d'accès</label>
+                            <textarea class="form-control" id="access_info" name="access_info" rows="3"
+                                      placeholder="Instructions pour accéder au secteur..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="approach" class="form-label">Marche d'approche</label>
+                            <textarea class="form-control" id="approach" name="approach" rows="3"
+                                      placeholder="Instructions détaillées pour l'approche à pied..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="parking_info" class="form-label">Informations de parking</label>
+                            <textarea class="form-control" id="parking_info" name="parking_info" rows="2"
+                                      placeholder="Où se garer, tarifs, restrictions..."></textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="coordinates_lat" class="form-label">Latitude</label>
+                                <input type="number" class="form-control" id="coordinates_lat" name="coordinates_lat" 
+                                       step="0.000001" min="-90" max="90" placeholder="46.123456">
+                                <div class="form-text">Coordonnée latitude (WGS84)</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="coordinates_lng" class="form-label">Longitude</label>
+                                <input type="number" class="form-control" id="coordinates_lng" name="coordinates_lng" 
+                                       step="0.000001" min="-180" max="180" placeholder="7.123456">
+                                <div class="form-text">Coordonnée longitude (WGS84)</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Expositions</label>
+                            <div class="row">
+                                {% for exposure in exposures %}
+                                    <div class="col-md-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="exposure_{{ exposure.id }}" name="exposures[]" value="{{ exposure.id }}">
+                                            <label class="form-check-label" for="exposure_{{ exposure.id }}">
+                                                {{ exposure.name }} ({{ exposure.code }})
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">Orientations cardinales du secteur</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="media_file" class="form-label">Image</label>
+                            <input type="file" class="form-control" id="media_file" name="media_file" accept="image/*">
+                            <div class="form-text">JPG, PNG, max 5MB</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="media_title" class="form-label">Titre de l'image</label>
+                            <input type="text" class="form-control" id="media_title" name="media_title"
+                                   placeholder="Titre descriptif de l'image (optionnel)">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Type d'image</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="media_relationship_type" 
+                                               id="media_type_main" value="main" checked>
+                                        <label class="form-check-label" for="media_type_main">
+                                            Image principale
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="media_relationship_type" 
+                                               id="media_type_gallery" value="gallery">
+                                        <label class="form-check-label" for="media_type_gallery">
+                                            Galerie
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="media_relationship_type" 
+                                               id="media_type_topo" value="topo">
+                                        <label class="form-check-label" for="media_type_topo">
+                                            Topo
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="active" name="active" value="1" checked>
+                            <label class="form-check-label" for="active">
+                                Secteur actif et visible publiquement
+                            </label>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url('/sectors') }}" class="btn btn-outline-secondary">
+                                Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i>
+                                Créer le secteur
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Aide</h2>
+                </div>
+                <div class="card-body">
+                    <h3 class="h6">Code du secteur</h3>
+                    <p class="small">Utilisez un code court et unique. Exemples: VAL01, GRIM-A, SAL-NORD</p>
+                    
+                    <h3 class="h6">Coordonnées</h3>
+                    <p class="small">Utilisez le format décimal (WGS84). Vous pouvez les obtenir sur Google Maps en cliquant droit sur la carte.</p>
+                    
+                    <h3 class="h6">Expositions</h3>
+                    <p class="small">Sélectionnez toutes les orientations possibles du secteur (Nord, Sud, Est, Ouest).</p>
+                    
+                    <h3 class="h6">Temps d'accès</h3>
+                    <p class="small">Temps de marche estimé depuis le parking jusqu'au pied des voies, en minutes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
