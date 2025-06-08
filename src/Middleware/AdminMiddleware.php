@@ -31,7 +31,8 @@ class AdminMiddleware
         $user = $this->auth->user();
 
         // Vérifier si l'utilisateur a les droits d'administrateur
-        if (!$user || !isset($user->autorisation) || $user->autorisation !== '1') {
+        // '0' = Super Admin, '1' = Modérateur/Éditeur
+        if (!$user || !isset($user->autorisation) || !in_array($user->autorisation, ['0', '1'])) {
             $this->session->flash('error', 'Accès non autorisé. Permission administrateur requise.');
             return Response::redirect('/');
         }
