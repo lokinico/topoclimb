@@ -1,0 +1,48 @@
+<!-- resources/views/admin/content.twig -->
+{% extends "admin/layout.twig" %}
+
+{% block title %}Gestion du contenu{% endblock %}
+
+{% block breadcrumb %}
+    <span class="breadcrumb-separator">></span>
+    <span>Contenu</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Gestion du contenu</h1>
+    <p class="page-subtitle">Modération et administration du contenu d'escalade</p>
+</div>
+
+<div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+    <h3>Statistiques du contenu</h3>
+    
+    {% if content.regions is defined %}
+        <div style="margin: 1rem 0;">
+            <h4>Régions</h4>
+            <p>Total: {{ content.regions.total|default(0) }}</p>
+        </div>
+    {% endif %}
+    
+    {% if content.sectors is defined %}
+        <div style="margin: 1rem 0;">
+            <h4>Secteurs</h4>
+            <p>Total: {{ content.sectors.total|default(0) }}</p>
+        </div>
+    {% endif %}
+    
+    {% if content.routes is defined %}
+        <div style="margin: 1rem 0;">
+            <h4>Voies</h4>
+            <p>Total: {{ content.routes.total|default(0) }}</p>
+        </div>
+    {% endif %}
+    
+    <div style="margin-top: 2rem;">
+        <a href="/regions" class="btn btn-primary">Gérer les régions</a>
+        <a href="/sectors" class="btn btn-primary" style="margin-left: 1rem;">Gérer les secteurs</a>
+        <a href="/routes" class="btn btn-primary" style="margin-left: 1rem;">Gérer les voies</a>
+    </div>
+</div>
+{% endblock %}
+
