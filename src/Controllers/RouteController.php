@@ -46,24 +46,25 @@ class RouteController extends BaseController
     private Database $db;
 
     /**
-     * Constructor - EXACTEMENT le même ordre que SectorController
+     * Constructor - Ordre exact imposé par le système d'injection
      */
     public function __construct(
         View $view,
         Session $session,
-        SectorService $sectorService,
+        CsrfManager $csrfManager,
+        RouteService $routeService,
         MediaService $mediaService,
-        Database $db,
-        CsrfManager $csrfManager
+        SectorService $sectorService,
+        AuthService $authService
     ) {
         parent::__construct($view, $session, $csrfManager);
-        $this->sectorService = $sectorService;
+        $this->routeService = $routeService;
         $this->mediaService = $mediaService;
-        $this->db = $db;
+        $this->sectorService = $sectorService;
+        $this->authService = $authService;
 
-        // Initialiser les autres services manuellement
-        $this->routeService = new RouteService($db);
-        $this->authService = new AuthService($session, $db);
+        // Récupérer Database via getInstance (pattern singleton)
+        $this->db = Database::getInstance();
     }
 
     /**
