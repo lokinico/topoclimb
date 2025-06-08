@@ -4,7 +4,6 @@
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
@@ -13,6 +12,10 @@ use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\AuthService;
 use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\Response;
+
+namespace TopoclimbCH\Controllers;
+
 
 class RouteController extends BaseController
 {
@@ -36,31 +39,6 @@ class RouteController extends BaseController
      */
     protected AuthService $authService;
 
-    /**
-     * Constructor
-     *
-     * @param View $view
-     * @param Session $session
-     * @param RouteService $routeService
-     * @param MediaService $mediaService
-     * @param SectorService $sectorService
-     * @param AuthService $authService
-     */
-    public function __construct(
-        View $view,
-        Session $session,
-        CsrfManager $csrfManager, // Ajoutez ce paramètre
-        RouteService $routeService,
-        MediaService $mediaService,
-        SectorService $sectorService,
-        AuthService $authService
-    ) {
-        parent::__construct($view, $session, $csrfManager);
-        $this->routeService = $routeService;
-        $this->mediaService = $mediaService;
-        $this->sectorService = $sectorService;
-        $this->authService = $authService;
-    }
 
     /**
      * Affiche la liste des voies
@@ -133,129 +111,6 @@ class RouteController extends BaseController
             'similarRoutes' => $similarRoutes,
             'ascentStats' => $ascentStats
         ]);
-    }
-
-
-    /**
-     * Affiche le formulaire de création d'une nouvelle voie - VERSION CORRIGÉE
-     */
-    public function create(Request $request): Response
-    {
-        try {
-            // Vérification simple des permissions - pas de méthode authorize()
-            if (!$this->session->get('auth_user_id')) {
-                $this->session->flash('error', 'Vous devez être connecté pour créer une voie');
-                return Response::redirect('/login');
-            }
-
-            // Récupérer les secteurs pour le dropdown
-            $sectors = $this->db->fetchAll("SELECT id, name FROM climbing_sectors WHERE active = 1 ORDER BY name ASC");
-
-            // Récupérer les systèmes de difficulté
-            $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
-
-            // Vérifier si un secteur spécifique est passé en paramètre
-            $sectorId = $request->query->get('sector_id');
-            $sector = null;
-            if ($sectorId) {
-                $sector = $this->db->fetchOne("SELECT * FROM climbing_sectors WHERE id = ? AND active = 1", [(int)$sectorId]);
-            }
-
-            return $this->render('routes/form', [
-                'route' => (object)[], // Objet vide pour le formulaire de création
-                'sectors' => $sectors,
-                'difficulty_systems' => $difficultySystems,
-                'sector' => $sector,
-                'csrf_token' => $this->createCsrfToken()
-            ]);
-        } catch (\Exception $e) {
-            error_log('RouteController::create error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors du chargement du formulaire : ' . $e->getMessage());
-            return Response::redirect('/routes');
-        }
-    }
-    /**
-     * Enregistre une nouvelle voie - VERSION CORRIGÉE
-     */
-    public function store(Request $request): Response
-    {
-        try {
-            // Vérification simple des permissions
-            if (!$this->session->get('auth_user_id')) {
-                $this->session->flash('error', 'Vous devez être connecté pour créer une voie');
-                return Response::redirect('/login');
-            }
-
-            // Valider le token CSRF
-            if (!$this->validateCsrfToken($request)) {
-                $this->session->flash('error', 'Token de sécurité invalide');
-                return Response::redirect('/routes/create');
-            }
-
-            // Récupérer les données du formulaire
-            $data = $request->request->all();
-
-            // Validation basique
-            if (empty($data['sector_id']) || empty($data['name'])) {
-                $this->session->flash('error', 'Le secteur et le nom de la voie sont obligatoires');
-                return Response::redirect('/routes/create');
-            }
-
-            // Préparer les données pour insertion
-            $routeData = [
-                'sector_id' => (int)$data['sector_id'],
-                'name' => $data['name'],
-                'difficulty' => $data['difficulty'] ?? null,
-                'difficulty_system_id' => (int)($data['difficulty_system_id'] ?? 1),
-                'style' => $data['style'] ?? null,
-                'beauty' => (int)($data['beauty'] ?? 0),
-                'length' => !empty($data['length']) ? (float)$data['length'] : null,
-                'equipment' => $data['equipment'] ?? null,
-                'rappel' => $data['rappel'] ?? null,
-                'comment' => $data['comment'] ?? null,
-                'active' => isset($data['active']) ? 1 : 1, // Par défaut actif
-                'created_by' => $this->session->get('auth_user_id'),
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            // Générer le numéro de voie automatiquement
-            $maxNumber = $this->db->fetchOne(
-                "SELECT MAX(number) as max_num FROM climbing_routes WHERE sector_id = ?",
-                [$routeData['sector_id']]
-            );
-            $routeData['number'] = ((int)($maxNumber['max_num'] ?? 0)) + 1;
-
-            // Insérer la voie
-            $routeId = $this->db->insert('climbing_routes', $routeData);
-
-            if (!$routeId) {
-                throw new \Exception('Erreur lors de la création de la voie');
-            }
-
-            // Gérer l'upload d'image si présent
-            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                try {
-                    $this->mediaService->uploadMedia($_FILES['image'], [
-                        'entity_type' => 'route',
-                        'entity_id' => $routeId,
-                        'relationship_type' => 'main',
-                        'title' => $data['name'],
-                        'is_public' => 1
-                    ], $this->session->get('auth_user_id'));
-                } catch (\Exception $e) {
-                    // Log l'erreur mais continue - l'image n'est pas critique
-                    error_log('Erreur upload image route: ' . $e->getMessage());
-                }
-            }
-
-            $this->session->flash('success', 'Voie créée avec succès !');
-            return Response::redirect('/routes/' . $routeId);
-        } catch (\Exception $e) {
-            error_log('RouteController::store error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors de la création : ' . $e->getMessage());
-            return Response::redirect('/routes/create');
-        }
     }
 
     /**
@@ -613,5 +468,159 @@ class RouteController extends BaseController
                 ['Content-Type' => 'application/json']
             );
         }
+    }
+
+
+    /**
+     * Affiche le formulaire de création d'une nouvelle voie
+     */
+    public function create(Request $request): Response
+    {
+        try {
+            // Vérification simple des permissions
+            if (!$this->session->get('auth_user_id')) {
+                $this->session->flash('error', 'Vous devez être connecté pour créer une voie');
+                return Response::redirect('/login'); // Utilise la même syntaxe que SectorController
+            }
+
+            // Récupérer les secteurs pour le dropdown
+            $sectors = $this->db->fetchAll("SELECT id, name FROM climbing_sectors WHERE active = 1 ORDER BY name ASC");
+
+            // Récupérer les systèmes de difficulté
+            $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
+
+            // Vérifier si un secteur spécifique est passé en paramètre
+            $sectorId = $request->query->get('sector_id');
+            $sector = null;
+            if ($sectorId) {
+                $sector = $this->db->fetchOne("SELECT * FROM climbing_sectors WHERE id = ? AND active = 1", [(int)$sectorId]);
+            }
+
+            // Créer un token CSRF
+            $csrfToken = bin2hex(random_bytes(32));
+            $this->session->set('csrf_token', $csrfToken);
+
+            return $this->view->render('routes/form.twig', [
+                'route' => (object)[], // Objet vide pour le formulaire de création
+                'sectors' => $sectors,
+                'difficulty_systems' => $difficultySystems,
+                'sector' => $sector,
+                'csrf_token' => $csrfToken
+            ]);
+        } catch (\Exception $e) {
+            error_log('RouteController::create error: ' . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors du chargement du formulaire : ' . $e->getMessage());
+            return Response::redirect('/routes'); // Même syntaxe que SectorController
+        }
+    }
+
+    /**
+     * Enregistre une nouvelle voie
+     */
+    public function store(Request $request): Response
+    {
+        try {
+            // Vérification simple des permissions
+            if (!$this->session->get('auth_user_id')) {
+                $this->session->flash('error', 'Vous devez être connecté pour créer une voie');
+                return Response::redirect('/login');
+            }
+
+            // Valider le token CSRF (même méthode que SectorController)
+            $token = $request->request->get('csrf_token');
+            $sessionToken = $this->session->get('csrf_token');
+
+            if (!$token || !$sessionToken || !hash_equals($sessionToken, $token)) {
+                $this->session->flash('error', 'Token de sécurité invalide');
+                return Response::redirect('/routes/create');
+            }
+
+            // Récupérer les données du formulaire
+            $data = $request->request->all();
+
+            // Validation basique
+            if (empty($data['sector_id']) || empty($data['name'])) {
+                $this->session->flash('error', 'Le secteur et le nom de la voie sont obligatoires');
+                return Response::redirect('/routes/create');
+            }
+
+            // Préparer les données pour insertion
+            $routeData = [
+                'sector_id' => (int)$data['sector_id'],
+                'name' => $data['name'],
+                'difficulty' => $data['difficulty'] ?? null,
+                'difficulty_system_id' => (int)($data['difficulty_system_id'] ?? 1),
+                'style' => $data['style'] ?? null,
+                'beauty' => (int)($data['beauty'] ?? 0),
+                'length' => !empty($data['length']) ? (float)$data['length'] : null,
+                'equipment' => $data['equipment'] ?? null,
+                'rappel' => $data['rappel'] ?? null,
+                'comment' => $data['comment'] ?? null,
+                'active' => isset($data['active']) ? 1 : 1,
+                'created_by' => $this->session->get('auth_user_id'),
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Générer le numéro de voie automatiquement
+            $maxNumber = $this->db->fetchOne(
+                "SELECT MAX(number) as max_num FROM climbing_routes WHERE sector_id = ?",
+                [$routeData['sector_id']]
+            );
+            $routeData['number'] = ((int)($maxNumber['max_num'] ?? 0)) + 1;
+
+            // Insérer la voie
+            $routeId = $this->db->insert('climbing_routes', $routeData);
+
+            if (!$routeId) {
+                throw new \Exception('Erreur lors de la création de la voie');
+            }
+
+            // Gérer l'upload d'image si présent
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $this->mediaService->uploadMedia($_FILES['image'], [
+                        'entity_type' => 'route',
+                        'entity_id' => $routeId,
+                        'relationship_type' => 'main',
+                        'title' => $data['name'],
+                        'is_public' => 1
+                    ], $this->session->get('auth_user_id'));
+                } catch (\Exception $e) {
+                    error_log('Erreur upload image route: ' . $e->getMessage());
+                }
+            }
+
+            $this->session->flash('success', 'Voie créée avec succès !');
+            return Response::redirect('/routes/' . $routeId);
+        } catch (\Exception $e) {
+            error_log('RouteController::store error: ' . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la création : ' . $e->getMessage());
+            return Response::redirect('/routes/create');
+        }
+    }
+
+    // ===== AUSSI, ASSURE-TOI QUE TU AS CES PROPRIÉTÉS DANS LA CLASSE =====
+
+    protected Database $db;
+
+    // ===== ET MODIFIE LE CONSTRUCTEUR POUR INJECTER Database =====
+
+    public function __construct(
+        View $view,
+        Session $session,
+        CsrfManager $csrfManager,
+        RouteService $routeService,
+        MediaService $mediaService,
+        SectorService $sectorService,
+        AuthService $authService,
+        Database $db // AJOUTER ce paramètre
+    ) {
+        parent::__construct($view, $session, $csrfManager);
+        $this->routeService = $routeService;
+        $this->mediaService = $mediaService;
+        $this->sectorService = $sectorService;
+        $this->authService = $authService;
+        $this->db = $db; // AJOUTER cette ligne
     }
 }
