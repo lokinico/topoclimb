@@ -480,9 +480,9 @@ class SectorController extends BaseController
         $data = $request->request->all();
 
         // Basic validation
-        if (empty($data['name']) || empty($data['code']) || empty($data['book_id'])) {
+        if (empty($data['name']) || empty($data['code'])) {
             $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires');
-            return Response::redirect('/sectors/' . $id . '/edit');  // ✅ CORRECTION
+            return Response::redirect('/sectors/create');
         }
 
         try {
