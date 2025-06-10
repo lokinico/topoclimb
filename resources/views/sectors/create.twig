@@ -24,14 +24,14 @@
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="book_id" class="form-label required">Site/Livre</label>
-                                <select class="form-select" id="book_id" name="book_id" required>
-                                    <option value="">Sélectionnez un site</option>
+                                <label for="book_id" class="form-label">Site/Livre (optionnel)</label>
+                                <select class="form-select" id="book_id" name="book_id">
+                                    <option value="">Aucun site sélectionné</option>
                                     {% for book in books %}
                                         <option value="{{ book.id }}">{{ book.name }}</option>
                                     {% endfor %}
                                 </select>
-                                <div class="form-text">Site d'escalade auquel appartient ce secteur</div>
+                                <div class="form-text">Site d'escalade auquel appartient ce secteur (optionnel)</div>
                             </div>
                             
                             <div class="col-md-6">
@@ -210,6 +210,9 @@
                     <h2 class="h5 mb-0">Aide</h2>
                 </div>
                 <div class="card-body">
+                    <h3 class="h6">Site/Livre</h3>
+                    <p class="small">Le site est optionnel. Vous pouvez créer un secteur indépendant ou l'associer à un livre/guide existant.</p>
+                    
                     <h3 class="h6">Code du secteur</h3>
                     <p class="small">Utilisez un code court et unique. Exemples: VAL01, GRIM-A, SAL-NORD</p>
                     
