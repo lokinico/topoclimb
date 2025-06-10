@@ -8,7 +8,8 @@ use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Security\CsrfManager;
-use TopoclimbCH\Core\Request;
+// CORRECTION 1: Utiliser Symfony Request comme les autres contrôleurs
+use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Services\RegionService;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Models\Site;
@@ -37,19 +38,20 @@ class SiteController extends BaseController
      */
     public function index(Request $request): Response
     {
-        $regionId = $request->getQuery('region_id');
-        $search = $request->getQuery('search', '');
+        // CORRECTION 2: Adapter les méthodes pour Symfony Request (comme RouteController)
+        $regionId = $request->query->get('region_id');      // au lieu de $request->getQuery('region_id')
+        $search = $request->query->get('search', '');       // au lieu de $request->getQuery('search', '')
 
         // Si pas de région spécifiée, rediriger vers les régions
         if (!$regionId) {
-            return $this->redirect('/regions');
+            return Response::redirect('/regions');
         }
 
         try {
             $region = Region::find($regionId);
             if (!$region) {
                 $this->session->flash('error', 'Région non trouvée');
-                return $this->redirect('/regions');
+                return Response::redirect('/regions');
             }
 
             $sites = Site::getByRegion($regionId);
@@ -62,7 +64,7 @@ class SiteController extends BaseController
                 });
             }
 
-            return $this->view->render('sites/index', [
+            return $this->render('sites/index', [
                 'sites' => $sites,
                 'region' => $region,
                 'search' => $search,
@@ -70,7 +72,7 @@ class SiteController extends BaseController
             ]);
         } catch (\Exception $e) {
             $this->session->flash('error', 'Erreur lors du chargement des sites');
-            return $this->redirect('/regions');
+            return Response::redirect('/regions');
         }
     }
 
@@ -79,19 +81,20 @@ class SiteController extends BaseController
      */
     public function show(Request $request): Response
     {
-        $id = $request->getParam('id');
+        // CORRECTION 3: Utiliser attributes->get() pour les paramètres d'URL comme RouteController
+        $id = $request->attributes->get('id');              // au lieu de $request->getParam('id')
 
         try {
             $site = Site::find($id);
             if (!$site) {
                 $this->session->flash('error', 'Site non trouvé');
-                return $this->redirect('/regions');
+                return Response::redirect('/regions');
             }
 
             $region = $site->region();
             $sectors = $site->getSectorsWithStats();
 
-            return $this->view->render('sites/show', [
+            return $this->render('sites/show', [
                 'site' => $site,
                 'region' => $region,
                 'sectors' => $sectors,
@@ -101,7 +104,7 @@ class SiteController extends BaseController
             ]);
         } catch (\Exception $e) {
             $this->session->flash('error', 'Erreur lors du chargement du site');
-            return $this->redirect('/regions');
+            return Response::redirect('/regions');
         }
     }
 
@@ -110,8 +113,9 @@ class SiteController extends BaseController
      */
     public function form(Request $request): Response
     {
-        $id = $request->getParam('id');
-        $regionId = $request->getQuery('region_id');
+        // CORRECTION 4: Utiliser les bonnes méthodes Symfony Request
+        $id = $request->attributes->get('id');              // au lieu de $request->getParam('id')
+        $regionId = $request->query->get('region_id');      // au lieu de $request->getQuery('region_id')
 
         $site = null;
         $region = null;
@@ -121,7 +125,7 @@ class SiteController extends BaseController
             $site = Site::find($id);
             if (!$site) {
                 $this->session->flash('error', 'Site non trouvé');
-                return $this->redirect('/regions');
+                return Response::redirect('/regions');
             }
             $region = $site->region();
         }
@@ -130,19 +134,19 @@ class SiteController extends BaseController
             $region = Region::find($regionId);
             if (!$region) {
                 $this->session->flash('error', 'Région non trouvée');
-                return $this->redirect('/regions');
+                return Response::redirect('/regions');
             }
         } else {
             $this->session->flash('error', 'Région requise pour créer un site');
-            return $this->redirect('/regions');
+            return Response::redirect('/regions');
         }
 
-        return $this->view->render('sites/form', [
+        return $this->render('sites/form', [
             'site' => $site,
             'region' => $region,
             'isEdit' => $id !== null,
             'title' => $id ? 'Modifier le site' : 'Nouveau site',
-            'csrfToken' => $this->csrfManager->generateToken()
+            'csrf_token' => $this->createCsrfToken()           // CORRECTION 5: Utiliser createCsrfToken() comme RouteController
         ]);
     }
 
@@ -151,20 +155,22 @@ class SiteController extends BaseController
      */
     public function store(Request $request): Response
     {
-        if (!$this->csrfManager->validateToken($request->getPost('csrf_token'))) {
+        // CORRECTION 6: Valider CSRF comme RouteController
+        if (!$this->validateCsrfToken($request)) {
             $this->session->flash('error', 'Token CSRF invalide');
-            return $this->redirect('/sites');
+            return Response::redirect('/sites');
         }
 
         try {
+            // CORRECTION 7: Utiliser request->get() pour POST comme RouteController
             $data = [
-                'region_id' => $request->getPost('region_id'),
-                'name' => $request->getPost('name'),
-                'code' => $request->getPost('code'),
-                'description' => $request->getPost('description'),
-                'year' => $request->getPost('year'),
-                'publisher' => $request->getPost('publisher'),
-                'isbn' => $request->getPost('isbn'),
+                'region_id' => $request->request->get('region_id'),
+                'name' => $request->request->get('name'),
+                'code' => $request->request->get('code'),
+                'description' => $request->request->get('description'),
+                'year' => $request->request->get('year'),
+                'publisher' => $request->request->get('publisher'),
+                'isbn' => $request->request->get('isbn'),
                 'active' => 1
             ];
 
@@ -173,14 +179,14 @@ class SiteController extends BaseController
 
             if ($site->save()) {
                 $this->session->flash('success', 'Site créé avec succès');
-                return $this->redirect("/sites/{$site->id}");
+                return Response::redirect("/sites/{$site->id}");
             } else {
                 $this->session->flash('error', 'Erreur lors de la création du site');
-                return $this->redirect()->back();
+                return Response::redirect('/sites/create');               // CORRECTION 8: Redirection spécifique
             }
         } catch (\Exception $e) {
             $this->session->flash('error', 'Erreur: ' . $e->getMessage());
-            return $this->redirect()->back();
+            return Response::redirect('/sites/create');                   // CORRECTION 9: Redirection spécifique
         }
     }
 
@@ -189,54 +195,53 @@ class SiteController extends BaseController
      */
     public function update(Request $request): Response
     {
-        $id = $request->getParam('id');
+        $id = $request->attributes->get('id');
 
-        if (!$this->csrfManager->validateToken($request->getPost('csrf_token'))) {
+        if (!$this->validateCsrfToken($request)) {
             $this->session->flash('error', 'Token CSRF invalide');
-            return $this->redirect("/sites/{$id}");
+            return Response::redirect("/sites/{$id}");
         }
 
         try {
             $site = Site::find($id);
             if (!$site) {
                 $this->session->flash('error', 'Site non trouvé');
-                return $this->redirect('/regions');
+                return Response::redirect('/regions');
             }
 
             $data = [
-                'name' => $request->getPost('name'),
-                'code' => $request->getPost('code'),
-                'description' => $request->getPost('description'),
-                'year' => $request->getPost('year'),
-                'publisher' => $request->getPost('publisher'),
-                'isbn' => $request->getPost('isbn')
+                'name' => $request->request->get('name'),
+                'code' => $request->request->get('code'),
+                'description' => $request->request->get('description'),
+                'year' => $request->request->get('year'),
+                'publisher' => $request->request->get('publisher'),
+                'isbn' => $request->request->get('isbn')
             ];
 
             $site->fill($data);
 
             if ($site->save()) {
                 $this->session->flash('success', 'Site mis à jour avec succès');
-                return $this->redirect("/sites/{$site->id}");
+                return Response::redirect("/sites/{$site->id}");
             } else {
                 $this->session->flash('error', 'Erreur lors de la mise à jour du site');
-                return $this->redirect()->back();
+                return Response::redirect("/sites/{$id}/edit");
             }
         } catch (\Exception $e) {
             $this->session->flash('error', 'Erreur: ' . $e->getMessage());
-            return $this->redirect()->back();
+            return Response::redirect("/sites/{$id}/edit");
         }
     }
 
     /**
-     * OUTIL DE SÉLECTION HIÉRARCHIQUE
-     * 
      * API endpoint pour obtenir la hiérarchie complète ou partielle
      */
     public function hierarchyApi(Request $request): Response
     {
-        $level = $request->getQuery('level', 'regions'); // regions, sites, sectors, routes
-        $parentId = $request->getQuery('parent_id');
-        $search = $request->getQuery('search', '');
+        // CORRECTION 10: Adapter pour Symfony Request
+        $level = $request->query->get('level', 'regions');    // regions, sites, sectors, routes
+        $parentId = $request->query->get('parent_id');
+        $search = $request->query->get('search', '');
 
         try {
             $data = [];
@@ -281,21 +286,32 @@ class SiteController extends BaseController
      */
     public function selector(Request $request): Response
     {
-        $mode = $request->getQuery('mode', 'select'); // select, book, stats
-        $preselected = $request->getQuery('preselected'); // format: region:1,site:2,sector:3
+        $mode = $request->query->get('mode', 'select'); // select, book, stats
+        $preselected = $request->query->get('preselected'); // format: region:1,site:2,sector:3
 
-        return $this->view->render('sites/selector', [
+        return $this->render('sites/selector', [
             'mode' => $mode,
             'preselected' => $preselected,
             'title' => 'Sélecteur hiérarchique',
-            'csrfToken' => $this->csrfManager->generateToken()
+            'csrf_token' => $this->createCsrfToken()
         ]);
+    }
+
+    // CORRECTION 11: Ajouter les méthodes CSRF héritées de BaseController
+    private function createCsrfToken(): string
+    {
+        return $this->csrfManager->generateToken();
+    }
+
+    private function validateCsrfToken(Request $request): bool
+    {
+        $token = $request->request->get('csrf_token');
+        return $this->csrfManager->validateToken($token);
     }
 
     /**
      * Méthodes privées pour l'API hiérarchique
      */
-
     private function getRegionsData(string $search = ''): array
     {
         $sql = "
