@@ -15,7 +15,7 @@ use TopoclimbCH\Core\Model;
  */
 class Sector extends Model
 {
-    protected string $table = 'climbing_sectors';
+    protected static string $table = 'climbing_sectors';
     protected string $primaryKey = 'id';
 
     protected array $fillable = [
