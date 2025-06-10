@@ -1,458 +1,649 @@
 <?php
 
-declare(strict_types=1);
-
 namespace TopoclimbCH\Controllers;
 
-use TopoclimbCH\Core\View;
-use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\Response;
-use TopoclimbCH\Core\Security\CsrfManager;
-// CORRECTION 1: Utiliser Symfony Request comme les autres contrôleurs
 use Symfony\Component\HttpFoundation\Request;
-use TopoclimbCH\Services\RegionService;
-use TopoclimbCH\Services\SectorService;
+use TopoclimbCH\Core\Response;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Database;
 use TopoclimbCH\Models\Site;
 use TopoclimbCH\Models\Region;
 use TopoclimbCH\Models\Sector;
+use TopoclimbCH\Models\Route;
+use TopoclimbCH\Services\MediaService;
+use TopoclimbCH\Core\Security\CsrfManager;
 
 class SiteController extends BaseController
 {
-    private RegionService $regionService;
-    private SectorService $sectorService;
-    private \TopoclimbCH\Core\Database $db;                    // AJOUT: Propriété Database
+    private Database $db;
+    private MediaService $mediaService;
 
     public function __construct(
         View $view,
         Session $session,
-        CsrfManager $csrfManager,
-        RegionService $regionService,
-        SectorService $sectorService
+        Database $db,
+        MediaService $mediaService,
+        CsrfManager $csrfManager
     ) {
         parent::__construct($view, $session, $csrfManager);
-        $this->regionService = $regionService;
-        $this->sectorService = $sectorService;
-
-        // AJOUT: Récupérer Database via getInstance (comme RouteController)
-        $this->db = \TopoclimbCH\Core\Database::getInstance();
+        $this->db = $db;
+        $this->mediaService = $mediaService;
     }
 
     /**
-     * Liste tous les sites avec filtrage par région
-     * AMÉLIORATION: Gère le cas où aucune région n'est spécifiée
+     * Liste tous les sites
      */
     public function index(Request $request): Response
     {
-        $regionId = $request->query->get('region_id');
-        $search = $request->query->get('search', '');
-
         try {
-            // CAS 1: Région spécifiée - Afficher les sites de cette région
+            $page = (int) $request->query->get('page', 1);
+            $perPage = (int) $request->query->get('per_page', 20);
+            $sortBy = $request->query->get('sort_by', 'name');
+            $sortDir = $request->query->get('sort_dir', 'ASC');
+            $regionId = $request->query->get('region_id');
+            $search = $request->query->get('search');
+
+            // Construction de la requête avec jointures
+            $whereConditions = ['s.active = 1'];
+            $params = [];
+
             if ($regionId) {
-                $region = Region::find($regionId);
-                if (!$region) {
-                    $this->session->flash('error', 'Région non trouvée');
-                    return Response::redirect('/regions');
-                }
-
-                $sites = Site::getByRegion($regionId);
-
-                // Filtrer par recherche si nécessaire
-                if (!empty($search)) {
-                    $sites = array_filter($sites, function ($site) use ($search) {
-                        return stripos($site['name'], $search) !== false ||
-                            stripos($site['description'], $search) !== false;
-                    });
-                }
-
-                return $this->render('sites/index', [
-                    'sites' => $sites,
-                    'region' => $region,
-                    'regions' => null, // Pas besoin de toutes les régions
-                    'search' => $search,
-                    'title' => 'Sites - ' . $region->name,
-                    'show_region_selector' => false
-                ]);
+                $whereConditions[] = 's.region_id = ?';
+                $params[] = (int)$regionId;
             }
 
-            // CAS 2: Aucune région spécifiée - Afficher sélecteur + tous les sites ou redirection
-            else {
-                // Option A: Rediriger vers les régions (comportement actuel)
-                // return Response::redirect('/regions');
+            if ($search) {
+                $whereConditions[] = '(s.name LIKE ? OR s.code LIKE ? OR s.description LIKE ?)';
+                $searchTerm = '%' . $search . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
 
-                // Option B: Afficher tous les sites avec sélecteur de région (NOUVEAU)
-                $regions = $this->db->fetchAll(                        // CORRECTION: Utiliser $this->db
-                    "SELECT r.*, c.name as country_name 
-                     FROM climbing_regions r 
-                     LEFT JOIN climbing_countries c ON r.country_id = c.id 
-                     WHERE r.active = 1 
-                     ORDER BY c.name, r.name"
-                );
+            $whereClause = implode(' AND ', $whereConditions);
 
-                // Récupérer tous les sites ou limiter à un nombre raisonnable
-                $sql = "
-                    SELECT s.*, r.name as region_name, r.id as region_id,
-                           COUNT(DISTINCT sec.id) as sector_count,
-                           COUNT(DISTINCT rt.id) as route_count
+            // Requête pour compter le total
+            $countSql = "SELECT COUNT(*) as total 
+                        FROM climbing_sites s 
+                        LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                        WHERE {$whereClause}";
+            $totalResult = $this->db->fetchOne($countSql, $params);
+            $total = $totalResult['total'];
+
+            // Requête paginée avec statistiques
+            $offset = ($page - 1) * $perPage;
+            $sql = "SELECT 
+                        s.*,
+                        r.name as region_name,
+                        r.id as region_id,
+                        COUNT(DISTINCT sect.id) as sectors_count,
+                        COUNT(DISTINCT rt.id) as routes_count
                     FROM climbing_sites s
-                    INNER JOIN climbing_regions r ON s.region_id = r.id
-                    LEFT JOIN climbing_sectors sec ON s.id = sec.site_id AND sec.active = 1
-                    LEFT JOIN climbing_routes rt ON sec.id = rt.sector_id AND rt.active = 1
-                    WHERE s.active = 1
-                ";
+                    LEFT JOIN climbing_regions r ON s.region_id = r.id
+                    LEFT JOIN climbing_sectors sect ON s.id = sect.site_id AND sect.active = 1
+                    LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
+                    WHERE {$whereClause}
+                    GROUP BY s.id
+                    ORDER BY {$sortBy} {$sortDir}
+                    LIMIT {$perPage} OFFSET {$offset}";
 
-                $params = [];
-                if (!empty($search)) {
-                    $sql .= " AND (s.name LIKE ? OR s.description LIKE ?)";
-                    $params = ["%{$search}%", "%{$search}%"];
-                }
+            $sites = $this->db->fetchAll($sql, $params);
 
-                $sql .= " GROUP BY s.id ORDER BY r.name, s.name LIMIT 50"; // Limiter pour performance
+            // Pagination info
+            $pagination = [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'last_page' => ceil($total / $perPage),
+                'from' => $offset + 1,
+                'to' => min($offset + $perPage, $total)
+            ];
 
-                $sites = $this->db->fetchAll($sql, $params);           // CORRECTION: Utiliser $this->db
+            // Données pour les filtres
+            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
 
-                return $this->render('sites/index', [
-                    'sites' => $sites,
-                    'region' => null, // Aucune région spécifique
-                    'regions' => $regions, // Toutes les régions pour le sélecteur
+            return $this->render('sites/index', [
+                'title' => 'Sites d\'escalade',
+                'sites' => $sites,
+                'pagination' => $pagination,
+                'regions' => $regions,
+                'currentFilters' => [
+                    'region_id' => $regionId,
                     'search' => $search,
-                    'title' => 'Tous les sites',
-                    'show_region_selector' => true, // Afficher le sélecteur
-                    'total_sites' => count($sites)
-                ]);
-            }
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir
+                ]
+            ]);
         } catch (\Exception $e) {
-            error_log('SiteController::index error: ' . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors du chargement des sites');
-            return Response::redirect('/regions');
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement des sites: ' . $e->getMessage());
+            return $this->render('sites/index', [
+                'sites' => [],
+                'error' => $e->getMessage()
+            ]);
         }
     }
+
     /**
-     * Affiche un site avec ses secteurs
+     * Affiche un site spécifique
      */
     public function show(Request $request): Response
     {
-        // CORRECTION 3: Utiliser attributes->get() pour les paramètres d'URL comme RouteController
-        $id = $request->attributes->get('id');              // au lieu de $request->getParam('id')
+        $id = $request->attributes->get('id');
 
-        try {
-            $site = Site::find($id);
-            if (!$site) {
-                $this->session->flash('error', 'Site non trouvé');
-                return Response::redirect('/regions');
-            }
-
-            $region = $site->region();
-            $sectors = $site->getSectorsWithStats();
-
-            return $this->render('sites/show', [
-                'site' => $site,
-                'region' => $region,
-                'sectors' => $sectors,
-                'totalRoutes' => $site->getTotalRoutes(),
-                'avgDifficulty' => $site->getAverageDifficulty(),
-                'title' => $site->name
-            ]);
-        } catch (\Exception $e) {
-            $this->session->flash('error', 'Erreur lors du chargement du site');
-            return Response::redirect('/regions');
-        }
-    }
-
-    /**
-     * Formulaire de création/édition de site
-     */
-    public function form(Request $request): Response
-    {
-        // CORRECTION 4: Utiliser les bonnes méthodes Symfony Request
-        $id = $request->attributes->get('id');              // au lieu de $request->getParam('id')
-        $regionId = $request->query->get('region_id');      // au lieu de $request->getQuery('region_id')
-
-        $site = null;
-        $region = null;
-
-        // Mode édition
-        if ($id) {
-            $site = Site::find($id);
-            if (!$site) {
-                $this->session->flash('error', 'Site non trouvé');
-                return Response::redirect('/regions');
-            }
-            $region = $site->region();
-        }
-        // Mode création
-        elseif ($regionId) {
-            $region = Region::find($regionId);
-            if (!$region) {
-                $this->session->flash('error', 'Région non trouvée');
-                return Response::redirect('/regions');
-            }
-        } else {
-            $this->session->flash('error', 'Région requise pour créer un site');
-            return Response::redirect('/regions');
-        }
-
-        return $this->render('sites/form', [
-            'site' => $site,
-            'region' => $region,
-            'isEdit' => $id !== null,
-            'title' => $id ? 'Modifier le site' : 'Nouveau site',
-            'csrf_token' => $this->createCsrfToken()           // CORRECTION 5: Utiliser createCsrfToken() comme RouteController
-        ]);
-    }
-
-    /**
-     * Sauvegarde un site (création)
-     */
-    public function store(Request $request): Response
-    {
-        // CORRECTION 6: Valider CSRF comme RouteController
-        if (!$this->validateCsrfToken($request)) {
-            $this->session->flash('error', 'Token CSRF invalide');
+        if (!$id) {
+            $this->session->flash('error', 'ID du site non spécifié');
             return Response::redirect('/sites');
         }
 
         try {
-            // CORRECTION 7: Utiliser request->get() pour POST comme RouteController
-            $data = [
-                'region_id' => $request->request->get('region_id'),
-                'name' => $request->request->get('name'),
-                'code' => $request->request->get('code'),
-                'description' => $request->request->get('description'),
-                'year' => $request->request->get('year'),
-                'publisher' => $request->request->get('publisher'),
-                'isbn' => $request->request->get('isbn'),
-                'active' => 1
+            // Récupérer le site avec sa région
+            $siteData = $this->db->fetchOne(
+                "SELECT s.*, r.name as region_name, r.id as region_id
+                 FROM climbing_sites s
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id
+                 WHERE s.id = ? AND s.active = 1",
+                [(int)$id]
+            );
+
+            if (!$siteData) {
+                $this->session->flash('error', 'Site non trouvé');
+                return Response::redirect('/sites');
+            }
+
+            // Récupérer les secteurs du site
+            $sectors = $this->db->fetchAll(
+                "SELECT sect.*, COUNT(rt.id) as routes_count
+                 FROM climbing_sectors sect
+                 LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
+                 WHERE sect.site_id = ? AND sect.active = 1
+                 GROUP BY sect.id
+                 ORDER BY sect.name ASC",
+                [(int)$id]
+            );
+
+            // Récupérer les médias du site
+            $media = $this->mediaService->getMediaForEntity('site', (int)$id);
+
+            // Calculer les statistiques
+            $stats = [
+                'sectors_count' => count($sectors),
+                'routes_count' => array_sum(array_column($sectors, 'routes_count')),
+                'min_altitude' => null,
+                'max_altitude' => null,
+                'difficulties' => []
             ];
 
-            $site = new Site();
-            $site->fill($data);
-
-            if ($site->save()) {
-                $this->session->flash('success', 'Site créé avec succès');
-                return Response::redirect("/sites/{$site->id}");
-            } else {
-                $this->session->flash('error', 'Erreur lors de la création du site');
-                return Response::redirect('/sites/create');               // CORRECTION 8: Redirection spécifique
+            // Analyser les secteurs pour les stats
+            foreach ($sectors as $sector) {
+                if (!is_null($sector['altitude'])) {
+                    if (is_null($stats['min_altitude']) || $sector['altitude'] < $stats['min_altitude']) {
+                        $stats['min_altitude'] = $sector['altitude'];
+                    }
+                    if (is_null($stats['max_altitude']) || $sector['altitude'] > $stats['max_altitude']) {
+                        $stats['max_altitude'] = $sector['altitude'];
+                    }
+                }
             }
+
+            // Récupérer toutes les difficultés des voies de ce site
+            if ($stats['routes_count'] > 0) {
+                $difficulties = $this->db->fetchAll(
+                    "SELECT DISTINCT rt.difficulty
+                     FROM climbing_routes rt
+                     JOIN climbing_sectors sect ON rt.sector_id = sect.id
+                     WHERE sect.site_id = ? AND rt.active = 1 AND rt.difficulty IS NOT NULL
+                     ORDER BY rt.difficulty",
+                    [(int)$id]
+                );
+                $stats['difficulties'] = array_column($difficulties, 'difficulty');
+            }
+
+            return $this->render('sites/show', [
+                'title' => $siteData['name'],
+                'site' => $siteData,
+                'sectors' => $sectors,
+                'media' => $media,
+                'stats' => $stats
+            ]);
         } catch (\Exception $e) {
-            $this->session->flash('error', 'Erreur: ' . $e->getMessage());
-            return Response::redirect('/sites/create');                   // CORRECTION 9: Redirection spécifique
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return Response::redirect('/sites');
         }
     }
 
     /**
-     * Met à jour un site
+     * Formulaire de création/édition d'un site
+     */
+    public function form(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        $isEdit = !is_null($id);
+
+        try {
+            $site = null;
+            if ($isEdit) {
+                $site = $this->db->fetchOne(
+                    "SELECT * FROM climbing_sites WHERE id = ? AND active = 1",
+                    [(int)$id]
+                );
+
+                if (!$site) {
+                    $this->session->flash('error', 'Site non trouvé');
+                    return Response::redirect('/sites');
+                }
+            }
+
+            // Données pour le formulaire
+            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+
+            // Médias existants si édition
+            $media = $isEdit ? $this->mediaService->getMediaForEntity('site', (int)$id) : [];
+
+            return $this->render('sites/form', [
+                'title' => $isEdit ? 'Modifier le site ' . $site['name'] : 'Créer un nouveau site',
+                'site' => $site,
+                'regions' => $regions,
+                'media' => $media,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return Response::redirect('/sites');
+        }
+    }
+
+    /**
+     * Création d'un nouveau site
+     */
+    public function store(Request $request): Response
+    {
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/sites/create');
+        }
+
+        $data = $request->request->all();
+
+        // Validation basique
+        if (empty($data['name']) || empty($data['code']) || empty($data['region_id'])) {
+            $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires (nom, code, région)');
+            return Response::redirect('/sites/create');
+        }
+
+        try {
+            $data['created_by'] = $_SESSION['auth_user_id'] ?? 1;
+
+            if (!$this->db->beginTransaction()) {
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
+                return Response::redirect('/sites/create');
+            }
+
+            // Vérifier l'unicité du code
+            $existingCode = $this->db->fetchOne(
+                "SELECT id FROM climbing_sites WHERE code = ? AND active = 1",
+                [$data['code']]
+            );
+
+            if ($existingCode) {
+                $this->db->rollBack();
+                $this->session->flash('error', 'Le code "' . $data['code'] . '" est déjà utilisé');
+                return Response::redirect('/sites/create');
+            }
+
+            // Préparer les données
+            $siteData = [
+                'name' => $data['name'],
+                'code' => $data['code'],
+                'region_id' => (int)$data['region_id'],
+                'description' => $data['description'] ?? null,
+                'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
+                'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+                'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
+                'access_info' => $data['access_info'] ?? null,
+                'year' => !empty($data['year']) ? (int)$data['year'] : null,
+                'publisher' => $data['publisher'] ?? null,
+                'isbn' => $data['isbn'] ?? null,
+                'active' => isset($data['active']) ? 1 : 0,
+                'created_by' => $data['created_by'],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $siteId = $this->db->insert('climbing_sites', $siteData);
+
+            if (!$siteId) {
+                $this->db->rollBack();
+                $this->session->flash('error', 'Erreur lors de la création du site');
+                return Response::redirect('/sites/create');
+            }
+
+            // Traitement des médias
+            $mediaFile = $_FILES['media_file'] ?? null;
+            if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name'])) {
+                $this->mediaService->uploadMedia($mediaFile, [
+                    'title' => $data['media_title'] ?? $data['name'],
+                    'description' => "Image pour le site: {$data['name']}",
+                    'is_public' => 1,
+                    'media_type' => 'image',
+                    'entity_type' => 'site',
+                    'entity_id' => $siteId,
+                    'relationship_type' => $data['media_relationship_type'] ?? 'main'
+                ], $data['created_by']);
+            }
+
+            if (!$this->db->commit()) {
+                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+            }
+
+            $this->session->flash('success', 'Site créé avec succès');
+            return Response::redirect('/sites/' . $siteId);
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->session->flash('error', 'Erreur lors de la création du site: ' . $e->getMessage());
+            return Response::redirect('/sites/create');
+        }
+    }
+
+    /**
+     * Mise à jour d'un site existant
      */
     public function update(Request $request): Response
     {
         $id = $request->attributes->get('id');
 
+        if (!$id) {
+            $this->session->flash('error', 'ID du site non spécifié');
+            return Response::redirect('/sites');
+        }
+
         if (!$this->validateCsrfToken($request)) {
-            $this->session->flash('error', 'Token CSRF invalide');
-            return Response::redirect("/sites/{$id}");
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/sites/' . $id . '/edit');
+        }
+
+        $data = $request->request->all();
+
+        // Validation basique
+        if (empty($data['name']) || empty($data['code']) || empty($data['region_id'])) {
+            $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires (nom, code, région)');
+            return Response::redirect('/sites/' . $id . '/edit');
         }
 
         try {
-            $site = Site::find($id);
-            if (!$site) {
-                $this->session->flash('error', 'Site non trouvé');
-                return Response::redirect('/regions');
+            $data['updated_by'] = $_SESSION['auth_user_id'] ?? 1;
+
+            if (!$this->db->beginTransaction()) {
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
+                return Response::redirect('/sites/' . $id . '/edit');
             }
 
-            $data = [
-                'name' => $request->request->get('name'),
-                'code' => $request->request->get('code'),
-                'description' => $request->request->get('description'),
-                'year' => $request->request->get('year'),
-                'publisher' => $request->request->get('publisher'),
-                'isbn' => $request->request->get('isbn')
+            // Vérifier l'unicité du code (excluant le site actuel)
+            $existingCode = $this->db->fetchOne(
+                "SELECT id FROM climbing_sites WHERE code = ? AND active = 1 AND id != ?",
+                [$data['code'], (int)$id]
+            );
+
+            if ($existingCode) {
+                $this->db->rollBack();
+                $this->session->flash('error', 'Le code "' . $data['code'] . '" est déjà utilisé');
+                return Response::redirect('/sites/' . $id . '/edit');
+            }
+
+            // Préparer les données de mise à jour
+            $updateData = [
+                'name' => $data['name'],
+                'code' => $data['code'],
+                'region_id' => (int)$data['region_id'],
+                'description' => $data['description'] ?? null,
+                'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
+                'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+                'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
+                'access_info' => $data['access_info'] ?? null,
+                'year' => !empty($data['year']) ? (int)$data['year'] : null,
+                'publisher' => $data['publisher'] ?? null,
+                'isbn' => $data['isbn'] ?? null,
+                'active' => isset($data['active']) ? 1 : 0,
+                'updated_by' => $data['updated_by'],
+                'updated_at' => date('Y-m-d H:i:s')
             ];
 
-            $site->fill($data);
+            $success = $this->db->update('climbing_sites', $updateData, 'id = ?', [(int)$id]);
 
-            if ($site->save()) {
-                $this->session->flash('success', 'Site mis à jour avec succès');
-                return Response::redirect("/sites/{$site->id}");
-            } else {
-                $this->session->flash('error', 'Erreur lors de la mise à jour du site');
-                return Response::redirect("/sites/{$id}/edit");
+            if (!$success) {
+                throw new \Exception("Échec de la mise à jour du site");
             }
+
+            // Traitement des nouveaux médias
+            $mediaFile = $_FILES['media_file'] ?? null;
+            if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name']) && $mediaFile['error'] === UPLOAD_ERR_OK) {
+                $mediaTitle = $data['media_title'] ?? null;
+                $relationshipType = $data['media_relationship_type'] ?? 'gallery';
+
+                $mediaId = $this->mediaService->uploadMedia($mediaFile, [
+                    'title' => $mediaTitle ?? $data['name'],
+                    'description' => "Image pour le site: {$data['name']}",
+                    'is_public' => 1,
+                    'media_type' => 'image',
+                    'entity_type' => 'site',
+                    'entity_id' => (int)$id,
+                    'relationship_type' => $relationshipType
+                ], $data['updated_by']);
+
+                if ($mediaId && $relationshipType === 'main') {
+                    $this->db->update(
+                        'climbing_media_relationships',
+                        ['relationship_type' => 'gallery'],
+                        'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
+                        ['site', (int)$id, 'main', $mediaId]
+                    );
+                }
+            }
+
+            if (!$this->db->commit()) {
+                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+            }
+
+            $this->session->flash('success', 'Site mis à jour avec succès');
+            return Response::redirect('/sites/' . $id);
         } catch (\Exception $e) {
-            $this->session->flash('error', 'Erreur: ' . $e->getMessage());
-            return Response::redirect("/sites/{$id}/edit");
+            if ($this->db->inTransaction()) {
+                $this->db->rollback();
+            }
+            $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+            return Response::redirect('/sites/' . $id . '/edit');
         }
     }
 
     /**
-     * API endpoint pour obtenir la hiérarchie complète ou partielle
+     * Suppression d'un site
      */
-    public function hierarchyApi(Request $request): Response
+    public function destroy(Request $request): Response
     {
-        // CORRECTION 10: Adapter pour Symfony Request
-        $level = $request->query->get('level', 'regions');    // regions, sites, sectors, routes
-        $parentId = $request->query->get('parent_id');
-        $search = $request->query->get('search', '');
+        $id = $request->attributes->get('id');
+
+        if (!$id) {
+            $this->session->flash('error', 'ID du site non spécifié');
+            return Response::redirect('/sites');
+        }
+
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/sites/' . $id);
+        }
 
         try {
-            $data = [];
+            // Vérifier que le site existe
+            $site = $this->db->fetchOne(
+                "SELECT * FROM climbing_sites WHERE id = ? AND active = 1",
+                [(int)$id]
+            );
 
-            switch ($level) {
-                case 'regions':
-                    $data = $this->getRegionsData($search);
-                    break;
-
-                case 'sites':
-                    if ($parentId) {
-                        $data = $this->getSitesData($parentId, $search);
-                    }
-                    break;
-
-                case 'sectors':
-                    $data = $this->getSectorsData($parentId, $search);
-                    break;
-
-                case 'routes':
-                    if ($parentId) {
-                        $data = $this->getRoutesData($parentId, $search);
-                    }
-                    break;
+            if (!$site) {
+                $this->session->flash('error', 'Site non trouvé');
+                return Response::redirect('/sites');
             }
+
+            // Vérifier s'il y a des secteurs associés
+            $sectorsCount = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM climbing_sectors WHERE site_id = ? AND active = 1",
+                [(int)$id]
+            );
+
+            if ($sectorsCount['count'] > 0) {
+                $this->session->flash('error', 'Impossible de supprimer le site car il contient des secteurs actifs');
+                return Response::redirect('/sites/' . $id);
+            }
+
+            if (!$this->db->beginTransaction()) {
+                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
+                return Response::redirect('/sites/' . $id);
+            }
+
+            // Désactiver le site (soft delete)
+            $success = $this->db->update(
+                'climbing_sites',
+                ['active' => 0, 'updated_at' => date('Y-m-d H:i:s')],
+                'id = ?',
+                [(int)$id]
+            );
+
+            if (!$success) {
+                $this->db->rollBack();
+                $this->session->flash('error', 'Erreur lors de la suppression du site');
+                return Response::redirect('/sites/' . $id);
+            }
+
+            if (!$this->db->commit()) {
+                throw new \Exception("Échec lors de la suppression finale");
+            }
+
+            $this->session->flash('success', 'Site supprimé avec succès');
+            return Response::redirect('/sites');
+        } catch (\Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            $this->session->flash('error', 'Erreur lors de la suppression du site: ' . $e->getMessage());
+            return Response::redirect('/sites/' . $id);
+        }
+    }
+
+    /**
+     * API: Recherche de sites avec autocomplétion
+     */
+    public function apiSearch(Request $request): Response
+    {
+        $query = $request->query->get('q', '');
+        $limit = min((int)$request->query->get('limit', 10), 50);
+
+        if (strlen($query) < 2) {
+            return Response::json([
+                'success' => true,
+                'data' => []
+            ]);
+        }
+
+        try {
+            $sites = Site::search($query, $limit);
 
             return Response::json([
                 'success' => true,
-                'data' => $data,
-                'level' => $level
+                'data' => $sites
             ]);
         } catch (\Exception $e) {
             return Response::json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Erreur lors de la recherche'
             ], 500);
         }
     }
 
     /**
-     * Outil de sélection interactif (page complète)
+     * API: Informations d'un site pour AJAX
      */
-    public function selector(Request $request): Response
+    public function apiShow(Request $request): Response
     {
-        $mode = $request->query->get('mode', 'select'); // select, book, stats
-        $preselected = $request->query->get('preselected'); // format: region:1,site:2,sector:3
+        $id = $request->attributes->get('id');
 
-        return $this->render('sites/selector', [
-            'mode' => $mode,
-            'preselected' => $preselected,
-            'title' => 'Sélecteur hiérarchique',
-            'csrf_token' => $this->createCsrfToken()
-        ]);
+        if (!$id) {
+            return Response::json([
+                'success' => false,
+                'error' => 'ID du site non spécifié'
+            ], 400);
+        }
+
+        try {
+            $site = $this->db->fetchOne(
+                "SELECT s.*, r.name as region_name, r.id as region_id
+                 FROM climbing_sites s
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id
+                 WHERE s.id = ? AND s.active = 1",
+                [(int)$id]
+            );
+
+            if (!$site) {
+                return Response::json([
+                    'success' => false,
+                    'error' => 'Site non trouvé'
+                ], 404);
+            }
+
+            return Response::json([
+                'success' => true,
+                'data' => $site
+            ]);
+        } catch (\Exception $e) {
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération du site'
+            ], 500);
+        }
     }
 
     /**
-     * Méthodes privées pour l'API hiérarchique
+     * API: Liste des sites par région
      */
-    private function getRegionsData(string $search = ''): array
+    public function apiIndex(Request $request): Response
     {
-        $sql = "
-            SELECT r.id, r.name, r.description,
-                   COUNT(DISTINCT s.id) as site_count,
-                   COUNT(DISTINCT sec.id) as sector_count,
-                   COUNT(DISTINCT rt.id) as route_count
-            FROM climbing_regions r
-            LEFT JOIN climbing_sites s ON r.id = s.region_id AND s.active = 1
-            LEFT JOIN climbing_sectors sec ON r.id = sec.region_id AND sec.active = 1
-            LEFT JOIN climbing_routes rt ON sec.id = rt.sector_id AND rt.active = 1
-            WHERE r.active = 1
-        ";
+        $regionId = $request->query->get('region_id');
+        $search = $request->query->get('search');
 
-        $params = [];
-        if (!empty($search)) {
-            $sql .= " AND (r.name LIKE ? OR r.description LIKE ?)";
-            $params = ["%{$search}%", "%{$search}%"];
+        try {
+            $whereConditions = ['s.active = 1'];
+            $params = [];
+
+            if ($regionId) {
+                $whereConditions[] = 's.region_id = ?';
+                $params[] = (int)$regionId;
+            }
+
+            if ($search) {
+                $whereConditions[] = '(s.name LIKE ? OR s.code LIKE ?)';
+                $searchTerm = '%' . $search . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+
+            $whereClause = implode(' AND ', $whereConditions);
+
+            $sql = "SELECT s.*, r.name as region_name
+                    FROM climbing_sites s
+                    LEFT JOIN climbing_regions r ON s.region_id = r.id
+                    WHERE {$whereClause}
+                    ORDER BY s.name ASC";
+
+            $sites = $this->db->fetchAll($sql, $params);
+
+            return Response::json([
+                'success' => true,
+                'data' => $sites
+            ]);
+        } catch (\Exception $e) {
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération des sites'
+            ], 500);
         }
-
-        $sql .= " GROUP BY r.id ORDER BY r.name";
-
-        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
-    }
-
-    private function getSitesData(int $regionId, string $search = ''): array
-    {
-        $sql = "
-            SELECT s.id, s.name, s.description, s.code,
-                   COUNT(DISTINCT sec.id) as sector_count,
-                   COUNT(DISTINCT rt.id) as route_count
-            FROM climbing_sites s
-            LEFT JOIN climbing_sectors sec ON s.id = sec.site_id AND sec.active = 1
-            LEFT JOIN climbing_routes rt ON sec.id = rt.sector_id AND rt.active = 1
-            WHERE s.region_id = ? AND s.active = 1
-        ";
-
-        $params = [$regionId];
-        if (!empty($search)) {
-            $sql .= " AND (s.name LIKE ? OR s.description LIKE ?)";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-        }
-
-        $sql .= " GROUP BY s.id ORDER BY s.name";
-
-        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
-    }
-
-    private function getSectorsData(?int $parentId, string $search = ''): array
-    {
-        $sql = "
-            SELECT sec.id, sec.name, sec.description, sec.code,
-                   sec.site_id, sec.region_id,
-                   s.name as site_name,
-                   r.name as region_name,
-                   COUNT(rt.id) as route_count
-            FROM climbing_sectors sec
-            LEFT JOIN climbing_sites s ON sec.site_id = s.id
-            INNER JOIN climbing_regions r ON sec.region_id = r.id
-            LEFT JOIN climbing_routes rt ON sec.id = rt.sector_id AND rt.active = 1
-            WHERE sec.active = 1
-        ";
-
-        $params = [];
-
-        // Si parentId fourni, peut être site_id ou region_id
-        if ($parentId) {
-            $sql .= " AND (sec.site_id = ? OR (sec.site_id IS NULL AND sec.region_id = ?))";
-            $params = [$parentId, $parentId];
-        }
-
-        if (!empty($search)) {
-            $sql .= " AND (sec.name LIKE ? OR sec.description LIKE ?)";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-        }
-
-        $sql .= " GROUP BY sec.id ORDER BY sec.name";
-
-        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
-    }
-
-    private function getRoutesData(int $sectorId, string $search = ''): array
-    {
-        $sql = "
-            SELECT r.id, r.name, r.number, r.difficulty, r.beauty, r.style, r.length,
-                   sec.name as sector_name
-            FROM climbing_routes r
-            INNER JOIN climbing_sectors sec ON r.sector_id = sec.id
-            WHERE r.sector_id = ? AND r.active = 1
-        ";
-
-        $params = [$sectorId];
-        if (!empty($search)) {
-            $sql .= " AND (r.name LIKE ? OR r.difficulty = ?)";
-            $params[] = "%{$search}%";
-            $params[] = $search;
-        }
-
-        $sql .= " ORDER BY r.number, r.name";
-
-        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
     }
 }

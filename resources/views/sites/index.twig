@@ -1,329 +1,325 @@
 {% extends "layouts/app.twig" %}
 
-{# Import des macros de texte #}
-{% import 'macros/text.twig' as text %}
-
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Sites d'escalade - TopoclimbCH{% endblock %}
 
 {% block content %}
-<div class="sites-index">
-    <div class="container">
-        
-        <!-- En-tête avec breadcrumb -->
-        <div class="page-header">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/">Accueil</a></li>
-                    <li class="breadcrumb-item"><a href="/regions">Régions</a></li>
-                    {% if region %}
-                    <li class="breadcrumb-item"><a href="/regions/{{ region.id }}">{{ region.name }}</a></li>
-                    <li class="breadcrumb-item active">Sites</li>
-                    {% else %}
-                    <li class="breadcrumb-item active">Tous les sites</li>
-                    {% endif %}
-                </ol>
-            </nav>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Sites d'escalade</h1>
+        <div class="header-actions">
+            <a href="{{ url('/sites/create') }}" class="btn btn-primary">
+                <i class="fa fa-plus mr-1"></i> Nouveau site
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="filters-section mb-4">
+    <form method="GET" action="{{ url('/sites') }}" class="filters-form">
+        <div class="row">
+            <div class="col-md-3">
+                <label for="region_id" class="form-label">Région</label>
+                <select name="region_id" id="region_id" class="form-control">
+                    <option value="">Toutes les régions</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id }}" 
+                                {% if currentFilters.region_id == region.id %}selected{% endif %}>
+                            {{ region.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
             
-            <div class="page-title-section">
-                {% if region %}
-                <h1>Sites de {{ region.name }}</h1>
-                <p class="text-muted">
-                    Sites d'escalade organisés en sous-zones de la région
-                </p>
-                {% else %}
-                <h1>Tous les sites</h1>
-                <p class="text-muted">
-                    Parcourez tous les sites d'escalade par région
-                </p>
-                {% endif %}
+            <div class="col-md-4">
+                <label for="search" class="form-label">Recherche</label>
+                <input type="text" name="search" id="search" class="form-control" 
+                       value="{{ currentFilters.search }}" 
+                       placeholder="Nom, code ou description...">
             </div>
-
-            <div class="page-actions">
-                {% if region %}
-                <a href="/sites/create?region_id={{ region.id }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Nouveau site
-                </a>
-                <a href="/sites/selector?mode=select&region_id={{ region.id }}" class="btn btn-outline-primary">
-                    <i class="fas fa-search"></i> Sélecteur hiérarchique
-                </a>
-                {% else %}
-                <a href="/sites/selector" class="btn btn-outline-primary">
-                    <i class="fas fa-search"></i> Sélecteur hiérarchique
-                </a>
-                {% endif %}
+            
+            <div class="col-md-2">
+                <label for="sort_by" class="form-label">Trier par</label>
+                <select name="sort_by" id="sort_by" class="form-control">
+                    <option value="name" {% if currentFilters.sort_by == 'name' %}selected{% endif %}>Nom</option>
+                    <option value="code" {% if currentFilters.sort_by == 'code' %}selected{% endif %}>Code</option>
+                    <option value="region_name" {% if currentFilters.sort_by == 'region_name' %}selected{% endif %}>Région</option>
+                    <option value="created_at" {% if currentFilters.sort_by == 'created_at' %}selected{% endif %}>Date création</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="sort_dir" class="form-label">Ordre</label>
+                <select name="sort_dir" id="sort_dir" class="form-control">
+                    <option value="ASC" {% if currentFilters.sort_dir == 'ASC' %}selected{% endif %}>Croissant</option>
+                    <option value="DESC" {% if currentFilters.sort_dir == 'DESC' %}selected{% endif %}>Décroissant</option>
+                </select>
+            </div>
+            
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fa fa-search"></i>
+                </button>
             </div>
         </div>
+    </form>
+</div>
 
-        <!-- Sélecteur de région (si pas de région spécifique) -->
-        {% if show_region_selector and regions %}
-        <div class="region-selector">
-            <form method="GET" class="selector-form">
-                <div class="row align-items-end">
-                    <div class="col-md-6">
-                        <label for="region_id" class="form-label">Filtrer par région</label>
-                        <select name="region_id" id="region_id" class="form-select">
-                            <option value="">Toutes les régions</option>
-                            {% for region_option in regions %}
-                            <option value="{{ region_option.id }}">
-                                {{ region_option.name }}
-                                {% if region_option.country_name %}({{ region_option.country_name }}){% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <input type="text" 
-                               name="search" 
-                               class="form-control" 
-                               placeholder="Rechercher un site..."
-                               value="{{ search }}">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-filter"></i> Filtrer
-                        </button>
-                    </div>
-                </div>
-            </form>
+<!-- Résultats -->
+<div class="results-section">
+    {% if sites|length > 0 %}
+        <div class="results-info mb-3">
+            <span class="text-muted">
+                Affichage de {{ pagination.from }} à {{ pagination.to }} sur {{ pagination.total }} sites
+            </span>
         </div>
-        {% endif %}
 
-        <!-- Barre de recherche (si région spécifique) -->
-        {% if region %}
-        <div class="filters-section">
-            <form method="GET" class="search-form">
-                <input type="hidden" name="region_id" value="{{ region.id }}">
-                <div class="row align-items-end">
-                    <div class="col-md-8">
-                        <label for="search" class="form-label">Rechercher un site</label>
-                        <input type="text" 
-                               id="search" 
-                               name="search" 
-                               class="form-control" 
-                               placeholder="Nom ou description du site..."
-                               value="{{ search }}">
-                    </div>
-                    <div class="col-md-4">
-                        <button type="submit" class="btn btn-outline-primary">
-                            <i class="fas fa-search"></i> Rechercher
-                        </button>
-                        {% if search %}
-                        <a href="/sites?region_id={{ region.id }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Effacer
-                        </a>
+        <div class="sites-grid">
+            {% for site in sites %}
+                <div class="site-card card h-100">
+                    <div class="card-body">
+                        <div class="site-header d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="card-title mb-1">
+                                    <a href="{{ url('/sites/' ~ site.id) }}" class="text-decoration-none">
+                                        {{ site.name }}
+                                    </a>
+                                </h5>
+                                <div class="site-meta small text-muted">
+                                    <span class="site-code">{{ site.code }}</span>
+                                    {% if site.region_name %}
+                                        • <span class="site-region">{{ site.region_name }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="site-actions dropdown">
+                                <button class="btn btn-link btn-sm" type="button" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url('/sites/' ~ site.id) }}">
+                                            <i class="fa fa-eye mr-2"></i> Voir détails
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url('/sites/' ~ site.id ~ '/edit') }}">
+                                            <i class="fa fa-edit mr-2"></i> Modifier
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url('/sectors/create?site_id=' ~ site.id) }}">
+                                            <i class="fa fa-plus mr-2"></i> Ajouter secteur
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {% if site.description %}
+                            <p class="card-text text-muted small">
+                                {{ site.description|slice(0, 120) }}{% if site.description|length > 120 %}...{% endif %}
+                            </p>
+                        {% endif %}
+
+                        <div class="site-stats">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="stat-value">{{ site.sectors_count|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Secteurs</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-value">{{ site.routes_count|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Voies</div>
+                                </div>
+                                <div class="col-4">
+                                    {% if site.altitude %}
+                                        <div class="stat-value">{{ site.altitude }}m</div>
+                                        <div class="stat-label small text-muted">Altitude</div>
+                                    {% else %}
+                                        <div class="stat-value">-</div>
+                                        <div class="stat-label small text-muted">Altitude</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if site.coordinates_lat and site.coordinates_lng %}
+                            <div class="site-location mt-2">
+                                <small class="text-muted">
+                                    <i class="fa fa-map-marker-alt mr-1"></i>
+                                    {{ site.coordinates_lat|number_format(6) }}, {{ site.coordinates_lng|number_format(6) }}
+                                </small>
+                            </div>
                         {% endif %}
                     </div>
+
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url('/sites/' ~ site.id) }}" class="btn btn-outline-primary btn-sm">
+                                Voir détails
+                            </a>
+                            
+                            {% if site.coordinates_lat and site.coordinates_lng %}
+                                <a href="https://www.google.com/maps?q={{ site.coordinates_lat }},{{ site.coordinates_lng }}" 
+                                   target="_blank" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fa fa-map-marker-alt"></i> Carte
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-            </form>
+            {% endfor %}
         </div>
+
+        <!-- Pagination -->
+        {% if pagination.last_page > 1 %}
+            <nav aria-label="Navigation sites" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- Précédent -->
+                    {% if pagination.current_page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url('/sites') }}?{{ query_string(currentFilters|merge({page: pagination.current_page - 1})) }}">
+                                Précédent
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Pages -->
+                    {% for page in range(max(1, pagination.current_page - 2), min(pagination.last_page, pagination.current_page + 2)) %}
+                        <li class="page-item {% if page == pagination.current_page %}active{% endif %}">
+                            <a class="page-link" href="{{ url('/sites') }}?{{ query_string(currentFilters|merge({page: page})) }}">
+                                {{ page }}
+                            </a>
+                        </li>
+                    {% endfor %}
+
+                    <!-- Suivant -->
+                    {% if pagination.current_page < pagination.last_page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url('/sites') }}?{{ query_string(currentFilters|merge({page: pagination.current_page + 1})) }}">
+                                Suivant
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% endif %}
 
-        <!-- Résultats -->
-        <div class="sites-results">
-            
-            {% if search %}
-            <div class="search-info">
-                <p class="text-muted">
-                    <i class="fas fa-search"></i>
-                    {{ sites|length }} résultat(s) pour "{{ search }}"
-                    {% if total_sites and total_sites > sites|length %}
-                    sur {{ total_sites }} sites total
-                    {% endif %}
-                </p>
+    {% else %}
+        <div class="empty-state text-center py-5">
+            <div class="empty-icon mb-3">
+                <i class="fa fa-mountain fa-3x text-muted"></i>
             </div>
-            {% endif %}
-
-            {% if sites is empty %}
-            
-                {% if search %}
-                <div class="empty-results">
-                    <div class="empty-icon">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <h3>Aucun site trouvé</h3>
-                    <p>Aucun site ne correspond à votre recherche "{{ search }}"</p>
-                    {% if region %}
-                    <a href="/sites?region_id={{ region.id }}" class="btn btn-primary">
-                        Voir tous les sites de {{ region.name }}
-                    </a>
-                    {% else %}
-                    <a href="/sites" class="btn btn-primary">
+            <h3 class="text-muted">Aucun site trouvé</h3>
+            <p class="text-muted">
+                {% if currentFilters.search or currentFilters.region_id %}
+                    Aucun site ne correspond à vos critères de recherche.
+                {% else %}
+                    Il n'y a pas encore de sites d'escalade enregistrés.
+                {% endif %}
+            </p>
+            <div class="mt-3">
+                {% if currentFilters.search or currentFilters.region_id %}
+                    <a href="{{ url('/sites') }}" class="btn btn-secondary me-2">
                         Voir tous les sites
                     </a>
-                    {% endif %}
-                </div>
-                {% else %}
-                <div class="empty-results">
-                    <div class="empty-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    {% if region %}
-                    <h3>Aucun site dans cette région</h3>
-                    <p>Cette région ne contient pas encore de sites d'escalade organisés.</p>
-                    <p class="text-muted">
-                        Les secteurs peuvent être directement attachés à la région ou organisés en sites.
-                    </p>
-                    <div class="empty-actions">
-                        <a href="/sites/create?region_id={{ region.id }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Créer le premier site
-                        </a>
-                        <a href="/regions/{{ region.id }}" class="btn btn-outline-primary">
-                            <i class="fas fa-climbing"></i> Voir les secteurs de la région
-                        </a>
-                    </div>
-                    {% else %}
-                    <h3>Aucun site trouvé</h3>
-                    <p>Aucun site d'escalade n'est encore enregistré dans la base de données.</p>
-                    <div class="empty-actions">
-                        <a href="/regions" class="btn btn-primary">
-                            <i class="fas fa-mountain"></i> Explorer les régions
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
                 {% endif %}
-
-            {% else %}
-
-            <!-- Grille des sites -->
-            <div class="sites-grid">
-                {% for site in sites %}
-                <div class="site-card">
-                    <div class="site-header">
-                        <h3 class="site-name">
-                            <a href="/sites/{{ site.id }}">{{ site.name }}</a>
-                        </h3>
-                        <div class="site-code">{{ site.code|upper }}</div>
-                    </div>
-
-                    <!-- Région (si affichage multi-régions) -->
-                    {% if not region and site.region_name %}
-                    <div class="site-region">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <a href="/sites?region_id={{ site.region_id }}">{{ site.region_name }}</a>
-                    </div>
-                    {% endif %}
-
-                    {% if site.description %}
-                    <p class="site-description">
-                        {# CORRECTION: Utilisation de la macro truncate #}
-                        {{ text.truncate(site.description, 120) }}
-                    </p>
-                    {% endif %}
-
-                    <div class="site-stats">
-                        <div class="stat-item">
-                            <i class="fas fa-climbing"></i>
-                            <span class="stat-value">{{ site.sector_count }}</span>
-                            <span class="stat-label">secteur{{ site.sector_count > 1 ? 's' : '' }}</span>
-                        </div>
-                        <div class="stat-item">
-                            <i class="fas fa-route"></i>
-                            <span class="stat-value">{{ site.route_count }}</span>
-                            <span class="stat-label">voie{{ site.route_count > 1 ? 's' : '' }}</span>
-                        </div>
-                        {% if site.avg_beauty %}
-                        <div class="stat-item">
-                            <i class="fas fa-star"></i>
-                            <span class="stat-value">{{ site.avg_beauty|number_format(1) }}</span>
-                            <span class="stat-label">beauté moy.</span>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    {% if site.min_difficulty and site.max_difficulty %}
-                    <div class="site-difficulty">
-                        <span class="difficulty-range">
-                            {{ site.min_difficulty }} - {{ site.max_difficulty }}
-                        </span>
-                    </div>
-                    {% endif %}
-
-                    <div class="site-meta">
-                        {% if site.year %}
-                        <span class="meta-item">
-                            <i class="fas fa-calendar"></i> {{ site.year }}
-                        </span>
-                        {% endif %}
-                        {% if site.publisher %}
-                        <span class="meta-item">
-                            <i class="fas fa-book"></i> {{ text.truncate(site.publisher, 30) }}
-                        </span>
-                        {% endif %}
-                    </div>
-
-                    <div class="site-actions">
-                        <a href="/sites/{{ site.id }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-eye"></i> Voir détail
-                        </a>
-                        <a href="/sites/{{ site.id }}/edit" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-edit"></i> Modifier
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            {% if total_sites and total_sites > sites|length %}
-            <div class="pagination-info">
-                <p class="text-muted text-center">
-                    Affichage de {{ sites|length }} sites sur {{ text.number(total_sites) }} total.
-                    <a href="/sites/selector" class="link-primary">Utiliser le sélecteur avancé</a>
-                    pour explorer tous les sites.
-                </p>
-            </div>
-            {% endif %}
-
-            {% endif %}
-
-        </div>
-
-        <!-- Navigation vers autres niveaux -->
-        <div class="navigation-section">
-            <h3>Navigation hiérarchique</h3>
-            <div class="nav-links">
-                <a href="/regions" class="nav-link">
-                    <i class="fas fa-mountain"></i>
-                    <div>
-                        <strong>Toutes les régions</strong>
-                        <small>Explorer d'autres régions</small>
-                    </div>
+                <a href="{{ url('/sites/create') }}" class="btn btn-primary">
+                    Créer le premier site
                 </a>
-                {% if region %}
-                <a href="/regions/{{ region.id }}" class="nav-link">
-                    <i class="fas fa-climbing"></i>
-                    <div>
-                        <strong>Secteurs de {{ region.name }}</strong>
-                        <small>Secteurs directement dans la région</small>
-                    </div>
-                </a>
-                <a href="/sites/selector?region_id={{ region.id }}" class="nav-link">
-                    <i class="fas fa-search"></i>
-                    <div>
-                        <strong>Sélecteur hiérarchique</strong>
-                        <small>Outil de navigation avancé</small>
-                    </div>
-                </a>
-                {% else %}
-                <a href="/sites/selector" class="nav-link">
-                    <i class="fas fa-search"></i>
-                    <div>
-                        <strong>Sélecteur hiérarchique</strong>
-                        <small>Outil de navigation avancé</small>
-                    </div>
-                </a>
-                {% endif %}
             </div>
         </div>
-
-    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
-{% block styles %}
-<link rel="stylesheet" href="/css/pages/sites/index.css">
-{% endblock %}
-
 {% block scripts %}
-<script src="/js/pages/sites/index.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit du formulaire de filtres
+    const filterInputs = document.querySelectorAll('#region_id, #search, #sort_by, #sort_dir');
+    
+    filterInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            // Délai pour permettre à l'utilisateur de taper
+            if (this.type === 'text') {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.form.submit();
+                }, 500);
+            } else {
+                this.form.submit();
+            }
+        });
+    });
+
+    // Gestion de la recherche en temps réel
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.form.submit();
+            }, 500);
+        });
+    }
+});
+</script>
+
+<style>
+.sites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.site-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.site-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.site-actions .btn-link {
+    color: #6c757d;
+    padding: 0.25rem;
+}
+
+.site-actions .btn-link:hover {
+    color: #495057;
+}
+
+.filters-form {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.empty-state {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.empty-icon i {
+    opacity: 0.5;
+}
+</style>
 {% endblock %}

@@ -1,299 +1,444 @@
 {% extends "layouts/app.twig" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}
+    {% if site %}
+        Modifier le site {{ site.name }}
+    {% else %}
+        Créer un nouveau site
+    {% endif %}
+    - TopoclimbCH
+{% endblock %}
 
 {% block content %}
-<div class="site-form">
-    <div class="container">
-        
-        <!-- En-tête avec breadcrumb -->
-        <div class="page-header">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/">Accueil</a></li>
-                    <li class="breadcrumb-item"><a href="/regions">Régions</a></li>
-                    <li class="breadcrumb-item"><a href="/regions/{{ region.id }}">{{ region.name }}</a></li>
-                    <li class="breadcrumb-item"><a href="/sites?region_id={{ region.id }}">Sites</a></li>
-                    {% if isEdit %}
-                    <li class="breadcrumb-item"><a href="/sites/{{ site.id }}">{{ site.name }}</a></li>
-                    <li class="breadcrumb-item active">Modifier</li>
-                    {% else %}
-                    <li class="breadcrumb-item active">Nouveau site</li>
-                    {% endif %}
-                </ol>
-            </nav>
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url('/sites') }}">Sites</a></li>
+            {% if site %}
+                <li class="breadcrumb-item"><a href="{{ url('/sites/' ~ site.id) }}">{{ site.name }}</a></li>
+                <li class="breadcrumb-item active">Modifier</li>
+            {% else %}
+                <li class="breadcrumb-item active">Nouveau site</li>
+            {% endif %}
+        </ol>
+    </nav>
+    
+    <h1>
+        {% if site %}
+            Modifier le site {{ site.name }}
+        {% else %}
+            Créer un nouveau site
+        {% endif %}
+    </h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form action="{{ site ? url('/sites/' ~ site.id) : url('/sites') }}" 
+              method="post" 
+              enctype="multipart/form-data" 
+              class="site-form">
             
-            <div class="page-title-section">
-                <h1>{{ title }}</h1>
-                <p class="text-muted">
-                    {% if isEdit %}
-                    Modifiez les informations du site dans la région {{ region.name }}
-                    {% else %}
-                    Créez un nouveau site dans la région {{ region.name }}
-                    {% endif %}
-                </p>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% if site %}
+                <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+
+            <!-- Informations de base -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations de base</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group mb-3">
+                                <label for="name" class="form-label">
+                                    Nom du site <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="name" id="name" class="form-control" 
+                                       value="{{ site.name|default('') }}" 
+                                       required maxlength="255" 
+                                       aria-describedby="name-help">
+                                <small id="name-help" class="form-text text-muted">
+                                    Nom complet du site d'escalade
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="code" class="form-label">
+                                    Code <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="code" id="code" class="form-control" 
+                                       value="{{ site.code|default('') }}" 
+                                       required maxlength="50" 
+                                       aria-describedby="code-help">
+                                <small id="code-help" class="form-text text-muted">
+                                    Identifiant unique du site
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="region_id" class="form-label">
+                            Région <span class="text-danger">*</span>
+                        </label>
+                        <select name="region_id" id="region_id" class="form-control" 
+                                required aria-describedby="region-help">
+                            <option value="">Sélectionnez une région</option>
+                            {% for region in regions %}
+                                <option value="{{ region.id }}" 
+                                        {% if site.region_id == region.id %}selected{% endif %}>
+                                    {{ region.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small id="region-help" class="form-text text-muted">
+                            Région géographique du site
+                        </small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea name="description" id="description" class="form-control" 
+                                  rows="4" aria-describedby="description-help">{{ site.description|default('') }}</textarea>
+                        <small id="description-help" class="form-text text-muted">
+                            Description générale du site d'escalade
+                        </small>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Formulaire -->
-        <div class="form-container">
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
+            <!-- Localisation -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Localisation</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_lat" class="form-label">Latitude</label>
+                                <input type="number" name="coordinates_lat" id="coordinates_lat" 
+                                       class="form-control" 
+                                       value="{{ site.coordinates_lat|default('') }}" 
+                                       step="0.00000001" min="-90" max="90"
+                                       aria-describedby="lat-help">
+                                <small id="lat-help" class="form-text text-muted">
+                                    Latitude en degrés décimaux (ex: 46.2044)
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_lng" class="form-label">Longitude</label>
+                                <input type="number" name="coordinates_lng" id="coordinates_lng" 
+                                       class="form-control" 
+                                       value="{{ site.coordinates_lng|default('') }}" 
+                                       step="0.00000001" min="-180" max="180"
+                                       aria-describedby="lng-help">
+                                <small id="lng-help" class="form-text text-muted">
+                                    Longitude en degrés décimaux (ex: 6.1432)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="altitude" class="form-label">Altitude</label>
+                        <div class="input-group">
+                            <input type="number" name="altitude" id="altitude" class="form-control" 
+                                   value="{{ site.altitude|default('') }}" 
+                                   min="0" max="9000" aria-describedby="altitude-help">
+                            <span class="input-group-text">m</span>
+                        </div>
+                        <small id="altitude-help" class="form-text text-muted">
+                            Altitude approximative du site en mètres
+                        </small>
+                    </div>
+
+                    <!-- Carte interactive -->
+                    <div class="map-section">
+                        <label class="form-label">Sélectionner la position sur la carte</label>
+                        <div id="map" style="height: 350px; border-radius: 0.375rem; border: 1px solid #dee2e6;"></div>
+                        <small class="form-text text-muted mt-2">
+                            Cliquez sur la carte pour placer le marker du site
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accès -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations d'accès</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="access_info" class="form-label">Informations d'accès</label>
+                        <textarea name="access_info" id="access_info" class="form-control" 
+                                  rows="4" aria-describedby="access-help">{{ site.access_info|default('') }}</textarea>
+                        <small id="access-help" class="form-text text-muted">
+                            Instructions pour accéder au site (parking, marche d'approche, etc.)
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations publication -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations de publication</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="year" class="form-label">Année</label>
+                                <input type="number" name="year" id="year" class="form-control" 
+                                       value="{{ site.year|default('') }}" 
+                                       min="1900" max="{{ "now"|date("Y") + 5 }}"
+                                       aria-describedby="year-help">
+                                <small id="year-help" class="form-text text-muted">
+                                    Année de publication/découverte
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="publisher" class="form-label">Éditeur</label>
+                                <input type="text" name="publisher" id="publisher" class="form-control" 
+                                       value="{{ site.publisher|default('') }}" 
+                                       maxlength="100" aria-describedby="publisher-help">
+                                <small id="publisher-help" class="form-text text-muted">
+                                    Éditeur principal du guide
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="isbn" class="form-label">ISBN</label>
+                                <input type="text" name="isbn" id="isbn" class="form-control" 
+                                       value="{{ site.isbn|default('') }}" 
+                                       maxlength="20" aria-describedby="isbn-help">
+                                <small id="isbn-help" class="form-text text-muted">
+                                    Code ISBN du guide (optionnel)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Images -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Images</h3>
+                </div>
+                <div class="card-body">
+                    <div class="media-upload-section">
+                        <div class="form-group mb-3">
+                            <label for="media_file" class="form-label">Ajouter une image</label>
+                            <div class="custom-file">
+                                <input type="file" name="media_file" id="media_file" 
+                                       class="custom-file-input" accept="image/*" 
+                                       aria-describedby="media-help">
+                                <label class="custom-file-label" for="media_file">Choisir un fichier</label>
+                            </div>
+                            <small id="media-help" class="form-text text-muted">
+                                Formats supportés: JPG, PNG, GIF. Taille max: 5MB
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="media_title" class="form-label">Titre de l'image</label>
+                            <input type="text" name="media_title" id="media_title" 
+                                   class="form-control" aria-describedby="media-title-help">
+                            <small id="media-title-help" class="form-text text-muted">
+                                Titre descriptif de l'image (optionnel)
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Type d'image</label>
+                            <div class="form-check">
+                                <input type="radio" id="media_type_main" name="media_relationship_type" 
+                                       value="main" class="form-check-input" checked>
+                                <label class="form-check-label" for="media_type_main">
+                                    Image principale
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input type="radio" id="media_type_gallery" name="media_relationship_type" 
+                                       value="gallery" class="form-check-input">
+                                <label class="form-check-label" for="media_type_gallery">
+                                    Galerie
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <form method="POST" action="{{ isEdit ? '/sites/' ~ site.id : '/sites' }}" class="site-form-content">
-                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                        <input type="hidden" name="region_id" value="{{ region.id }}">
-                        {% if isEdit %}
-                        <input type="hidden" name="_method" value="PUT">
-                        {% endif %}
-
-                        <!-- Informations principales -->
-                        <div class="form-section">
-                            <h3>Informations principales</h3>
-                            
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="form-group">
-                                        <label for="name" class="form-label required">
-                                            Nom du site
-                                        </label>
-                                        <input type="text" 
-                                               id="name" 
-                                               name="name" 
-                                               class="form-control"
-                                               value="{{ site.name ?? '' }}"
-                                               required
-                                               maxlength="255"
-                                               placeholder="Ex: Dalle de Baulmes">
-                                        <div class="form-text">
-                                            Nom descriptif du site d'escalade
+                    <!-- Images existantes -->
+                    {% if media and media|length > 0 %}
+                        <div class="existing-media mt-4">
+                            <h5>Images existantes</h5>
+                            <div class="media-gallery row">
+                                {% for item in media %}
+                                    <div class="col-md-4 mb-3">
+                                        <div class="media-item">
+                                            {% if item.file_path %}
+                                                {% set image_url = item.file_path starts with 'http' ? item.file_path : url(item.file_path starts with '/' ? item.file_path : '/' ~ item.file_path) %}
+                                                <img src="{{ image_url }}" 
+                                                     class="img-fluid rounded" 
+                                                     alt="{{ item.title|default('Image du site') }}"
+                                                     style="height: 150px; width: 100%; object-fit: cover;">
+                                            {% endif %}
+                                            
+                                            <div class="media-info mt-2">
+                                                <h6 class="mb-1">{{ item.title|default('Image ' ~ item.id) }}</h6>
+                                                <small class="text-muted">
+                                                    Type: {{ item.relationship_type|default('gallery')|capitalize }}
+                                                </small>
+                                            </div>
+                                            
+                                            <div class="media-actions mt-2">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-danger media-delete-btn"
+                                                        data-media-id="{{ item.id }}"
+                                                        data-csrf-token="{{ csrf_token }}">
+                                                    <i class="fa fa-trash"></i> Supprimer
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="code" class="form-label">
-                                            Code du site
-                                        </label>
-                                        <input type="text" 
-                                               id="code" 
-                                               name="code" 
-                                               class="form-control"
-                                               value="{{ site.code ?? '' }}"
-                                               maxlength="50"
-                                               placeholder="Ex: BAU">
-                                        <div class="form-text">
-                                            Code court (généré automatiquement si vide)
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="description" class="form-label">
-                                    Description
-                                </label>
-                                <textarea id="description" 
-                                          name="description" 
-                                          class="form-control"
-                                          rows="4"
-                                          placeholder="Description du site, caractéristiques, accès général...">{{ site.description ?? '' }}</textarea>
-                                <div class="form-text">
-                                    Description générale du site (optionnel)
-                                </div>
+                                {% endfor %}
                             </div>
                         </div>
+                    {% endif %}
+                </div>
+            </div>
 
-                        <!-- Informations de publication -->
-                        <div class="form-section">
-                            <h3>Informations de publication</h3>
-                            <p class="text-muted">
-                                Ces informations sont utiles si le site fait partie d'un topo publié
-                            </p>
-                            
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="year" class="form-label">
-                                            Année
-                                        </label>
-                                        <input type="number" 
-                                               id="year" 
-                                               name="year" 
-                                               class="form-control"
-                                               value="{{ site.year ?? '' }}"
-                                               min="1900"
-                                               max="{{ "now"|date("Y") + 5 }}"
-                                               placeholder="Ex: 2023">
-                                    </div>
-                                </div>
-                                <div class="col-md-8">
-                                    <div class="form-group">
-                                        <label for="publisher" class="form-label">
-                                            Éditeur
-                                        </label>
-                                        <input type="text" 
-                                               id="publisher" 
-                                               name="publisher" 
-                                               class="form-control"
-                                               value="{{ site.publisher ?? '' }}"
-                                               maxlength="100"
-                                               placeholder="Ex: CAS, Guide local...">
-                                    </div>
-                                </div>
-                            </div>
+            <!-- État -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">État</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input type="checkbox" name="active" id="active" class="form-check-input" 
+                               value="1" {% if not site or site.active != 0 %}checked{% endif %}>
+                        <label for="active" class="form-check-label">
+                            Site actif
+                        </label>
+                        <small class="form-text text-muted d-block">
+                            Décochez pour désactiver temporairement le site
+                        </small>
+                    </div>
+                </div>
+            </div>
 
-                            <div class="form-group">
-                                <label for="isbn" class="form-label">
-                                    ISBN
-                                </label>
-                                <input type="text" 
-                                       id="isbn" 
-                                       name="isbn" 
-                                       class="form-control"
-                                       value="{{ site.isbn ?? '' }}"
-                                       maxlength="20"
-                                       placeholder="Ex: 978-3-..."
-                                       pattern="[\d\-Xx]*">
-                                <div class="form-text">
-                                    Numéro ISBN du topo si publié
-                                </div>
-                            </div>
-                        </div>
+            <!-- Actions -->
+            <div class="form-actions d-flex gap-3 mb-5">
+                <button type="submit" class="btn btn-primary">
+                    {% if site %}
+                        <i class="fa fa-save"></i> Mettre à jour
+                    {% else %}
+                        <i class="fa fa-plus"></i> Créer le site
+                    {% endif %}
+                </button>
+                
+                <a href="{{ site ? url('/sites/' ~ site.id) : url('/sites') }}" 
+                   class="btn btn-secondary">
+                    <i class="fa fa-times"></i> Annuler
+                </a>
+                
+                {% if site %}
+                    <button type="button" class="btn btn-outline-danger ms-auto" 
+                            data-bs-toggle="modal" data-bs-target="#deleteSiteModal">
+                        <i class="fa fa-trash"></i> Supprimer
+                    </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
 
-                        <!-- Aperçu de la hiérarchie -->
-                        <div class="form-section">
-                            <h3>Hiérarchie</h3>
-                            <div class="hierarchy-preview">
-                                <div class="hierarchy-item">
-                                    <i class="fas fa-mountain text-primary"></i>
-                                    <span>{{ region.name }}</span>
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
-                                <div class="hierarchy-item active">
-                                    <i class="fas fa-map-marker-alt text-success"></i>
-                                    <span>
-                                        {% if isEdit %}
-                                        {{ site.name }}
-                                        {% else %}
-                                        <em>Nouveau site</em>
-                                        {% endif %}
-                                    </span>
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
-                                <div class="hierarchy-item future">
-                                    <i class="fas fa-climbing text-muted"></i>
-                                    <span class="text-muted">Secteurs futurs</span>
-                                </div>
-                            </div>
-                            <div class="form-text">
-                                Ce site sera une sous-zone de la région {{ region.name }}
-                            </div>
-                        </div>
-
-                        <!-- Actions -->
-                        <div class="form-actions">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <button type="submit" class="btn btn-primary btn-lg">
-                                        <i class="fas fa-save"></i>
-                                        {% if isEdit %}
-                                        Mettre à jour le site
-                                        {% else %}
-                                        Créer le site
-                                        {% endif %}
-                                    </button>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    {% if isEdit %}
-                                    <a href="/sites/{{ site.id }}" class="btn btn-outline-secondary btn-lg">
-                                        <i class="fas fa-times"></i> Annuler
-                                    </a>
-                                    {% else %}
-                                    <a href="/sites?region_id={{ region.id }}" class="btn btn-outline-secondary btn-lg">
-                                        <i class="fas fa-times"></i> Annuler
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        {% if isEdit %}
-                        <!-- Actions avancées pour l'édition -->
-                        <div class="form-section advanced-actions">
-                            <h3>Actions avancées</h3>
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Attention :</strong> Ces actions affectent l'organisation des secteurs
-                            </div>
-                            
-                            <div class="advanced-action">
-                                <h5>Déplacer les secteurs</h5>
-                                <p class="text-muted">
-                                    Déplacer tous les secteurs de ce site vers un autre site ou directement dans la région
-                                </p>
-                                <button type="button" class="btn btn-outline-warning" onclick="showMoveModal()">
-                                    <i class="fas fa-arrows-alt"></i> Gérer les secteurs
-                                </button>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                    </form>
-
+    <!-- Sidebar avec aide -->
+    <div class="col-lg-4">
+        <div class="help-section card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-info-circle text-info"></i> Aide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="help-item mb-3">
+                    <h6>Qu'est-ce qu'un site ?</h6>
+                    <p class="small text-muted">
+                        Un site regroupe plusieurs secteurs d'escalade dans une zone géographique cohérente 
+                        (ex: "Rochers de Freyr", "Gorges du Verdon").
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Code du site</h6>
+                    <p class="small text-muted">
+                        Utilisez un code court et unique (ex: "FREYR", "VERDON_OUEST"). 
+                        Évitez les espaces et caractères spéciaux.
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Coordonnées</h6>
+                    <p class="small text-muted">
+                        Placez le point au centre approximatif du site. Vous pourrez affiner 
+                        la position de chaque secteur individuellement.
+                    </p>
+                </div>
+                
+                <div class="help-item">
+                    <h6>Hiérarchie</h6>
+                    <p class="small text-muted">
+                        <strong>Région</strong> → <strong>Site</strong> → <strong>Secteur</strong> → <strong>Voie</strong>
+                    </p>
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
-{% if isEdit %}
-<!-- Modal de déplacement des secteurs -->
-<div class="modal fade" id="moveSectorsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<!-- Modal de suppression -->
+{% if site %}
+<div class="modal fade" id="deleteSiteModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Déplacer les secteurs</h5>
+                <h5 class="modal-title">Supprimer le site</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Choisissez où déplacer les secteurs du site <strong>{{ site.name }}</strong> :</p>
-                
-                <form id="moveSectorsForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    
-                    <div class="form-group">
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="move_type" id="move_to_region" value="region" checked>
-                            <label class="form-check-label" for="move_to_region">
-                                Déplacer directement dans la région {{ region.name }}
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="move_type" id="move_to_site" value="site">
-                            <label class="form-check-label" for="move_to_site">
-                                Déplacer vers un autre site
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div id="site_selection" style="display: none;">
-                        <div class="form-group">
-                            <label for="target_site" class="form-label">Site de destination</label>
-                            <select id="target_site" name="target_site" class="form-control">
-                                <option value="">Choisir un site...</option>
-                                <!-- Options chargées via AJAX -->
-                            </select>
-                        </div>
-                    </div>
-                </form>
+                <p>Êtes-vous sûr de vouloir supprimer le site <strong>{{ site.name }}</strong> ?</p>
+                <p class="text-danger small">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Cette action est irréversible et supprimera également tous les secteurs associés.
+                </p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-warning" onclick="confirmMove()">
-                    <i class="fas fa-arrows-alt"></i> Déplacer les secteurs
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Annuler
                 </button>
+                <form method="POST" action="{{ url('/sites/' ~ site.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="btn btn-danger">
+                        Supprimer définitivement
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -301,65 +446,166 @@
 {% endif %}
 {% endblock %}
 
-{% block styles %}
-<link rel="stylesheet" href="/css/pages/sites/form.css">
-{% endblock %}
-
 {% block scripts %}
-<script src="/js/pages/sites/form.js"></script>
-{% if isEdit %}
+<!-- Leaflet pour la carte -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <script>
-function showMoveModal() {
-    const moveModal = new bootstrap.Modal(document.getElementById('moveSectorsModal'));
-    moveModal.show();
-    loadAvailableSites();
-}
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser la carte
+    const map = L.map('map').setView([46.8182, 8.2275], 7); // Centre de la Suisse
 
-function loadAvailableSites() {
-    // Charger les autres sites de la région via AJAX
-    fetch(`/api/sites?region_id={{ region.id }}&exclude={{ site.id }}`)
-        .then(response => response.json())
-        .then(data => {
-            const select = document.getElementById('target_site');
-            select.innerHTML = '<option value="">Choisir un site...</option>';
-            data.forEach(site => {
-                select.innerHTML += `<option value="${site.id}">${site.name} (${site.code})</option>`;
-            });
-        });
-}
+    // Couche de base
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-document.querySelectorAll('input[name="move_type"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const siteSelection = document.getElementById('site_selection');
-        if (this.value === 'site') {
-            siteSelection.style.display = 'block';
+    // Marker du site
+    let siteMarker = null;
+    
+    // Si coordonnées existantes, placer le marker
+    {% if site.coordinates_lat and site.coordinates_lng %}
+        siteMarker = L.marker([{{ site.coordinates_lat }}, {{ site.coordinates_lng }}])
+            .addTo(map);
+        map.setView([{{ site.coordinates_lat }}, {{ site.coordinates_lng }}], 13);
+    {% endif %}
+
+    // Clic sur la carte pour placer/déplacer le marker
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        // Mettre à jour les champs
+        document.getElementById('coordinates_lat').value = lat.toFixed(8);
+        document.getElementById('coordinates_lng').value = lng.toFixed(8);
+        
+        // Placer/déplacer le marker
+        if (siteMarker) {
+            siteMarker.setLatLng([lat, lng]);
         } else {
-            siteSelection.style.display = 'none';
+            siteMarker = L.marker([lat, lng]).addTo(map);
+        }
+    });
+
+    // Mise à jour de la carte quand les coordonnées sont saisies manuellement
+    function updateMapFromCoordinates() {
+        const lat = parseFloat(document.getElementById('coordinates_lat').value);
+        const lng = parseFloat(document.getElementById('coordinates_lng').value);
+        
+        if (!isNaN(lat) && !isNaN(lng)) {
+            if (siteMarker) {
+                siteMarker.setLatLng([lat, lng]);
+            } else {
+                siteMarker = L.marker([lat, lng]).addTo(map);
+            }
+            map.setView([lat, lng], 13);
+        }
+    }
+
+    document.getElementById('coordinates_lat').addEventListener('change', updateMapFromCoordinates);
+    document.getElementById('coordinates_lng').addEventListener('change', updateMapFromCoordinates);
+
+    // Génération automatique du code à partir du nom
+    document.getElementById('name').addEventListener('input', function() {
+        const codeInput = document.getElementById('code');
+        if (!codeInput.value || codeInput.dataset.autoGenerated === 'true') {
+            const generatedCode = this.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '_')
+                .substring(0, 20);
+            codeInput.value = generatedCode;
+            codeInput.dataset.autoGenerated = 'true';
+        }
+    });
+
+    document.getElementById('code').addEventListener('input', function() {
+        this.dataset.autoGenerated = 'false';
+    });
+
+    // Gestion du nom de fichier
+    document.getElementById('media_file').addEventListener('change', function() {
+        const label = this.nextElementSibling;
+        const fileName = this.files[0]?.name || 'Choisir un fichier';
+        label.textContent = fileName;
+    });
+
+    // Suppression de médias
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('media-delete-btn') || e.target.closest('.media-delete-btn')) {
+            const btn = e.target.classList.contains('media-delete-btn') ? e.target : e.target.closest('.media-delete-btn');
+            const mediaId = btn.dataset.mediaId;
+            const csrfToken = btn.dataset.csrfToken;
+
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+                fetch(`/api/media/${mediaId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.closest('.col-md-4').remove();
+                    } else {
+                        alert('Erreur lors de la suppression');
+                    }
+                })
+                .catch(() => {
+                    alert('Erreur lors de la suppression');
+                });
+            }
         }
     });
 });
-
-function confirmMove() {
-    const form = document.getElementById('moveSectorsForm');
-    const formData = new FormData(form);
-    
-    fetch(`/sites/{{ site.id }}/move-sectors`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Secteurs déplacés avec succès');
-            location.reload();
-        } else {
-            alert('Erreur: ' + data.message);
-        }
-    })
-    .catch(error => {
-        alert('Erreur lors du déplacement');
-    });
-}
 </script>
-{% endif %}
-{% endblock %>
+
+<style>
+.form-section .card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-section .card-title {
+    color: #495057;
+    font-weight: 600;
+}
+
+.custom-file-label::after {
+    content: "Parcourir";
+}
+
+.media-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+}
+
+.help-section {
+    position: sticky;
+    top: 2rem;
+}
+
+.help-item h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.form-actions {
+    border-top: 1px solid #dee2e6;
+    padding-top: 2rem;
+}
+
+@media (max-width: 768px) {
+    .help-section {
+        position: static;
+        margin-top: 2rem;
+    }
+}
+</style>
+{% endblock %}
