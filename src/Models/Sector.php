@@ -1,591 +1,523 @@
 <?php
-// src/Models/Sector.php
+
+declare(strict_types=1);
 
 namespace TopoclimbCH\Models;
 
 use TopoclimbCH\Core\Model;
-use TopoclimbCH\Core\Filtering\SectorFilter;
-use TopoclimbCH\Exceptions\ModelException;
 
+/**
+ * Sector Model - Secteurs d'escalade avec hiérarchie flexible
+ * 
+ * Un secteur peut être :
+ * - Directement attaché à une région (site_id = NULL)
+ * - Organisé dans un site (site_id = ID du site)
+ */
 class Sector extends Model
 {
-    /**
-     * Nom de la table en base de données
-     */
-    protected static string $table = 'climbing_sectors';
-    
-    /**
-     * Liste des attributs remplissables en masse
-     */
+    protected string $table = 'climbing_sectors';
+    protected string $primaryKey = 'id';
+
     protected array $fillable = [
-        'book_id', 'region_id', 'name', 'code', 'description', 'access_info', 
-        'color', 'access_time', 'altitude', 'approach', 'height', 
-        'parking_info', 'coordinates_lat', 'coordinates_lng',
-        'coordinates_swiss_e', 'coordinates_swiss_n', 'active'
+        'book_id',
+        'region_id',
+        'site_id',
+        'name',
+        'code',
+        'description',
+        'access_info',
+        'color',
+        'access_time',
+        'altitude',
+        'approach',
+        'height',
+        'parking_info',
+        'coordinates_lat',
+        'coordinates_lng',
+        'coordinates_swiss_e',
+        'coordinates_swiss_n',
+        'active'
     ];
-    
-    /**
-     * Règles de validation
-     */
+
     protected array $rules = [
-        'book_id' => 'required|numeric',
-        'name' => 'required|max:255',
-        'code' => 'required|max:50',
-        'coordinates_lat' => 'nullable|numeric|min:-90|max:90',
-        'coordinates_lng' => 'nullable|numeric|min:-180|max:180',
-        'altitude' => 'nullable|numeric|min:0|max:9000',
-        'active' => 'in:0,1'
+        'region_id' => 'required|numeric',
+        'site_id' => 'numeric', // Optionnel pour hiérarchie flexible
+        'name' => 'required|min:2|max:255',
+        'code' => 'required|min:1|max:50',
+        'access_time' => 'numeric',
+        'altitude' => 'numeric',
+        'height' => 'numeric',
+        'coordinates_lat' => 'numeric',
+        'coordinates_lng' => 'numeric'
     ];
-    
+
     /**
-     * Relation avec les voies d'escalade
+     * Relations
      */
-    public function routes(): array
-    {
-        return $this->hasMany(Route::class);
-    }
-    
+
     /**
-     * Relation avec la région
+     * Un secteur appartient à une région
      */
     public function region(): ?Region
     {
-        return $this->belongsTo(Region::class);
+        return $this->belongsTo(Region::class, 'region_id');
     }
-    
+
     /**
-     * Relation avec le livre/site
+     * Un secteur peut appartenir à un site (optionnel)
+     */
+    public function site(): ?Site
+    {
+        if (!$this->site_id) {
+            return null;
+        }
+        return $this->belongsTo(Site::class, 'site_id');
+    }
+
+    /**
+     * Un secteur peut appartenir à un book/topo
      */
     public function book(): ?Book
     {
-        return $this->belongsTo(Book::class);
+        if (!$this->book_id) {
+            return null;
+        }
+        return $this->belongsTo(Book::class, 'book_id');
     }
-    
+
     /**
-     * Relation avec les expositions
+     * Un secteur a plusieurs voies
+     */
+    public function routes(): array
+    {
+        return $this->hasMany(Route::class, 'sector_id');
+    }
+
+    /**
+     * Expositions du secteur (many-to-many)
      */
     public function exposures(): array
     {
-        return $this->belongsToMany(
-            Exposure::class, 
-            'climbing_sector_exposures', 
-            'sector_id', 
-            'exposure_id'
-        );
+        $sql = "
+            SELECT e.*, se.is_primary, se.notes
+            FROM climbing_exposures e
+            INNER JOIN climbing_sector_exposures se ON e.id = se.exposure_id
+            WHERE se.sector_id = ?
+            ORDER BY se.is_primary DESC, e.sort_order
+        ";
+
+        return $this->db->fetchAll($sql, [$this->id]);
     }
-    
+
     /**
-     * Relation avec les mois (qualité par mois)
+     * Mois favorables du secteur (many-to-many)
      */
     public function months(): array
     {
-        return $this->belongsToMany(
-            Month::class, 
-            'climbing_sector_months', 
-            'sector_id', 
-            'month_id'
-        );
+        $sql = "
+            SELECT m.*, sm.quality, sm.notes
+            FROM climbing_months m
+            INNER JOIN climbing_sector_months sm ON m.id = sm.month_id
+            WHERE sm.sector_id = ?
+            ORDER BY m.month_number
+        ";
+
+        return $this->db->fetchAll($sql, [$this->id]);
     }
-    
+
     /**
-     * Récupère les parkings associés au secteur
+     * Books qui incluent ce secteur
      */
-    public function parkings(): array
+    public function books(): array
     {
-        return $this->belongsToMany(
-            Parking::class, 
-            'parking_secteur', 
-            'secteur_id', 
-            'parking_id'
-        );
+        $sql = "
+            SELECT b.*, bs.sort_order, bs.is_complete, bs.notes
+            FROM climbing_books b
+            INNER JOIN climbing_book_sectors bs ON b.id = bs.book_id
+            WHERE bs.sector_id = ? AND b.active = 1
+            ORDER BY bs.sort_order, b.name
+        ";
+
+        return $this->db->fetchAll($sql, [$this->id]);
     }
-    
+
     /**
-     * Mutateur pour le champ active
+     * Méthodes utilitaires
      */
-    public function setActiveAttribute($value): bool
+
+    /**
+     * Obtenir toutes les voies du secteur avec statistiques
+     */
+    public function getRoutesWithStats(): array
     {
-        return (bool) $value;
+        $sql = "
+            SELECT r.*,
+                   dg.numerical_value as difficulty_numeric,
+                   ds.name as difficulty_system_name
+            FROM climbing_routes r
+            LEFT JOIN climbing_difficulty_grades dg ON r.difficulty = dg.value AND r.difficulty_system_id = dg.system_id
+            LEFT JOIN climbing_difficulty_systems ds ON r.difficulty_system_id = ds.id
+            WHERE r.sector_id = ? AND r.active = 1
+            ORDER BY r.number, r.name
+        ";
+
+        return $this->db->fetchAll($sql, [$this->id]);
     }
-    
+
     /**
-     * Accesseur pour le temps d'accès formaté
+     * Obtenir les statistiques du secteur
      */
-    public function getAccessTimeFormattedAttribute(): string
+    public function getStatistics(): array
     {
-        $time = $this->attributes['access_time'] ?? null;
-        
-        if ($time === null) {
+        $sql = "
+            SELECT 
+                COUNT(*) as total_routes,
+                AVG(CAST(beauty AS UNSIGNED)) as avg_beauty,
+                MIN(dg.numerical_value) as min_difficulty_numeric,
+                MAX(dg.numerical_value) as max_difficulty_numeric,
+                MIN(r.difficulty) as min_difficulty,
+                MAX(r.difficulty) as max_difficulty,
+                AVG(r.length) as avg_length,
+                COUNT(CASE WHEN r.style = 'sport' THEN 1 END) as sport_routes,
+                COUNT(CASE WHEN r.style = 'trad' THEN 1 END) as trad_routes,
+                COUNT(CASE WHEN r.style = 'boulder' THEN 1 END) as boulder_routes
+            FROM climbing_routes r
+            LEFT JOIN climbing_difficulty_grades dg ON r.difficulty = dg.value AND r.difficulty_system_id = dg.system_id
+            WHERE r.sector_id = ? AND r.active = 1
+        ";
+
+        return $this->db->fetchOne($sql, [$this->id]);
+    }
+
+    /**
+     * Vérifier si le secteur a des voies
+     */
+    public function hasRoutes(): bool
+    {
+        $sql = "SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1";
+        $result = $this->db->fetchOne($sql, [$this->id]);
+        return $result['count'] > 0;
+    }
+
+    /**
+     * Obtenir la hiérarchie complète du secteur
+     */
+    public function getHierarchy(): array
+    {
+        $hierarchy = [];
+
+        // Région (toujours présente)
+        $region = $this->region();
+        if ($region) {
+            $hierarchy['region'] = [
+                'id' => $region->id,
+                'name' => $region->name,
+                'type' => 'region'
+            ];
+        }
+
+        // Site (optionnel)
+        $site = $this->site();
+        if ($site) {
+            $hierarchy['site'] = [
+                'id' => $site->id,
+                'name' => $site->name,
+                'type' => 'site'
+            ];
+        }
+
+        // Secteur actuel
+        $hierarchy['sector'] = [
+            'id' => $this->id,
+            'name' => $this->name,
+            'type' => 'sector'
+        ];
+
+        return $hierarchy;
+    }
+
+    /**
+     * Déplacer le secteur vers un autre site ou directement dans une région
+     */
+    public function moveTo(?int $newSiteId = null, ?int $newRegionId = null): bool
+    {
+        if ($newSiteId && $newRegionId) {
+            throw new \InvalidArgumentException('Spécifiez soit un site, soit une région, pas les deux');
+        }
+
+        if (!$newSiteId && !$newRegionId) {
+            throw new \InvalidArgumentException('Nouveau site ou nouvelle région requis');
+        }
+
+        try {
+            if ($newSiteId) {
+                // Vérifier que le site existe et obtenir sa région
+                $site = Site::find($newSiteId);
+                if (!$site) {
+                    throw new \Exception('Site de destination non trouvé');
+                }
+
+                $this->site_id = $newSiteId;
+                $this->region_id = $site->region_id;
+            } else {
+                // Déplacement direct vers une région
+                $region = Region::find($newRegionId);
+                if (!$region) {
+                    throw new \Exception('Région de destination non trouvée');
+                }
+
+                $this->site_id = null;
+                $this->region_id = $newRegionId;
+            }
+
+            return $this->save();
+        } catch (\Exception $e) {
+            throw new \Exception('Erreur lors du déplacement du secteur: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Rechercher des secteurs
+     */
+    public static function search(string $query, ?int $regionId = null, ?int $siteId = null): array
+    {
+        $sql = "
+            SELECT s.*, 
+                   r.name as region_name,
+                   si.name as site_name,
+                   COUNT(ro.id) as route_count
+            FROM climbing_sectors s
+            INNER JOIN climbing_regions r ON s.region_id = r.id
+            LEFT JOIN climbing_sites si ON s.site_id = si.id
+            LEFT JOIN climbing_routes ro ON s.id = ro.sector_id AND ro.active = 1
+            WHERE s.active = 1 
+            AND (s.name LIKE ? OR s.description LIKE ? OR s.code LIKE ?)
+        ";
+
+        $params = ["%{$query}%", "%{$query}%", "%{$query}%"];
+
+        if ($regionId) {
+            $sql .= " AND s.region_id = ?";
+            $params[] = $regionId;
+        }
+
+        if ($siteId) {
+            $sql .= " AND s.site_id = ?";
+            $params[] = $siteId;
+        }
+
+        $sql .= " GROUP BY s.id ORDER BY s.name";
+
+        $db = new \TopoclimbCH\Core\Database();
+        return $db->fetchAll($sql, $params);
+    }
+
+    /**
+     * Obtenir les secteurs par critères avec hiérarchie
+     */
+    public static function getByCriteria(array $filters = []): array
+    {
+        $sql = "
+            SELECT s.*, 
+                   r.name as region_name,
+                   si.name as site_name,
+                   COUNT(ro.id) as route_count,
+                   AVG(CAST(ro.beauty AS UNSIGNED)) as avg_beauty
+            FROM climbing_sectors s
+            INNER JOIN climbing_regions r ON s.region_id = r.id
+            LEFT JOIN climbing_sites si ON s.site_id = si.id
+            LEFT JOIN climbing_routes ro ON s.id = ro.sector_id AND ro.active = 1
+            WHERE s.active = 1
+        ";
+
+        $params = [];
+
+        // Filtrage par région
+        if (!empty($filters['region_id'])) {
+            $sql .= " AND s.region_id = ?";
+            $params[] = $filters['region_id'];
+        }
+
+        // Filtrage par site
+        if (!empty($filters['site_id'])) {
+            $sql .= " AND s.site_id = ?";
+            $params[] = $filters['site_id'];
+        }
+
+        // Secteurs sans site (directement dans région)
+        if (isset($filters['no_site']) && $filters['no_site']) {
+            $sql .= " AND s.site_id IS NULL";
+        }
+
+        // Filtrage par altitude
+        if (!empty($filters['altitude_min'])) {
+            $sql .= " AND s.altitude >= ?";
+            $params[] = $filters['altitude_min'];
+        }
+
+        if (!empty($filters['altitude_max'])) {
+            $sql .= " AND s.altitude <= ?";
+            $params[] = $filters['altitude_max'];
+        }
+
+        $sql .= " GROUP BY s.id ORDER BY s.name";
+
+        $db = new \TopoclimbCH\Core\Database();
+        return $db->fetchAll($sql, $params);
+    }
+
+    /**
+     * Accesseurs
+     */
+
+    public function getFullNameAttribute(): string
+    {
+        $parts = [];
+
+        $region = $this->region();
+        if ($region) {
+            $parts[] = $region->name;
+        }
+
+        $site = $this->site();
+        if ($site) {
+            $parts[] = $site->name;
+        }
+
+        $parts[] = $this->name;
+
+        return implode(' - ', $parts);
+    }
+
+    public function getHierarchyPathAttribute(): string
+    {
+        $hierarchy = $this->getHierarchy();
+        $path = [];
+
+        foreach ($hierarchy as $level) {
+            $path[] = $level['name'];
+        }
+
+        return implode(' > ', $path);
+    }
+
+    public function getAccessTimeDisplayAttribute(): string
+    {
+        if (!$this->access_time) {
             return 'Non spécifié';
         }
-        
-        if ($time < 60) {
-            return "{$time} minutes";
+
+        if ($this->access_time < 60) {
+            return $this->access_time . ' min';
         }
-        
-        $hours = floor($time / 60);
-        $minutes = $time % 60;
-        
-        if ($minutes === 0) {
-            return "{$hours} heure" . ($hours > 1 ? 's' : '');
+
+        $hours = floor($this->access_time / 60);
+        $minutes = $this->access_time % 60;
+
+        $display = $hours . 'h';
+        if ($minutes > 0) {
+            $display .= sprintf('%02d', $minutes);
         }
-        
-        return "{$hours}h{$minutes}";
+
+        return $display;
     }
-    
-    /**
-     * Récupère les secteurs actifs
-     */
-    public static function active(): array
+
+    public function getAltitudeDisplayAttribute(): string
     {
-        return static::where(['active' => 1]);
+        return $this->altitude ? $this->altitude . ' m' : 'Non spécifiée';
     }
-    
-    /**
-     * Méthode pour vérifier si le secteur a des coordonnées GPS
-     */
-    public function hasCoordinates(): bool
+
+    public function getCoordinatesDisplayAttribute(): string
     {
-        return isset($this->attributes['coordinates_lat']) && 
-               isset($this->attributes['coordinates_lng']) &&
-               $this->attributes['coordinates_lat'] !== null &&
-               $this->attributes['coordinates_lng'] !== null;
-    }
-    
-    /**
-     * Méthode pour obtenir l'URL Google Maps
-     */
-    public function getGoogleMapsUrl(): ?string
-    {
-        if (!$this->hasCoordinates()) {
-            return null;
+        if ($this->coordinates_lat && $this->coordinates_lng) {
+            return sprintf('%.6f, %.6f', $this->coordinates_lat, $this->coordinates_lng);
         }
-        
-        $lat = $this->attributes['coordinates_lat'];
-        $lng = $this->attributes['coordinates_lng'];
-        
-        return "https://www.google.com/maps?q={$lat},{$lng}";
-    }
-    
-    /**
-     * Événement avant la sauvegarde
-     * 
-     * @throws ModelException
-     * @return bool
-     */
-    protected function onSaving(): bool
-    {
-        // S'assurer que le code est unique
-        if (isset($this->attributes['code'])) {
-            $this->attributes['code'] = $this->generateUniqueCode($this->attributes['code']);
+
+        if ($this->coordinates_swiss_e && $this->coordinates_swiss_n) {
+            return "CH: {$this->coordinates_swiss_e}, {$this->coordinates_swiss_n}";
         }
-        
-        return true;
+
+        return 'Non spécifiées';
     }
-    
-    /**
-     * Génère un code unique
-     * 
-     * @param string $baseCode
-     * @return string
-     * @throws ModelException
-     */
-    protected function generateUniqueCode(string $baseCode): string
+
+    public function getGoogleMapsUrlAttribute(): string
     {
-        $code = $baseCode;
+        if (!$this->coordinates_lat || !$this->coordinates_lng) {
+            return '';
+        }
+
+        return "https://www.google.com/maps?q={$this->coordinates_lat},{$this->coordinates_lng}";
+    }
+
+    /**
+     * Événements du modèle
+     */
+
+    protected function onCreating(): void
+    {
+        // Générer un code unique si pas fourni
+        if (empty($this->code)) {
+            $this->code = $this->generateUniqueCode();
+        }
+
+        // Valider la hiérarchie
+        $this->validateHierarchy();
+    }
+
+    protected function onUpdating(): void
+    {
+        // Valider la hiérarchie lors des mises à jour
+        $this->validateHierarchy();
+    }
+
+    /**
+     * Valider la cohérence hiérarchique
+     */
+    private function validateHierarchy(): void
+    {
+        // Si un site est spécifié, vérifier qu'il appartient à la même région
+        if ($this->site_id && $this->region_id) {
+            $site = Site::find($this->site_id);
+            if ($site && $site->region_id != $this->region_id) {
+                throw new \Exception('Le site spécifié n\'appartient pas à la région indiquée');
+            }
+        }
+    }
+
+    /**
+     * Générer un code unique pour le secteur
+     */
+    private function generateUniqueCode(): string
+    {
+        $baseName = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $this->name), 0, 3));
+        if (strlen($baseName) < 3) {
+            $baseName = str_pad($baseName, 3, 'X');
+        }
+
         $counter = 1;
-        $maxAttempts = 100; // Éviter une boucle infinie
-        
-        while ($counter <= $maxAttempts) {
-            // Vérifier si le code existe déjà
-            $sql = "SELECT id FROM " . static::$table . " WHERE code = ?";
-            if (isset($this->id)) {
-                $sql .= " AND id != ?";
-                $params = [$code, $this->id];
-            } else {
-                $params = [$code];
-            }
-            
-            $existing = self::getConnection()->fetchOne($sql, $params);
-            
-            // Si le code n'existe pas, l'utiliser
-            if (!$existing) {
-                return $code;
-            }
-            
-            // Sinon, générer un nouveau code avec un compteur
-            $code = "{$baseCode}-{$counter}";
+        $code = $baseName;
+
+        while ($this->codeExists($code)) {
+            $code = $baseName . sprintf('%02d', $counter);
             $counter++;
         }
-        
-        throw new ModelException("Impossible de générer un code unique après {$maxAttempts} tentatives pour '{$baseCode}'");
+
+        return $code;
     }
-    
+
     /**
-     * Valide les coordonnées géographiques
-     * 
-     * @return bool
+     * Vérifier si un code existe déjà
      */
-    public function validateCoordinates(): bool
+    private function codeExists(string $code): bool
     {
-        if (!$this->hasCoordinates()) {
-            return true; // Pas de coordonnées à valider
-        }
-        
-        $lat = $this->attributes['coordinates_lat'];
-        $lng = $this->attributes['coordinates_lng'];
-        
-        return is_numeric($lat) && is_numeric($lng) && 
-               $lat >= -90 && $lat <= 90 && 
-               $lng >= -180 && $lng <= 180;
-    }
-    
-    /**
-     * Récupère les secteurs avec pagination et filtrage
-     *
-     * @param Filter $filter Filtre à appliquer
-     * @param int $page Page courante
-     * @param int $perPage Nombre d'éléments par page
-     * @param string|null $orderBy Champ pour le tri
-     * @param string $direction Direction du tri (ASC/DESC)
-     * @return Paginator
-     */
-    public static function filterAndPaginate(
-        \TopoclimbCH\Core\Filtering\Filter $filter,
-        int $page = 1,
-        int $perPage = 15,
-        ?string $orderBy = null,
-        string $direction = 'ASC'
-    ): \TopoclimbCH\Core\Pagination\Paginator {
-        // S'assurer que les valeurs sont valides
-        $page = max(1, $page);
-        $perPage = max(1, min(100, $perPage));
-        
-        // Utiliser 'name' comme champ de tri par défaut si non spécifié
-        $sortBy = $orderBy ?? 'name';
-        $sortDir = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
-        
-        // Préfixe de table pour les secteurs
-        $tablePrefix = 's';
-        
-        // Obtenir l'instance de Database
-        $db = \TopoclimbCH\Core\Database::getInstance();
-        
-        // Construire la clause WHERE à partir du filtre
-        $filterResult = $filter->apply();
-        $whereConditions = $filterResult['conditions'] ?? [];
-        $whereParams = $filterResult['parameters'] ?? [];
-        $joins = $filterResult['joins'] ?? [];
-        
-        // Simplifier la condition d'active pour déboguer
-        // Note : nous gardons cette condition, mais vous pourriez la commenter temporairement
-        // pour voir si c'est elle qui cause le problème
-        $whereConditions[] = "{$tablePrefix}.active = 1";
-        
-        // Construire la clause WHERE complète
-        $whereClause = '';
-        if (!empty($whereConditions)) {
-            $whereClause = "WHERE " . implode(' AND ', $whereConditions);
-        }
-        
-        // Construire les jointures
-        $joinClause = '';
-        if (!empty($joins)) {
-            $joinClause = implode(' ', array_unique($joins));
-        }
-        
-        // Valider et sécuriser le tri
-        $allowedSortFields = ['name', 'altitude', 'access_time', 'created_at'];
-        $sortBy = in_array($sortBy, $allowedSortFields) ? $sortBy : 'name';
-        
-        // Vérification directe du nombre de secteurs dans la table
-        $checkSql = "SELECT COUNT(*) as count FROM " . static::$table;
-        $checkResult = $db->fetchOne($checkSql);
-        $totalInTable = (int) ($checkResult['count'] ?? 0);
-        
-        // Si aucun secteur dans la table, retourner un paginateur vide
-        if ($totalInTable === 0) {
-            return new \TopoclimbCH\Core\Pagination\Paginator(
-                [],
-                0,
-                $page,
-                $perPage
-            );
-        }
-        
-        // Construire la requête de base pour le comptage
-        $countSql = "SELECT COUNT(DISTINCT {$tablePrefix}.id) as total 
-                    FROM " . static::$table . " {$tablePrefix}
-                    {$joinClause}
-                    {$whereClause}";
-        
-        // Exécuter la requête de comptage
-        $countResult = $db->fetchOne($countSql, $whereParams);
-        $total = (int) ($countResult['total'] ?? 0);
-        
-        // Si aucun résultat avec les filtres, retourner un paginateur vide
-        if ($total === 0) {
-            return new \TopoclimbCH\Core\Pagination\Paginator(
-                [],
-                0,
-                $page,
-                $perPage
-            );
-        }
-        
-        // Calculer l'offset pour la pagination
-        $offset = ($page - 1) * $perPage;
-        
-        // Requête simplifiée pour tester
-        $sql = "SELECT {$tablePrefix}.*, r.name as region_name 
-                FROM " . static::$table . " {$tablePrefix}
-                LEFT JOIN climbing_regions r ON {$tablePrefix}.region_id = r.id
-                {$joinClause}
-                {$whereClause}
-                ORDER BY {$tablePrefix}.{$sortBy} {$sortDir}
-                LIMIT {$perPage} OFFSET {$offset}";
-        
-        // Exécuter la requête principale
-        $items = $db->fetchAll($sql, $whereParams);
-        error_log("SQL Count: " . $countSql . " | Params: " . json_encode($whereParams));
-        error_log("SQL Items: " . $sql . " | Results count: " . count($items));
-        // Créer et retourner un objet Paginator
-        return new \TopoclimbCH\Core\Pagination\Paginator(
-            $items,
-            $total,
-            $page,
-            $perPage
-        );
-    }    
-    /**
-     * Récupère tous les secteurs d'une région
-     *
-     * @param int $regionId
-     * @param bool $activeOnly Retourner uniquement les secteurs actifs
-     * @return array
-     */
-    public static function getAllByRegion(int $regionId, bool $activeOnly = true): array
-    {
-        $sql = "SELECT s.*, r.name as region_name
-                FROM " . static::$table . " s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.region_id = ?";
-                
-        if ($activeOnly) {
-            $sql .= " AND s.active = 1";
-        }
-        
-        $sql .= " ORDER BY s.name ASC";
-        
-        return self::getConnection()->fetchAll($sql, [$regionId]);
-    }
-    
-    /**
-     * Récupère tous les secteurs d'un site/book
-     *
-     * @param int $bookId
-     * @param bool $activeOnly Retourner uniquement les secteurs actifs
-     * @return array
-     */
-    public static function getAllByBook(int $bookId, bool $activeOnly = true): array
-    {
-        $sql = "SELECT s.*, r.name as region_name
-                FROM " . static::$table . " s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.book_id = ?";
-                
-        if ($activeOnly) {
-            $sql .= " AND s.active = 1";
-        }
-        
-        $sql .= " ORDER BY s.name ASC";
-        
-        return self::getConnection()->fetchAll($sql, [$bookId]);
-    }
-    
-    /**
-     * Recherche de secteurs par mots-clés
-     *
-     * @param string $keyword Terme de recherche
-     * @param int $limit Limite de résultats
-     * @return array
-     */
-    public static function search(string $keyword, int $limit = 10): array
-    {
-        $keyword = '%' . trim($keyword) . '%';
-        
-        $sql = "SELECT s.*, r.name as region_name
-                FROM " . static::$table . " s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.active = 1 AND (
-                    s.name LIKE ? OR 
-                    s.description LIKE ? OR
-                    s.code LIKE ?
-                )
-                ORDER BY s.name ASC
-                LIMIT ?";
-                
-        return self::getConnection()->fetchAll($sql, [$keyword, $keyword, $keyword, $limit]);
-    }
-    
-    /**
-     * Récupère les secteurs recommandés pour un mois donné
-     *
-     * @param int $monthId ID du mois (1-12)
-     * @param string $quality Qualité minimale (excellent, good, average)
-     * @param int $limit Limite de résultats
-     * @return array
-     */
-    public static function getRecommendedForMonth(int $monthId, string $quality = 'good', int $limit = 10): array
-    {
-        $validQualities = ['excellent', 'good', 'average'];
-        $quality = in_array($quality, $validQualities) ? $quality : 'good';
-        
-        // Construire la condition de qualité
-        $qualityCondition = "";
-        if ($quality === 'excellent') {
-            $qualityCondition = "sm.quality = 'excellent'";
-        } elseif ($quality === 'good') {
-            $qualityCondition = "sm.quality IN ('excellent', 'good')";
+        $sql = "SELECT COUNT(*) as count FROM climbing_sectors WHERE code = ? AND active = 1";
+        if ($this->id) {
+            $sql .= " AND id != ?";
+            $result = $this->db->fetchOne($sql, [$code, $this->id]);
         } else {
-            $qualityCondition = "sm.quality IN ('excellent', 'good', 'average')";
+            $result = $this->db->fetchOne($sql, [$code]);
         }
-        
-        $sql = "SELECT s.*, r.name as region_name, sm.quality
-                FROM " . static::$table . " s
-                JOIN climbing_sector_months sm ON s.id = sm.sector_id
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.active = 1 AND sm.month_id = ? AND {$qualityCondition}
-                ORDER BY FIELD(sm.quality, 'excellent', 'good', 'average'), s.name ASC
-                LIMIT ?";
-                
-        return self::getConnection()->fetchAll($sql, [$monthId, $limit]);
-    }
-    /**
-     * Récupère les statistiques d'un secteur
-     *
-     * @param int $sectorId
-     * @return array
-     */
-    public static function getStats(int $sectorId): array
-    {
-        // Obtenir l'instance de Database
-        $db = \TopoclimbCH\Core\Database::getInstance();
-        
-        // Compter les voies
-        $routesCount = $db->fetchOne(
-            "SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1",
-            [$sectorId]
-        );
-        
-        // Récupérer la difficulté min et max
-        $difficultyStats = $db->fetchOne(
-            "SELECT MIN(numerical_value) as min_difficulty, MAX(numerical_value) as max_difficulty
-            FROM climbing_routes r
-            JOIN climbing_difficulty_grades g ON r.difficulty = g.value AND r.difficulty_system_id = g.system_id
-            WHERE r.sector_id = ? AND r.active = 1",
-            [$sectorId]
-        );
-        
-        // Compter les médias
-        $mediaCount = $db->fetchOne(
-            "SELECT COUNT(*) as count FROM climbing_media_relationships 
-            WHERE entity_type = 'sector' AND entity_id = ?",
-            [$sectorId]
-        );
-        
-        return [
-            'routes_count' => (int) ($routesCount['count'] ?? 0),
-            'min_difficulty' => $difficultyStats['min_difficulty'] ?? null,
-            'max_difficulty' => $difficultyStats['max_difficulty'] ?? null,
-            'media_count' => (int) ($mediaCount['count'] ?? 0)
-        ];
-    }
-    
-    /**
-     * Recherche les secteurs proches géographiquement
-     *
-     * @param float $lat Latitude
-     * @param float $lng Longitude
-     * @param float $radiusKm Rayon de recherche en km
-     * @param int $limit Nombre maximum de résultats
-     * @return array
-     */
-    public static function findNearby(float $lat, float $lng, float $radiusKm = 10.0, int $limit = 10): array
-    {
-        // Formule Haversine pour calculer la distance
-        $sql = "SELECT s.*, r.name as region_name,
-               (6371 * acos(cos(radians(?)) * cos(radians(s.coordinates_lat)) * 
-                cos(radians(s.coordinates_lng) - radians(?)) + 
-                sin(radians(?)) * sin(radians(s.coordinates_lat)))) AS distance
-                FROM " . static::$table . " s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.active = 1 
-                AND s.coordinates_lat IS NOT NULL 
-                AND s.coordinates_lng IS NOT NULL
-                HAVING distance < ?
-                ORDER BY distance ASC
-                LIMIT ?";
-        
-        return self::getConnection()->fetchAll($sql, [$lat, $lng, $lat, $radiusKm, $limit]);
-    }
-    
-    /**
-     * Récupère les secteurs similaires basés sur divers critères
-     *
-     * @param int $sectorId
-     * @param int $limit
-     * @return array
-     */
-    public static function getSimilarSectors(int $sectorId, int $limit = 5): array
-    {
-        $sector = self::find($sectorId);
-        
-        if (!$sector) {
-            return [];
-        }
-        
-        // Base SQL query
-        $sql = "SELECT s.*, r.name as region_name
-                FROM " . static::$table . " s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.id != ? AND s.active = 1";
-        
-        $params = [$sectorId];
-        
-        // Filter by region if available
-        if ($sector->region_id) {
-            $sql .= " AND s.region_id = ?";
-            $params[] = $sector->region_id;
-        }
-        
-        // Filter by altitude range if available
-        if ($sector->altitude) {
-            $minAlt = max(0, $sector->altitude - 300);
-            $maxAlt = $sector->altitude + 300;
-            $sql .= " AND (s.altitude BETWEEN ? AND ?)";
-            $params[] = $minAlt;
-            $params[] = $maxAlt;
-        }
-        
-        $sql .= " ORDER BY s.name ASC LIMIT ?";
-        $params[] = $limit;
-        
-        return self::getConnection()->fetchAll($sql, $params);
-    }
-    
-    /**
-     * Génère une slug URL convivial à partir du nom et du code
-     * 
-     * @return string
-     */
-    public function getSlugAttribute(): string
-    {
-        $name = $this->attributes['name'] ?? '';
-        $code = $this->attributes['code'] ?? '';
-        
-        $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $name), '-'));
-        
-        return $slug . '-' . $code;
+
+        return $result['count'] > 0;
     }
 }
