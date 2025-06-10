@@ -1,0 +1,96 @@
+{#
+ # Macros Twig pour manipulation de texte
+ # Usage: {% import 'macros/text.twig' as text %}
+ #}
+
+{#
+ # Tronque un texte à une longueur donnée
+ # @param string text - Le texte à tronquer
+ # @param int length - Longueur maximale (défaut: 100)
+ # @param string suffix - Suffixe à ajouter (défaut: '...')
+ # @return string
+ #}
+{% macro truncate(text, length = 100, suffix = '...') %}
+    {%- if text|length > length -%}
+        {{- text|slice(0, length)|trim ~ suffix -}}
+    {%- else -%}
+        {{- text -}}
+    {%- endif -%}
+{% endmacro %}
+
+{#
+ # Tronque un texte par mots (évite de couper au milieu d'un mot)
+ # @param string text - Le texte à tronquer
+ # @param int length - Longueur maximale approximative
+ # @param string suffix - Suffixe à ajouter (défaut: '...')
+ # @return string
+ #}
+{% macro truncateWords(text, length = 100, suffix = '...') %}
+    {%- if text|length <= length -%}
+        {{- text -}}
+    {%- else -%}
+        {%- set truncated = text|slice(0, length)|trim -%}
+        {%- set lastSpace = truncated|split(' ')|slice(0, -1)|join(' ') -%}
+        {{- lastSpace ~ suffix -}}
+    {%- endif -%}
+{% endmacro %}
+
+{#
+ # Formate un texte en extrait (première phrase ou X caractères)
+ # @param string text - Le texte source
+ # @param int maxLength - Longueur maximum si pas de point
+ # @return string
+ #}
+{% macro excerpt(text, maxLength = 150) %}
+    {%- set firstSentence = text|split('.')|first -%}
+    {%- if firstSentence|length <= maxLength and firstSentence|length < text|length -%}
+        {{- firstSentence ~ '.' -}}
+    {%- else -%}
+        {{- text|length > maxLength ? text|slice(0, maxLength)|trim ~ '...' : text -}}
+    {%- endif -%}
+{% endmacro %}
+
+{#
+ # Capitalise la première lettre de chaque mot
+ # @param string text
+ # @return string
+ #}
+{% macro title(text) %}
+    {{- text|split(' ')|map(word => word|capitalize)|join(' ') -}}
+{% endmacro %}
+
+{#
+ # Convertit une chaîne en slug (URL-friendly)
+ # @param string text
+ # @return string
+ #}
+{% macro slug(text) %}
+    {{- text|lower|replace({' ': '-', 'é': 'e', 'è': 'e', 'ê': 'e', 'à': 'a', 'ç': 'c', 'ô': 'o', 'ù': 'u', 'û': 'u', 'î': 'i', 'ï': 'i'})|replace('/[^a-z0-9\-]/', '')|replace('/-+/', '-')|trim('-') -}}
+{% endmacro %}
+
+{#
+ # Formate un nombre avec des espaces comme séparateurs de milliers (style français)
+ # @param number num
+ # @param int decimals
+ # @return string
+ #}
+{% macro number(num, decimals = 0) %}
+    {{- num|number_format(decimals, ',', ' ') -}}
+{% endmacro %}
+
+{#
+ # Formate une taille de fichier en unités humaines
+ # @param int bytes
+ # @return string
+ #}
+{% macro fileSize(bytes) %}
+    {%- if bytes < 1024 -%}
+        {{- bytes ~ ' B' -}}
+    {%- elseif bytes < 1048576 -%}
+        {{- (bytes / 1024)|round(1) ~ ' KB' -}}
+    {%- elseif bytes < 1073741824 -%}
+        {{- (bytes / 1048576)|round(1) ~ ' MB' -}}
+    {%- else -%}
+        {{- (bytes / 1073741824)|round(1) ~ ' GB' -}}
+    {%- endif -%}
+{% endmacro %}

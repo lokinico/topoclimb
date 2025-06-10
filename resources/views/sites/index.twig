@@ -1,5 +1,8 @@
 {% extends "layouts/app.twig" %}
 
+{# Import des macros de texte #}
+{% import 'macros/text.twig' as text %}
+
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
@@ -12,29 +15,81 @@
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">Accueil</a></li>
                     <li class="breadcrumb-item"><a href="/regions">Régions</a></li>
+                    {% if region %}
                     <li class="breadcrumb-item"><a href="/regions/{{ region.id }}">{{ region.name }}</a></li>
                     <li class="breadcrumb-item active">Sites</li>
+                    {% else %}
+                    <li class="breadcrumb-item active">Tous les sites</li>
+                    {% endif %}
                 </ol>
             </nav>
             
             <div class="page-title-section">
+                {% if region %}
                 <h1>Sites de {{ region.name }}</h1>
                 <p class="text-muted">
                     Sites d'escalade organisés en sous-zones de la région
                 </p>
+                {% else %}
+                <h1>Tous les sites</h1>
+                <p class="text-muted">
+                    Parcourez tous les sites d'escalade par région
+                </p>
+                {% endif %}
             </div>
 
             <div class="page-actions">
+                {% if region %}
                 <a href="/sites/create?region_id={{ region.id }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Nouveau site
                 </a>
                 <a href="/sites/selector?mode=select&region_id={{ region.id }}" class="btn btn-outline-primary">
                     <i class="fas fa-search"></i> Sélecteur hiérarchique
                 </a>
+                {% else %}
+                <a href="/sites/selector" class="btn btn-outline-primary">
+                    <i class="fas fa-search"></i> Sélecteur hiérarchique
+                </a>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Barre de recherche et filtres -->
+        <!-- Sélecteur de région (si pas de région spécifique) -->
+        {% if show_region_selector and regions %}
+        <div class="region-selector">
+            <form method="GET" class="selector-form">
+                <div class="row align-items-end">
+                    <div class="col-md-6">
+                        <label for="region_id" class="form-label">Filtrer par région</label>
+                        <select name="region_id" id="region_id" class="form-select">
+                            <option value="">Toutes les régions</option>
+                            {% for region_option in regions %}
+                            <option value="{{ region_option.id }}">
+                                {{ region_option.name }}
+                                {% if region_option.country_name %}({{ region_option.country_name }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" 
+                               name="search" 
+                               class="form-control" 
+                               placeholder="Rechercher un site..."
+                               value="{{ search }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i> Filtrer
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Barre de recherche (si région spécifique) -->
+        {% if region %}
         <div class="filters-section">
             <form method="GET" class="search-form">
                 <input type="hidden" name="region_id" value="{{ region.id }}">
@@ -61,6 +116,7 @@
                 </div>
             </form>
         </div>
+        {% endif %}
 
         <!-- Résultats -->
         <div class="sites-results">
@@ -70,6 +126,9 @@
                 <p class="text-muted">
                     <i class="fas fa-search"></i>
                     {{ sites|length }} résultat(s) pour "{{ search }}"
+                    {% if total_sites and total_sites > sites|length %}
+                    sur {{ total_sites }} sites total
+                    {% endif %}
                 </p>
             </div>
             {% endif %}
@@ -83,15 +142,22 @@
                     </div>
                     <h3>Aucun site trouvé</h3>
                     <p>Aucun site ne correspond à votre recherche "{{ search }}"</p>
+                    {% if region %}
                     <a href="/sites?region_id={{ region.id }}" class="btn btn-primary">
+                        Voir tous les sites de {{ region.name }}
+                    </a>
+                    {% else %}
+                    <a href="/sites" class="btn btn-primary">
                         Voir tous les sites
                     </a>
+                    {% endif %}
                 </div>
                 {% else %}
                 <div class="empty-results">
                     <div class="empty-icon">
                         <i class="fas fa-map-marker-alt"></i>
                     </div>
+                    {% if region %}
                     <h3>Aucun site dans cette région</h3>
                     <p>Cette région ne contient pas encore de sites d'escalade organisés.</p>
                     <p class="text-muted">
@@ -105,6 +171,15 @@
                             <i class="fas fa-climbing"></i> Voir les secteurs de la région
                         </a>
                     </div>
+                    {% else %}
+                    <h3>Aucun site trouvé</h3>
+                    <p>Aucun site d'escalade n'est encore enregistré dans la base de données.</p>
+                    <div class="empty-actions">
+                        <a href="/regions" class="btn btn-primary">
+                            <i class="fas fa-mountain"></i> Explorer les régions
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -121,9 +196,18 @@
                         <div class="site-code">{{ site.code|upper }}</div>
                     </div>
 
+                    <!-- Région (si affichage multi-régions) -->
+                    {% if not region and site.region_name %}
+                    <div class="site-region">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <a href="/sites?region_id={{ site.region_id }}">{{ site.region_name }}</a>
+                    </div>
+                    {% endif %}
+
                     {% if site.description %}
                     <p class="site-description">
-                        {{ site.description|truncate(120) }}
+                        {# CORRECTION: Utilisation de la macro truncate #}
+                        {{ text.truncate(site.description, 120) }}
                     </p>
                     {% endif %}
 
@@ -163,7 +247,7 @@
                         {% endif %}
                         {% if site.publisher %}
                         <span class="meta-item">
-                            <i class="fas fa-book"></i> {{ site.publisher }}
+                            <i class="fas fa-book"></i> {{ text.truncate(site.publisher, 30) }}
                         </span>
                         {% endif %}
                     </div>
@@ -180,6 +264,16 @@
                 {% endfor %}
             </div>
 
+            {% if total_sites and total_sites > sites|length %}
+            <div class="pagination-info">
+                <p class="text-muted text-center">
+                    Affichage de {{ sites|length }} sites sur {{ text.number(total_sites) }} total.
+                    <a href="/sites/selector" class="link-primary">Utiliser le sélecteur avancé</a>
+                    pour explorer tous les sites.
+                </p>
+            </div>
+            {% endif %}
+
             {% endif %}
 
         </div>
@@ -195,6 +289,7 @@
                         <small>Explorer d'autres régions</small>
                     </div>
                 </a>
+                {% if region %}
                 <a href="/regions/{{ region.id }}" class="nav-link">
                     <i class="fas fa-climbing"></i>
                     <div>
@@ -209,6 +304,15 @@
                         <small>Outil de navigation avancé</small>
                     </div>
                 </a>
+                {% else %}
+                <a href="/sites/selector" class="nav-link">
+                    <i class="fas fa-search"></i>
+                    <div>
+                        <strong>Sélecteur hiérarchique</strong>
+                        <small>Outil de navigation avancé</small>
+                    </div>
+                </a>
+                {% endif %}
             </div>
         </div>
 
