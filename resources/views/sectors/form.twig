@@ -21,8 +21,7 @@
     </div>
     
     <div class="form-container">
-        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors/create') }}" 
-              method="post" 
+        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors') }}"              method="post" 
               enctype="multipart/form-data" 
               class="form form-horizontal">
             
