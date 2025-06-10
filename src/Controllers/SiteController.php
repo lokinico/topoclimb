@@ -20,6 +20,7 @@ class SiteController extends BaseController
 {
     private RegionService $regionService;
     private SectorService $sectorService;
+    private \TopoclimbCH\Core\Database $db;                    // AJOUT: Propriété Database
 
     public function __construct(
         View $view,
@@ -31,95 +32,49 @@ class SiteController extends BaseController
         parent::__construct($view, $session, $csrfManager);
         $this->regionService = $regionService;
         $this->sectorService = $sectorService;
+
+        // AJOUT: Récupérer Database via getInstance (comme RouteController)
+        $this->db = \TopoclimbCH\Core\Database::getInstance();
     }
 
     /**
      * Liste tous les sites avec filtrage par région
-     * AMÉLIORATION: Gère le cas où aucune région n'est spécifiée
      */
     public function index(Request $request): Response
     {
-        $regionId = $request->query->get('region_id');
-        $search = $request->query->get('search', '');
+        // CORRECTION 2: Adapter les méthodes pour Symfony Request (comme RouteController)
+        $regionId = $request->query->get('region_id');      // au lieu de $request->getQuery('region_id')
+        $search = $request->query->get('search', '');       // au lieu de $request->getQuery('search', '')
+
+        // Si pas de région spécifiée, rediriger vers les régions
+        if (!$regionId) {
+            return Response::redirect('/regions');
+        }
 
         try {
-            // CAS 1: Région spécifiée - Afficher les sites de cette région
-            if ($regionId) {
-                $region = Region::find($regionId);
-                if (!$region) {
-                    $this->session->flash('error', 'Région non trouvée');
-                    return Response::redirect('/regions');
-                }
-
-                $sites = Site::getByRegion($regionId);
-
-                // Filtrer par recherche si nécessaire
-                if (!empty($search)) {
-                    $sites = array_filter($sites, function ($site) use ($search) {
-                        return stripos($site['name'], $search) !== false ||
-                            stripos($site['description'], $search) !== false;
-                    });
-                }
-
-                return $this->render('sites/index', [
-                    'sites' => $sites,
-                    'region' => $region,
-                    'regions' => null, // Pas besoin de toutes les régions
-                    'search' => $search,
-                    'title' => 'Sites - ' . $region->name,
-                    'show_region_selector' => false
-                ]);
+            $region = Region::find($regionId);
+            if (!$region) {
+                $this->session->flash('error', 'Région non trouvée');
+                return Response::redirect('/regions');
             }
 
-            // CAS 2: Aucune région spécifiée - Afficher sélecteur + tous les sites ou redirection
-            else {
-                // Option A: Rediriger vers les régions (comportement actuel)
-                // return Response::redirect('/regions');
+            $sites = Site::getByRegion($regionId);
 
-                // Option B: Afficher tous les sites avec sélecteur de région (NOUVEAU)
-                $regions = $this->db->fetchAll(
-                    "SELECT r.*, c.name as country_name 
-                     FROM climbing_regions r 
-                     LEFT JOIN climbing_countries c ON r.country_id = c.id 
-                     WHERE r.active = 1 
-                     ORDER BY c.name, r.name"
-                );
-
-                // Récupérer tous les sites ou limiter à un nombre raisonnable
-                $sql = "
-                    SELECT s.*, r.name as region_name, r.id as region_id,
-                           COUNT(DISTINCT sec.id) as sector_count,
-                           COUNT(DISTINCT rt.id) as route_count
-                    FROM climbing_sites s
-                    INNER JOIN climbing_regions r ON s.region_id = r.id
-                    LEFT JOIN climbing_sectors sec ON s.id = sec.site_id AND sec.active = 1
-                    LEFT JOIN climbing_routes rt ON sec.id = rt.sector_id AND rt.active = 1
-                    WHERE s.active = 1
-                ";
-
-                $params = [];
-                if (!empty($search)) {
-                    $sql .= " AND (s.name LIKE ? OR s.description LIKE ?)";
-                    $params = ["%{$search}%", "%{$search}%"];
-                }
-
-                $sql .= " GROUP BY s.id ORDER BY r.name, s.name LIMIT 50"; // Limiter pour performance
-
-                $db = new \TopoclimbCH\Core\Database();
-                $sites = $db->fetchAll($sql, $params);
-
-                return $this->render('sites/index', [
-                    'sites' => $sites,
-                    'region' => null, // Aucune région spécifique
-                    'regions' => $regions, // Toutes les régions pour le sélecteur
-                    'search' => $search,
-                    'title' => 'Tous les sites',
-                    'show_region_selector' => true, // Afficher le sélecteur
-                    'total_sites' => count($sites)
-                ]);
+            // Filtrer par recherche si nécessaire
+            if (!empty($search)) {
+                $sites = array_filter($sites, function ($site) use ($search) {
+                    return stripos($site['name'], $search) !== false ||
+                        stripos($site['description'], $search) !== false;
+                });
             }
+
+            return $this->render('sites/index', [
+                'sites' => $sites,
+                'region' => $region,
+                'search' => $search,
+                'title' => 'Sites - ' . $region->name
+            ]);
         } catch (\Exception $e) {
-            error_log('SiteController::index error: ' . $e->getMessage());
             $this->session->flash('error', 'Erreur lors du chargement des sites');
             return Response::redirect('/regions');
         }
@@ -371,8 +326,7 @@ class SiteController extends BaseController
 
         $sql .= " GROUP BY r.id ORDER BY r.name";
 
-        $db = new \TopoclimbCH\Core\Database();
-        return $db->fetchAll($sql, $params);
+        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
     }
 
     private function getSitesData(int $regionId, string $search = ''): array
@@ -396,8 +350,7 @@ class SiteController extends BaseController
 
         $sql .= " GROUP BY s.id ORDER BY s.name";
 
-        $db = new \TopoclimbCH\Core\Database();
-        return $db->fetchAll($sql, $params);
+        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
     }
 
     private function getSectorsData(?int $parentId, string $search = ''): array
@@ -431,8 +384,7 @@ class SiteController extends BaseController
 
         $sql .= " GROUP BY sec.id ORDER BY sec.name";
 
-        $db = new \TopoclimbCH\Core\Database();
-        return $db->fetchAll($sql, $params);
+        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
     }
 
     private function getRoutesData(int $sectorId, string $search = ''): array
@@ -454,7 +406,6 @@ class SiteController extends BaseController
 
         $sql .= " ORDER BY r.number, r.name";
 
-        $db = new \TopoclimbCH\Core\Database();
-        return $db->fetchAll($sql, $params);
+        return $this->db->fetchAll($sql, $params);                    // CORRECTION: Utiliser $this->db
     }
 }
