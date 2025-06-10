@@ -1105,4 +1105,5 @@ return [
             \TopoclimbCH\Middleware\PermissionMiddleware::class
         ]
     ]
+
 ];

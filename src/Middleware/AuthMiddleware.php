@@ -2,7 +2,6 @@
 
 namespace TopoclimbCH\Middleware;
 
-use TopoclimbCH\Core\Container;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Core\Auth;
@@ -11,6 +10,16 @@ use TopoclimbCH\Core\Database;
 
 class AuthMiddleware
 {
+    private const PUBLIC_ROUTES = [
+        '/',
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+        '/about',
+        '/contact'
+    ];
+
     private Session $session;
     private Database $db;
     private ?Auth $auth = null;
@@ -19,13 +28,19 @@ class AuthMiddleware
     {
         $this->session = $session;
         $this->db = $db;
-
-        // On ne tente plus d'obtenir Auth via le conteneur ici
+        $this->auth = Auth::getInstance();
     }
 
     public function handle(Request $request, callable $next): Response
     {
-        // Vérification directe basée sur la session, sans interaction DB risquée
+        $currentPath = $request->getPathInfo();
+
+        // Vérifier si c'est une route publique
+        if (in_array($currentPath, self::PUBLIC_ROUTES)) {
+            return $next($request);
+        }
+
+        // Vérification de l'authentification
         $hasAuthUserId = isset($_SESSION['auth_user_id']) && $_SESSION['auth_user_id'];
         $isAuthenticated = isset($_SESSION['is_authenticated']) && $_SESSION['is_authenticated'];
 
@@ -33,28 +48,19 @@ class AuthMiddleware
             ($hasAuthUserId ? $_SESSION['auth_user_id'] : 'non défini') .
             ", Authentifié=" . ($isAuthenticated ? 'oui' : 'non'));
 
-        // Si authentification présente en session, on accepte et on continue
         if ($hasAuthUserId && $isAuthenticated) {
-            // On continue la chaîne de middleware sans tenter d'initialiser Auth
             return $next($request);
         }
 
-        // Si on arrive ici, l'utilisateur n'est pas authentifié
-        $currentPath = $request->getPathInfo();
+        // Si non authentifié, sauvegarder l'URL et rediriger
+        if ($currentPath !== '/login') {
+            $this->session->set('intended_url', $currentPath);
+            $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
+            $this->session->persist();
 
-        // Éviter les boucles de redirection
-        if ($currentPath === '/login') {
-            return $next($request);
+            return Response::redirect('/login');
         }
 
-        // Stocker l'URL pour redirection après login
-        $this->session->set('intended_url', $currentPath);
-        $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
-
-        // Persister la session
-        $this->session->persist();
-
-        // Redirection vers login
-        return Response::redirect('/login');
+        return $next($request);
     }
 }
