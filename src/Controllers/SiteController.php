@@ -297,18 +297,6 @@ class SiteController extends BaseController
         ]);
     }
 
-    // CORRECTION 11: Ajouter les méthodes CSRF héritées de BaseController
-    private function createCsrfToken(): string
-    {
-        return $this->csrfManager->generateToken();
-    }
-
-    private function validateCsrfToken(Request $request): bool
-    {
-        $token = $request->request->get('csrf_token');
-        return $this->csrfManager->validateToken($token);
-    }
-
     /**
      * Méthodes privées pour l'API hiérarchique
      */
