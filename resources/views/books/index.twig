@@ -1,0 +1,281 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="books-index">
+    <div class="container">
+        
+        <!-- En-tête avec breadcrumb -->
+        <div class="page-header">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Accueil</a></li>
+                    <li class="breadcrumb-item active">Topos & Livres</li>
+                </ol>
+            </nav>
+            
+            <div class="page-title-section">
+                <h1>{{ title }}</h1>
+                <p class="text-muted">
+                    Gestion des topos et livres d'escalade avec contenu flexible
+                </p>
+            </div>
+
+            <div class="page-actions">
+                <a href="/books/create" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nouveau livre
+                </a>
+                <a href="/sites/selector?mode=book" class="btn btn-outline-primary">
+                    <i class="fas fa-search"></i> Sélecteur hiérarchique
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="filters-section">
+            <form method="GET" class="search-form">
+                <div class="row align-items-end">
+                    <div class="col-md-5">
+                        <label for="search" class="form-label">Rechercher un livre</label>
+                        <input type="text" 
+                               id="search" 
+                               name="search" 
+                               class="form-control" 
+                               placeholder="Nom, éditeur ou code..."
+                               value="{{ search }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="region_id" class="form-label">Région</label>
+                        <select id="region_id" name="region_id" class="form-control">
+                            <option value="">Toutes les régions</option>
+                            {% for region in regions %}
+                            <option value="{{ region.id }}" {% if currentRegion and currentRegion.id == region.id %}selected{% endif %}>
+                                {{ region.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                        {% if search or currentRegion %}
+                        <a href="/books" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Reset
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Résultats -->
+        <div class="books-results">
+            
+            {% if search %}
+            <div class="search-info">
+                <p class="text-muted">
+                    <i class="fas fa-search"></i>
+                    {{ books|length }} résultat(s) pour "{{ search }}"
+                    {% if currentRegion %}dans {{ currentRegion.name }}{% endif %}
+                </p>
+            </div>
+            {% endif %}
+
+            {% if books is empty %}
+            
+                {% if search %}
+                <div class="empty-results">
+                    <div class="empty-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3>Aucun livre trouvé</h3>
+                    <p>Aucun livre ne correspond à vos critères de recherche.</p>
+                    <a href="/books" class="btn btn-primary">
+                        Voir tous les livres
+                    </a>
+                </div>
+                {% else %}
+                <div class="empty-results">
+                    <div class="empty-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <h3>Aucun livre d'escalade</h3>
+                    <p>Vous n'avez pas encore créé de topo ou livre d'escalade.</p>
+                    <div class="empty-actions">
+                        <a href="/books/create" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Créer le premier livre
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+            {% else %}
+
+            <!-- Grille des livres -->
+            <div class="books-grid">
+                {% for book in books %}
+                <div class="book-card" data-book-id="{{ book.id }}">
+                    <div class="book-header">
+                        <h3 class="book-title">
+                            <a href="/books/{{ book.id }}">{{ book.name }}</a>
+                        </h3>
+                        <div class="book-meta">
+                            {% if book.code %}
+                            <span class="book-code">{{ book.code|upper }}</span>
+                            {% endif %}
+                            {% if book.year %}
+                            <span class="book-year">{{ book.year }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="book-info">
+                        <div class="book-region">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <a href="/regions/{{ book.region_id }}">{{ book.region_name }}</a>
+                        </div>
+                        {% if book.publisher %}
+                        <div class="book-publisher">
+                            <i class="fas fa-building"></i>
+                            {{ book.publisher }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="book-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-climbing"></i>
+                            <span class="stat-value">{{ book.sector_count }}</span>
+                            <span class="stat-label">secteur{{ book.sector_count > 1 ? 's' : '' }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-route"></i>
+                            <span class="stat-value">{{ book.route_count + book.complete_sector_routes }}</span>
+                            <span class="stat-label">voie{{ (book.route_count + book.complete_sector_routes) > 1 ? 's' : '' }}</span>
+                        </div>
+                        {% if book.complete_sector_routes > 0 %}
+                        <div class="stat-item">
+                            <i class="fas fa-layer-group"></i>
+                            <span class="stat-value">{{ book.complete_sector_routes }}</span>
+                            <span class="stat-label">secteur{{ book.complete_sector_routes > 1 ? 's' : '' }} complet{{ book.complete_sector_routes > 1 ? 's' : '' }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="book-content-preview">
+                        {% if book.sector_count > 0 %}
+                        <span class="content-type">
+                            <i class="fas fa-layer-group"></i> {{ book.sector_count }} secteur{{ book.sector_count > 1 ? 's' : '' }}
+                        </span>
+                        {% endif %}
+                        {% if book.route_count > 0 %}
+                        <span class="content-type">
+                            <i class="fas fa-route"></i> {{ book.route_count }} voie{{ book.route_count > 1 ? 's' : '' }} spécifique{{ book.route_count > 1 ? 's' : '' }}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="book-actions">
+                        <a href="/books/{{ book.id }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Voir détail
+                        </a>
+                        <a href="/books/{{ book.id }}/manage-content" class="btn btn-success btn-sm">
+                            <i class="fas fa-edit"></i> Gérer contenu
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/books/{{ book.id }}/edit">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </a></li>
+                                <li><a class="dropdown-item" href="/sites/selector?mode=book&book_id={{ book.id }}">
+                                    <i class="fas fa-search"></i> Sélecteur
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/books/{{ book.id }}/export?format=json">
+                                    <i class="fas fa-download"></i> Export JSON
+                                </a></li>
+                                <li><a class="dropdown-item" href="/books/{{ book.id }}/export?format=gpx">
+                                    <i class="fas fa-map"></i> Export GPX
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if pagination.total > 1 %}
+            <div class="pagination-section">
+                <nav aria-label="Navigation des pages">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.current > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.current - 1 }}{% if search %}&search={{ search }}{% endif %}{% if currentRegion %}&region_id={{ currentRegion.id }}{% endif %}">
+                                Précédent
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for page in range(max(1, pagination.current - 2), min(pagination.total, pagination.current + 2)) %}
+                        <li class="page-item {{ page == pagination.current ? 'active' : '' }}">
+                            <a class="page-link" href="?page={{ page }}{% if search %}&search={{ search }}{% endif %}{% if currentRegion %}&region_id={{ currentRegion.id }}{% endif %}">
+                                {{ page }}
+                            </a>
+                        </li>
+                        {% endfor %}
+
+                        {% if pagination.current < pagination.total %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.current + 1 }}{% if search %}&search={{ search }}{% endif %}{% if currentRegion %}&region_id={{ currentRegion.id }}{% endif %}">
+                                Suivant
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <p class="text-center text-muted">
+                    Page {{ pagination.current }} sur {{ pagination.total }} ({{ pagination.total_items }} livre{{ pagination.total_items > 1 ? 's' : '' }} au total)
+                </p>
+            </div>
+            {% endif %}
+
+            {% endif %}
+
+        </div>
+
+        <!-- Aide et navigation -->
+        <div class="help-section">
+            <h3>À propos des topos TopoclimbCH</h3>
+            <div class="help-grid">
+                <div class="help-item">
+                    <h4><i class="fas fa-layer-group"></i> Contenu flexible</h4>
+                    <p>Créez des topos avec des secteurs complets ou des voies spécifiques selon vos besoins.</p>
+                </div>
+                <div class="help-item">
+                    <h4><i class="fas fa-search"></i> Sélection facile</h4>
+                    <p>Utilisez l'outil de sélection hiérarchique pour choisir précisément le contenu.</p>
+                </div>
+                <div class="help-item">
+                    <h4><i class="fas fa-download"></i> Export multiple</h4>
+                    <p>Exportez vos topos en JSON, GPX ou KML pour les utiliser sur différents appareils.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/pages/books/index.css">
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/pages/books/index.js"></script>
+{% endblock %}

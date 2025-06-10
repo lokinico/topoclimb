@@ -865,5 +865,244 @@ return [
         'path' => '/403',
         'controller' => \TopoclimbCH\Controllers\ErrorController::class,
         'action' => 'forbidden'
+    ],
+
+    // ========================================
+    // ROUTES SITES (hiérarchie flexible)
+    // ========================================
+
+    // Liste des sites d'une région
+    [
+        'method' => 'GET',
+        'path' => '/sites',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'index',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // Détail d'un site
+    [
+        'method' => 'GET',
+        'path' => '/sites/{id}',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'show',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // Formulaire création site
+    [
+        'method' => 'GET',
+        'path' => '/sites/create',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'form',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Formulaire édition site
+    [
+        'method' => 'GET',
+        'path' => '/sites/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'form',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Création nouveau site
+    [
+        'method' => 'POST',
+        'path' => '/sites',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Mise à jour site existant
+    [
+        'method' => 'PUT',
+        'path' => '/sites/{id}',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'update',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Suppression site
+    [
+        'method' => 'DELETE',
+        'path' => '/sites/{id}',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'destroy',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // API HIÉRARCHIQUE (AJAX)
+    // ========================================
+
+    // API pour obtenir données hiérarchiques
+    [
+        'method' => 'GET',
+        'path' => '/sites/hierarchy-api',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'hierarchyApi',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // Outil de sélection interactif
+    [
+        'method' => 'GET',
+        'path' => '/sites/selector',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'selector',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // ROUTES SECTEURS MISES À JOUR
+    // ========================================
+
+    // Secteurs d'un site spécifique
+    [
+        'method' => 'GET',
+        'path' => '/sites/{id}/sectors',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'bySite',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // Déplacer les secteurs d'un site
+    [
+        'method' => 'POST',
+        'path' => '/sites/{id}/move-sectors',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'moveSectors',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // API ENDPOINTS POUR AJAX
+    // ========================================
+
+    // Recherche sites avec autocomplétion
+    [
+        'method' => 'GET',
+        'path' => '/api/sites/search',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'apiSearch',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // Vérification unicité code site
+    [
+        'method' => 'GET',
+        'path' => '/api/sites/check-code',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'checkCode',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // Liste sites d'une région (AJAX)
+    [
+        'method' => 'GET',
+        'path' => '/api/sites',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'apiIndex',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // Statistiques d'un site (AJAX)
+    [
+        'method' => 'GET',
+        'path' => '/api/sites/{id}/stats',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'apiStats',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // ROUTES BOOKS/TOPOS (optionnelles)
+    // ========================================
+
+    // Si tu veux créer un BookController séparé plus tard:
+    [
+        'method' => 'GET',
+        'path' => '/books',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'index',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    // Détail d'un livre/topo
+    [
+        'method' => 'GET',
+        'path' => '/books/{id}',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'show',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/books/{id}/add-sector',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'addSector',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    [
+        'method' => 'POST',
+        'path' => '/books/save-selection',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'saveSelection',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
     ]
 ];

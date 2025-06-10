@@ -1,0 +1,387 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="book-show">
+    <div class="container">
+        
+        <!-- En-tête avec breadcrumb -->
+        <div class="page-header">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Accueil</a></li>
+                    <li class="breadcrumb-item"><a href="/books">Topos & Livres</a></li>
+                    <li class="breadcrumb-item active">{{ book.name }}</li>
+                </ol>
+            </nav>
+            
+            <div class="book-header">
+                <div class="book-title">
+                    <h1>{{ book.name }}</h1>
+                    <div class="book-meta">
+                        {% if book.code %}
+                        <span class="book-code">{{ book.code|upper }}</span>
+                        {% endif %}
+                        {% if book.year %}
+                        <span class="book-year">{{ book.year }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="book-actions">
+                    <a href="/books/{{ book.id }}/manage-content" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Gérer contenu
+                    </a>
+                    <a href="/sites/selector?mode=book&book_id={{ book.id }}" class="btn btn-success">
+                        <i class="fas fa-search"></i> Sélecteur
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/books/{{ book.id }}/edit">
+                                <i class="fas fa-edit"></i> Modifier les infos
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/books/{{ book.id }}/export?format=json">
+                                <i class="fas fa-download"></i> Export JSON
+                            </a></li>
+                            <li><a class="dropdown-item" href="/books/{{ book.id }}/export?format=gpx">
+                                <i class="fas fa-map"></i> Export GPX
+                            </a></li>
+                            <li><a class="dropdown-item" href="/books/{{ book.id }}/export?format=kml">
+                                <i class="fas fa-globe"></i> Export KML
+                            </a></li>
+                            <li><a class="dropdown-item" href="/books/{{ book.id }}/export?format=pdf">
+                                <i class="fas fa-file-pdf"></i> Export PDF
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="confirmDelete()">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations du livre -->
+        <div class="book-info">
+            <div class="row">
+                <div class="col-lg-8">
+                    
+                    <!-- Statistiques -->
+                    <div class="info-section">
+                        <h3>Contenu du topo</h3>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-layer-group"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-number">{{ stats.sector_count }}</div>
+                                    <div class="stat-label">Secteur{{ stats.sector_count > 1 ? 's' : '' }} complet{{ stats.sector_count > 1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-route"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-number">{{ stats.route_count }}</div>
+                                    <div class="stat-label">Voie{{ stats.route_count > 1 ? 's' : '' }} spécifique{{ stats.route_count > 1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-climbing"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-number">{{ stats.total_routes }}</div>
+                                    <div class="stat-label">Voie{{ stats.total_routes > 1 ? 's' : '' }} au total</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secteurs inclus -->
+                    {% if sectors is not empty %}
+                    <div class="info-section">
+                        <h3>Secteurs complets ({{ sectors|length }})</h3>
+                        <div class="sectors-list">
+                            {% for sector in sectors %}
+                            <div class="content-item sector-item">
+                                <div class="item-header">
+                                    <h4>
+                                        <a href="/sectors/{{ sector.id }}">{{ sector.name }}</a>
+                                    </h4>
+                                    <div class="item-meta">
+                                        <span class="badge badge-primary">{{ sector.route_count }} voies</span>
+                                        {% if sector.is_complete %}
+                                        <span class="badge badge-success">Complet</span>
+                                        {% else %}
+                                        <span class="badge badge-warning">Partiel</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if sector.book_notes %}
+                                <p class="item-notes">{{ sector.book_notes }}</p>
+                                {% endif %}
+                                <div class="item-actions">
+                                    <a href="/sectors/{{ sector.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Voir secteur
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="removeSector({{ sector.id }})">
+                                        <i class="fas fa-times"></i> Retirer
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Voies spécifiques -->
+                    {% if routes is not empty %}
+                    <div class="info-section">
+                        <h3>Voies spécifiques ({{ routes|length }})</h3>
+                        <div class="routes-list">
+                            {% for route in routes %}
+                            <div class="content-item route-item">
+                                <div class="route-number">{{ route.number }}</div>
+                                <div class="route-info">
+                                    <h5>
+                                        <a href="/routes/{{ route.id }}">{{ route.name }}</a>
+                                    </h5>
+                                    <div class="route-details">
+                                        <span class="route-difficulty">{{ route.difficulty }}</span>
+                                        {% if route.beauty > 0 %}
+                                        <span class="route-beauty">{{ '★'|repeat(route.beauty) }}</span>
+                                        {% endif %}
+                                        {% if route.length %}
+                                        <span class="route-length">{{ route.length }}m</span>
+                                        {% endif %}
+                                        <span class="route-sector">{{ route.sector_name }}</span>
+                                    </div>
+                                    {% if route.page_number %}
+                                    <div class="route-page">Page {{ route.page_number }}</div>
+                                    {% endif %}
+                                    {% if route.book_notes %}
+                                    <p class="item-notes">{{ route.book_notes }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="item-actions">
+                                    <a href="/routes/{{ route.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Voir voie
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="removeRoute({{ route.id }})">
+                                        <i class="fas fa-times"></i> Retirer
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- État vide -->
+                    {% if sectors is empty and routes is empty %}
+                    <div class="info-section">
+                        <div class="empty-content">
+                            <div class="empty-icon">
+                                <i class="fas fa-book-open"></i>
+                            </div>
+                            <h3>Livre vide</h3>
+                            <p>Ce livre ne contient pas encore de contenu d'escalade.</p>
+                            <div class="empty-actions">
+                                <a href="/books/{{ book.id }}/manage-content" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Ajouter du contenu
+                                </a>
+                                <a href="/sites/selector?mode=book&book_id={{ book.id }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-search"></i> Utiliser le sélecteur
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Métadonnées -->
+                    <div class="sidebar-section">
+                        <h4>Informations</h4>
+                        <div class="meta-list">
+                            <div class="meta-item">
+                                <strong>Région :</strong>
+                                <a href="/regions/{{ region.id }}">{{ region.name }}</a>
+                            </div>
+                            {% if book.code %}
+                            <div class="meta-item">
+                                <strong>Code :</strong>
+                                {{ book.code|upper }}
+                            </div>
+                            {% endif %}
+                            {% if book.year %}
+                            <div class="meta-item">
+                                <strong>Année :</strong>
+                                {{ book.year }}
+                            </div>
+                            {% endif %}
+                            {% if book.publisher %}
+                            <div class="meta-item">
+                                <strong>Éditeur :</strong>
+                                {{ book.publisher }}
+                            </div>
+                            {% endif %}
+                            {% if book.isbn %}
+                            <div class="meta-item">
+                                <strong>ISBN :</strong>
+                                {{ book.isbn }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Actions rapides -->
+                    <div class="sidebar-section">
+                        <h4>Actions rapides</h4>
+                        <div class="quick-actions">
+                            <a href="/books/{{ book.id }}/manage-content" class="action-link">
+                                <i class="fas fa-edit"></i>
+                                <div>
+                                    <strong>Gérer le contenu</strong>
+                                    <small>Ajouter/retirer secteurs et voies</small>
+                                </div>
+                            </a>
+                            <a href="/sites/selector?mode=book&book_id={{ book.id }}" class="action-link">
+                                <i class="fas fa-search"></i>
+                                <div>
+                                    <strong>Sélecteur hiérarchique</strong>
+                                    <small>Outil avancé de sélection</small>
+                                </div>
+                            </a>
+                            <a href="/books/{{ book.id }}/export?format=gpx" class="action-link">
+                                <i class="fas fa-download"></i>
+                                <div>
+                                    <strong>Export GPS</strong>
+                                    <small>Télécharger en GPX/KML</small>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="sidebar-section">
+                        <h4>Navigation</h4>
+                        <div class="nav-links">
+                            <a href="/books" class="nav-item">
+                                <i class="fas fa-book"></i>
+                                <span>Tous les livres</span>
+                            </a>
+                            <a href="/books?region_id={{ region.id }}" class="nav-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>Livres de {{ region.name }}</span>
+                            </a>
+                            <a href="/regions/{{ region.id }}" class="nav-item">
+                                <i class="fas fa-mountain"></i>
+                                <span>Région {{ region.name }}</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le livre <strong>{{ book.name }}</strong> ?</p>
+                <p class="text-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Cette action ne peut pas être annulée. Le contenu du livre sera définitivement perdu.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="/books/{{ book.id }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/pages/books/show.css">
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/pages/books/show.js"></script>
+<script>
+function confirmDelete() {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+function removeSector(sectorId) {
+    if (confirm('Retirer ce secteur du livre ?')) {
+        fetch(`/books/{{ book.id }}/remove-sector/${sectorId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ csrfToken }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la suppression');
+        });
+    }
+}
+
+function removeRoute(routeId) {
+    if (confirm('Retirer cette voie du livre ?')) {
+        fetch(`/books/{{ book.id }}/remove-route/${routeId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ csrfToken }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la suppression');
+        });
+    }
+}
+</script>
+{% endblock %}

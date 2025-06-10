@@ -1,0 +1,365 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="site-form">
+    <div class="container">
+        
+        <!-- En-tête avec breadcrumb -->
+        <div class="page-header">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Accueil</a></li>
+                    <li class="breadcrumb-item"><a href="/regions">Régions</a></li>
+                    <li class="breadcrumb-item"><a href="/regions/{{ region.id }}">{{ region.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="/sites?region_id={{ region.id }}">Sites</a></li>
+                    {% if isEdit %}
+                    <li class="breadcrumb-item"><a href="/sites/{{ site.id }}">{{ site.name }}</a></li>
+                    <li class="breadcrumb-item active">Modifier</li>
+                    {% else %}
+                    <li class="breadcrumb-item active">Nouveau site</li>
+                    {% endif %}
+                </ol>
+            </nav>
+            
+            <div class="page-title-section">
+                <h1>{{ title }}</h1>
+                <p class="text-muted">
+                    {% if isEdit %}
+                    Modifiez les informations du site dans la région {{ region.name }}
+                    {% else %}
+                    Créez un nouveau site dans la région {{ region.name }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="form-container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    
+                    <form method="POST" action="{{ isEdit ? '/sites/' ~ site.id : '/sites' }}" class="site-form-content">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="region_id" value="{{ region.id }}">
+                        {% if isEdit %}
+                        <input type="hidden" name="_method" value="PUT">
+                        {% endif %}
+
+                        <!-- Informations principales -->
+                        <div class="form-section">
+                            <h3>Informations principales</h3>
+                            
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        <label for="name" class="form-label required">
+                                            Nom du site
+                                        </label>
+                                        <input type="text" 
+                                               id="name" 
+                                               name="name" 
+                                               class="form-control"
+                                               value="{{ site.name ?? '' }}"
+                                               required
+                                               maxlength="255"
+                                               placeholder="Ex: Dalle de Baulmes">
+                                        <div class="form-text">
+                                            Nom descriptif du site d'escalade
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="code" class="form-label">
+                                            Code du site
+                                        </label>
+                                        <input type="text" 
+                                               id="code" 
+                                               name="code" 
+                                               class="form-control"
+                                               value="{{ site.code ?? '' }}"
+                                               maxlength="50"
+                                               placeholder="Ex: BAU">
+                                        <div class="form-text">
+                                            Code court (généré automatiquement si vide)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="description" class="form-label">
+                                    Description
+                                </label>
+                                <textarea id="description" 
+                                          name="description" 
+                                          class="form-control"
+                                          rows="4"
+                                          placeholder="Description du site, caractéristiques, accès général...">{{ site.description ?? '' }}</textarea>
+                                <div class="form-text">
+                                    Description générale du site (optionnel)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations de publication -->
+                        <div class="form-section">
+                            <h3>Informations de publication</h3>
+                            <p class="text-muted">
+                                Ces informations sont utiles si le site fait partie d'un topo publié
+                            </p>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="year" class="form-label">
+                                            Année
+                                        </label>
+                                        <input type="number" 
+                                               id="year" 
+                                               name="year" 
+                                               class="form-control"
+                                               value="{{ site.year ?? '' }}"
+                                               min="1900"
+                                               max="{{ "now"|date("Y") + 5 }}"
+                                               placeholder="Ex: 2023">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        <label for="publisher" class="form-label">
+                                            Éditeur
+                                        </label>
+                                        <input type="text" 
+                                               id="publisher" 
+                                               name="publisher" 
+                                               class="form-control"
+                                               value="{{ site.publisher ?? '' }}"
+                                               maxlength="100"
+                                               placeholder="Ex: CAS, Guide local...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="isbn" class="form-label">
+                                    ISBN
+                                </label>
+                                <input type="text" 
+                                       id="isbn" 
+                                       name="isbn" 
+                                       class="form-control"
+                                       value="{{ site.isbn ?? '' }}"
+                                       maxlength="20"
+                                       placeholder="Ex: 978-3-..."
+                                       pattern="[\d\-Xx]*">
+                                <div class="form-text">
+                                    Numéro ISBN du topo si publié
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aperçu de la hiérarchie -->
+                        <div class="form-section">
+                            <h3>Hiérarchie</h3>
+                            <div class="hierarchy-preview">
+                                <div class="hierarchy-item">
+                                    <i class="fas fa-mountain text-primary"></i>
+                                    <span>{{ region.name }}</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                                <div class="hierarchy-item active">
+                                    <i class="fas fa-map-marker-alt text-success"></i>
+                                    <span>
+                                        {% if isEdit %}
+                                        {{ site.name }}
+                                        {% else %}
+                                        <em>Nouveau site</em>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                                <div class="hierarchy-item future">
+                                    <i class="fas fa-climbing text-muted"></i>
+                                    <span class="text-muted">Secteurs futurs</span>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                Ce site sera une sous-zone de la région {{ region.name }}
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="form-actions">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-save"></i>
+                                        {% if isEdit %}
+                                        Mettre à jour le site
+                                        {% else %}
+                                        Créer le site
+                                        {% endif %}
+                                    </button>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    {% if isEdit %}
+                                    <a href="/sites/{{ site.id }}" class="btn btn-outline-secondary btn-lg">
+                                        <i class="fas fa-times"></i> Annuler
+                                    </a>
+                                    {% else %}
+                                    <a href="/sites?region_id={{ region.id }}" class="btn btn-outline-secondary btn-lg">
+                                        <i class="fas fa-times"></i> Annuler
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if isEdit %}
+                        <!-- Actions avancées pour l'édition -->
+                        <div class="form-section advanced-actions">
+                            <h3>Actions avancées</h3>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Attention :</strong> Ces actions affectent l'organisation des secteurs
+                            </div>
+                            
+                            <div class="advanced-action">
+                                <h5>Déplacer les secteurs</h5>
+                                <p class="text-muted">
+                                    Déplacer tous les secteurs de ce site vers un autre site ou directement dans la région
+                                </p>
+                                <button type="button" class="btn btn-outline-warning" onclick="showMoveModal()">
+                                    <i class="fas fa-arrows-alt"></i> Gérer les secteurs
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% if isEdit %}
+<!-- Modal de déplacement des secteurs -->
+<div class="modal fade" id="moveSectorsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Déplacer les secteurs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Choisissez où déplacer les secteurs du site <strong>{{ site.name }}</strong> :</p>
+                
+                <form id="moveSectorsForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="move_type" id="move_to_region" value="region" checked>
+                            <label class="form-check-label" for="move_to_region">
+                                Déplacer directement dans la région {{ region.name }}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="move_type" id="move_to_site" value="site">
+                            <label class="form-check-label" for="move_to_site">
+                                Déplacer vers un autre site
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="site_selection" style="display: none;">
+                        <div class="form-group">
+                            <label for="target_site" class="form-label">Site de destination</label>
+                            <select id="target_site" name="target_site" class="form-control">
+                                <option value="">Choisir un site...</option>
+                                <!-- Options chargées via AJAX -->
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning" onclick="confirmMove()">
+                    <i class="fas fa-arrows-alt"></i> Déplacer les secteurs
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/pages/sites/form.css">
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/pages/sites/form.js"></script>
+{% if isEdit %}
+<script>
+function showMoveModal() {
+    const moveModal = new bootstrap.Modal(document.getElementById('moveSectorsModal'));
+    moveModal.show();
+    loadAvailableSites();
+}
+
+function loadAvailableSites() {
+    // Charger les autres sites de la région via AJAX
+    fetch(`/api/sites?region_id={{ region.id }}&exclude={{ site.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('target_site');
+            select.innerHTML = '<option value="">Choisir un site...</option>';
+            data.forEach(site => {
+                select.innerHTML += `<option value="${site.id}">${site.name} (${site.code})</option>`;
+            });
+        });
+}
+
+document.querySelectorAll('input[name="move_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const siteSelection = document.getElementById('site_selection');
+        if (this.value === 'site') {
+            siteSelection.style.display = 'block';
+        } else {
+            siteSelection.style.display = 'none';
+        }
+    });
+});
+
+function confirmMove() {
+    const form = document.getElementById('moveSectorsForm');
+    const formData = new FormData(form);
+    
+    fetch(`/sites/{{ site.id }}/move-sectors`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Secteurs déplacés avec succès');
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erreur lors du déplacement');
+    });
+}
+</script>
+{% endif %}
+{% endblock %>

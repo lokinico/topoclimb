@@ -1,0 +1,255 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="hierarchy-selector">
+    <div class="container">
+        <div class="selector-header">
+            <h1>{{ title }}</h1>
+            <p class="text-muted">
+                Sélectionnez une région, puis optionnellement un site, un secteur et enfin des voies.
+            </p>
+        </div>
+
+        <!-- Barre de recherche globale -->
+        <div class="search-bar mb-4">
+            <input type="text" 
+                   id="global-search" 
+                   class="form-control" 
+                   placeholder="Rechercher dans toute la hiérarchie...">
+        </div>
+
+        <!-- Sélection hiérarchique -->
+        <div class="hierarchy-levels row">
+            
+            <!-- Niveau 1: Régions -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="level-container" data-level="regions">
+                    <h3 class="level-title">
+                        <i class="fas fa-mountain"></i> Régions
+                    </h3>
+                    <div class="level-search">
+                        <input type="text" class="form-control form-control-sm" 
+                               placeholder="Filtrer régions...">
+                    </div>
+                    <div class="level-content" id="regions-list">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i> Chargement...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Niveau 2: Sites -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="level-container disabled" data-level="sites">
+                    <h3 class="level-title">
+                        <i class="fas fa-map-marker-alt"></i> Sites
+                        <small class="text-muted">(optionnel)</small>
+                    </h3>
+                    <div class="level-search">
+                        <input type="text" class="form-control form-control-sm" 
+                               placeholder="Filtrer sites...">
+                    </div>
+                    <div class="level-content" id="sites-list">
+                        <div class="empty-state">
+                            <i class="fas fa-arrow-left"></i>
+                            <p>Sélectionnez d'abord une région</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Niveau 3: Secteurs -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="level-container disabled" data-level="sectors">
+                    <h3 class="level-title">
+                        <i class="fas fa-climbing"></i> Secteurs
+                    </h3>
+                    <div class="level-search">
+                        <input type="text" class="form-control form-control-sm" 
+                               placeholder="Filtrer secteurs...">
+                    </div>
+                    <div class="level-content" id="sectors-list">
+                        <div class="empty-state">
+                            <i class="fas fa-arrow-left"></i>
+                            <p>Sélectionnez une région/site</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Niveau 4: Voies -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="level-container disabled" data-level="routes">
+                    <h3 class="level-title">
+                        <i class="fas fa-route"></i> Voies
+                    </h3>
+                    <div class="level-search">
+                        <input type="text" class="form-control form-control-sm" 
+                               placeholder="Filtrer voies...">
+                    </div>
+                    <div class="level-content" id="routes-list">
+                        <div class="empty-state">
+                            <i class="fas fa-arrow-left"></i>
+                            <p>Sélectionnez un secteur</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Breadcrumb de sélection -->
+        <div class="selection-breadcrumb">
+            <h4>Sélection actuelle :</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb" id="selection-breadcrumb">
+                    <li class="breadcrumb-item text-muted">Aucune sélection</li>
+                </ol>
+            </nav>
+        </div>
+
+        <!-- Résultats/Actions selon le mode -->
+        <div class="selection-results" id="selection-results" style="display: none;">
+            
+            {% if mode == 'book' %}
+            <!-- Mode gestion de book/topo -->
+            <div class="book-management">
+                <h4>Gestion du topo</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Secteurs sélectionnés</h5>
+                        <div id="selected-sectors"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Voies sélectionnées</h5>
+                        <div id="selected-routes"></div>
+                    </div>
+                </div>
+                <div class="book-actions mt-3">
+                    <button class="btn btn-primary" id="save-book-selection">
+                        <i class="fas fa-save"></i> Sauvegarder la sélection
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if mode == 'stats' %}
+            <!-- Mode statistiques -->
+            <div class="statistics-display">
+                <h4>Statistiques de la sélection</h4>
+                <div class="stats-grid" id="stats-display">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+            {% endif %}
+
+            {% if mode == 'select' %}
+            <!-- Mode sélection simple -->
+            <div class="simple-selection">
+                <h4>Éléments sélectionnés</h4>
+                <div id="selected-items">
+                    <!-- Rempli dynamiquement -->
+                </div>
+                <div class="selection-actions mt-3">
+                    <button class="btn btn-primary" id="confirm-selection">
+                        <i class="fas fa-check"></i> Confirmer la sélection
+                    </button>
+                    <button class="btn btn-secondary" id="clear-selection">
+                        <i class="fas fa-times"></i> Vider la sélection
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </div>
+</div>
+
+<!-- Templates pour les éléments -->
+<script type="text/template" id="region-item-template">
+    <div class="hierarchy-item" data-id="{id}" data-type="region">
+        <div class="item-header">
+            <h5 class="item-name">{name}</h5>
+            <div class="item-stats">
+                <span class="badge badge-info">{site_count} sites</span>
+                <span class="badge badge-secondary">{sector_count} secteurs</span>
+                <span class="badge badge-success">{route_count} voies</span>
+            </div>
+        </div>
+        {description ? '<p class="item-description">' + description + '</p>' : ''}
+    </div>
+</script>
+
+<script type="text/template" id="site-item-template">
+    <div class="hierarchy-item" data-id="{id}" data-type="site">
+        <div class="item-header">
+            <h6 class="item-name">{name}</h6>
+            <div class="item-stats">
+                <span class="badge badge-secondary">{sector_count} secteurs</span>
+                <span class="badge badge-success">{route_count} voies</span>
+            </div>
+        </div>
+        <div class="item-meta">
+            <small class="text-muted">Code: {code}</small>
+        </div>
+        {description ? '<p class="item-description">' + description + '</p>' : ''}
+    </div>
+</script>
+
+<script type="text/template" id="sector-item-template">
+    <div class="hierarchy-item" data-id="{id}" data-type="sector">
+        <div class="item-header">
+            <h6 class="item-name">{name}</h6>
+            <div class="item-stats">
+                <span class="badge badge-success">{route_count} voies</span>
+                {avg_beauty ? '<span class="badge badge-warning">★ ' + avg_beauty + '</span>' : ''}
+            </div>
+        </div>
+        <div class="item-meta">
+            <small class="text-muted">
+                {site_name ? site_name + ' - ' : ''}{region_name}
+                {min_difficulty && max_difficulty ? ' • ' + min_difficulty + ' - ' + max_difficulty : ''}
+            </small>
+        </div>
+    </div>
+</script>
+
+<script type="text/template" id="route-item-template">
+    <div class="hierarchy-item route-item" data-id="{id}" data-type="route">
+        <div class="item-header">
+            <div class="route-number">{number}</div>
+            <div class="route-info">
+                <h6 class="item-name">{name}</h6>
+                <div class="route-details">
+                    <span class="route-difficulty">{difficulty}</span>
+                    {beauty > 0 ? '<span class="route-beauty">★'.repeat(beauty) + '</span>' : ''}
+                    {length ? '<span class="route-length">' + length + 'm</span>' : ''}
+                    {style ? '<span class="route-style">' + style + '</span>' : ''}
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+<!-- Données initiales pour JavaScript -->
+<script>
+window.HierarchySelector = {
+    mode: '{{ mode }}',
+    preselected: '{{ preselected }}',
+    csrfToken: '{{ csrfToken }}',
+    apiBaseUrl: '/sites/hierarchy-api'
+};
+</script>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/pages/sites/selector.css">
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/pages/sites/selector.js"></script>
+{% endblock %}
