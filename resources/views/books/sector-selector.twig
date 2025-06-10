@@ -1,0 +1,578 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Gérer les secteurs - {{ book.name }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url('/books') }}">Guides</a></li>
+            <li class="breadcrumb-item"><a href="{{ url('/books/' ~ book.id) }}">{{ book.name }}</a></li>
+            <li class="breadcrumb-item active">Gérer secteurs</li>
+        </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1>Gérer les secteurs</h1>
+            <p class="text-muted mb-0">Guide: <strong>{{ book.name }}</strong></p>
+        </div>
+        
+        <div class="header-actions">
+            <a href="{{ url('/books/' ~ book.id) }}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Retour au guide
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Secteurs disponibles -->
+    <div class="col-lg-6">
+        <div class="available-sectors-section">
+            <div class="section-header d-flex justify-content-between align-items-center mb-3">
+                <h3>Secteurs disponibles</h3>
+                <span class="badge bg-info">{{ availableSectors|length }} secteurs</span>
+            </div>
+
+            <!-- Filtres -->
+            <div class="filters-section mb-3">
+                <form method="GET" action="{{ url('/books/' ~ book.id ~ '/sectors') }}" class="filters-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Recherche</label>
+                            <input type="text" name="search" id="search" class="form-control" 
+                                   value="{{ currentFilters.search }}" 
+                                   placeholder="Nom ou code...">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="region_id" class="form-label">Région</label>
+                            <select name="region_id" id="region_id" class="form-control">
+                                <option value="">Toutes</option>
+                                {% for region in regions %}
+                                    <option value="{{ region.id }}" 
+                                            {% if currentFilters.region_id == region.id %}selected{% endif %}>
+                                        {{ region.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-secondary w-100">
+                                <i class="fa fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Liste des secteurs disponibles -->
+            <div class="available-sectors">
+                {% if availableSectors|length > 0 %}
+                    {% set currentRegion = '' %}
+                    {% set currentSite = '' %}
+                    
+                    {% for sector in availableSectors %}
+                        {% if sector.region_name != currentRegion %}
+                            {% if currentRegion != '' %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% set currentRegion = sector.region_name|default('Région inconnue') %}
+                            <div class="region-group mb-3">
+                                <h5 class="region-title text-primary mb-2">
+                                    <i class="fa fa-map-marker-alt me-2"></i>{{ currentRegion }}
+                                </h5>
+                                <div class="sectors-in-region">
+                        {% endif %}
+                        
+                        {% if sector.site_name != currentSite %}
+                            {% set currentSite = sector.site_name|default('Site inconnu') %}
+                            <div class="site-subtitle text-muted small mb-2">
+                                <i class="fa fa-mountain me-1"></i>{{ currentSite }}
+                                {% if sector.site_code %}({{ sector.site_code }}){% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="sector-item card mb-2" data-sector-id="{{ sector.id }}">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="sector-info flex-grow-1">
+                                        <h6 class="mb-1">{{ sector.name }}</h6>
+                                        <div class="sector-meta small text-muted">
+                                            <span class="sector-code">{{ sector.code }}</span>
+                                            <span class="separator">•</span>
+                                            <span class="routes-count">{{ sector.routes_count }} voies</span>
+                                            {% if sector.altitude %}
+                                                <span class="separator">•</span>
+                                                <span class="altitude">{{ sector.altitude }}m</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="sector-actions">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-success add-sector-btn"
+                                                data-sector-id="{{ sector.id }}"
+                                                data-sector-name="{{ sector.name }}"
+                                                title="Ajouter au guide">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    {% if currentRegion != '' %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-state text-center py-4">
+                        <div class="empty-icon mb-3">
+                            <i class="fa fa-search fa-2x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">Aucun secteur disponible</h5>
+                        <p class="text-muted">
+                            {% if currentFilters.search or currentFilters.region_id %}
+                                Aucun secteur ne correspond à vos critères.
+                            {% else %}
+                                Tous les secteurs sont déjà dans ce guide.
+                            {% endif %}
+                        </p>
+                        {% if currentFilters.search or currentFilters.region_id %}
+                            <a href="{{ url('/books/' ~ book.id ~ '/sectors') }}" class="btn btn-secondary">
+                                Voir tous les secteurs
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Secteurs dans le guide -->
+    <div class="col-lg-6">
+        <div class="book-sectors-section">
+            <div class="section-header d-flex justify-content-between align-items-center mb-3">
+                <h3>Secteurs du guide</h3>
+                <span class="badge bg-success" id="book-sectors-count">{{ book.sectors_count|default(0) }} secteurs</span>
+            </div>
+
+            <div class="book-sectors" id="book-sectors-list">
+                <!-- Chargé via AJAX -->
+                <div class="loading-placeholder text-center py-4">
+                    <i class="fa fa-spinner fa-spin fa-2x"></i>
+                    <p class="text-muted mt-2">Chargement des secteurs...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour ajouter un secteur -->
+<div class="modal fade" id="addSectorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter un secteur au guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addSectorForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="sector_id" id="modal-sector-id">
+                    
+                    <div class="sector-info mb-3">
+                        <h6 id="modal-sector-name"></h6>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="page_number" class="form-label">Numéro de page</label>
+                        <input type="number" name="page_number" id="page_number" 
+                               class="form-control" min="1" max="9999"
+                               aria-describedby="page-help">
+                        <small id="page-help" class="form-text text-muted">
+                            Page où se trouve ce secteur dans le guide (optionnel)
+                        </small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="sort_order" class="form-label">Ordre dans le guide</label>
+                        <input type="number" name="sort_order" id="sort_order" 
+                               class="form-control" min="0" value="0"
+                               aria-describedby="order-help">
+                        <small id="order-help" class="form-text text-muted">
+                            Position du secteur dans l'ordre du guide (0 = automatique)
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea name="notes" id="notes" class="form-control" rows="3"
+                                  aria-describedby="notes-help"></textarea>
+                        <small id="notes-help" class="form-text text-muted">
+                            Notes spécifiques à ce secteur dans le guide (optionnel)
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Ajouter au guide
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const bookId = {{ book.id }};
+    const csrfToken = '{{ csrf_token }}';
+    
+    // Charger les secteurs du guide
+    loadBookSectors();
+    
+    // Filtres auto-submit
+    const searchInput = document.getElementById('search');
+    const regionSelect = document.getElementById('region_id');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.form.submit();
+            }, 500);
+        });
+    }
+
+    if (regionSelect) {
+        regionSelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
+    
+    // Gestion des boutons d'ajout
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('add-sector-btn') || e.target.closest('.add-sector-btn')) {
+            const btn = e.target.classList.contains('add-sector-btn') ? e.target : e.target.closest('.add-sector-btn');
+            const sectorId = btn.dataset.sectorId;
+            const sectorName = btn.dataset.sectorName;
+            
+            // Remplir le modal
+            document.getElementById('modal-sector-id').value = sectorId;
+            document.getElementById('modal-sector-name').textContent = sectorName;
+            
+            // Réinitialiser le formulaire
+            document.getElementById('addSectorForm').reset();
+            document.getElementById('modal-sector-id').value = sectorId;
+            
+            // Ouvrir le modal
+            new bootstrap.Modal(document.getElementById('addSectorModal')).show();
+        }
+        
+        // Gestion des boutons de suppression
+        if (e.target.classList.contains('remove-sector-btn') || e.target.closest('.remove-sector-btn')) {
+            const btn = e.target.classList.contains('remove-sector-btn') ? e.target : e.target.closest('.remove-sector-btn');
+            const sectorId = btn.dataset.sectorId;
+            const sectorName = btn.dataset.sectorName;
+            
+            if (confirm(`Retirer "${sectorName}" de ce guide ?`)) {
+                removeSectorFromBook(sectorId);
+            }
+        }
+    });
+    
+    // Soumission du formulaire d'ajout
+    document.getElementById('addSectorForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const sectorId = formData.get('sector_id');
+        
+        fetch(`/books/${bookId}/add-sector`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fermer le modal
+                bootstrap.Modal.getInstance(document.getElementById('addSectorModal')).hide();
+                
+                // Masquer le secteur de la liste disponible
+                const sectorItem = document.querySelector(`[data-sector-id="${sectorId}"]`);
+                if (sectorItem) {
+                    sectorItem.style.display = 'none';
+                }
+                
+                // Recharger la liste du guide
+                loadBookSectors();
+                
+                // Notification de succès
+                showNotification('Secteur ajouté avec succès', 'success');
+            } else {
+                showNotification(data.error || 'Erreur lors de l\'ajout', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Erreur lors de l\'ajout du secteur', 'error');
+        });
+    });
+    
+    function loadBookSectors() {
+        fetch(`/api/books/${bookId}/sectors`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderBookSectors(data.data);
+                    updateSectorsCount(data.data.length);
+                } else {
+                    document.getElementById('book-sectors-list').innerHTML = 
+                        '<div class="alert alert-warning">Erreur lors du chargement</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                document.getElementById('book-sectors-list').innerHTML = 
+                    '<div class="alert alert-danger">Erreur de connexion</div>';
+            });
+    }
+    
+    function renderBookSectors(sectors) {
+        const container = document.getElementById('book-sectors-list');
+        
+        if (sectors.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state text-center py-4">
+                    <div class="empty-icon mb-3">
+                        <i class="fa fa-book-open fa-2x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">Aucun secteur</h5>
+                    <p class="text-muted">Ce guide ne contient pas encore de secteurs.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        let currentRegion = '';
+        
+        sectors.forEach(sector => {
+            if (sector.region_name !== currentRegion) {
+                if (currentRegion !== '') {
+                    html += '</div></div>';
+                }
+                currentRegion = sector.region_name || 'Région inconnue';
+                html += `
+                    <div class="region-group mb-3">
+                        <h6 class="region-title text-primary mb-2">
+                            <i class="fa fa-map-marker-alt me-2"></i>${currentRegion}
+                        </h6>
+                        <div class="sectors-in-region">
+                `;
+            }
+            
+            html += `
+                <div class="sector-item card mb-2">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="sector-info flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="/sectors/${sector.id}" class="text-decoration-none">
+                                        ${sector.name}
+                                    </a>
+                                </h6>
+                                <div class="sector-meta small text-muted">
+                                    <span class="sector-code">${sector.code}</span>
+                                    <span class="separator">•</span>
+                                    <span class="routes-count">${sector.routes_count || 0} voies</span>
+                                    ${sector.page_number ? `<span class="separator">•</span><span class="page-number">Page ${sector.page_number}</span>` : ''}
+                                </div>
+                                ${sector.book_notes ? `<div class="sector-notes small text-info mt-1"><i class="fa fa-sticky-note me-1"></i>${sector.book_notes}</div>` : ''}
+                            </div>
+                            
+                            <div class="sector-actions">
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger remove-sector-btn"
+                                        data-sector-id="${sector.id}"
+                                        data-sector-name="${sector.name}"
+                                        title="Retirer du guide">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (currentRegion !== '') {
+            html += '</div></div>';
+        }
+        
+        container.innerHTML = html;
+    }
+    
+    function removeSectorFromBook(sectorId) {
+        fetch(`/books/${bookId}/remove-sector`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                csrf_token: csrfToken,
+                sector_id: sectorId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recharger la liste du guide
+                loadBookSectors();
+                
+                // Réafficher le secteur dans la liste disponible
+                const hiddenSector = document.querySelector(`[data-sector-id="${sectorId}"][style*="display: none"]`);
+                if (hiddenSector) {
+                    hiddenSector.style.display = 'block';
+                }
+                
+                showNotification('Secteur retiré du guide', 'success');
+            } else {
+                showNotification(data.error || 'Erreur lors de la suppression', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Erreur lors de la suppression', 'error');
+        });
+    }
+    
+    function updateSectorsCount(count) {
+        document.getElementById('book-sectors-count').textContent = `${count} secteurs`;
+    }
+    
+    function showNotification(message, type) {
+        // Implémentation simple d'une notification
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove après 3 secondes
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+});
+</script>
+
+<style>
+.region-group {
+    border-left: 3px solid #007bff;
+    padding-left: 1rem;
+    margin-left: 0.5rem;
+}
+
+.region-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.site-subtitle {
+    margin-left: 1rem;
+    font-style: italic;
+}
+
+.sector-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e9ecef;
+}
+
+.sector-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.sector-meta .separator {
+    margin: 0 0.5rem;
+    color: #dee2e6;
+}
+
+.available-sectors-section,
+.book-sectors-section {
+    min-height: 500px;
+}
+
+.filters-form {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.loading-placeholder {
+    color: #6c757d;
+}
+
+.empty-state {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border: 2px dashed #dee2e6;
+    padding: 2rem;
+}
+
+.section-header h3 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.add-sector-btn {
+    transition: all 0.2s ease;
+}
+
+.add-sector-btn:hover {
+    transform: scale(1.1);
+}
+
+.remove-sector-btn:hover {
+    transform: scale(1.1);
+}
+
+.sector-notes {
+    background: #e7f3ff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    border-left: 3px solid #0066cc;
+}
+
+@media (max-width: 992px) {
+    .col-lg-6 {
+        margin-bottom: 2rem;
+    }
+    
+    .available-sectors-section,
+    .book-sectors-section {
+        min-height: auto;
+    }
+}
+</style>
+{% endblock %}

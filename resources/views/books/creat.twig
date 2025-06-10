@@ -1,0 +1,451 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}
+    {% if book %}
+        Modifier le guide {{ book.name }}
+    {% else %}
+        Créer un nouveau guide
+    {% endif %}
+    - TopoclimbCH
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url('/books') }}">Guides</a></li>
+            {% if book %}
+                <li class="breadcrumb-item"><a href="{{ url('/books/' ~ book.id) }}">{{ book.name }}</a></li>
+                <li class="breadcrumb-item active">Modifier</li>
+            {% else %}
+                <li class="breadcrumb-item active">Nouveau guide</li>
+            {% endif %}
+        </ol>
+    </nav>
+    
+    <h1>
+        {% if book %}
+            Modifier le guide {{ book.name }}
+        {% else %}
+            Créer un nouveau guide
+        {% endif %}
+    </h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form action="{{ book ? url('/books/' ~ book.id) : url('/books') }}" 
+              method="post" 
+              class="book-form">
+            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% if book %}
+                <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+
+            <!-- Informations de base -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations du guide</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group mb-3">
+                                <label for="name" class="form-label">
+                                    Nom du guide <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="name" id="name" class="form-control" 
+                                       value="{{ book.name|default('') }}" 
+                                       required maxlength="100" 
+                                       aria-describedby="name-help">
+                                <small id="name-help" class="form-text text-muted">
+                                    Nom complet du guide d'escalade
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="code" class="form-label">Code</label>
+                                <input type="text" name="code" id="code" class="form-control" 
+                                       value="{{ book.code|default('') }}" 
+                                       maxlength="50" 
+                                       aria-describedby="code-help">
+                                <small id="code-help" class="form-text text-muted">
+                                    Identifiant court (optionnel)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="region_id" class="form-label">Région principale</label>
+                        <select name="region_id" id="region_id" class="form-control" 
+                                aria-describedby="region-help">
+                            <option value="">Aucune région spécifique</option>
+                            {% for region in regions %}
+                                <option value="{{ region.id }}" 
+                                        {% if book.region_id == region.id %}selected{% endif %}>
+                                    {{ region.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small id="region-help" class="form-text text-muted">
+                            Région principale couverte par le guide (optionnel, car un guide peut couvrir plusieurs régions)
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations d'édition -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations d'édition</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="publisher" class="form-label">Éditeur</label>
+                                <input type="text" name="publisher" id="publisher" class="form-control" 
+                                       value="{{ book.publisher|default('') }}" 
+                                       maxlength="100" aria-describedby="publisher-help">
+                                <small id="publisher-help" class="form-text text-muted">
+                                    Maison d'édition du guide
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="year" class="form-label">Année de publication</label>
+                                <input type="number" name="year" id="year" class="form-control" 
+                                       value="{{ book.year|default('') }}" 
+                                       min="1900" max="{{ "now"|date("Y") + 5 }}"
+                                       aria-describedby="year-help">
+                                <small id="year-help" class="form-text text-muted">
+                                    Année de première publication
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="isbn" class="form-label">ISBN</label>
+                        <input type="text" name="isbn" id="isbn" class="form-control" 
+                               value="{{ book.isbn|default('') }}" 
+                               maxlength="20" aria-describedby="isbn-help"
+                               pattern="[0-9\-X]{10,17}">
+                        <small id="isbn-help" class="form-text text-muted">
+                            Code ISBN du guide (format: 978-2-1234-5678-9)
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- État -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">État</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input type="checkbox" name="active" id="active" class="form-check-input" 
+                               value="1" {% if not book or book.active != 0 %}checked{% endif %}>
+                        <label for="active" class="form-check-label">
+                            Guide actif
+                        </label>
+                        <small class="form-text text-muted d-block">
+                            Décochez pour désactiver temporairement le guide
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions d-flex gap-3 mb-5">
+                <button type="submit" class="btn btn-primary">
+                    {% if book %}
+                        <i class="fa fa-save"></i> Mettre à jour
+                    {% else %}
+                        <i class="fa fa-plus"></i> Créer le guide
+                    {% endif %}
+                </button>
+                
+                <a href="{{ book ? url('/books/' ~ book.id) : url('/books') }}" 
+                   class="btn btn-secondary">
+                    <i class="fa fa-times"></i> Annuler
+                </a>
+                
+                {% if book %}
+                    <button type="button" class="btn btn-outline-danger ms-auto" 
+                            data-bs-toggle="modal" data-bs-target="#deleteBookModal">
+                        <i class="fa fa-trash"></i> Supprimer
+                    </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Sidebar avec aide -->
+    <div class="col-lg-4">
+        <div class="help-section card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-info-circle text-info"></i> À propos des guides
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="help-item mb-3">
+                    <h6>Qu'est-ce qu'un guide ?</h6>
+                    <p class="small text-muted">
+                        Un guide d'escalade regroupe des secteurs de différents sites et régions 
+                        selon une logique éditoriale (ex: "Escalade dans les Préalpes", "Guide du Jura").
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Différence avec les sites</h6>
+                    <p class="small text-muted">
+                        • <strong>Site</strong> = zone géographique cohérente<br>
+                        • <strong>Guide</strong> = publication regroupant plusieurs sites/secteurs
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Région principale</h6>
+                    <p class="small text-muted">
+                        Sélectionnez la région principale si le guide se concentre sur une zone. 
+                        Laissez vide pour les guides multi-régions.
+                    </p>
+                </div>
+                
+                <div class="help-item">
+                    <h6>Gestion des secteurs</h6>
+                    <p class="small text-muted">
+                        Après création, utilisez l'outil de gestion pour ajouter/retirer des secteurs 
+                        et définir leur ordre dans le guide.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {% if book %}
+        <div class="current-stats card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Statistiques actuelles</h5>
+            </div>
+            <div class="card-body">
+                <div class="stat-item d-flex justify-content-between mb-2">
+                    <span>Secteurs:</span>
+                    <span class="badge bg-primary">{{ book.sectors_count|default(0) }}</span>
+                </div>
+                <div class="stat-item d-flex justify-content-between mb-2">
+                    <span>Sites couverts:</span>
+                    <span class="badge bg-info">{{ book.sites_count|default(0) }}</span>
+                </div>
+                <div class="stat-item d-flex justify-content-between">
+                    <span>Voies totales:</span>
+                    <span class="badge bg-success">{{ book.routes_count|default(0) }}</span>
+                </div>
+                
+                <div class="mt-3">
+                    <a href="{{ url('/books/' ~ book.id ~ '/sectors') }}" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fa fa-cog"></i> Gérer les secteurs
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+{% if book %}
+<div class="modal fade" id="deleteBookModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Supprimer le guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le guide <strong>{{ book.name }}</strong> ?</p>
+                <p class="text-warning small">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Cette action supprimera le guide mais préservera les secteurs et voies.
+                    Les secteurs ne seront plus associés à ce guide.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Annuler
+                </button>
+                <form method="POST" action="{{ url('/books/' ~ book.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="btn btn-danger">
+                        Supprimer le guide
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Génération automatique du code à partir du nom
+    const nameInput = document.getElementById('name');
+    const codeInput = document.getElementById('code');
+    
+    nameInput.addEventListener('input', function() {
+        if (!codeInput.value || codeInput.dataset.autoGenerated === 'true') {
+            const generatedCode = this.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '_')
+                .substring(0, 15)
+                .replace(/_+$/, ''); // Supprimer les underscores en fin
+            codeInput.value = generatedCode;
+            codeInput.dataset.autoGenerated = 'true';
+        }
+    });
+
+    codeInput.addEventListener('input', function() {
+        this.dataset.autoGenerated = 'false';
+    });
+
+    // Validation de l'ISBN
+    const isbnInput = document.getElementById('isbn');
+    isbnInput.addEventListener('input', function() {
+        let value = this.value.replace(/[^0-9X\-]/g, '');
+        this.value = value;
+        
+        // Vérification basique du format
+        if (value.length > 0) {
+            const isValid = /^(97[89]\-?\d{1,5}\-?\d{1,7}\-?\d{1,6}\-?\d|0\-?\d{1,10}\-?\d|1\-?\d{1,5}\-?\d{1,7}\-?[\dX])$/.test(value);
+            
+            if (isValid) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            }
+        } else {
+            this.classList.remove('is-valid', 'is-invalid');
+        }
+    });
+
+    // Validation de l'année
+    const yearInput = document.getElementById('year');
+    yearInput.addEventListener('input', function() {
+        const currentYear = new Date().getFullYear();
+        const year = parseInt(this.value);
+        
+        if (year && (year < 1900 || year > currentYear + 5)) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+            if (year) {
+                this.classList.add('is-valid');
+            }
+        }
+    });
+
+    // Auto-completion intelligente pour l'éditeur
+    const publisherInput = document.getElementById('publisher');
+    const commonPublishers = [
+        'Éditions Glénat',
+        'Éditions du Seuil',
+        'JMÉditions',
+        'Éditions Olizane',
+        'Rother',
+        'Rockfax',
+        'Éditions Géoguide',
+        'Auto-édition'
+    ];
+
+    publisherInput.addEventListener('input', function() {
+        const value = this.value.toLowerCase();
+        const suggestions = commonPublishers.filter(pub => 
+            pub.toLowerCase().includes(value)
+        );
+        
+        // Ici vous pourriez ajouter une liste déroulante de suggestions
+    });
+});
+</script>
+
+<style>
+.form-section .card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-section .card-title {
+    color: #495057;
+    font-weight: 600;
+}
+
+.help-section {
+    position: sticky;
+    top: 2rem;
+}
+
+.help-item h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.form-actions {
+    border-top: 1px solid #dee2e6;
+    padding-top: 2rem;
+}
+
+.current-stats .stat-item {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.current-stats .stat-item:last-child {
+    border-bottom: none;
+}
+
+.is-valid {
+    border-color: #28a745;
+}
+
+.is-invalid {
+    border-color: #dc3545;
+}
+
+.isbn-format-hint {
+    font-family: monospace;
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+    .help-section {
+        position: static;
+        margin-top: 2rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .form-actions .ms-auto {
+        margin-left: 0 !important;
+    }
+}
+</style>
+{% endblock %}
