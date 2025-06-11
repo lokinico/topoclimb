@@ -226,11 +226,12 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\AuthService'           // Position 9: ?AuthService $authService
             ],
             'TopoclimbCH\\Controllers\\SiteController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class,
-                'TopoclimbCH\\Services\\RegionService',
-                'TopoclimbCH\\Services\\SectorService'
+                View::class,                              // Position 1
+                Session::class,                           // Position 2  
+                CsrfManager::class,                       // Position 3
+                'TopoclimbCH\\Services\\MediaService',    // Position 4 ← AJOUTÉ
+                'TopoclimbCH\\Services\\RegionService',   // Position 5
+                'TopoclimbCH\\Services\\SectorService'    // Position 6
             ],
             'TopoclimbCH\\Controllers\\ErrorController' => [
                 View::class,

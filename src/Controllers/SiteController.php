@@ -21,18 +21,14 @@ class SiteController extends BaseController
     public function __construct(
         View $view,
         Session $session,
-        CsrfManager $csrfManager,    // Position 3 ✅
-        RegionService $regionService, // Position 4 ✅ (container injecte RegionService en 4ème)
-        SectorService $sectorService  // Position 5 ✅ (container injecte SectorService en 5ème)
+        CsrfManager $csrfManager,
+        MediaService $mediaService,      // Position 4
+        RegionService $regionService,    // Position 5  
+        SectorService $sectorService     // Position 6
     ) {
         parent::__construct($view, $session, $csrfManager);
-        $this->regionService = $regionService;
-        $this->sectorService = $sectorService;
-
-        // MediaService peut être récupéré via le container dans les méthodes si nécessaire
-        // ou instancié manuellement si pas injecté
-        $this->mediaService = Container::getInstance()->get(MediaService::class);
-        // $this->db est déjà disponible via BaseController
+        $this->mediaService = $mediaService;
+        // Le reste du code reste identique
     }
 
     /**
