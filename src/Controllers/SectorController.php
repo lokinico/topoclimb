@@ -10,6 +10,7 @@ use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\MediaService;
+use TopoclimbCH\Services\ValidationService;
 use TopoclimbCH\Core\Filtering\SectorFilter;
 use TopoclimbCH\Models\Sector;
 use TopoclimbCH\Models\Region;
@@ -32,52 +33,88 @@ class SectorController extends BaseController
     private MediaService $mediaService;
 
     /**
+     * @var ValidationService
+     */
+    private ValidationService $validationService;
+
+    /**
      * @var Database
      */
     private Database $db;
 
     /**
+     * Expositions valides pour validation
+     */
+    private const VALID_EXPOSURES = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'];
+
+    /**
+     * Qualités valides pour les mois
+     */
+    private const VALID_MONTH_QUALITIES = ['poor', 'fair', 'good', 'excellent'];
+
+    /**
+     * Types MIME autorisés pour upload
+     */
+    private const ALLOWED_MIME_TYPES = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp',
+        'application/pdf'
+    ];
+
+    /**
+     * Limites géographiques Suisse
+     */
+    private const SWISS_LAT_MIN = 45.8;
+    private const SWISS_LAT_MAX = 47.9;
+    private const SWISS_LNG_MIN = 5.9;
+    private const SWISS_LNG_MAX = 10.6;
+
+    /**
      * Constructor
-     *
-     * @param View $view
-     * @param Session $session
-     * @param SectorService $sectorService
-     * @param MediaService $mediaService
-     * @param Database $db
      */
     public function __construct(
         View $view,
         Session $session,
         SectorService $sectorService,
         MediaService $mediaService,
+        ValidationService $validationService,
         Database $db,
         CsrfManager $csrfManager
     ) {
         parent::__construct($view, $session, $csrfManager);
         $this->sectorService = $sectorService;
         $this->mediaService = $mediaService;
+        $this->validationService = $validationService;
         $this->db = $db;
     }
 
     /**
      * List all sectors
-     *
-     * @param Request $request
-     * @return Response
      */
     public function index(Request $request): Response
     {
         try {
+            // Vérification permission de lecture
+            if (!$this->canViewSectors()) {
+                $this->session->flash('error', 'Accès non autorisé');
+                return Response::redirect('/');
+            }
+
             // Créer le filtre à partir des paramètres de requête
             $filter = new SectorFilter($request->query->all());
 
-            // Récupérer la page courante
-            $page = (int) $request->query->get('page', 1);
-            $perPage = (int) $request->query->get('per_page', 20);
+            // Récupérer la page courante avec validation
+            $page = max(1, (int) $request->query->get('page', 1));
+            $perPage = min(100, max(10, (int) $request->query->get('per_page', 20))); // Limiter entre 10-100
 
-            // Obtenir le champ et la direction de tri
-            $sortBy = $request->query->get('sort_by', 'name');
-            $sortDir = $request->query->get('sort_dir', 'ASC');
+            // Obtenir le champ et la direction de tri avec validation
+            $allowedSortFields = ['name', 'code', 'altitude', 'access_time', 'created_at'];
+            $sortBy = in_array($request->query->get('sort_by'), $allowedSortFields)
+                ? $request->query->get('sort_by')
+                : 'name';
+            $sortDir = strtoupper($request->query->get('sort_dir')) === 'DESC' ? 'DESC' : 'ASC';
 
             // Paginer les résultats filtrés
             $paginatedSectors = Sector::filterAndPaginate(
@@ -88,8 +125,10 @@ class SectorController extends BaseController
                 $sortDir
             );
 
-            // Récupérer les données pour les filtres
-            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+            // Récupérer les données pour les filtres avec validation
+            $regions = $this->db->fetchAll(
+                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
             $exposures = Exposure::getAllSorted();
             $months = Month::getAllSorted();
 
@@ -104,63 +143,57 @@ class SectorController extends BaseController
                 'sort_dir' => $sortDir
             ]);
         } catch (\Exception $e) {
-            $this->session->flash('error', 'Une erreur est survenue lors du chargement des secteurs: ' . $e->getMessage());
+            error_log("SectorIndex Error: " . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement des secteurs');
             return $this->render('sectors/index', [
                 'sectors' => [],
-                'error' => $e->getMessage()
+                'error' => 'Erreur de chargement'
             ]);
         }
     }
 
     /**
      * Show a single sector
-     *
-     * @param Request $request
-     * @return Response
      */
-
     public function show(Request $request): Response
     {
         $id = $request->attributes->get('id');
-        error_log("DEBUG show() - ID reçu: " . ($id ?? 'NULL'));
 
-        if (!$id) {
-            error_log("DEBUG show() - Pas d'ID, redirection");
-            $this->session->flash('error', 'ID du secteur non spécifié');
+        // Validation ID
+        if (!$id || !is_numeric($id) || $id <= 0) {
+            $this->session->flash('error', 'ID du secteur invalide');
             return Response::redirect('/sectors');
         }
 
+        // Vérification permission de lecture
+        if (!$this->canViewSectors()) {
+            $this->session->flash('error', 'Accès non autorisé');
+            return Response::redirect('/');
+        }
+
         try {
-            error_log("DEBUG show() - Appel getSectorById pour ID: " . $id);
             $sector = $this->sectorService->getSectorById((int) $id);
-            error_log("DEBUG show() - Secteur trouvé: " . ($sector ? 'OUI' : 'NON'));
 
             if (!$sector) {
-                error_log("DEBUG show() - Secteur non trouvé, redirection");
                 $this->session->flash('error', 'Secteur non trouvé');
                 return Response::redirect('/sectors');
             }
 
-            // Récupérer les routes du secteur
-            $routes = Route::where(['sector_id' => $id, 'active' => 1]);
+            // Récupérer les routes du secteur de manière sécurisée
+            $routes = $this->getSectorRoutesSecure((int) $id);
             $routes_count = count($routes);
 
-            // Récupérer les expositions
-            $exposures = $this->db->fetchAll(
-                "SELECT e.* FROM climbing_exposures e 
-             JOIN climbing_sector_exposures se ON e.id = se.exposure_id 
-             WHERE se.sector_id = ?",
-                [(int)$id]
-            );
+            // Récupérer les expositions de manière sécurisée
+            $exposures = $this->getSectorExposuresSecure((int) $id);
 
-            // Récupérer les médias
-            $media = $this->mediaService->getMediaForEntity('sector', (int)$id);
+            // Récupérer les médias de manière sécurisée
+            $media = $this->mediaService->getMediaForEntity('sector', (int) $id);
 
-            // Calculer les statistiques
-            $stats = $this->calculateSectorStats($routes);
+            // Calculer les statistiques de manière sécurisée
+            $stats = $this->calculateSectorStatsSecure($routes);
 
             return $this->render('sectors/show', [
-                'title' => $sector['name'],
+                'title' => htmlspecialchars($sector['name'], ENT_QUOTES, 'UTF-8'),
                 'sector' => $sector,
                 'exposures' => $exposures,
                 'media' => $media,
@@ -169,73 +202,52 @@ class SectorController extends BaseController
                 'min_difficulty' => $stats['min_difficulty'] ?? null,
                 'max_difficulty' => $stats['max_difficulty'] ?? null,
                 'avg_route_length' => $stats['avg_length'] ?? null,
-                'route_styles' => array_unique(array_column($routes, 'style'))
+                'route_styles' => array_unique(array_filter(array_column($routes, 'style')))
             ]);
         } catch (\Exception $e) {
-            error_log("DEBUG show() - Exception: " . $e->getMessage());
-            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            error_log("SectorShow Error: " . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement du secteur');
             return Response::redirect('/sectors');
         }
     }
 
     /**
-     * Calculer les statistiques du secteur
-     */
-    private function calculateSectorStats(array $routes): array
-    {
-        $stats = [];
-
-        if (empty($routes)) {
-            return $stats;
-        }
-
-        // Calcul des difficultés min/max
-        $difficulties = array_column($routes, 'difficulty');
-        $difficulties = array_filter($difficulties); // Enlever les valeurs vides
-        if (!empty($difficulties)) {
-            $stats['min_difficulty'] = min($difficulties);
-            $stats['max_difficulty'] = max($difficulties);
-        }
-
-        // Calcul de la longueur moyenne
-        $lengths = array_column($routes, 'length');
-        $lengths = array_filter($lengths); // Enlever les valeurs nulles
-        if (!empty($lengths)) {
-            $stats['avg_length'] = round(array_sum($lengths) / count($lengths));
-        }
-
-        return $stats;
-    }
-
-    /**
      * Display create sector form
-     *
-     * @param Request $request
-     * @return Response
      */
     public function create(Request $request): Response
     {
-        try {
-            // Get data for form selections
-            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-            $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
-            $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
-            $months = $this->db->fetchAll("SELECT id, name, short_name FROM climbing_months ORDER BY month_number ASC");
+        // Vérification permission de création
+        if (!$this->canCreateSectors()) {
+            $this->session->flash('error', 'Vous n\'avez pas les permissions pour créer un secteur');
+            return Response::redirect('/sectors');
+        }
 
-            // Précharger des valeurs par défaut
+        try {
+            // Get data for form selections avec validation
+            $regions = $this->getValidRegions();
+            $books = $this->getValidBooks();
+            $exposures = $this->getValidExposures();
+            $months = $this->getValidMonths();
+
+            // Précharger des valeurs par défaut sécurisées
             $sector = [
                 'color' => '#FF0000',
                 'active' => 1
             ];
 
-            // Si un region_id est spécifié, préconfigurer le secteur
+            // Validation des paramètres URL
             if ($request->query->has('region_id')) {
-                $sector['region_id'] = (int) $request->query->get('region_id');
+                $regionId = (int) $request->query->get('region_id');
+                if ($this->isValidRegionId($regionId)) {
+                    $sector['region_id'] = $regionId;
+                }
             }
 
-            // Si un book_id est spécifié
             if ($request->query->has('book_id')) {
-                $sector['book_id'] = (int) $request->query->get('book_id');
+                $bookId = (int) $request->query->get('book_id');
+                if ($this->isValidBookId($bookId)) {
+                    $sector['book_id'] = $bookId;
+                }
             }
 
             return $this->render('sectors/form', [
@@ -248,158 +260,113 @@ class SectorController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
-            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/sectors');  // ✅ CORRECTION
+            error_log("SectorCreate Error: " . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement du formulaire');
+            return Response::redirect('/sectors');
         }
     }
 
     /**
      * Store a new sector
-     *
-     * @param Request $request
-     * @return Response
      */
     public function store(Request $request): Response
     {
+        // Vérification permission de création
+        if (!$this->canCreateSectors()) {
+            $this->session->flash('error', 'Vous n\'avez pas les permissions pour créer un secteur');
+            return Response::redirect('/sectors');
+        }
+
         // Validate CSRF token
         if (!$this->validateCsrfToken($request)) {
             $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
-            return Response::redirect('/sectors/create');  // ✅ CORRECTION
+            return Response::redirect('/sectors/create');
         }
 
         // Get form data
         $data = $request->request->all();
 
-        // Basic validation
-        if (empty($data['name']) || empty($data['code']) || empty($data['book_id'])) {
-            $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires');
-            return Response::redirect('/sectors/create');  // ✅ CORRECTION
+        // Validation complète des données
+        $validationErrors = $this->validateSectorData($data);
+        if (!empty($validationErrors)) {
+            $this->session->flash('error', 'Erreurs de validation : ' . implode(', ', $validationErrors));
+            return Response::redirect('/sectors/create');
+        }
+
+        // Vérification unicité du code
+        if ($this->sectorCodeExists($data['code'], $data['book_id'] ?? null)) {
+            $this->session->flash('error', 'Ce code secteur existe déjà pour ce site');
+            return Response::redirect('/sectors/create');
         }
 
         try {
-            // Add the current user ID
-            $data['created_by'] = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? 1;
+            // Add the current user ID de manière sécurisée
+            $userId = $this->getCurrentUserId();
+            if (!$userId) {
+                throw new \Exception('Utilisateur non authentifié');
+            }
 
             // Start transaction
             if (!$this->db->beginTransaction()) {
-                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
-                return Response::redirect('/sectors/create');  // ✅ CORRECTION
+                throw new \Exception('Impossible de démarrer la transaction');
             }
 
-            // Prepare data for insertion
-            $sectorData = [
-                'name' => $data['name'],
-                'code' => $data['code'],
-                'book_id' => $data['book_id'],
-                'region_id' => $data['region_id'] ?? null,
-                'description' => $data['description'] ?? null,
-                'access_info' => $data['access_info'] ?? null,
-                'color' => $data['color'] ?? '#FF0000',
-                'access_time' => !empty($data['access_time']) ? (int)$data['access_time'] : null,
-                'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
-                'approach' => $data['approach'] ?? null,
-                'height' => !empty($data['height']) ? (float)$data['height'] : null,
-                'parking_info' => $data['parking_info'] ?? null,
-                'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
-                'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
-                'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
-                'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
-                'active' => isset($data['active']) ? 1 : 0,
-                'created_by' => $data['created_by'],
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
+            // Prepare data for insertion de manière sécurisée
+            $sectorData = $this->prepareSectorData($data, $userId);
 
             // Insert the sector
             $sectorId = $this->db->insert('climbing_sectors', $sectorData);
 
             if (!$sectorId) {
-                $this->db->rollBack();
-                $this->session->flash('error', 'Erreur lors de la création du secteur');
-                return Response::redirect('/sectors/create');  // ✅ CORRECTION
+                throw new \Exception('Erreur lors de la création du secteur');
             }
 
-            // Handle exposures if provided
+            // Handle exposures de manière sécurisée
             if (!empty($data['exposures'])) {
-                foreach ($data['exposures'] as $exposureId) {
-                    $isPrimary = ($data['primary_exposure'] ?? 0) == $exposureId ? 1 : 0;
-                    $this->db->insert('climbing_sector_exposures', [
-                        'sector_id' => (int)$sectorId,
-                        'exposure_id' => (int)$exposureId,
-                        'is_primary' => $isPrimary,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                }
+                $this->handleSectorExposures($sectorId, $data['exposures'], $data['primary_exposure'] ?? null);
             }
 
-            // Handle months if provided
+            // Handle months de manière sécurisée
             if (!empty($data['months'])) {
-                foreach ($data['months'] as $monthId => $monthData) {
-                    if (isset($monthData['quality'])) {
-                        $this->db->insert('climbing_sector_months', [
-                            'sector_id' => (int)$sectorId,
-                            'month_id' => (int)$monthId,
-                            'quality' => $monthData['quality'],
-                            'notes' => $monthData['notes'] ?? null,
-                            'created_at' => date('Y-m-d H:i:s')
-                        ]);
-                    }
-                }
+                $this->handleSectorMonths($sectorId, $data['months']);
             }
 
-            // Traiter le média si présent (nouvelle approche unifiée)
-            $mediaFile = $_FILES['media_file'] ?? null;
-            if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name'])) {
-                $this->mediaService->uploadMedia($mediaFile, [
-                    'title' => $data['media_title'] ?? $data['name'],
-                    'description' => "Image pour le secteur: {$data['name']}",
-                    'is_public' => 1,
-                    'media_type' => 'image',
-                    'entity_type' => 'sector',
-                    'entity_id' => $sectorId,
-                    'relationship_type' => $data['media_relationship_type'] ?? 'main'
-                ], $data['created_by']);
-            }
-            // Support de l'ancien champ pour compatibilité
-            elseif (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $this->mediaService->uploadMedia($_FILES['image'], [
-                    'entity_type' => 'sector',
-                    'entity_id' => $sectorId,
-                    'relationship_type' => 'main',
-                    'title' => $data['name'],
-                    'is_public' => 1
-                ], $data['created_by']);
-            }
+            // Traiter le média de manière sécurisée
+            $this->handleSectorMediaUpload($sectorId, $data, $userId);
 
             if (!$this->db->commit()) {
-                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+                throw new \Exception('Échec lors de l\'enregistrement final');
             }
 
             $this->session->flash('success', 'Secteur créé avec succès');
-            return Response::redirect('/sectors/' . $sectorId);  // ✅ CORRECTION
-        } catch (ServiceException $e) {
-            $this->db->rollBack();
-            $this->session->flash('error', 'Erreur: ' . $e->getMessage());
-            return Response::redirect('/sectors/create');  // ✅ CORRECTION
+            return Response::redirect('/sectors/' . $sectorId);
         } catch (\Exception $e) {
-            $this->db->rollBack();
-            $this->session->flash('error', 'Erreur lors de la création du secteur');
-            return Response::redirect('/sectors/create');  // ✅ CORRECTION
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log("SectorStore Error: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la création : ' . $e->getMessage());
+            return Response::redirect('/sectors/create');
         }
     }
+
     /**
      * Display edit sector form
-     *
-     * @param Request $request
-     * @return Response
      */
     public function edit(Request $request): Response
     {
         $id = $request->attributes->get('id');
 
-        if (!$id) {
-            $this->session->flash('error', 'ID du secteur non spécifié');
-            return Response::redirect('/sectors');  // ✅ CORRECTION
+        // Validation ID
+        if (!$id || !is_numeric($id) || $id <= 0) {
+            $this->session->flash('error', 'ID du secteur invalide');
+            return Response::redirect('/sectors');
+        }
+
+        // Vérification permission de modification
+        if (!$this->canEditSectors()) {
+            $this->session->flash('error', 'Vous n\'avez pas les permissions pour modifier ce secteur');
+            return Response::redirect('/sectors');
         }
 
         try {
@@ -407,17 +374,17 @@ class SectorController extends BaseController
 
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
-                return Response::redirect('/sectors');  // ✅ CORRECTION
+                return Response::redirect('/sectors');
             }
 
-            // Get data for form selections
-            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-            $books = $this->db->fetchAll("SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC");
-            $exposures = $this->db->fetchAll("SELECT id, name, code FROM climbing_exposures ORDER BY sort_order ASC");
-            $months = $this->db->fetchAll("SELECT id, name, short_name FROM climbing_months ORDER BY month_number ASC");
+            // Get data for form selections de manière sécurisée
+            $regions = $this->getValidRegions();
+            $books = $this->getValidBooks();
+            $exposures = $this->getValidExposures();
+            $months = $this->getValidMonths();
 
-            // Get current exposures for this sector
-            $sectorExposures = $this->sectorService->getSectorExposures((int) $id);
+            // Get current exposures for this sector de manière sécurisée
+            $sectorExposures = $this->getSectorExposuresSecure((int) $id);
             $currentExposures = array_column($sectorExposures, 'exposure_id');
             $primaryExposure = null;
 
@@ -428,23 +395,22 @@ class SectorController extends BaseController
                 }
             }
 
-            // Get months data
-            $sectorMonths = $this->sectorService->getSectorMonths((int) $id);
+            // Get months data de manière sécurisée
+            $sectorMonths = $this->getSectorMonthsSecure((int) $id);
             $monthsData = [];
 
             foreach ($sectorMonths as $month) {
                 $monthsData[$month['month_id']] = [
                     'quality' => $month['quality'],
-                    'notes' => $month['notes']
+                    'notes' => htmlspecialchars($month['notes'] ?? '', ENT_QUOTES, 'UTF-8')
                 ];
             }
 
-            // Récupérer les médias associés à ce secteur via MediaService
+            // Récupérer les médias de manière sécurisée
             $media = $this->mediaService->getMediaForEntity('sector', (int) $id);
 
-
             return $this->render('sectors/form', [
-                'title' => 'Modifier le secteur ' . $sector['name'],
+                'title' => 'Modifier le secteur ' . htmlspecialchars($sector['name'], ENT_QUOTES, 'UTF-8'),
                 'sector' => $sector,
                 'regions' => $regions,
                 'books' => $books,
@@ -457,179 +423,117 @@ class SectorController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
-            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/sectors');  // ✅ CORRECTION
+            error_log("SectorEdit Error: " . $e->getMessage());
+            $this->session->flash('error', 'Une erreur est survenue lors du chargement du formulaire');
+            return Response::redirect('/sectors');
         }
     }
+
     /**
      * Update a sector
-     *
-     * @param Request $request
-     * @return Response
      */
     public function update(Request $request): Response
     {
         $id = $request->attributes->get('id');
 
-        if (!$id) {
-            $this->session->flash('error', 'ID du secteur non spécifié');
-            return Response::redirect('/sectors');  // ✅ CORRECTION
+        // Validation ID
+        if (!$id || !is_numeric($id) || $id <= 0) {
+            $this->session->flash('error', 'ID du secteur invalide');
+            return Response::redirect('/sectors');
+        }
+
+        // Vérification permission de modification
+        if (!$this->canEditSectors()) {
+            $this->session->flash('error', 'Vous n\'avez pas les permissions pour modifier ce secteur');
+            return Response::redirect('/sectors');
+        }
+
+        // Validate CSRF token
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/sectors/' . $id . '/edit');
         }
 
         // Get form data
         $data = $request->request->all();
 
-        // Basic validation
-        if (empty($data['name']) || empty($data['code'])) {
-            $this->session->flash('error', 'Veuillez remplir tous les champs obligatoires');
-            return Response::redirect('/sectors/create');
+        // Validation complète des données
+        $validationErrors = $this->validateSectorData($data, (int) $id);
+        if (!empty($validationErrors)) {
+            $this->session->flash('error', 'Erreurs de validation : ' . implode(', ', $validationErrors));
+            return Response::redirect('/sectors/' . $id . '/edit');
+        }
+
+        // Vérification unicité du code (en excluant le secteur actuel)
+        if ($this->sectorCodeExists($data['code'], $data['book_id'] ?? null, (int) $id)) {
+            $this->session->flash('error', 'Ce code secteur existe déjà pour ce site');
+            return Response::redirect('/sectors/' . $id . '/edit');
         }
 
         try {
-            // IMPORTANT: Obtenir l'ID utilisateur directement de $_SESSION
-            $data['updated_by'] = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? 1;
-
-            // Begin transaction avec gestion d'erreur explicite
-            if (!$this->db->beginTransaction()) {
-                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
-                return Response::redirect('/sectors/' . $id . '/edit');  // ✅ CORRECTION
+            // Get current user ID de manière sécurisée
+            $userId = $this->getCurrentUserId();
+            if (!$userId) {
+                throw new \Exception('Utilisateur non authentifié');
             }
 
-            // Mise à jour principale de la table climbing_sectors
-            $updateData = [
-                'name' => $data['name'],
-                'code' => $data['code'],
-                'book_id' => $data['book_id'],
-                'region_id' => $data['region_id'] ?? null,
-                'description' => $data['description'] ?? null,
-                'access_info' => $data['access_info'] ?? null,
-                'color' => $data['color'] ?? '#FF0000',
-                'access_time' => !empty($data['access_time']) ? (int)$data['access_time'] : null,
-                'altitude' => !empty($data['altitude']) ? (int)$data['altitude'] : null,
-                'approach' => $data['approach'] ?? null,
-                'height' => !empty($data['height']) ? (float)$data['height'] : null,
-                'parking_info' => $data['parking_info'] ?? null,
-                'coordinates_lat' => !empty($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
-                'coordinates_lng' => !empty($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
-                'coordinates_swiss_e' => $data['coordinates_swiss_e'] ?? null,
-                'coordinates_swiss_n' => $data['coordinates_swiss_n'] ?? null,
-                'active' => isset($data['active']) ? 1 : 0,
-                'updated_at' => date('Y-m-d H:i:s'),
-                'updated_by' => $data['updated_by']
-            ];
+            // Begin transaction
+            if (!$this->db->beginTransaction()) {
+                throw new \Exception('Impossible de démarrer la transaction');
+            }
 
-            // Mise à jour directe via Database
-            $success = $this->db->update('climbing_sectors', $updateData, 'id = ?', [(int)$id]);
+            // Prepare update data de manière sécurisée
+            $updateData = $this->prepareSectorData($data, $userId, true);
+
+            // Update sector
+            $success = $this->db->update('climbing_sectors', $updateData, 'id = ?', [(int) $id]);
 
             if (!$success) {
-                throw new \Exception("Échec de la mise à jour du secteur principal");
+                throw new \Exception('Échec de la mise à jour du secteur');
             }
 
-            // Gestion des exposures - suppression puis réinsertion
-            $this->db->delete('climbing_sector_exposures', 'sector_id = ?', [(int)$id]);
+            // Handle exposures de manière sécurisée
+            $this->updateSectorExposures((int) $id, $data['exposures'] ?? [], $data['primary_exposure'] ?? null);
 
-            if (!empty($data['exposures'])) {
-                foreach ($data['exposures'] as $exposureId) {
-                    $isPrimary = ($data['primary_exposure'] ?? 0) == $exposureId ? 1 : 0;
-                    $this->db->insert('climbing_sector_exposures', [
-                        'sector_id' => (int)$id,
-                        'exposure_id' => (int)$exposureId,
-                        'is_primary' => $isPrimary,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                }
-            }
+            // Handle months de manière sécurisée
+            $this->updateSectorMonths((int) $id, $data['months'] ?? []);
 
-            // Gestion des months - suppression puis réinsertion si définis
-            $this->db->delete('climbing_sector_months', 'sector_id = ?', [(int)$id]);
+            // Traiter le média de manière sécurisée
+            $this->handleSectorMediaUpload((int) $id, $data, $userId);
 
-            if (!empty($data['months'])) {
-                foreach ($data['months'] as $monthId => $monthData) {
-                    if (isset($monthData['quality'])) {
-                        $this->db->insert('climbing_sector_months', [
-                            'sector_id' => (int)$id,
-                            'month_id' => (int)$monthId,
-                            'quality' => $monthData['quality'],
-                            'notes' => $monthData['notes'] ?? null,
-                            'created_at' => date('Y-m-d H:i:s')
-                        ]);
-                    }
-                }
-            }
-
-            // MODIFICATION: Traitement unifié des médias - uniquement avec media_file
-            try {
-                $mediaFile = $_FILES['media_file'] ?? null;
-                if ($mediaFile && isset($mediaFile['tmp_name']) && is_uploaded_file($mediaFile['tmp_name']) && $mediaFile['error'] === UPLOAD_ERR_OK) {
-                    // Récupérer les informations sur le média
-                    $mediaTitle = $data['media_title'] ?? null;
-                    $relationshipType = $data['media_relationship_type'] ?? 'gallery';
-
-                    // Uploader le média
-                    $mediaId = $this->mediaService->uploadMedia($mediaFile, [
-                        'title' => $mediaTitle ?? $data['name'],
-                        'description' => "Image pour le secteur: {$data['name']}",
-                        'is_public' => 1,
-                        'media_type' => 'image',
-                        'entity_type' => 'sector',
-                        'entity_id' => (int)$id,
-                        'relationship_type' => $relationshipType
-                    ], $data['updated_by']);
-
-                    if ($mediaId) {
-
-                        // Si c'est une image principale, mettre à jour les anciennes relations "main"
-                        if ($relationshipType === 'main') {
-                            $this->db->update(
-                                'climbing_media_relationships',
-                                ['relationship_type' => 'gallery'],
-                                'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
-                                ['sector', (int)$id, 'main', $mediaId]
-                            );
-                        }
-                    } else {
-                        error_log("SectorUpdate: Échec de l'ajout du média");
-                    }
-                }
-            } catch (\Exception $e) {
-                // Capture des erreurs de traitement d'image mais continue l'exécution
-                error_log("SectorUpdate: Erreur lors du traitement de l'image: " . $e->getMessage());
-                // Ne pas lancer d'exception ici pour permettre à la mise à jour de se terminer
-            }
-
-            // Commit de la transaction
             if (!$this->db->commit()) {
-                error_log("SectorUpdate: Échec commit transaction");
-                throw new \Exception("Échec lors de l'enregistrement final des modifications");
+                throw new \Exception('Échec lors de l\'enregistrement final');
             }
 
-            error_log("SectorUpdate: Mise à jour réussie du secteur #" . $id);
             $this->session->flash('success', 'Secteur mis à jour avec succès');
-            return Response::redirect('/sectors/' . $id);  // ✅ CORRECTION
+            return Response::redirect('/sectors/' . $id);
         } catch (\Exception $e) {
-            // En cas d'erreur, rollback et message d'erreur
             if ($this->db->inTransaction()) {
                 $this->db->rollback();
             }
-            error_log("SectorUpdate - Exception: " . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
-            return Response::redirect('/sectors/' . $id . '/edit');  // ✅ CORRECTION
+            error_log("SectorUpdate Error: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
+            return Response::redirect('/sectors/' . $id . '/edit');
         }
     }
 
     /**
      * Delete a sector
-     *
-     * @param Request $request
-     * @return Response
      */
     public function delete(Request $request): Response
     {
         $id = $request->attributes->get('id');
 
-        if (!$id) {
-            $this->session->flash('error', 'ID du secteur non spécifié');
-            return Response::redirect('/sectors');  // ✅ CORRECTION
+        // Validation ID
+        if (!$id || !is_numeric($id) || $id <= 0) {
+            $this->session->flash('error', 'ID du secteur invalide');
+            return Response::redirect('/sectors');
+        }
+
+        // Vérification permission de suppression
+        if (!$this->canDeleteSectors()) {
+            $this->session->flash('error', 'Vous n\'avez pas les permissions pour supprimer ce secteur');
+            return Response::redirect('/sectors');
         }
 
         // Check if it's a POST request with confirmation
@@ -639,33 +543,30 @@ class SectorController extends BaseController
 
                 if (!$sector) {
                     $this->session->flash('error', 'Secteur non trouvé');
-                    return Response::redirect('/sectors');  // ✅ CORRECTION
+                    return Response::redirect('/sectors');
                 }
 
-                // Get routes count
-                $routesCount = count($this->sectorService->getSectorRoutes((int) $id));
-                $mediaCount = count($this->sectorService->getSectorMedia((int) $id));
+                // Vérifications de dépendances de manière sécurisée
+                $dependencies = $this->checkSectorDependencies((int) $id);
 
-                // Show confirmation page
+                // Show confirmation page avec informations sur les dépendances
                 return $this->render('sectors/delete', [
-                    'title' => 'Supprimer le secteur ' . $sector['name'],
+                    'title' => 'Supprimer le secteur ' . htmlspecialchars($sector['name'], ENT_QUOTES, 'UTF-8'),
                     'sector' => $sector,
-                    'routesCount' => $routesCount,
-                    'mediaCount' => $mediaCount,
+                    'dependencies' => $dependencies,
                     'csrf_token' => $this->createCsrfToken()
                 ]);
             } catch (\Exception $e) {
-                $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-                return Response::redirect('/sectors');  // ✅ CORRECTION
+                error_log("SectorDeleteForm Error: " . $e->getMessage());
+                $this->session->flash('error', 'Une erreur est survenue lors du chargement');
+                return Response::redirect('/sectors');
             }
         }
-
-        // It's a POST request, proceed with deletion
 
         // Validate CSRF token
         if (!$this->validateCsrfToken($request)) {
             $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
-            return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
+            return Response::redirect('/sectors/' . $id . '/delete');
         }
 
         try {
@@ -673,115 +574,92 @@ class SectorController extends BaseController
             $sector = $this->sectorService->getSectorById((int) $id);
             if (!$sector) {
                 $this->session->flash('error', 'Secteur non trouvé');
-                return Response::redirect('/sectors');  // ✅ CORRECTION
+                return Response::redirect('/sectors');
             }
 
+            // Vérification finale des dépendances
+            $dependencies = $this->checkSectorDependencies((int) $id);
+            if ($dependencies['canDelete'] === false) {
+                $this->session->flash('error', 'Impossible de supprimer : ' . $dependencies['reason']);
+                return Response::redirect('/sectors/' . $id . '/delete');
+            }
+
+            // Begin transaction
             if (!$this->db->beginTransaction()) {
-                error_log("SectorDelete: Erreur démarrage transaction");
-                $this->session->flash('error', 'Erreur de base de données: impossible de démarrer la transaction');
-                return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
+                throw new \Exception('Impossible de démarrer la transaction');
             }
 
-            // Supprimer les relations associées
-            $this->db->delete('climbing_sector_exposures', 'sector_id = ?', [(int)$id]);
-            $this->db->delete('climbing_sector_months', 'sector_id = ?', [(int)$id]);
-
-            // Récupérer les relations média pour pouvoir supprimer les médias
-            $mediaRelations = $this->db->fetchAll("SELECT media_id FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?", [(int)$id]);
-            foreach ($mediaRelations as $relation) {
-                // Supprimer les annotations des médias
-                $this->db->delete('climbing_media_annotations', 'media_id = ?', [(int)$relation['media_id']]);
-                // Supprimer les relations des médias
-                $this->db->delete('climbing_media_relationships', 'media_id = ?', [(int)$relation['media_id']]);
-                // Supprimer les tags des médias
-                $this->db->delete('climbing_media_tags', 'media_id = ?', [(int)$relation['media_id']]);
-                // Supprimer les médias eux-mêmes
-                $this->db->delete('climbing_media', 'id = ?', [(int)$relation['media_id']]);
-            }
-
-            // Supprimer le secteur lui-même
-            $success = $this->db->delete('climbing_sectors', 'id = ?', [(int)$id]);
-
-            if (!$success) {
-                $this->db->rollBack();
-                $this->session->flash('error', 'Erreur lors de la suppression du secteur');
-                return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
-            }
+            // Suppression sécurisée avec cascade contrôlée
+            $this->deleteSectorSecurely((int) $id);
 
             if (!$this->db->commit()) {
-                error_log("SectorDelete: Échec commit transaction");
-                throw new \Exception("Échec lors de la suppression finale");
+                throw new \Exception('Échec lors de la suppression finale');
             }
 
             $this->session->flash('success', 'Secteur supprimé avec succès');
-            return Response::redirect('/sectors');  // ✅ CORRECTION
+            return Response::redirect('/sectors');
         } catch (\Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            error_log("SectorDelete: Exception: " . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors de la suppression du secteur: ' . $e->getMessage());
-            return Response::redirect('/sectors/' . $id . '/delete');  // ✅ CORRECTION
+            error_log("SectorDelete Error: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la suppression : ' . $e->getMessage());
+            return Response::redirect('/sectors/' . $id . '/delete');
         }
     }
+
     /**
-     * API endpoint pour récupérer les voies d'un secteur
-     *
-     * @param Request $request
-     * @return Response
+     * API endpoint pour récupérer les voies d'un secteur (SÉCURISÉ)
      */
     public function getRoutes(Request $request): Response
     {
-        $id = $request->attributes->get('id');
-
-        if (!$id) {
+        // Vérification authentification pour API
+        if (!$this->isAuthenticated()) {
             return Response::json([
                 'success' => false,
-                'error' => 'ID du secteur non spécifié'
+                'error' => 'Authentification requise'
+            ], 401);
+        }
+
+        $id = $request->attributes->get('id');
+
+        // Validation ID
+        if (!$id || !is_numeric($id) || $id <= 0) {
+            return Response::json([
+                'success' => false,
+                'error' => 'ID du secteur invalide'
             ], 400);
+        }
+
+        // Vérification permission de lecture
+        if (!$this->canViewSectors()) {
+            return Response::json([
+                'success' => false,
+                'error' => 'Accès non autorisé'
+            ], 403);
         }
 
         try {
             // Vérifier que le secteur existe
             $sector = $this->sectorService->getSectorById((int) $id);
-            if (!$sector) { // ✅ CORRECTION: Ajout du $
+            if (!$sector) {
                 return Response::json([
                     'success' => false,
                     'error' => 'Secteur non trouvé'
                 ], 404);
             }
 
-            // Récupérer les routes du secteur
-            $routes = Route::where(['sector_id' => $id, 'active' => 1]);
+            // Récupérer les routes de manière sécurisée
+            $routes = $this->getSectorRoutesSecure((int) $id);
 
-            // Enrichir les données des voies (version simplifiée)
+            // Enrichir les données des voies de manière sécurisée
             $enrichedRoutes = [];
             foreach ($routes as $route) {
-                $enrichedRoutes[] = [
-                    'id' => $route['id'],
-                    'name' => $route['name'],
-                    'number' => $route['number'] ?? null,
-                    'difficulty' => $route['difficulty'] ?? null,
-                    'beauty' => $route['beauty'] ?? '0',
-                    'style' => $route['style'] ?? null,
-                    'length' => $route['length'] ?? null,
-                    'equipment' => $route['equipment'] ?? null,
-                    'comment' => $route['comment'] ?? null,
-                    'styleFormatted' => $this->formatStyle($route['style'] ?? null),
-                    'beautyStars' => (int) ($route['beauty'] ?? 0),
-                    'equipmentFormatted' => $this->formatEquipment($route['equipment'] ?? null),
-                    'lengthFormatted' => isset($route['length']) ? $route['length'] . 'm' : null,
-                    'ascents_count' => $this->getRouteAscentsCount((int)$route['id'])
-                ];
+                $enrichedRoutes[] = $this->enrichRouteDataSecure($route);
             }
 
-            // Calculer les statistiques basiques
-            $stats = [
-                'total_routes' => count($routes),
-                'min_difficulty' => $this->getMinDifficulty($routes),
-                'max_difficulty' => $this->getMaxDifficulty($routes),
-                'avg_length' => $this->getAverageLength($routes)
-            ];
+            // Calculer les statistiques de manière sécurisée
+            $stats = $this->calculateSectorStatsSecure($routes);
 
             return Response::json([
                 'success' => true,
@@ -793,7 +671,6 @@ class SectorController extends BaseController
             ]);
         } catch (\Exception $e) {
             error_log("API getRoutes error for sector $id: " . $e->getMessage());
-            error_log("Stack trace: " . $e->getTraceAsString());
             return Response::json([
                 'success' => false,
                 'error' => 'Erreur lors du chargement des voies'
@@ -801,85 +678,642 @@ class SectorController extends BaseController
         }
     }
 
+    // ===================== MÉTHODES DE SÉCURITÉ =====================
+
     /**
-     * Formater le style de voie
+     * Validate sector data
      */
-    private function formatStyle(?string $style): string
+    private function validateSectorData(array $data, ?int $excludeId = null): array
     {
-        if (!$style) return '';
+        $errors = [];
 
-        $styles = [
-            'sport' => 'Sportive',
-            'trad' => 'Traditionnelle',
-            'mix' => 'Mixte',
-            'boulder' => 'Bloc',
-            'aid' => 'Artificielle',
-            'ice' => 'Glace',
-            'other' => 'Autre'
-        ];
+        // Validation nom
+        if (empty($data['name']) || strlen(trim($data['name'])) < 2 || strlen(trim($data['name'])) > 255) {
+            $errors[] = 'Le nom doit contenir entre 2 et 255 caractères';
+        }
 
-        return $styles[$style] ?? ucfirst($style);
+        // Validation code
+        if (empty($data['code']) || !preg_match('/^[A-Z0-9_-]{1,20}$/i', $data['code'])) {
+            $errors[] = 'Le code doit contenir uniquement des lettres, chiffres, tirets et underscores (max 20 caractères)';
+        }
+
+        // Validation book_id
+        if (empty($data['book_id']) || !is_numeric($data['book_id'])) {
+            $errors[] = 'Le site/livre est obligatoire';
+        } elseif (!$this->isValidBookId((int) $data['book_id'])) {
+            $errors[] = 'Site/livre invalide';
+        }
+
+        // Validation coordonnées GPS Suisse
+        if (!empty($data['coordinates_lat'])) {
+            $lat = (float) $data['coordinates_lat'];
+            if ($lat < self::SWISS_LAT_MIN || $lat > self::SWISS_LAT_MAX) {
+                $errors[] = 'Latitude hors des limites suisses (' . self::SWISS_LAT_MIN . ' - ' . self::SWISS_LAT_MAX . ')';
+            }
+        }
+
+        if (!empty($data['coordinates_lng'])) {
+            $lng = (float) $data['coordinates_lng'];
+            if ($lng < self::SWISS_LNG_MIN || $lng > self::SWISS_LNG_MAX) {
+                $errors[] = 'Longitude hors des limites suisses (' . self::SWISS_LNG_MIN . ' - ' . self::SWISS_LNG_MAX . ')';
+            }
+        }
+
+        // Validation altitude
+        if (!empty($data['altitude'])) {
+            $altitude = (int) $data['altitude'];
+            if ($altitude < 200 || $altitude > 4000) {
+                $errors[] = 'Altitude doit être entre 200m et 4000m';
+            }
+        }
+
+        // Validation temps d'accès
+        if (!empty($data['access_time'])) {
+            $accessTime = (int) $data['access_time'];
+            if ($accessTime < 5 || $accessTime > 600) {
+                $errors[] = 'Temps d\'accès doit être entre 5 et 600 minutes';
+            }
+        }
+
+        // Validation expositions
+        if (!empty($data['exposures'])) {
+            if (!is_array($data['exposures'])) {
+                $errors[] = 'Format d\'expositions invalide';
+            } else {
+                foreach ($data['exposures'] as $exposureId) {
+                    if (!$this->isValidExposureId($exposureId)) {
+                        $errors[] = 'Exposition invalide : ' . $exposureId;
+                    }
+                }
+            }
+        }
+
+        // Validation mois
+        if (!empty($data['months'])) {
+            if (!is_array($data['months'])) {
+                $errors[] = 'Format de mois invalide';
+            } else {
+                foreach ($data['months'] as $monthId => $monthData) {
+                    if (!$this->isValidMonthId($monthId)) {
+                        $errors[] = 'Mois invalide : ' . $monthId;
+                    }
+                    if (isset($monthData['quality']) && !in_array($monthData['quality'], self::VALID_MONTH_QUALITIES)) {
+                        $errors[] = 'Qualité de mois invalide : ' . $monthData['quality'];
+                    }
+                }
+            }
+        }
+
+        return $errors;
     }
 
     /**
-     * Formater l'équipement
+     * Check if user can view sectors
      */
-    private function formatEquipment(?string $equipment): string
+    private function canViewSectors(): bool
     {
-        if (!$equipment) return '';
-
-        $equipments = [
-            'poor' => 'Mauvais',
-            'adequate' => 'Engagé',
-            'good' => 'Bien équipé',
-            'excellent' => 'Excellent'
-        ];
-
-        return $equipments[$equipment] ?? ucfirst($equipment);
+        return $this->isAuthenticated(); // Tous les utilisateurs connectés peuvent voir
     }
 
     /**
-     * Compter les ascensions d'une voie
+     * Check if user can create sectors
      */
-    private function getRouteAscentsCount(int $routeId): int
+    private function canCreateSectors(): bool
+    {
+        return $this->hasRole(['1', '2', '4']); // Admin, Moderator, Editor
+    }
+
+    /**
+     * Check if user can edit sectors
+     */
+    private function canEditSectors(): bool
+    {
+        return $this->hasRole(['1', '2', '4']); // Admin, Moderator, Editor
+    }
+
+    /**
+     * Check if user can delete sectors
+     */
+    private function canDeleteSectors(): bool
+    {
+        return $this->hasRole(['1', '2']); // Admin, Moderator seulement
+    }
+
+    /**
+     * Check if code exists for this book (excluding current sector)
+     */
+    private function sectorCodeExists(string $code, ?int $bookId, ?int $excludeId = null): bool
+    {
+        $query = "SELECT COUNT(*) as count FROM climbing_sectors WHERE code = ? AND book_id = ?";
+        $params = [$code, $bookId];
+
+        if ($excludeId) {
+            $query .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+
+        $result = $this->db->fetchOne($query, $params);
+        return (int) ($result['count'] ?? 0) > 0;
+    }
+
+    /**
+     * Validate exposure ID against valid exposures
+     */
+    private function isValidExposureId($exposureId): bool
+    {
+        if (!is_numeric($exposureId)) return false;
+
+        $exposure = $this->db->fetchOne(
+            "SELECT code FROM climbing_exposures WHERE id = ?",
+            [(int) $exposureId]
+        );
+
+        return $exposure && in_array($exposure['code'], self::VALID_EXPOSURES);
+    }
+
+    /**
+     * Validate month ID
+     */
+    private function isValidMonthId($monthId): bool
+    {
+        return is_numeric($monthId) && $monthId >= 1 && $monthId <= 12;
+    }
+
+    /**
+     * Validate region ID
+     */
+    private function isValidRegionId(int $regionId): bool
+    {
+        $region = $this->db->fetchOne(
+            "SELECT id FROM climbing_regions WHERE id = ? AND active = 1",
+            [$regionId]
+        );
+        return (bool) $region;
+    }
+
+    /**
+     * Validate book ID
+     */
+    private function isValidBookId(int $bookId): bool
+    {
+        $book = $this->db->fetchOne(
+            "SELECT id FROM climbing_sites WHERE id = ? AND active = 1",
+            [$bookId]
+        );
+        return (bool) $book;
+    }
+
+    /**
+     * Get valid regions
+     */
+    private function getValidRegions(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+        );
+    }
+
+    /**
+     * Get valid books
+     */
+    private function getValidBooks(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC"
+        );
+    }
+
+    /**
+     * Get valid exposures
+     */
+    private function getValidExposures(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT id, name, code FROM climbing_exposures WHERE code IN ('" .
+                implode("','", self::VALID_EXPOSURES) . "') ORDER BY sort_order ASC"
+        );
+    }
+
+    /**
+     * Get valid months
+     */
+    private function getValidMonths(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT id, name, short_name, month_number FROM climbing_months ORDER BY month_number ASC"
+        );
+    }
+
+    /**
+     * Prepare sector data for database
+     */
+    private function prepareSectorData(array $data, int $userId, bool $isUpdate = false): array
+    {
+        $sectorData = [
+            'name' => trim($data['name']),
+            'code' => strtoupper(trim($data['code'])),
+            'book_id' => (int) $data['book_id'],
+            'region_id' => !empty($data['region_id']) ? (int) $data['region_id'] : null,
+            'description' => !empty($data['description']) ? trim($data['description']) : null,
+            'access_info' => !empty($data['access_info']) ? trim($data['access_info']) : null,
+            'color' => $data['color'] ?? '#FF0000',
+            'access_time' => !empty($data['access_time']) ? (int) $data['access_time'] : null,
+            'altitude' => !empty($data['altitude']) ? (int) $data['altitude'] : null,
+            'approach' => !empty($data['approach']) ? trim($data['approach']) : null,
+            'height' => !empty($data['height']) ? (float) $data['height'] : null,
+            'parking_info' => !empty($data['parking_info']) ? trim($data['parking_info']) : null,
+            'coordinates_lat' => !empty($data['coordinates_lat']) ? (float) $data['coordinates_lat'] : null,
+            'coordinates_lng' => !empty($data['coordinates_lng']) ? (float) $data['coordinates_lng'] : null,
+            'coordinates_swiss_e' => !empty($data['coordinates_swiss_e']) ? trim($data['coordinates_swiss_e']) : null,
+            'coordinates_swiss_n' => !empty($data['coordinates_swiss_n']) ? trim($data['coordinates_swiss_n']) : null,
+            'active' => isset($data['active']) ? 1 : 0,
+            'updated_at' => date('Y-m-d H:i:s'),
+            'updated_by' => $userId
+        ];
+
+        if (!$isUpdate) {
+            $sectorData['created_at'] = date('Y-m-d H:i:s');
+            $sectorData['created_by'] = $userId;
+        }
+
+        return $sectorData;
+    }
+
+    /**
+     * Handle sector exposures securely
+     */
+    private function handleSectorExposures(int $sectorId, array $exposures, ?string $primaryExposure): void
+    {
+        foreach ($exposures as $exposureId) {
+            if (!$this->isValidExposureId($exposureId)) {
+                continue; // Skip invalid exposures
+            }
+
+            $isPrimary = ($primaryExposure && $primaryExposure == $exposureId) ? 1 : 0;
+            $this->db->insert('climbing_sector_exposures', [
+                'sector_id' => $sectorId,
+                'exposure_id' => (int) $exposureId,
+                'is_primary' => $isPrimary,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    /**
+     * Update sector exposures securely
+     */
+    private function updateSectorExposures(int $sectorId, array $exposures, ?string $primaryExposure): void
+    {
+        // Delete existing exposures
+        $this->db->delete('climbing_sector_exposures', 'sector_id = ?', [$sectorId]);
+
+        // Add new exposures
+        if (!empty($exposures)) {
+            $this->handleSectorExposures($sectorId, $exposures, $primaryExposure);
+        }
+    }
+
+    /**
+     * Handle sector months securely
+     */
+    private function handleSectorMonths(int $sectorId, array $months): void
+    {
+        foreach ($months as $monthId => $monthData) {
+            if (!$this->isValidMonthId($monthId) || !isset($monthData['quality'])) {
+                continue; // Skip invalid months
+            }
+
+            if (!in_array($monthData['quality'], self::VALID_MONTH_QUALITIES)) {
+                continue; // Skip invalid qualities
+            }
+
+            $this->db->insert('climbing_sector_months', [
+                'sector_id' => $sectorId,
+                'month_id' => (int) $monthId,
+                'quality' => $monthData['quality'],
+                'notes' => !empty($monthData['notes']) ? trim($monthData['notes']) : null,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    /**
+     * Update sector months securely
+     */
+    private function updateSectorMonths(int $sectorId, array $months): void
+    {
+        // Delete existing months
+        $this->db->delete('climbing_sector_months', 'sector_id = ?', [$sectorId]);
+
+        // Add new months
+        if (!empty($months)) {
+            $this->handleSectorMonths($sectorId, $months);
+        }
+    }
+
+    /**
+     * Handle sector media upload securely
+     */
+    private function handleSectorMediaUpload(int $sectorId, array $data, int $userId): void
+    {
+        try {
+            $mediaFile = $_FILES['media_file'] ?? null;
+            if (!$mediaFile || !isset($mediaFile['tmp_name']) || !is_uploaded_file($mediaFile['tmp_name'])) {
+                return; // No file uploaded
+            }
+
+            // Validate file type
+            if (!$this->isValidMediaFile($mediaFile)) {
+                throw new \Exception('Type de fichier non autorisé');
+            }
+
+            // Validate file size (5MB max)
+            if ($mediaFile['size'] > 5 * 1024 * 1024) {
+                throw new \Exception('Fichier trop volumineux (max 5MB)');
+            }
+
+            $relationshipType = $data['media_relationship_type'] ?? 'gallery';
+            if (!in_array($relationshipType, ['main', 'gallery', 'topo'])) {
+                $relationshipType = 'gallery';
+            }
+
+            $mediaId = $this->mediaService->uploadMedia($mediaFile, [
+                'title' => !empty($data['media_title']) ? trim($data['media_title']) : 'Image secteur',
+                'description' => "Image pour le secteur: {$data['name']}",
+                'is_public' => 1,
+                'media_type' => 'image',
+                'entity_type' => 'sector',
+                'entity_id' => $sectorId,
+                'relationship_type' => $relationshipType
+            ], $userId);
+
+            // Si c'est une image principale, mettre à jour les anciennes relations "main"
+            if ($relationshipType === 'main' && $mediaId) {
+                $this->db->update(
+                    'climbing_media_relationships',
+                    ['relationship_type' => 'gallery'],
+                    'entity_type = ? AND entity_id = ? AND relationship_type = ? AND media_id != ?',
+                    ['sector', $sectorId, 'main', $mediaId]
+                );
+            }
+        } catch (\Exception $e) {
+            error_log("Media upload error: " . $e->getMessage());
+            // Ne pas faire échouer toute l'opération pour un problème de média
+        }
+    }
+
+    /**
+     * Validate media file
+     */
+    private function isValidMediaFile(array $file): bool
+    {
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return false;
+        }
+
+        // Check MIME type
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        return in_array($mimeType, self::ALLOWED_MIME_TYPES);
+    }
+
+    /**
+     * Get sector routes securely
+     */
+    private function getSectorRoutesSecure(int $sectorId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM climbing_routes WHERE sector_id = ? AND active = 1 ORDER BY number ASC, name ASC",
+            [$sectorId]
+        );
+    }
+
+    /**
+     * Get sector exposures securely
+     */
+    private function getSectorExposuresSecure(int $sectorId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT e.*, se.is_primary FROM climbing_exposures e 
+             JOIN climbing_sector_exposures se ON e.id = se.exposure_id 
+             WHERE se.sector_id = ? AND e.code IN ('" . implode("','", self::VALID_EXPOSURES) . "')
+             ORDER BY e.sort_order ASC",
+            [$sectorId]
+        );
+    }
+
+    /**
+     * Get sector months securely
+     */
+    private function getSectorMonthsSecure(int $sectorId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT sm.*, m.name, m.month_number FROM climbing_sector_months sm
+             JOIN climbing_months m ON sm.month_id = m.id
+             WHERE sm.sector_id = ? AND sm.quality IN ('" . implode("','", self::VALID_MONTH_QUALITIES) . "')
+             ORDER BY m.month_number ASC",
+            [$sectorId]
+        );
+    }
+
+    /**
+     * Calculate sector stats securely
+     */
+    private function calculateSectorStatsSecure(array $routes): array
+    {
+        $stats = [];
+
+        if (empty($routes)) {
+            return $stats;
+        }
+
+        // Calcul des difficultés min/max de manière sécurisée
+        $difficulties = array_filter(array_column($routes, 'difficulty'));
+        if (!empty($difficulties)) {
+            $stats['min_difficulty'] = min($difficulties);
+            $stats['max_difficulty'] = max($difficulties);
+        }
+
+        // Calcul de la longueur moyenne de manière sécurisée
+        $lengths = array_filter(array_map('floatval', array_column($routes, 'length')));
+        if (!empty($lengths)) {
+            $stats['avg_length'] = round(array_sum($lengths) / count($lengths));
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Enrich route data securely for API
+     */
+    private function enrichRouteDataSecure(array $route): array
+    {
+        return [
+            'id' => (int) $route['id'],
+            'name' => htmlspecialchars($route['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+            'number' => $route['number'] ?? null,
+            'difficulty' => htmlspecialchars($route['difficulty'] ?? '', ENT_QUOTES, 'UTF-8'),
+            'beauty' => (int) ($route['beauty'] ?? 0),
+            'style' => htmlspecialchars($route['style'] ?? '', ENT_QUOTES, 'UTF-8'),
+            'length' => $route['length'] ? (float) $route['length'] : null,
+            'equipment' => htmlspecialchars($route['equipment'] ?? '', ENT_QUOTES, 'UTF-8'),
+            'comment' => htmlspecialchars($route['comment'] ?? '', ENT_QUOTES, 'UTF-8'),
+            'lengthFormatted' => $route['length'] ? $route['length'] . 'm' : null,
+            'ascents_count' => $this->getRouteAscentsCountSecure((int) $route['id'])
+        ];
+    }
+
+    /**
+     * Get route ascents count securely
+     */
+    private function getRouteAscentsCountSecure(int $routeId): int
     {
         try {
             $result = $this->db->fetchOne(
                 "SELECT COUNT(*) as count FROM user_ascents WHERE route_id = ?",
                 [$routeId]
             );
-            return (int) ($result['count'] ?? 0);
+            return max(0, (int) ($result['count'] ?? 0));
         } catch (\Exception $e) {
+            error_log("Error counting ascents for route $routeId: " . $e->getMessage());
             return 0;
         }
     }
 
     /**
-     * Obtenir la difficulté minimale
+     * Check sector dependencies before deletion
      */
-    private function getMinDifficulty(array $routes): ?string
+    private function checkSectorDependencies(int $sectorId): array
     {
-        $difficulties = array_filter(array_column($routes, 'difficulty'));
-        return !empty($difficulties) ? min($difficulties) : null;
+        $dependencies = [
+            'canDelete' => true,
+            'reason' => '',
+            'routesCount' => 0,
+            'ascentsCount' => 0,
+            'mediaCount' => 0
+        ];
+
+        try {
+            // Count routes
+            $routesResult = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ?",
+                [$sectorId]
+            );
+            $dependencies['routesCount'] = (int) ($routesResult['count'] ?? 0);
+
+            // Count ascents via routes
+            $ascentsResult = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM user_ascents ua 
+                 JOIN climbing_routes r ON ua.route_id = r.id 
+                 WHERE r.sector_id = ?",
+                [$sectorId]
+            );
+            $dependencies['ascentsCount'] = (int) ($ascentsResult['count'] ?? 0);
+
+            // Count media
+            $mediaResult = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM climbing_media_relationships 
+                 WHERE entity_type = 'sector' AND entity_id = ?",
+                [$sectorId]
+            );
+            $dependencies['mediaCount'] = (int) ($mediaResult['count'] ?? 0);
+
+            // Determine if deletion is allowed
+            if ($dependencies['ascentsCount'] > 0) {
+                $dependencies['canDelete'] = false;
+                $dependencies['reason'] = "Ce secteur contient {$dependencies['ascentsCount']} ascensions d'utilisateurs";
+            } elseif ($dependencies['routesCount'] > 10) {
+                $dependencies['canDelete'] = false;
+                $dependencies['reason'] = "Ce secteur contient {$dependencies['routesCount']} voies (limite: 10)";
+            }
+        } catch (\Exception $e) {
+            error_log("Error checking dependencies for sector $sectorId: " . $e->getMessage());
+            $dependencies['canDelete'] = false;
+            $dependencies['reason'] = 'Erreur lors de la vérification des dépendances';
+        }
+
+        return $dependencies;
     }
 
     /**
-     * Obtenir la difficulté maximale  
+     * Delete sector securely with controlled cascade
      */
-    private function getMaxDifficulty(array $routes): ?string
+    private function deleteSectorSecurely(int $sectorId): void
     {
-        $difficulties = array_filter(array_column($routes, 'difficulty'));
-        return !empty($difficulties) ? max($difficulties) : null;
+        // Delete relations first
+        $this->db->delete('climbing_sector_exposures', 'sector_id = ?', [$sectorId]);
+        $this->db->delete('climbing_sector_months', 'sector_id = ?', [$sectorId]);
+
+        // Handle media deletion securely
+        $mediaRelations = $this->db->fetchAll(
+            "SELECT media_id FROM climbing_media_relationships WHERE entity_type = 'sector' AND entity_id = ?",
+            [$sectorId]
+        );
+
+        foreach ($mediaRelations as $relation) {
+            $mediaId = (int) $relation['media_id'];
+
+            // Delete media annotations
+            $this->db->delete('climbing_media_annotations', 'media_id = ?', [$mediaId]);
+
+            // Delete media relationships
+            $this->db->delete('climbing_media_relationships', 'media_id = ?', [$mediaId]);
+
+            // Delete media tags
+            $this->db->delete('climbing_media_tags', 'media_id = ?', [$mediaId]);
+
+            // Delete media itself
+            $this->db->delete('climbing_media', 'id = ?', [$mediaId]);
+        }
+
+        // Delete routes if any (should be few based on dependency check)
+        $routes = $this->db->fetchAll("SELECT id FROM climbing_routes WHERE sector_id = ?", [$sectorId]);
+        foreach ($routes as $route) {
+            $routeId = (int) $route['id'];
+
+            // Note: Ascensions should not exist based on dependency check
+            // But we check anyway for safety
+            $this->db->delete('user_ascents', 'route_id = ?', [$routeId]);
+            $this->db->delete('climbing_routes', 'id = ?', [$routeId]);
+        }
+
+        // Finally delete the sector
+        $success = $this->db->delete('climbing_sectors', 'id = ?', [$sectorId]);
+
+        if (!$success) {
+            throw new \Exception('Échec de la suppression du secteur');
+        }
     }
 
     /**
-     * Calculer la longueur moyenne
+     * Get current user ID securely
      */
-    private function getAverageLength(array $routes): ?int
+    private function getCurrentUserId(): ?int
     {
-        $lengths = array_filter(array_column($routes, 'length'));
-        if (empty($lengths)) return null;
+        $userId = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? null;
+        return $userId ? (int) $userId : null;
+    }
 
-        return (int) round(array_sum($lengths) / count($lengths));
+    /**
+     * Check if user is authenticated
+     */
+    private function isAuthenticated(): bool
+    {
+        return $this->getCurrentUserId() !== null;
+    }
+
+    /**
+     * Check if user has specific role(s)
+     */
+    private function hasRole(array $allowedRoles): bool
+    {
+        if (!$this->isAuthenticated()) {
+            return false;
+        }
+
+        $userRole = $_SESSION['auth_user_role'] ?? $this->session->get('user_role') ?? '3';
+        return in_array($userRole, $allowedRoles);
     }
 }
