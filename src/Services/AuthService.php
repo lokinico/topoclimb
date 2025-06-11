@@ -81,6 +81,16 @@ class AuthService
             // Créer l'objet User
             $user = new User();
             $user->fill($result);
+            $user = User::fromDatabase($result);
+
+            // AJOUT DE DEBUG
+            error_log("DEBUG - ID depuis BDD: " . ($result['id'] ?? 'NULL'));
+            error_log("DEBUG - User attributes: " . json_encode($user->getAttribute('id')));
+            error_log("DEBUG - User __get id: " . ($user->id ?? 'NULL'));
+            error_log("DEBUG - User getId(): " . (method_exists($user, 'getId') ? $user->getId() : 'method not found'));
+
+            // Connecter l'utilisateur (login() retourne void)
+            $this->auth->login($user, $remember);
 
             // Connecter l'utilisateur
             $loginSuccess = $this->auth->login($user);
