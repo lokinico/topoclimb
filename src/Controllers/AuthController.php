@@ -12,25 +12,15 @@ use TopoclimbCH\Models\User;
 use TopoclimbCH\Services\AuthService;
 use TopoclimbCH\Services\ValidationService;
 use TopoclimbCH\Core\Security\CsrfManager;
-
+use TopoclimbCH\Exceptions\ValidationException;
+use TopoclimbCH\Exceptions\AuthorizationException;
 
 class AuthController extends BaseController
 {
     /**
-     * @var Auth
-     * Modifier cette déclaration pour la rendre compatible avec BaseController
-     */
-    protected ?Auth $auth;
-
-    /**
      * @var AuthService
      */
     protected AuthService $authService;
-
-    /**
-     * @var Database
-     */
-    protected Database $db;
 
     /**
      * @var ValidationService
@@ -38,144 +28,130 @@ class AuthController extends BaseController
     protected ValidationService $validationService;
 
     /**
-     * Constructor
+     * Constructor - CORRIGÉ pour éviter les conflits de type
      *
      * @param View $view
      * @param Session $session
-     * @param Database $db      // ← Déplacé en 3ème position
-     * @param CsrfManager $csrfManager  // ← Déplacé en 4ème position
+     * @param CsrfManager $csrfManager
+     * @param Database $database
      */
-    public function __construct(View $view, Session $session, Database $db, CsrfManager $csrfManager)
+    public function __construct(View $view, Session $session, CsrfManager $csrfManager, Database $database)
     {
         parent::__construct($view, $session, $csrfManager);
 
-        // Initialiser les propriétés spécifiques à ce contrôleur
-        $this->db = $db;  // ← Database maintenant disponible directement
-        $this->auth = Auth::getInstance($session, $this->db);
-        $this->authService = new AuthService($this->auth, $session, $this->db);
+        // Utiliser la propriété héritée de BaseController
+        $this->db = $database;
 
-        // Créer ValidationService à la demande plutôt que par injection
+        // Initialiser Auth si pas déjà fait
+        if (!$this->auth) {
+            $this->auth = Auth::getInstance($session, $this->db);
+        }
+
+        // Initialiser les services
+        $this->authService = new AuthService($this->auth, $session, $this->db);
         $this->validationService = new ValidationService();
     }
 
     /**
-     * Affiche le formulaire de connexion
-     *
-     * @return Response
+     * Affiche le formulaire de connexion - VERSION SÉCURISÉE
      */
     public function loginForm(): Response
     {
-        if ($this->auth->check()) {
-            return $this->redirect('/');
-        }
+        try {
+            // Rediriger si déjà connecté
+            if ($this->auth && $this->auth->check()) {
+                return $this->redirect('/');
+            }
 
-        // Utiliser le token existant si on est en train de préserver le token
-        if ($this->session->has('_preserve_csrf')) {
-            $csrfToken = $this->session->get('csrf_token');
-            $this->session->remove('_preserve_csrf'); // Nettoyage
-        } else {
-            // Sinon, générer un nouveau token
-            $csrfToken = $this->createCsrfToken();
-        }
-
-        return $this->render('auth/login', [
-            'csrf_token' => $csrfToken
-        ]);
-    }
-
-    public function login(Request $request): Response
-    {
-        $credentials = $request->request->all();
-
-        // Ajouter des logs pour déboguer
-        error_log('Tentative de connexion avec: ' . json_encode([
-            'email' => $credentials['email'] ?? 'non fourni',
-            'password_length' => isset($credentials['password']) ? strlen($credentials['password']) : 0
-        ]));
-
-        // Validation
-        $rules = [
-            'email' => 'required',
-            'password' => 'required'
-        ];
-
-        $errors = $this->validationService->validate($credentials, $rules);
-
-        if (!empty($errors)) {
-            $this->session->flash('errors', $errors);
-            $this->session->flash('old', [
-                'email' => $credentials['email'] ?? ''
+            return $this->render('auth/login', [
+                'title' => 'Connexion',
+                'csrf_token' => $this->createCsrfToken()
             ]);
-            return $this->redirect('/login');
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire de connexion');
+            return $this->render('auth/login', [
+                'title' => 'Connexion',
+                'csrf_token' => $this->createCsrfToken(),
+                'error' => 'Une erreur est survenue'
+            ]);
         }
-
-        // Remember me
-        $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
-
-        // Tentative de connexion
-        $loginSuccess = $this->auth->attempt($credentials['email'], $credentials['password'], $remember);
-        error_log('Résultat de la tentative de connexion: ' . ($loginSuccess ? 'succès' : 'échec'));
-
-        if ($loginSuccess) {
-            // Récupération de l'URL intentionnelle
-            $intendedUrl = $this->session->get('intended_url', '/');
-            $this->session->remove('intended_url');
-
-            // Conserver les données critiques en session
-            $this->session->set('auth_user_id', $this->auth->id());
-            $this->session->set('user_authenticated', true);
-
-            // Message de succès
-            $this->flash('success', 'Vous êtes maintenant connecté');
-
-            // CRUCIAL: Persister la session
-            $this->session->persist();
-
-            // Log pour déboguer
-            error_log('Authentification réussie. User ID en session: ' . $this->session->get('auth_user_id'));
-            error_log('Redirection après connexion vers: ' . $intendedUrl);
-
-            // Redirection avec envoi immédiat
-            $response = Response::redirect($intendedUrl);
-            $response->send();
-            exit;
-        }
-
-        // Si échec de connexion
-        $this->flash('error', 'Identifiants invalides');
-        $this->session->flash('old', ['email' => $credentials['email'] ?? '']);
-        return $this->redirect('/login');
-
-        // Récupération de l'URL intentionnelle si disponible
-        $intendedUrl = $this->session->get('intended_url', '/');
-        $this->session->remove('intended_url');
-
-        $this->flash('success', 'Vous êtes maintenant connecté');
-
-        // Log de la redirection
-        error_log('Redirection après connexion vers: ' . $intendedUrl);
-
-        return $this->redirect($intendedUrl);
     }
 
     /**
-     * Déconnexion de l'utilisateur
+     * Traite la connexion - VERSION SÉCURISÉE
      */
-    public function logout(Request $request): Response  // ✅ Ajouter Request $request
+    public function login(Request $request): Response
     {
         try {
-            error_log("=== DÉBUT LOGOUT ===");
+            // Validation CSRF
+            $this->requireCsrfToken($request);
 
-            $userId = $this->auth ? $this->auth->id() : null;
-            error_log("User ID avant logout: " . ($userId ?? 'null'));
+            // Rate limiting - 5 tentatives par 5 minutes
+            $this->checkRateLimit($request->getClientIp(), 'login', 5, 300);
 
-            // Utiliser la méthode logout() de Auth qui gère tout
-            if ($this->auth) {
-                $success = $this->auth->logout();
-                error_log("Auth::logout() résultat: " . ($success ? 'succès' : 'échec'));
+            // Validation des données
+            $credentials = $this->validateInput($request->request->all(), [
+                'email' => 'required|email|max:255',
+                'password' => 'required|min:1|max:255'
+            ]);
+
+            $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
+
+            // Tentative de connexion
+            $loginSuccess = $this->authService->attempt($credentials['email'], $credentials['password'], $remember);
+
+            if ($loginSuccess) {
+                // Réinitialiser le rate limit en cas de succès
+                $this->resetRateLimit($request->getClientIp(), 'login');
+
+                // Récupération de l'URL intentionnelle
+                $intendedUrl = $this->session->get('intended_url', '/');
+                $this->session->remove('intended_url');
+
+                // Logging de connexion réussie
+                $this->logAction('user_login_success', [
+                    'user_id' => $this->auth->id(),
+                    'ip' => $request->getClientIp(),
+                    'user_agent' => $request->headers->get('User-Agent')
+                ]);
+
+                $this->flash('success', 'Connexion réussie');
+                return $this->redirect($intendedUrl);
             }
 
-            // Nettoyer aussi la session via le gestionnaire de session
+            // Échec de connexion
+            $this->logAction('user_login_failed', [
+                'email' => $credentials['email'],
+                'ip' => $request->getClientIp(),
+                'user_agent' => $request->headers->get('User-Agent')
+            ]);
+
+            $this->flash('error', 'Identifiants invalides');
+            return $this->redirect('/login');
+        } catch (ValidationException $e) {
+            $this->flash('error', 'Données de connexion invalides');
+            return $this->redirect('/login');
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de la connexion');
+            $this->flash('error', 'Une erreur est survenue lors de la connexion');
+            return $this->redirect('/login');
+        }
+    }
+
+    /**
+     * Déconnexion - VERSION SÉCURISÉE
+     */
+    public function logout(Request $request): Response
+    {
+        try {
+            $userId = $this->auth ? $this->auth->id() : null;
+
+            // Déconnexion via AuthService
+            if ($this->auth) {
+                $this->auth->logout();
+            }
+
+            // Nettoyer la session
             $this->session->remove('auth_user_id');
             $this->session->remove('is_authenticated');
 
@@ -184,192 +160,305 @@ class AuthController extends BaseController
                 setcookie('remember_token', '', time() - 3600, '/', '', true, true);
             }
 
-            error_log("Logout réussi");
+            // Logging
+            $this->logAction('user_logout', [
+                'user_id' => $userId,
+                'ip' => $request->getClientIp()
+            ]);
 
-            // ✅ Utiliser flash() au lieu de with()
             $this->flash('success', 'Vous avez été déconnecté avec succès');
-
-            // ✅ Retourner une Response simple sans with()
             return $this->redirect('/');
         } catch (\Exception $e) {
-            error_log("ERREUR LOGOUT: " . $e->getMessage());
-            error_log("Stack trace: " . $e->getTraceAsString());
-
-            // ✅ Utiliser flash() au lieu de with()
+            $this->handleError($e, 'Erreur lors de la déconnexion');
             $this->flash('error', 'Erreur lors de la déconnexion');
-
             return $this->redirect('/');
         }
     }
-
-    public function registerForm(): Response
-    {
-        if ($this->auth->check()) {
-            return $this->redirect('/');
-        }
-
-        // Générer et passer le token CSRF à la vue
-        $csrfToken = $this->createCsrfToken();
-
-        return $this->render('auth/register', [
-            'csrf_token' => $csrfToken
-        ]);
-    }
-
-    public function register(Request $request): Response
-    {
-        $data = $request->request->all();
-
-        // Validation
-        $rules = [
-            'nom' => 'required',
-            'prenom' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|min:8',
-            'password_confirmation' => 'required',
-            'username' => 'required'
-        ];
-
-        $errors = $this->validationService->validate($data, $rules);
-
-        // Vérification de la correspondance des mots de passe
-        if (!$this->validationService->validateEquals($data, 'password', 'password_confirmation')) {
-            $errors = $this->validationService->addError($errors, 'password_confirmation', 'Les mots de passe ne correspondent pas');
-        }
-
-        // Vérification des conflits d'email/username
-        // Utiliser directement une requête SQL pour éviter les problèmes avec Model::where()
-        $emailExists = $this->db->query("SELECT COUNT(*) as count FROM users WHERE mail = ?", [$data['email']])->fetch();
-        if ($emailExists && $emailExists['count'] > 0) {
-            $errors = $this->validationService->addError($errors, 'email', 'Cet email est déjà utilisé');
-        }
-
-        $usernameExists = $this->db->query("SELECT COUNT(*) as count FROM users WHERE username = ?", [$data['username']])->fetch();
-        if ($usernameExists && $usernameExists['count'] > 0) {
-            $errors = $this->validationService->addError($errors, 'username', 'Ce nom d\'utilisateur est déjà utilisé');
-        }
-
-        if (!empty($errors)) {
-            $this->session->flash('errors', $errors);
-            $this->session->flash('old', $data);
-            return $this->redirect('/register');
-        }
-
-        // Création de l'utilisateur
-        $user = new User();
-        $user->nom = $data['nom'];
-        $user->prenom = $data['prenom'];
-        $user->mail = $data['email'];
-        $user->username = $data['username'];
-        $user->ville = $data['ville'] ?? '';
-        $user->password = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
-        $user->autorisation = '3'; // Utilisateur standard
-        $user->save();
-
-        // Connexion automatique
-        $this->auth->attempt($data['email'], $data['password']);
-
-        $this->flash('success', 'Votre compte a été créé avec succès');
-        return $this->redirect('/');
-    }
-
-    public function forgotPasswordForm(): Response
-    {
-        // Générer et passer le token CSRF à la vue
-        $csrfToken = $this->createCsrfToken();
-
-        return $this->render('auth/forgot-password', [
-            'csrf_token' => $csrfToken
-        ]);
-    }
-
-    public function forgotPassword(Request $request): Response
-    {
-        $email = $request->request->get('email');
-
-        // Validation
-        $rules = [
-            'email' => 'required|email'
-        ];
-
-        $errors = $this->validationService->validate(['email' => $email], $rules);
-
-        if (!empty($errors)) {
-            $this->session->flash('errors', $errors);
-            return $this->redirect('/forgot-password');
-        }
-
-        $this->authService->sendPasswordResetEmail($email);
-
-        // Message identique que l'email existe ou non (sécurité contre l'énumération)
-        $this->flash('success', 'Un email de réinitialisation a été envoyé si cette adresse est associée à un compte');
-        return $this->redirect('/login');
-    }
-
-    public function resetPasswordForm(Request $request): Response
-    {
-        $token = $request->attributes->get('token');
-
-        if (!$this->authService->validateResetToken($token)) {
-            $this->flash('error', 'Ce lien de réinitialisation est invalide ou a expiré');
-            return $this->redirect('/login');
-        }
-
-        // Générer et passer le token CSRF à la vue
-        $csrfToken = $this->createCsrfToken();
-
-        return $this->render('auth/reset-password', [
-            'token' => $token,
-            'csrf_token' => $csrfToken
-        ]);
-    }
-
-    public function resetPassword(Request $request): Response
-    {
-        $data = $request->request->all();
-        $token = $data['token'] ?? '';
-
-        // Validation
-        $rules = [
-            'token' => 'required',
-            'password' => 'required|min:8',
-            'password_confirmation' => 'required'
-        ];
-
-        $errors = $this->validationService->validate($data, $rules);
-
-        // Vérification de la correspondance des mots de passe
-        if (!$this->validationService->validateEquals($data, 'password', 'password_confirmation')) {
-            $errors = $this->validationService->addError($errors, 'password_confirmation', 'Les mots de passe ne correspondent pas');
-        }
-
-        if (!empty($errors)) {
-            $this->session->flash('errors', $errors);
-            return $this->redirect('/reset-password?token=' . $token);
-        }
-
-        if ($this->authService->resetPassword($token, $data['password'])) {
-            $this->flash('success', 'Votre mot de passe a été réinitialisé avec succès');
-            return $this->redirect('/login');
-        }
-
-        $this->flash('error', 'Une erreur est survenue lors de la réinitialisation');
-        return $this->redirect('/reset-password?token=' . $token);
-    }
-
-    // SUPPRESSION DE LA MÉTHODE validateCsrfToken 
-    // Elle sera héritée de BaseController
 
     /**
-     * Méthode pour tester la connexion à la base de données
+     * Formulaire d'inscription - VERSION SÉCURISÉE
+     */
+    public function registerForm(): Response
+    {
+        try {
+            if ($this->auth && $this->auth->check()) {
+                return $this->redirect('/');
+            }
+
+            return $this->render('auth/register', [
+                'title' => 'Inscription',
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire d\'inscription');
+            return $this->redirect('/');
+        }
+    }
+
+    /**
+     * Traite l'inscription - VERSION SÉCURISÉE
+     */
+    public function register(Request $request): Response
+    {
+        try {
+            // Validation CSRF
+            $this->requireCsrfToken($request);
+
+            // Rate limiting - 3 inscriptions par heure par IP
+            $this->checkRateLimit($request->getClientIp(), 'register', 3, 3600);
+
+            // Validation des données
+            $data = $this->validateInput($request->request->all(), [
+                'nom' => 'required|string|min:2|max:100',
+                'prenom' => 'required|string|min:2|max:100',
+                'email' => 'required|email|max:255',
+                'password' => 'required|min:12|max:255',
+                'password_confirmation' => 'required',
+                'username' => 'required|string|min:3|max:50|regex:/^[a-zA-Z0-9_]+$/',
+                'ville' => 'nullable|string|max:100'
+            ]);
+
+            // Vérification de la correspondance des mots de passe
+            if ($data['password'] !== $data['password_confirmation']) {
+                throw new ValidationException('Les mots de passe ne correspondent pas');
+            }
+
+            // Validation avancée du mot de passe
+            if (!$this->validatePasswordStrength($data['password'])) {
+                throw new ValidationException('Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial');
+            }
+
+            $result = $this->executeInTransaction(function () use ($data, $request) {
+                // Vérification de l'unicité email/username
+                $emailExists = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE mail = ?", [$data['email']]);
+                if ($emailExists && $emailExists['count'] > 0) {
+                    throw new ValidationException('Cet email est déjà utilisé');
+                }
+
+                $usernameExists = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE username = ?", [$data['username']]);
+                if ($usernameExists && $usernameExists['count'] > 0) {
+                    throw new ValidationException('Ce nom d\'utilisateur est déjà utilisé');
+                }
+
+                // Création de l'utilisateur
+                $user = new User();
+                $user->nom = $data['nom'];
+                $user->prenom = $data['prenom'];
+                $user->mail = $data['email'];
+                $user->username = $data['username'];
+                $user->ville = $data['ville'] ?? '';
+                $user->password = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+                $user->autorisation = '4'; // Nouveau membre (en attente)
+                $user->save();
+
+                // Logging
+                $this->logAction('user_registered', [
+                    'user_id' => $user->id,
+                    'email' => $data['email'],
+                    'username' => $data['username'],
+                    'ip' => $request->getClientIp()
+                ]);
+
+                return $user;
+            });
+
+            // Connexion automatique après inscription
+            $this->auth->attempt($data['email'], $data['password']);
+
+            $this->flash('success', 'Inscription réussie ! Votre compte est en attente de validation.');
+            return $this->redirect('/pending');
+        } catch (ValidationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/register');
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de l\'inscription');
+            $this->flash('error', 'Une erreur est survenue lors de l\'inscription');
+            return $this->redirect('/register');
+        }
+    }
+
+    /**
+     * Formulaire mot de passe oublié - VERSION SÉCURISÉE
+     */
+    public function forgotPasswordForm(): Response
+    {
+        try {
+            return $this->render('auth/forgot-password', [
+                'title' => 'Mot de passe oublié',
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire');
+            return $this->redirect('/login');
+        }
+    }
+
+    /**
+     * Traite la demande de réinitialisation - VERSION SÉCURISÉE
+     */
+    public function forgotPassword(Request $request): Response
+    {
+        try {
+            // Validation CSRF
+            $this->requireCsrfToken($request);
+
+            // Rate limiting - 3 demandes par heure par IP
+            $this->checkRateLimit($request->getClientIp(), 'forgot_password', 3, 3600);
+
+            // Validation
+            $data = $this->validateInput($request->request->all(), [
+                'email' => 'required|email|max:255'
+            ]);
+
+            $this->authService->sendPasswordResetEmail($data['email']);
+
+            // Logging (sans révéler si l'email existe)
+            $this->logAction('password_reset_requested', [
+                'email' => $data['email'],
+                'ip' => $request->getClientIp()
+            ]);
+
+            // Message identique que l'email existe ou non (sécurité)
+            $this->flash('success', 'Si cette adresse email est associée à un compte, vous recevrez un lien de réinitialisation.');
+            return $this->redirect('/login');
+        } catch (ValidationException $e) {
+            $this->flash('error', 'Adresse email invalide');
+            return $this->redirect('/forgot-password');
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de la demande de réinitialisation');
+            $this->flash('error', 'Une erreur est survenue');
+            return $this->redirect('/forgot-password');
+        }
+    }
+
+    /**
+     * Formulaire de réinitialisation avec token - VERSION SÉCURISÉE
+     */
+    public function resetPasswordForm(Request $request): Response
+    {
+        try {
+            $token = $request->attributes->get('token');
+
+            if (!$token || !$this->authService->validateResetToken($token)) {
+                $this->flash('error', 'Lien de réinitialisation invalide ou expiré');
+                return $this->redirect('/login');
+            }
+
+            return $this->render('auth/reset-password', [
+                'title' => 'Réinitialiser le mot de passe',
+                'token' => $token,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire de réinitialisation');
+            return $this->redirect('/login');
+        }
+    }
+
+    /**
+     * Traite la réinitialisation - VERSION SÉCURISÉE
+     */
+    public function resetPassword(Request $request): Response
+    {
+        try {
+            // Validation CSRF
+            $this->requireCsrfToken($request);
+
+            // Validation des données
+            $data = $this->validateInput($request->request->all(), [
+                'token' => 'required|string',
+                'password' => 'required|min:12|max:255',
+                'password_confirmation' => 'required'
+            ]);
+
+            // Vérification correspondance mots de passe
+            if ($data['password'] !== $data['password_confirmation']) {
+                throw new ValidationException('Les mots de passe ne correspondent pas');
+            }
+
+            // Validation force du mot de passe
+            if (!$this->validatePasswordStrength($data['password'])) {
+                throw new ValidationException('Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial');
+            }
+
+            if ($this->authService->resetPassword($data['token'], $data['password'])) {
+                $this->logAction('password_reset_completed', [
+                    'ip' => $request->getClientIp()
+                ]);
+
+                $this->flash('success', 'Mot de passe réinitialisé avec succès');
+                return $this->redirect('/login');
+            }
+
+            throw new ValidationException('Token de réinitialisation invalide');
+        } catch (ValidationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/reset-password?token=' . ($data['token'] ?? ''));
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de la réinitialisation');
+            $this->flash('error', 'Une erreur est survenue');
+            return $this->redirect('/login');
+        }
+    }
+
+    // ===== MÉTHODES PRIVÉES SÉCURISÉES =====
+
+    /**
+     * Vérifie le rate limiting
+     */
+    private function checkRateLimit(string $identifier, string $action, int $maxAttempts, int $timeWindow): void
+    {
+        $key = "rate_limit_{$action}_{$identifier}";
+        $attempts = $this->session->get($key, ['count' => 0, 'timestamp' => time()]);
+
+        // Reset si la fenêtre de temps est dépassée
+        if (time() - $attempts['timestamp'] > $timeWindow) {
+            $attempts = ['count' => 0, 'timestamp' => time()];
+        }
+
+        if ($attempts['count'] >= $maxAttempts) {
+            $remainingTime = $timeWindow - (time() - $attempts['timestamp']);
+            throw new ValidationException("Trop de tentatives. Réessayez dans " . ceil($remainingTime / 60) . " minutes.");
+        }
+
+        // Incrémenter le compteur
+        $attempts['count']++;
+        $this->session->set($key, $attempts);
+    }
+
+    /**
+     * Remet à zéro le rate limit
+     */
+    private function resetRateLimit(string $identifier, string $action): void
+    {
+        $key = "rate_limit_{$action}_{$identifier}";
+        $this->session->remove($key);
+    }
+
+    /**
+     * Valide la force du mot de passe
+     */
+    private function validatePasswordStrength(string $password): bool
+    {
+        // Au moins 12 caractères, une majuscule, une minuscule, un chiffre, un caractère spécial
+        return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/', $password) === 1;
+    }
+
+    /**
+     * Test de connexion à la base de données (pour debugging)
      */
     public function testDatabase(): Response
     {
         try {
-            $result = $this->db->query("SELECT 1")->fetch();
-            return Response::json(['success' => true, 'message' => 'Connexion à la BDD réussie']);
+            if (!$this->db) {
+                return $this->json(['success' => false, 'message' => 'Database non initialisée']);
+            }
+
+            $result = $this->db->fetchOne("SELECT 1 as test");
+            return $this->json(['success' => true, 'message' => 'Connexion à la BDD réussie', 'result' => $result]);
         } catch (\Exception $e) {
-            return Response::json(['success' => false, 'message' => 'Erreur de connexion: ' . $e->getMessage()]);
+            $this->handleError($e, 'Test de connexion BDD');
+            return $this->json(['success' => false, 'message' => 'Erreur de connexion à la BDD']);
         }
     }
 }
