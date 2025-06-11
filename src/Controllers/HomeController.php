@@ -3,6 +3,7 @@
 namespace TopoclimbCH\Controllers;
 
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Security\CsrfManager;
@@ -50,7 +51,7 @@ class HomeController extends BaseController
         $this->userService = $userService;
         $this->weatherService = $weatherService;
     }
-    public function index(): void
+    public function index(): Response
     {
         try {
             // Calculer les statistiques dynamiques
@@ -76,7 +77,7 @@ class HomeController extends BaseController
                 ]
             ];
 
-            $this->render('home/index', $data);
+            return $this->render('home/index', $data);
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors du chargement de la page d\'accueil');
         }
