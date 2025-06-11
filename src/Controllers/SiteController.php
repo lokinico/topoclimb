@@ -21,12 +21,12 @@ class SiteController extends BaseController
     public function __construct(
         View $view,
         Session $session,
-        Database $db,
-        MediaService $mediaService,
-        CsrfManager $csrfManager
+        CsrfManager $csrfManager,  // Position 3 comme attendu par le container
+        MediaService $mediaService, // Position 4
+        RegionService $regionService, // Position 5 (ajouté car utilisé dans le code)
+        SectorService $sectorService  // Position 6 (ajouté car utilisé dans le code)
     ) {
         parent::__construct($view, $session, $csrfManager);
-        $this->db = $db;
         $this->mediaService = $mediaService;
     }
 
