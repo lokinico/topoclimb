@@ -190,12 +190,13 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\AuthService'      // Position 4: AuthService $authService
             ],
             'TopoclimbCH\\Controllers\\SectorController' => [
-                View::class,
-                Session::class,
-                'TopoclimbCH\\Services\\SectorService',
-                'TopoclimbCH\\Services\\MediaService',
-                Database::class,
-                CsrfManager::class
+                View::class,                                    // 1
+                Session::class,                                 // 2
+                'TopoclimbCH\\Services\\SectorService',         // 3
+                'TopoclimbCH\\Services\\MediaService',          // 4
+                'TopoclimbCH\\Services\\ValidationService',     // 5 ← CORRIGÉ
+                Database::class,                                // 6 ← DÉPLACÉ
+                CsrfManager::class                              // 7
             ],
             'TopoclimbCH\\Controllers\\RouteController' => [
                 View::class,
