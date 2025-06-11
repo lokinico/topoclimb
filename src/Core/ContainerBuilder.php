@@ -165,13 +165,14 @@ class ContainerBuilder
     {
         $controllers = [
             'TopoclimbCH\\Controllers\\HomeController' => [
-                Database::class,                              // Position 1: Database $db
-                'TopoclimbCH\\Services\\RegionService',       // Position 2: RegionService $regionService
-                'TopoclimbCH\\Services\\SiteService',         // Position 3: SiteService $siteService
-                'TopoclimbCH\\Services\\SectorService',       // Position 4: SectorService $sectorService
-                'TopoclimbCH\\Services\\RouteService',        // Position 5: RouteService $routeService
-                'TopoclimbCH\\Services\\UserService',         // Position 6: UserService $userService
-                'TopoclimbCH\\Services\\WeatherService'       // Position 7: WeatherService $weatherService
+                View::class,                              // Position 1: pour BaseController
+                Database::class,                          // Position 2
+                'TopoclimbCH\\Services\\RegionService',   // Position 3
+                'TopoclimbCH\\Services\\SiteService',     // Position 4
+                'TopoclimbCH\\Services\\SectorService',   // Position 5
+                'TopoclimbCH\\Services\\RouteService',    // Position 6
+                'TopoclimbCH\\Services\\UserService',     // Position 7
+                'TopoclimbCH\\Services\\WeatherService'   // Position 8
             ],
             'TopoclimbCH\\Controllers\\AuthController' => [
                 View::class,
