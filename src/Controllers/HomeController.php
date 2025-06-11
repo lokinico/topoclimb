@@ -341,38 +341,4 @@ class HomeController extends BaseController
             ]
         ]);
     }
-
-    /**
-     * Gestion d'erreur centralisée
-     */
-    private function handleError(\Exception $e, string $message): void
-    {
-        error_log($message . ': ' . $e->getMessage());
-
-        // En développement, afficher l'erreur
-        if ($_ENV['APP_DEBUG'] ?? false) {
-            throw $e;
-        }
-
-        // En production, afficher une page d'erreur générique
-        $this->render('home/index', [
-            'title' => 'TopoclimbCH',
-            'description' => 'Escalade en Suisse',
-            'stats' => [
-                'regions_count' => '0',
-                'sites_count' => '0',
-                'sectors_count' => '0',
-                'routes_count' => '0',
-                'books_count' => '0',
-                'users_count' => '0',
-                'ascents_count' => '0',
-                'active_users_month' => '0',
-                'new_routes_month' => '0',
-                'photos_count' => '0'
-            ],
-            'popular_sectors' => [],
-            'recent_books' => [],
-            'trending_routes' => []
-        ]);
-    }
 }
