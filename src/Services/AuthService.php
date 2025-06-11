@@ -79,8 +79,7 @@ class AuthService
             }
 
             // Créer l'objet User
-            $user = new User();
-            $user->fill($result);
+            $user = User::fromDatabase($result);
 
             // Connecter l'utilisateur
             $loginSuccess = $this->auth->login($user);
@@ -133,8 +132,7 @@ class AuthService
             // Récupérer l'utilisateur créé
             $userData = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
 
-            $user = new User();
-            $user->fill($userData);
+            $user = User::fromDatabase($result);
 
             return $user;
         } catch (\Exception $e) {
@@ -201,8 +199,7 @@ class AuthService
             }
 
             // Créer l'objet User
-            $user = new User();
-            $user->fill($result);
+            $user = User::fromDatabase($result);
 
             // Connecter l'utilisateur
             $loginSuccess = $this->auth->login($user);
