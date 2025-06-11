@@ -70,10 +70,7 @@
         </div>
     </div>
 
-    <!-- Navigation -->
-    {% include 'partials/navigation.twig' %}
-    
-    <!-- Navigation mise à jour avec la nouvelle structure -->
+    <!-- Navigation moderne -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
             <a class="navbar-brand" href="{{ url('/') }}">
@@ -108,9 +105,9 @@
                         </a>
                     </li>
                     
-                    <!-- Menu Explorer avec nouvelle hiérarchie -->
+                    <!-- Menu Explorer avec hiérarchie complète -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ is_active(['/regions', '/sites', '/sectors', '/routes']) ? 'active' : '' }}" 
+                        <a class="nav-link dropdown-toggle {{ is_active(['/regions', '/sites', '/sectors', '/routes', '/books']) ? 'active' : '' }}" 
                            href="#" data-bs-toggle="dropdown">
                             <i class="fas fa-map me-1"></i>
                             Explorer
@@ -427,6 +424,7 @@
                             <a href="{{ url('/search?q=5c') }}" class="badge bg-secondary text-decoration-none">5c</a>
                             <a href="{{ url('/search?q=dalle') }}" class="badge bg-secondary text-decoration-none">Dalle</a>
                             <a href="{{ url('/search?q=Bataille') }}" class="badge bg-secondary text-decoration-none">Bataille</a>
+                            <a href="{{ url('/search?q=guide&type=book') }}" class="badge bg-info text-decoration-none">Guides</a>
                         </div>
                     </div>
                 </div>
@@ -469,6 +467,18 @@
                             <a href="{{ url('/books/create') }}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
                                 <i class="fas fa-book fa-2x mb-2"></i>
                                 <span>Nouveau guide</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ url('/ascents/create') }}" class="btn btn-outline-secondary w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                <span>Logger ascension</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ url('/media/upload') }}" class="btn btn-outline-dark w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-camera fa-2x mb-2"></i>
+                                <span>Ajouter photos</span>
                             </a>
                         </div>
                         <div class="col-6">

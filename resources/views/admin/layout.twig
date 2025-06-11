@@ -1,707 +1,318 @@
 <!DOCTYPE html>
-<html lang="{{ app_locale|default('fr') }}" data-theme="light">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{% block description %}TopoclimbCH - Base de données des sites d'escalade en Suisse{% endblock %}">
-    <meta name="keywords" content="{% block keywords %}escalade, grimpe, topo, suisse, voies, secteurs{% endblock %}">
-    <meta name="author" content="TopoclimbCH">
+    <title>{% block title %}{{ title ?? 'Administration' }}{% endblock %} - {{ app_name }}</title>
     
-    <!-- PWA Meta -->
-    <meta name="theme-color" content="#667eea">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    {{ csrf_meta() }}
     
-    <title>{% block title %}TopoclimbCH{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Favicons -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
-    
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    
-    <!-- Libs externes -->
-    {% block map_styles %}{% endblock %}
-    {% block styles %}{% endblock %}
-    
-    <!-- Performance monitoring -->
-    <script>
-        window.performanceMetrics = {
-            startTime: performance.now(),
-            resourceTimings: []
-        };
-    </script>
-</head>
-<body class="d-flex flex-column min-vh-100" data-theme="light">
-    <!-- Barre de notifications système -->
-    <div id="systemNotifications" class="system-notifications">
-        <!-- Notifications météo, alertes, maintenance, etc. -->
-    </div>
-
-    <!-- Toolbar utilitaires -->
-    <div class="utility-toolbar" id="utilityToolbar">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center">
-                <!-- Informations contextuelles -->
-                <div class="context-info">
-                    <span id="weatherWidget" class="weather-widget d-none d-md-inline">
-                        <i class="fas fa-cloud-sun"></i>
-                        <span class="temp">--°C</span>
-                    </span>
-                    <span id="locationInfo" class="location-info ms-3 d-none d-lg-inline">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span class="location">Suisse</span>
-                    </span>
-                </div>
-                
-                <!-- Outils rapides -->
-                <div class="quick-tools">
-                    <!-- Language switcher -->
-                    <div class="dropdown d-inline-block">
-                        <button class="btn btn-sm btn-ghost dropdown-toggle" data-bs-toggle="dropdown" aria-label="Changer de langue">
-                            <i class="fas fa-globe"></i>
-                            <span class="d-none d-sm-inline">{{ app_locale|upper }}</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="?lang=fr"><i class="flag-icon flag-icon-ch"></i> Français</a></li>
-                            <li><a class="dropdown-item" href="?lang=de"><i class="flag-icon flag-icon-de"></i> Deutsch</a></li>
-                            <li><a class="dropdown-item" href="?lang=en"><i class="flag-icon flag-icon-gb"></i> English</a></li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Dark mode toggle -->
-                    <button class="btn btn-sm btn-ghost" id="themeToggle" aria-label="Changer le thème">
-                        <i class="fas fa-moon dark-icon"></i>
-                        <i class="fas fa-sun light-icon"></i>
-                    </button>
-                    
-                    <!-- Accessibility tools -->
-                    <div class="dropdown d-inline-block">
-                        <button class="btn btn-sm btn-ghost dropdown-toggle" data-bs-toggle="dropdown" aria-label="Outils d'accessibilité">
-                            <i class="fas fa-universal-access"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#" onclick="adjustFontSize(1)"><i class="fas fa-search-plus me-2"></i>Agrandir texte</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="adjustFontSize(-1)"><i class="fas fa-search-minus me-2"></i>Réduire texte</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="toggleHighContrast()"><i class="fas fa-adjust me-2"></i>Contraste élevé</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="toggleReducedMotion()"><i class="fas fa-running me-2"></i>Réduire animations</a></li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Notifications center -->
-                    {% if auth() %}
-                    <div class="dropdown d-inline-block">
-                        <button class="btn btn-sm btn-ghost position-relative" data-bs-toggle="dropdown" aria-label="Notifications">
-                            <i class="fas fa-bell"></i>
-                            <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end notification-panel">
-                            <div class="notification-header">
-                                <h6 class="mb-0">Notifications</h6>
-                                <button class="btn btn-sm btn-ghost" onclick="markAllAsRead()">
-                                    <i class="fas fa-check-double"></i>
-                                </button>
-                            </div>
-                            <div class="notification-list" id="notificationList">
-                                <!-- Notifications dynamiques -->
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navigation principale -->
-    <nav class="navbar navbar-expand-lg navbar-modern sticky-top">
-        <div class="container">
-            <a class="navbar-brand brand-modern" href="{{ url('/') }}">
-                <div class="brand-icon">
-                    <i class="fas fa-mountain"></i>
-                </div>
-                <span class="brand-text">TopoclimbCH</span>
-            </a>
-            
-            <!-- Recherche intégrée (desktop) -->
-            <div class="navbar-search d-none d-lg-flex">
-                <form action="{{ url('/search') }}" method="get" class="search-form-inline">
-                    <div class="input-group">
-                        <input type="text" class="form-control search-input" name="q" 
-                               placeholder="Rechercher..." autocomplete="off"
-                               id="headerSearchInput">
-                        <button type="submit" class="btn btn-search">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                    <!-- Autocomplete dropdown -->
-                    <div class="search-autocomplete" id="searchAutocomplete"></div>
-                </form>
-            </div>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarMain">
-                <ul class="navbar-nav nav-modern me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {{ is_active('/') ? 'active' : '' }}" href="{{ url('/') }}">
-                            <i class="fas fa-home me-2"></i>
-                            <span>Accueil</span>
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ is_active('/regions') or is_active('/sites') or is_active('/sectors') ? 'active' : '' }}" 
-                           href="#" data-bs-toggle="dropdown">
-                            <i class="fas fa-map me-2"></i>
-                            <span>Explorer</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-modern">
-                            <li><a class="dropdown-item" href="{{ url('/regions') }}">
-                                <i class="fas fa-map-marked-alt me-2"></i>Régions
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url('/sites') }}">
-                                <i class="fas fa-book me-2"></i>Sites
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url('/sectors') }}">
-                                <i class="fas fa-location-dot me-2"></i>Secteurs
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url('/map') }}">
-                                <i class="fas fa-globe me-2"></i>Carte interactive
-                            </a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ is_active('/routes') ? 'active' : '' }}" href="{{ url('/routes') }}">
-                            <i class="fas fa-route me-2"></i>
-                            <span>Voies</span>
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="fas fa-users me-2"></i>
-                            <span>Communauté</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-modern">
-                            <li><a class="dropdown-item" href="{{ url('/events') }}">
-                                <i class="fas fa-calendar me-2"></i>Événements
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url('/forum') }}">
-                                <i class="fas fa-comments me-2"></i>Forum
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url('/blog') }}">
-                                <i class="fas fa-newspaper me-2"></i>Blog
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url('/leaderboard') }}">
-                                <i class="fas fa-trophy me-2"></i>Classements
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-                
-                <!-- Actions rapides -->
-                <div class="navbar-actions me-3">
-                    <!-- Recherche mobile -->
-                    <button class="btn btn-action d-lg-none" data-bs-toggle="modal" data-bs-target="#searchModal">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    
-                    <!-- Localisation -->
-                    <button class="btn btn-action" id="geoLocationBtn" title="Ma position">
-                        <i class="fas fa-crosshairs"></i>
-                    </button>
-                    
-                    <!-- Favoris rapides -->
-                    {% if auth() %}
-                    <div class="dropdown d-inline-block">
-                        <button class="btn btn-action dropdown-toggle" data-bs-toggle="dropdown" title="Favoris">
-                            <i class="fas fa-heart"></i>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end favorites-panel">
-                            <div class="dropdown-header">Favoris récents</div>
-                            <div id="quickFavorites">
-                                <!-- Favoris chargés dynamiquement -->
-                            </div>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="{{ url('/favorites') }}">
-                                <i class="fas fa-heart me-2"></i>Voir tous les favoris
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Ajout rapide -->
-                    <button class="btn btn-action" data-bs-toggle="modal" data-bs-target="#quickAddModal" title="Ajout rapide">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    {% endif %}
-                </div>
-                
-                <!-- Menu utilisateur -->
-                <ul class="navbar-nav">
-                    {% if auth() %}
-                        <li class="nav-item dropdown user-dropdown">
-                            <a class="nav-link dropdown-toggle user-menu" href="#" data-bs-toggle="dropdown">
-                                <div class="user-avatar">
-                                    {% if auth_user().avatar %}
-                                        <img src="{{ asset('uploads/avatars/' ~ auth_user().avatar) }}" alt="Avatar">
-                                    {% else %}
-                                        <i class="fas fa-user-circle"></i>
-                                    {% endif %}
-                                </div>
-                                <div class="user-info d-none d-lg-block">
-                                    <span class="user-name">{{ auth_user().prenom }}</span>
-                                    <small class="user-role">
-                                        {% if auth_user().autorisation == '0' %}Admin
-                                        {% elseif auth_user().autorisation == '1' %}Modérateur
-                                        {% elseif auth_user().autorisation == '2' %}Éditeur
-                                        {% else %}Grimpeur
-                                        {% endif %}
-                                    </small>
-                                </div>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-modern dropdown-menu-end">
-                                <li class="dropdown-header">
-                                    <div class="user-dropdown-info">
-                                        <strong>{{ auth_user().prenom }} {{ auth_user().nom }}</strong>
-                                        <small class="text-muted">{{ auth_user().mail }}</small>
-                                    </div>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url('/profile') }}">
-                                    <i class="fas fa-user me-3"></i>Mon profil
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ url('/ascents') }}">
-                                    <i class="fas fa-chart-line me-3"></i>Mes ascensions
-                                    <span class="badge bg-primary ms-auto">{{ user_stats.total_ascents|default(0) }}</span>
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ url('/favorites') }}">
-                                    <i class="fas fa-heart me-3"></i>Mes favoris
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ url('/events/my') }}">
-                                    <i class="fas fa-calendar me-3"></i>Mes événements
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ url('/achievements') }}">
-                                    <i class="fas fa-medal me-3"></i>Réussites
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                {% if auth_user().autorisation in ['1', '2'] %}
-                                <li><a class="dropdown-item" href="{{ url('/admin') }}">
-                                    <i class="fas fa-cog me-3"></i>Administration
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                {% endif %}
-                                <li><a class="dropdown-item" href="{{ url('/settings') }}">
-                                    <i class="fas fa-sliders-h me-3"></i>Paramètres
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ url('/help') }}">
-                                    <i class="fas fa-question-circle me-3"></i>Aide
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="{{ url('/logout') }}">
-                                    <i class="fas fa-sign-out-alt me-3"></i>Déconnexion
-                                </a></li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="btn btn-outline-light me-2" href="{{ url('/login') }}">
-                                <i class="fas fa-sign-in-alt me-1"></i>Connexion
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-light" href="{{ url('/register') }}">
-                                <i class="fas fa-user-plus me-1"></i>S'inscrire
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
-    
-    <!-- Breadcrumbs intelligents -->
-    {% block breadcrumb %}
-        {% if breadcrumbs is defined and breadcrumbs|length > 1 %}
-            <div class="breadcrumb-section">
-                <div class="container">
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb breadcrumb-modern">
-                            {% for crumb in breadcrumbs %}
-                                {% if loop.last %}
-                                    <li class="breadcrumb-item active" aria-current="page">
-                                        {{ crumb.title }}
-                                        {% if crumb.stats %}
-                                            <span class="breadcrumb-stats">{{ crumb.stats }}</span>
-                                        {% endif %}
-                                    </li>
-                                {% else %}
-                                    <li class="breadcrumb-item">
-                                        <a href="{{ crumb.url }}">{{ crumb.title }}</a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                        </ol>
-                    </nav>
-                    
-                    <!-- Actions contextuelles -->
-                    {% if page_actions is defined %}
-                        <div class="page-actions">
-                            {% for action in page_actions %}
-                                <a href="{{ action.url }}" class="btn btn-sm {{ action.class|default('btn-primary') }}">
-                                    {% if action.icon %}<i class="{{ action.icon }} me-1"></i>{% endif %}
-                                    {{ action.label }}
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        {% endif %}
-    {% endblock %}
-    
-    <!-- Sidebar contextuelle (optionnelle) -->
-    {% if show_sidebar is defined and show_sidebar %}
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-    <div class="sidebar-contextual" id="contextualSidebar">
-        <div class="sidebar-header">
-            <h5 class="sidebar-title">{{ sidebar_title|default('Outils') }}</h5>
-            <button class="btn btn-ghost btn-sm" onclick="toggleSidebar()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="sidebar-content">
-            {% block sidebar_content %}{% endblock %}
-        </div>
-    </div>
-    {% endif %}
-    
-    <!-- Contenu principal -->
-    <main class="flex-grow-1 main-content">
-        <!-- Messages flash modernes -->
-        {% include 'partials/flash.twig' %}
-        
-        <!-- Zone de contenu -->
-        {% block content %}{% endblock %}
-    </main>
-    
-    <!-- Barre d'outils flottante (mobile) -->
-    <div class="floating-toolbar d-md-none" id="floatingToolbar">
-        {% if auth() %}
-        <button class="fab-btn" data-bs-toggle="modal" data-bs-target="#quickAddModal" title="Ajout rapide">
-            <i class="fas fa-plus"></i>
-        </button>
-        {% endif %}
-        <button class="fab-btn" id="scrollToTop" title="Retour en haut">
-            <i class="fas fa-chevron-up"></i>
-        </button>
-    </div>
-    
-    <!-- Footer moderne -->
-    <footer class="footer-modern mt-auto">
-        <div class="footer-content">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-4 mb-4">
-                        <div class="footer-brand">
-                            <div class="brand-icon">
-                                <i class="fas fa-mountain"></i>
-                            </div>
-                            <h5>TopoclimbCH</h5>
-                        </div>
-                        <p class="footer-description">
-                            La référence pour les sites d'escalade en Suisse. 
-                            Découvrez, partagez et grimpez en toute sécurité.
-                        </p>
-                        <div class="social-links">
-                            <a href="#" class="social-link" title="Facebook">
-                                <i class="fab fa-facebook"></i>
-                            </a>
-                            <a href="#" class="social-link" title="Instagram">
-                                <i class="fab fa-instagram"></i>
-                            </a>
-                            <a href="#" class="social-link" title="YouTube">
-                                <i class="fab fa-youtube"></i>
-                            </a>
-                            <a href="#" class="social-link" title="GitHub">
-                                <i class="fab fa-github"></i>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Exploration</h6>
-                        <ul class="footer-links">
-                            <li><a href="{{ url('/regions') }}">Régions</a></li>
-                            <li><a href="{{ url('/sites') }}">Sites</a></li>
-                            <li><a href="{{ url('/sectors') }}">Secteurs</a></li>
-                            <li><a href="{{ url('/routes') }}">Voies</a></li>
-                            <li><a href="{{ url('/events') }}">Événements</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Communauté</h6>
-                        <ul class="footer-links">
-                            <li><a href="{{ url('/forum') }}">Forum</a></li>
-                            <li><a href="{{ url('/blog') }}">Blog</a></li>
-                            <li><a href="{{ url('/guides') }}">Guides</a></li>
-                            <li><a href="{{ url('/weather') }}">Météo</a></li>
-                            <li><a href="{{ url('/safety') }}">Sécurité</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Support</h6>
-                        <ul class="footer-links">
-                            <li><a href="{{ url('/help') }}">Aide</a></li>
-                            <li><a href="{{ url('/contact') }}">Contact</a></li>
-                            <li><a href="{{ url('/about') }}">À propos</a></li>
-                            <li><a href="{{ url('/privacy') }}">Confidentialité</a></li>
-                            <li><a href="{{ url('/terms') }}">CGU</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Newsletter</h6>
-                        <p class="footer-newsletter-text">
-                            Nouveaux sites, événements et conseils.
-                        </p>
-                        <form class="newsletter-form" method="post" action="{{ url('/newsletter') }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                            <div class="input-group input-group-modern">
-                                <input type="email" class="form-control" placeholder="Email" name="email" required>
-                                <button class="btn btn-newsletter" type="submit">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            <div class="container">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <p class="copyright">
-                            &copy; {{ "now"|date("Y") }} TopoclimbCH. Tous droits réservés.
-                        </p>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <p class="made-with-love">
-                            Développé avec <i class="fas fa-heart text-danger"></i> en Suisse
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
-    
-    <!-- Modales -->
-    
-    <!-- Modale de recherche rapide -->
-    <div class="modal fade" id="searchModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content modal-modern">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title">
-                        <i class="fas fa-search me-2"></i>Recherche rapide
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form action="{{ url('/search') }}" method="get">
-                        <div class="search-input-group">
-                            <input type="text" class="form-control form-control-lg" name="q" 
-                                   placeholder="Rechercher un secteur, une voie, un site..." 
-                                   autocomplete="off" autofocus id="modalSearchInput">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Filtres rapides -->
-                        <div class="search-filters mt-3">
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <select class="form-select" name="type">
-                                        <option value="">Tout</option>
-                                        <option value="route">Voies</option>
-                                        <option value="sector">Secteurs</option>
-                                        <option value="site">Sites</option>
-                                        <option value="region">Régions</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <select class="form-select" name="difficulty">
-                                        <option value="">Difficulté</option>
-                                        <option value="3">3a - 3c</option>
-                                        <option value="4">4a - 4c</option>
-                                        <option value="5">5a - 5c</option>
-                                        <option value="6">6a - 6c</option>
-                                        <option value="7">7a - 7c</option>
-                                        <option value="8">8a+</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <select class="form-select" name="region">
-                                        <option value="">Région</option>
-                                        <!-- Options chargées dynamiquement -->
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                    
-                    <!-- Suggestions et historique -->
-                    <div class="search-suggestions mt-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Recherches récentes</h6>
-                                <div id="recentSearches">
-                                    <!-- Chargé via localStorage -->
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Recherches populaires</h6>
-                                <div class="search-tags">
-                                    <a href="{{ url('/search?q=Jura') }}" class="search-tag">Jura</a>
-                                    <a href="{{ url('/search?q=Valais') }}" class="search-tag">Valais</a>
-                                    <a href="{{ url('/search?q=5c') }}" class="search-tag">5c</a>
-                                    <a href="{{ url('/search?q=dalle') }}" class="search-tag">Dalle</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Résultats en temps réel -->
-                    <div id="searchResults" class="search-results mt-3" style="display: none;">
-                        <!-- Résultats Ajax -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    {% if auth() %}
-    <!-- Modale d'ajout rapide -->
-    <div class="modal fade" id="quickAddModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content modal-modern">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title">
-                        <i class="fas fa-plus me-2"></i>Ajout rapide
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="quick-add-grid">
-                        <a href="{{ url('/routes/create') }}" class="quick-add-item">
-                            <div class="quick-add-icon bg-primary">
-                                <i class="fas fa-route"></i>
-                            </div>
-                            <span>Nouvelle voie</span>
-                        </a>
-                        <a href="{{ url('/sectors/create') }}" class="quick-add-item">
-                            <div class="quick-add-icon bg-success">
-                                <i class="fas fa-location-dot"></i>
-                            </div>
-                            <span>Nouveau secteur</span>
-                        </a>
-                        <a href="{{ url('/events/create') }}" class="quick-add-item">
-                            <div class="quick-add-icon bg-info">
-                                <i class="fas fa-calendar-plus"></i>
-                            </div>
-                            <span>Nouvel événement</span>
-                        </a>
-                        <a href="{{ url('/ascents/log') }}" class="quick-add-item">
-                            <div class="quick-add-icon bg-warning">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <span>Logger ascension</span>
-                        </a>
-                        <a href="{{ url('/media/upload') }}" class="quick-add-item">
-                            <div class="quick-add-icon bg-secondary">
-                                <i class="fas fa-camera"></i>
-                            </div>
-                            <span>Ajouter photos</span>
-                        </a>
-                        <a href="{{ url('/reports/new') }}" class="quick-add-item">
-                            <div class="quick-add-icon bg-danger">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-                            <span>Signaler problème</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
-    <!-- Loading overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="loading-spinner">
-            <div class="spinner-modern"></div>
-            <p>Chargement...</p>
-        </div>
-    </div>
-    
-    <!-- Toast container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
-        <!-- Toasts dynamiques -->
-    </div>
-    
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Service Worker pour PWA -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('{{ asset("sw.js") }}');
+    <style>
+        .sidebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
-    </script>
-    
-    <!-- Libs externes -->
-    {% block map_scripts %}{% endblock %}
-    
-    <!-- Scripts de l'application -->
-    <script src="{{ asset('js/components/common.js') }}"></script>
-    <script src="{{ asset('js/components/search-manager.js') }}"></script>
-    <script src="{{ asset('js/components/notification-manager.js') }}"></script>
-    <script src="{{ asset('js/components/geolocation-manager.js') }}"></script>
-    <script src="{{ asset('js/app.js') }}"></script>
-    
-    <!-- Scripts spécifiques -->
-    {% block scripts %}{% endblock %}
-    
-    <!-- Initialisation -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialisation des modules
-            TopoclimbCH.init();
+        
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 2px 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+        }
+        
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+        }
+        
+        .main-content {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: none;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 20px 0;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 25px;
+        }
+        
+        .btn-outline-primary {
+            color: #667eea;
+            border-color: #667eea;
+            border-radius: 10px;
+        }
+        
+        .table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .badge {
+            padding: 8px 12px;
+            border-radius: 20px;
+        }
+        
+        .alert {
+            border-radius: 15px;
+            border: none;
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -250px;
+                width: 250px;
+                z-index: 1050;
+                transition: left 0.3s ease;
+            }
             
-            // Performance monitoring
-            window.addEventListener('load', function() {
-                const loadTime = performance.now() - window.performanceMetrics.startTime;
-                console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
-                
-                // Envoyer métriques si activé
-                if (window.analytics) {
-                    window.analytics.timing('page_load', loadTime);
+            .sidebar.show {
+                left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse" id="adminSidebar">
+                <div class="position-sticky pt-3">
+                    <!-- Logo/Title -->
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="bi bi-shield-check"></i>
+                            Admin Panel
+                        </h4>
+                    </div>
+                    
+                    <!-- User Info -->
+                    <div class="text-center mb-4 p-3 bg-white bg-opacity-10 rounded mx-2">
+                        <div class="text-white">
+                            <i class="bi bi-person-circle fs-2"></i>
+                            <div class="mt-2">
+                                <small>{{ auth_user.prenom }} {{ auth_user.nom }}</small><br>
+                                <small class="opacity-75">Administrateur</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {{ is_active('/admin') }}" href="/admin">
+                                <i class="bi bi-speedometer2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ is_active('/admin/users') }}" href="/admin/users">
+                                <i class="bi bi-people"></i>
+                                Utilisateurs
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ is_active('/admin/content') }}" href="/admin/content">
+                                <i class="bi bi-geo-alt"></i>
+                                Contenu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ is_active('/admin/media') }}" href="/admin/media">
+                                <i class="bi bi-images"></i>
+                                Médias
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ is_active('/admin/reports') }}" href="/admin/reports">
+                                <i class="bi bi-graph-up"></i>
+                                Rapports
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ is_active('/admin/settings') }}" href="/admin/settings">
+                                <i class="bi bi-gear"></i>
+                                Configuration
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ is_active('/admin/logs') }}" href="/admin/logs">
+                                <i class="bi bi-file-text"></i>
+                                Logs
+                            </a>
+                        </li>
+                        
+                        <hr class="text-white-50 my-3">
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <i class="bi bi-house"></i>
+                                Retour au site
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/logout">
+                                <i class="bi bi-box-arrow-right"></i>
+                                Déconnexion
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Mobile header -->
+                <div class="d-md-none admin-header">
+                    <div class="d-flex justify-content-between align-items-center px-3">
+                        <h5 class="mb-0">Administration</h5>
+                        <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#adminSidebar">
+                            <i class="bi bi-list"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Page header -->
+                <div class="page-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h2 mb-0">{% block page_title %}{{ title }}{% endblock %}</h1>
+                            {% block breadcrumb %}{% endblock %}
+                        </div>
+                        <div>
+                            {% block page_actions %}{% endblock %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flash messages -->
+                {% for type, messages in flash() %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ type == 'error' ? 'danger' : type }} alert-dismissible fade show" role="alert">
+                            {% if type == 'success' %}
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                            {% elseif type == 'error' %}
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+                {{ clear_flash() }}
+
+                <!-- Page content -->
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Configuration CSRF pour AJAX
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Helper pour requêtes AJAX avec CSRF
+        function adminAjax(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'X-CSRF-Token': csrfToken,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            };
+            
+            return fetch(url, { ...defaultOptions, ...options });
+        }
+        
+        // Confirmation pour actions dangereuses
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('confirm-action')) {
+                const message = e.target.dataset.confirm || 'Êtes-vous sûr ?';
+                if (!confirm(message)) {
+                    e.preventDefault();
+                }
+            }
+        });
+        
+        // Auto-hide alerts après 5 secondes
+        setTimeout(function() {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                if (!alert.classList.contains('alert-danger')) {
+                    alert.style.transition = 'opacity 0.5s';
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 500);
                 }
             });
-        });
+        }, 5000);
     </script>
+    
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
