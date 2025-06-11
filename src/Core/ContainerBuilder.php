@@ -1,21 +1,20 @@
 <?php
 // src/Core/ContainerBuilder.php
 
-namespace TopoclimbCH\Controllers;
+namespace TopoclimbCH\Core;
 
-use Symfony\Component\HttpFoundation\Request;
-use TopoclimbCH\Core\Response;
-use TopoclimbCH\Core\Session;
-use TopoclimbCH\Core\View;
-use TopoclimbCH\Core\Database;
-use TopoclimbCH\Models\Site;
-use TopoclimbCH\Models\Region;
-use TopoclimbCH\Models\Sector;
-use TopoclimbCH\Models\Route;
-use TopoclimbCH\Services\MediaService;
-use TopoclimbCH\Services\RegionService;    // ← AJOUTÉ
-use TopoclimbCH\Services\SectorService;    // ← AJOUTÉ
+use Psr\Log\LoggerInterface;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
+use Symfony\Component\DependencyInjection\Reference;
+use TopoclimbCH\Controllers\HomeController;
+use TopoclimbCH\Controllers\ErrorController;
+use TopoclimbCH\Controllers\SectorController;
+use TopoclimbCH\Controllers\RouteController;
+use TopoclimbCH\Controllers\AuthController;
 use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\Router;
 
 class ContainerBuilder
 {

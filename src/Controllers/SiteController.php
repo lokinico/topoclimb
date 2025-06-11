@@ -1,5 +1,7 @@
 <?php
 
+<?php
+
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
@@ -12,6 +14,8 @@ use TopoclimbCH\Models\Region;
 use TopoclimbCH\Models\Sector;
 use TopoclimbCH\Models\Route;
 use TopoclimbCH\Services\MediaService;
+use TopoclimbCH\Services\RegionService;    // ← AJOUTÉ
+use TopoclimbCH\Services\SectorService;    // ← AJOUTÉ
 use TopoclimbCH\Core\Security\CsrfManager;
 
 class SiteController extends BaseController
