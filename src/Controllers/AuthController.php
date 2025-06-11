@@ -58,8 +58,7 @@ class AuthController extends BaseController
     public function loginForm(): Response
     {
         try {
-            // Rediriger si déjà connecté
-            if ($this->auth && $this->auth->check()) {
+            if ($this->auth->check()) {
                 return $this->redirect('/');
             }
 
@@ -76,39 +75,27 @@ class AuthController extends BaseController
             ]);
         }
     }
-
     /**
      * Traite la connexion - VERSION SÉCURISÉE
      */
     public function login(Request $request): Response
     {
         try {
-            // Validation CSRF
             $this->requireCsrfToken($request);
-
-            // Rate limiting - 5 tentatives par 5 minutes
             $this->checkRateLimit($request->getClientIp(), 'login', 5, 300);
 
-            // Validation des données
             $credentials = $this->validateInput($request->request->all(), [
                 'email' => 'required|email|max:255',
                 'password' => 'required|min:1|max:255'
             ]);
 
-            $remember = isset($credentials['remember']) && $credentials['remember'] === '1';
+            $remember = $request->request->get('remember') === '1';
 
-            // Tentative de connexion
-            $loginSuccess = $this->authService->attempt($credentials['email'], $credentials['password'], $remember);
-
-            if ($loginSuccess) {
-                // Réinitialiser le rate limit en cas de succès
+            if ($this->authService->attempt($credentials['email'], $credentials['password'], $remember)) {
                 $this->resetRateLimit($request->getClientIp(), 'login');
-
-                // Récupération de l'URL intentionnelle
                 $intendedUrl = $this->session->get('intended_url', '/');
                 $this->session->remove('intended_url');
 
-                // Logging de connexion réussie
                 $this->logAction('user_login_success', [
                     'user_id' => $this->auth->id(),
                     'ip' => $request->getClientIp(),
@@ -119,7 +106,6 @@ class AuthController extends BaseController
                 return $this->redirect($intendedUrl);
             }
 
-            // Échec de connexion
             $this->logAction('user_login_failed', [
                 'email' => $credentials['email'],
                 'ip' => $request->getClientIp(),
@@ -144,23 +130,16 @@ class AuthController extends BaseController
     public function logout(Request $request): Response
     {
         try {
-            $userId = $this->auth ? $this->auth->id() : null;
+            $userId = $this->auth->id();
+            $this->auth->logout();
 
-            // Déconnexion via AuthService
-            if ($this->auth) {
-                $this->auth->logout();
-            }
-
-            // Nettoyer la session
             $this->session->remove('auth_user_id');
             $this->session->remove('is_authenticated');
 
-            // Supprimer le cookie remember_token
             if (isset($_COOKIE['remember_token'])) {
                 setcookie('remember_token', '', time() - 3600, '/', '', true, true);
             }
 
-            // Logging
             $this->logAction('user_logout', [
                 'user_id' => $userId,
                 'ip' => $request->getClientIp()
