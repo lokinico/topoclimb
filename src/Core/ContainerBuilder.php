@@ -135,6 +135,9 @@ class ContainerBuilder
             'TopoclimbCH\\Services\\UserService' => [
                 Database::class
             ],
+            'TopoclimbCH\\Services\\SiteService' => [
+                Database::class
+            ],
             'TopoclimbCH\\Services\\AscentService' => [
                 Database::class
             ]
@@ -162,9 +165,13 @@ class ContainerBuilder
     {
         $controllers = [
             'TopoclimbCH\\Controllers\\HomeController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class
+                Database::class,                              // Position 1: Database $db
+                'TopoclimbCH\\Services\\RegionService',       // Position 2: RegionService $regionService
+                'TopoclimbCH\\Services\\SiteService',         // Position 3: SiteService $siteService
+                'TopoclimbCH\\Services\\SectorService',       // Position 4: SectorService $sectorService
+                'TopoclimbCH\\Services\\RouteService',        // Position 5: RouteService $routeService
+                'TopoclimbCH\\Services\\UserService',         // Position 6: UserService $userService
+                'TopoclimbCH\\Services\\WeatherService'       // Position 7: WeatherService $weatherService
             ],
             'TopoclimbCH\\Controllers\\AuthController' => [
                 View::class,
