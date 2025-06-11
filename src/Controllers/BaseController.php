@@ -30,12 +30,28 @@ abstract class BaseController
 
         // Initialiser Auth depuis le conteneur si disponible
         try {
-            if (Container::getInstance() && Container::getInstance()->has(Auth::class)) {
-                $this->auth = Container::getInstance()->get(Auth::class);
+            if (Container::getInstance() && Container::getInstance()->has(Database::class)) {
+                $this->db = Container::getInstance()->get(Database::class);
             }
         } catch (\Exception $e) {
-            error_log('Auth non initialisé dans BaseController: ' . $e->getMessage());
+            error_log('Database non initialisée dans BaseController: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Handle a request and return a response
+     */
+    protected function handleError(\Exception $e, string $message): void
+    {
+        error_log($message . ': ' . $e->getMessage());
+
+        // En développement, afficher l'erreur
+        if (env('APP_DEBUG', false)) {
+            throw $e;
+        }
+
+        // En production, rediriger ou afficher une page d'erreur générique
+        $this->flash('error', 'Une erreur est survenue. Veuillez réessayer.');
     }
 
     /**

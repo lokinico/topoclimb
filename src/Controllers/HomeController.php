@@ -4,6 +4,8 @@ namespace TopoclimbCH\Controllers;
 
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Services\RegionService;
 use TopoclimbCH\Services\SiteService;
 use TopoclimbCH\Services\SectorService;
@@ -28,18 +30,18 @@ class HomeController extends BaseController
     private ?WeatherService $weatherService;
 
     public function __construct(
-        View $view,                      // Position 1: pour BaseController
-        Session $session,                // Position 2: pour BaseController  
-        CsrfManager $csrfManager,        // Position 3: pour BaseController
-        Database $db,                    // Position 4
-        RegionService $regionService,    // Position 5
-        SiteService $siteService,        // Position 6
-        SectorService $sectorService,    // Position 7
-        RouteService $routeService,      // Position 8
-        UserService $userService,        // Position 9
-        ?WeatherService $weatherService = null // Position 10
+        View $view,
+        Session $session,
+        CsrfManager $csrfManager,
+        Database $db,
+        RegionService $regionService,
+        SiteService $siteService,
+        SectorService $sectorService,
+        RouteService $routeService,
+        UserService $userService,
+        ?WeatherService $weatherService = null
     ) {
-        parent::__construct($view, $session, $csrfManager);  // 3 paramètres pour BaseController
+        parent::__construct($view, $session, $csrfManager);
         $this->db = $db;
         $this->regionService = $regionService;
         $this->siteService = $siteService;
@@ -48,7 +50,6 @@ class HomeController extends BaseController
         $this->userService = $userService;
         $this->weatherService = $weatherService;
     }
-
     public function index(): void
     {
         try {
