@@ -37,10 +37,6 @@ class SectorController extends BaseController
      */
     private ValidationService $validationService;
 
-    /**
-     * @var Database
-     */
-    protected Database $db;
 
     /**
      * Expositions valides pour validation
