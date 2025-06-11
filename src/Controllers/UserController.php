@@ -23,7 +23,6 @@ class UserController extends BaseController
     protected UserService $userService;
     protected AscentService $ascentService;
     protected AuthService $authService;
-    protected Database $db;
 
     public function __construct(View $view, Session $session, CsrfManager $csrfManager)
     {

@@ -25,10 +25,6 @@ class DifficultyGradeController extends BaseController
      */
     protected AuthService $authService;
 
-    /**
-     * @var Database
-     */
-    protected Database $db;
 
     /**
      * Constructor

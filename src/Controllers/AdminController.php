@@ -12,7 +12,7 @@ use TopoclimbCH\Core\Security\CsrfManager;
 
 class AdminController extends BaseController
 {
-    private Database $db;
+
 
     public function __construct(View $view, Session $session, CsrfManager $csrfManager, Database $db, Auth $auth)
     {
