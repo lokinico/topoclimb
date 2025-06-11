@@ -14,7 +14,6 @@ use TopoclimbCH\Core\Security\CsrfManager;
 class MediaController extends BaseController
 {
     private MediaService $mediaService;
-    private Database $db;
 
     public function __construct(
         View $view,
