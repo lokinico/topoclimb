@@ -40,10 +40,6 @@ class RouteController extends BaseController
      */
     private AuthService $authService;
 
-    /**
-     * @var Database
-     */
-    private Database $db;
 
     /**
      * Constructor - Ordre exact imposé par le système d'injection
