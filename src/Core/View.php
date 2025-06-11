@@ -251,6 +251,20 @@ class View
             );
         }, ['is_safe' => ['html']]));
 
+        // ===== NOUVELLES FONCTIONS POUR URLS ET PARAMÈTRES =====
+        $this->twig->addFunction(new TwigFunction('query_string', function (array $params = []) {
+            $filteredParams = [];
+
+            // Filtrer les paramètres vides et null
+            foreach ($params as $key => $value) {
+                if ($value !== null && $value !== '') {
+                    $filteredParams[$key] = $value;
+                }
+            }
+
+            return http_build_query($filteredParams);
+        }));
+
         // ===== FONCTIONS FLASH ORIGINALES =====
 
         $this->twig->addFunction(new TwigFunction('flash', function () {
