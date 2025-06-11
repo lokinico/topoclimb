@@ -7,7 +7,6 @@ use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
-use TopoclimbCH\Core\Database;
 use TopoclimbCH\Models\User;
 use TopoclimbCH\Services\AuthService;
 use TopoclimbCH\Services\ValidationService;
@@ -28,28 +27,27 @@ class AuthController extends BaseController
     protected ValidationService $validationService;
 
     /**
-     * Constructor - CORRIGÉ pour éviter les conflits de type
+     * Constructor avec injection de dépendance pure
      *
      * @param View $view
      * @param Session $session
      * @param CsrfManager $csrfManager
-     * @param Database $database
+     * @param AuthService $authService
      */
-    public function __construct(View $view, Session $session, CsrfManager $csrfManager, Database $database)
-    {
+    public function __construct(
+        View $view,
+        Session $session,
+        CsrfManager $csrfManager,
+        AuthService $authService
+    ) {
         parent::__construct($view, $session, $csrfManager);
 
-        // Utiliser la propriété héritée de BaseController
-        $this->db = $database;
+        // Injection pure des services
+        $this->authService = $authService;
+        $this->validationService = new ValidationService(); // ValidationService n'a pas de dépendances
 
-        // Initialiser Auth si pas déjà fait
-        if (!$this->auth) {
-            $this->auth = Auth::getInstance($session, $this->db);
-        }
-
-        // Initialiser les services
-        $this->authService = new AuthService($this->auth, $session, $this->db);
-        $this->validationService = new ValidationService();
+        // Récupérer Auth depuis AuthService
+        $this->auth = $this->authService->user() ? Auth::getInstance($session, null) : null;
     }
 
     /**
@@ -58,7 +56,7 @@ class AuthController extends BaseController
     public function loginForm(): Response
     {
         try {
-            if ($this->auth->check()) {
+            if ($this->authService->check()) {
                 return $this->redirect('/');
             }
 
@@ -75,6 +73,7 @@ class AuthController extends BaseController
             ]);
         }
     }
+
     /**
      * Traite la connexion - VERSION SÉCURISÉE
      */
@@ -97,7 +96,7 @@ class AuthController extends BaseController
                 $this->session->remove('intended_url');
 
                 $this->logAction('user_login_success', [
-                    'user_id' => $this->auth->id(),
+                    'user_id' => $this->authService->id(),
                     'ip' => $request->getClientIp(),
                     'user_agent' => $request->headers->get('User-Agent')
                 ]);
@@ -125,21 +124,27 @@ class AuthController extends BaseController
     }
 
     /**
-     * Déconnexion - VERSION SÉCURISÉE
+     * Déconnexion - VERSION SÉCURISÉE avec AuthService
      */
     public function logout(Request $request): Response
     {
         try {
-            $userId = $this->auth->id();
-            $this->auth->logout();
+            // Récupérer l'ID utilisateur avant déconnexion
+            $userId = $this->authService->id();
 
+            // Déconnexion via AuthService
+            $this->authService->logout();
+
+            // Nettoyage supplémentaire de la session
             $this->session->remove('auth_user_id');
             $this->session->remove('is_authenticated');
 
+            // Supprimer le cookie remember_token s'il existe
             if (isset($_COOKIE['remember_token'])) {
                 setcookie('remember_token', '', time() - 3600, '/', '', true, true);
             }
 
+            // Log de la déconnexion
             $this->logAction('user_logout', [
                 'user_id' => $userId,
                 'ip' => $request->getClientIp()
@@ -160,7 +165,7 @@ class AuthController extends BaseController
     public function registerForm(): Response
     {
         try {
-            if ($this->auth && $this->auth->check()) {
+            if ($this->authService->check()) {
                 return $this->redirect('/');
             }
 
@@ -208,27 +213,8 @@ class AuthController extends BaseController
             }
 
             $result = $this->executeInTransaction(function () use ($data, $request) {
-                // Vérification de l'unicité email/username
-                $emailExists = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE mail = ?", [$data['email']]);
-                if ($emailExists && $emailExists['count'] > 0) {
-                    throw new ValidationException('Cet email est déjà utilisé');
-                }
-
-                $usernameExists = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE username = ?", [$data['username']]);
-                if ($usernameExists && $usernameExists['count'] > 0) {
-                    throw new ValidationException('Ce nom d\'utilisateur est déjà utilisé');
-                }
-
-                // Création de l'utilisateur
-                $user = new User();
-                $user->nom = $data['nom'];
-                $user->prenom = $data['prenom'];
-                $user->mail = $data['email'];
-                $user->username = $data['username'];
-                $user->ville = $data['ville'] ?? '';
-                $user->password = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
-                $user->autorisation = '4'; // Nouveau membre (en attente)
-                $user->save();
+                // Création de l'utilisateur via AuthService
+                $user = $this->authService->register($data);
 
                 // Logging
                 $this->logAction('user_registered', [
@@ -242,7 +228,7 @@ class AuthController extends BaseController
             });
 
             // Connexion automatique après inscription
-            $this->auth->attempt($data['email'], $data['password']);
+            $this->authService->attempt($data['email'], $data['password']);
 
             $this->flash('success', 'Inscription réussie ! Votre compte est en attente de validation.');
             return $this->redirect('/pending');
@@ -429,15 +415,12 @@ class AuthController extends BaseController
     public function testDatabase(): Response
     {
         try {
-            if (!$this->db) {
-                return $this->json(['success' => false, 'message' => 'Database non initialisée']);
-            }
-
-            $result = $this->db->fetchOne("SELECT 1 as test");
-            return $this->json(['success' => true, 'message' => 'Connexion à la BDD réussie', 'result' => $result]);
+            // Test via AuthService
+            $testResult = $this->authService->check();
+            return $this->json(['success' => true, 'message' => 'AuthService fonctionne correctement', 'auth_check' => $testResult]);
         } catch (\Exception $e) {
-            $this->handleError($e, 'Test de connexion BDD');
-            return $this->json(['success' => false, 'message' => 'Erreur de connexion à la BDD']);
+            $this->handleError($e, 'Test de AuthService');
+            return $this->json(['success' => false, 'message' => 'Erreur avec AuthService']);
         }
     }
 }

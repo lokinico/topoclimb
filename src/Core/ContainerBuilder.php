@@ -106,10 +106,16 @@ class ContainerBuilder
     private function registerBusinessServices(SymfonyContainerBuilder $container): void
     {
         $services = [
+            // AJOUT: Mailer en premier car AuthService en dépend
+            'TopoclimbCH\\Services\\Mailer' => [
+                Database::class
+            ],
+            // CORRECTION: AuthService avec Mailer ajouté
             'TopoclimbCH\\Services\\AuthService' => [
                 Auth::class,
                 Session::class,
-                Database::class
+                Database::class,
+                'TopoclimbCH\\Services\\Mailer'
             ],
             'TopoclimbCH\\Services\\SectorService' => [
                 Database::class
@@ -127,7 +133,7 @@ class ContainerBuilder
                 Database::class
             ],
             'TopoclimbCH\\Services\\WeatherService' => [
-                Database::class  // Ajout du WeatherService
+                Database::class
             ],
             'TopoclimbCH\\Services\\ValidationService' => [
                 Database::class
@@ -176,11 +182,12 @@ class ContainerBuilder
                 'TopoclimbCH\\Services\\UserService',     // Position 9
                 'TopoclimbCH\\Services\\WeatherService'   // Position 10
             ],
+            // CORRECTION: AuthController avec AuthService au lieu de Database
             'TopoclimbCH\\Controllers\\AuthController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class,
-                AuthService::class
+                View::class,                              // Position 1: View $view
+                Session::class,                           // Position 2: Session $session  
+                CsrfManager::class,                       // Position 3: CsrfManager $csrfManager
+                'TopoclimbCH\\Services\\AuthService'      // Position 4: AuthService $authService
             ],
             'TopoclimbCH\\Controllers\\SectorController' => [
                 View::class,
