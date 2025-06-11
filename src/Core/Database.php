@@ -51,9 +51,7 @@ class Database
     /**
      * Empêche le clonage de l'instance (pattern Singleton)
      */
-    private function __clone()
-    {
-    }
+    private function __clone() {}
 
     /**
      * Récupère l'instance unique de la classe Database (pattern Singleton)
@@ -152,11 +150,11 @@ class Database
     {
         $columns = implode(', ', array_keys($data));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
-        
+
         $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
-        
+
         $this->query($sql, array_values($data));
-        
+
         return (int) $this->getConnection()->lastInsertId();
     }
 
@@ -176,11 +174,11 @@ class Database
             $setParts[] = "{$column} = ?";
         }
         $setClause = implode(', ', $setParts);
-        
+
         $sql = "UPDATE {$table} SET {$setClause} WHERE {$where}";
-        
+
         $statement = $this->query($sql, array_merge(array_values($data), $params));
-        
+
         return $statement->rowCount();
     }
 
@@ -195,9 +193,9 @@ class Database
     public function delete(string $table, string $where, array $params = []): int
     {
         $sql = "DELETE FROM {$table} WHERE {$where}";
-        
+
         $statement = $this->query($sql, $params);
-        
+
         return $statement->rowCount();
     }
 
@@ -229,5 +227,70 @@ class Database
     public function rollback(): bool
     {
         return $this->getConnection()->rollBack();
+    }
+
+    /**
+     * Vérifie si une transaction est actuellement active
+     *
+     * @return bool
+     */
+    public function inTransaction(): bool
+    {
+        return $this->getConnection()->inTransaction();
+    }
+
+    /**
+     * Exécute une fonction dans une transaction
+     *
+     * @param callable $callback Fonction à exécuter
+     * @return mixed Résultat de la fonction
+     * @throws \Exception Si une erreur survient
+     */
+    public function transaction(callable $callback): mixed
+    {
+        $this->beginTransaction();
+
+        try {
+            $result = $callback($this);
+            $this->commit();
+            return $result;
+        } catch (\Exception $e) {
+            $this->rollback();
+            throw $e;
+        }
+    }
+
+    /**
+     * Compte le nombre d'enregistrements
+     *
+     * @param string $sql Requête SQL
+     * @param array $params Paramètres pour la requête préparée
+     * @return int
+     */
+    public function count(string $sql, array $params = []): int
+    {
+        // Retire ORDER BY pour le count
+        $countSql = preg_replace('/\s+ORDER\s+BY\s+.+$/i', '', $sql);
+
+        // Wrap dans un COUNT
+        $countSql = "SELECT COUNT(*) as total FROM ({$countSql}) as count_query";
+
+        $result = $this->fetchOne($countSql, $params);
+        return (int) ($result['total'] ?? 0);
+    }
+
+    /**
+     * Vérifie si un enregistrement existe
+     *
+     * @param string $table Nom de la table
+     * @param string $where Condition WHERE
+     * @param array $params Paramètres pour la condition WHERE
+     * @return bool
+     */
+    public function exists(string $table, string $where, array $params = []): bool
+    {
+        $sql = "SELECT 1 FROM {$table} WHERE {$where} LIMIT 1";
+        $result = $this->fetchOne($sql, $params);
+        return $result !== null;
     }
 }
