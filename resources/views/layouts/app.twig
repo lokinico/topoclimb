@@ -4,138 +4,280 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{% block description %}TopoclimbCH - Base de données des sites d'escalade en Suisse{% endblock %}">
-    <meta name="keywords" content="{% block keywords %}escalade, grimpe, topo, suisse, voies, secteurs{% endblock %}">
     
     <title>{% block title %}TopoclimbCH{% endblock %}</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
     
     <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     
-    <!-- Libs externes optionnelles -->
-    {% block map_styles %}{% endblock %}
-    
     <!-- Styles spécifiques aux pages -->
     {% block styles %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <!-- Navigation moderne -->
-    <nav class="navbar navbar-expand-lg navbar-modern sticky-top">
+    <!-- Barre d'outils utilitaires -->
+    <div class="utility-bar bg-light border-bottom py-1 d-none d-md-block">
         <div class="container">
-            <a class="navbar-brand brand-modern" href="{{ url('/') }}">
-                <div class="brand-icon">
-                    <i class="fas fa-mountain"></i>
+            <div class="d-flex justify-content-between align-items-center small">
+                <!-- Informations contextuelles -->
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Widget météo -->
+                    <div id="weatherWidget" class="d-flex align-items-center gap-2 text-muted">
+                        <i class="fas fa-cloud-sun"></i>
+                        <span class="weather-temp">--°C</span>
+                        <span class="weather-location d-none d-lg-inline">Suisse</span>
+                    </div>
+                    
+                    <!-- Statut -->
+                    {% if auth() %}
+                    <div class="d-flex align-items-center gap-1 text-success">
+                        <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                        <span>En ligne</span>
+                    </div>
+                    {% endif %}
                 </div>
-                <span class="brand-text">TopoclimbCH</span>
+                
+                <!-- Outils rapides -->
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Sélecteur de langue -->
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-globe me-1"></i>
+                            {{ app_locale|upper|default('FR') }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="?lang=fr">🇫🇷 Français</a></li>
+                            <li><a class="dropdown-item" href="?lang=de">🇩🇪 Deutsch</a></li>
+                            <li><a class="dropdown-item" href="?lang=en">🇬🇧 English</a></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Mode sombre -->
+                    <button class="btn btn-sm btn-outline-secondary" id="themeToggle" title="Changer le thème">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <!-- Raccourcis clavier -->
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#shortcutsModal" title="Raccourcis (Ctrl+?)">
+                        <i class="fas fa-keyboard"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    {% include 'partials/navigation.twig' %}
+    
+    <!-- Navigation mise à jour avec la nouvelle structure -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url('/') }}">
+                <i class="fas fa-mountain me-2"></i>
+                TopoclimbCH
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-                <span></span>
-                <span></span>
-                <span></span>
+            <!-- Recherche intégrée (desktop) -->
+            <div class="navbar-search d-none d-lg-flex flex-grow-1 mx-4">
+                <form action="{{ url('/search') }}" method="get" class="w-100">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" 
+                               placeholder="Rechercher voies, secteurs, sites, guides..." 
+                               autocomplete="off" id="navSearchInput">
+                        <button type="submit" class="btn btn-outline-light">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
             </button>
             
             <div class="collapse navbar-collapse" id="navbarMain">
-                <ul class="navbar-nav nav-modern me-auto">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link {{ is_active('/') ? 'active' : '' }}" href="{{ url('/') }}">
-                            <i class="fas fa-home me-2"></i>
-                            <span>Accueil</span>
+                            <i class="fas fa-home me-1"></i>
+                            Accueil
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ is_active('/regions') ? 'active' : '' }}" href="{{ url('/regions') }}">
-                            <i class="fas fa-map me-2"></i>
-                            <span>Régions</span>
+                    
+                    <!-- Menu Explorer avec nouvelle hiérarchie -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {{ is_active(['/regions', '/sites', '/sectors', '/routes']) ? 'active' : '' }}" 
+                           href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-map me-1"></i>
+                            Explorer
                         </a>
+                        <ul class="dropdown-menu">
+                            <li><h6 class="dropdown-header">Hiérarchie géographique</h6></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/regions') }}">
+                                    <i class="fas fa-map-marked-alt me-2"></i>
+                                    Régions
+                                    <small class="text-muted ms-auto">Zones principales</small>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/sites') }}">
+                                    <i class="fas fa-mountain me-2"></i>
+                                    Sites
+                                    <small class="text-muted ms-auto">Aires d'escalade</small>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/sectors') }}">
+                                    <i class="fas fa-location-dot me-2"></i>
+                                    Secteurs
+                                    <small class="text-muted ms-auto">Zones spécifiques</small>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/routes') }}">
+                                    <i class="fas fa-route me-2"></i>
+                                    Voies
+                                    <small class="text-muted ms-auto">Itinéraires d'escalade</small>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Guides et topos</h6></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/books') }}">
+                                    <i class="fas fa-book me-2"></i>
+                                    Guides (Books)
+                                    <small class="text-muted ms-auto">Publications</small>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/map') }}">
+                                    <i class="fas fa-globe me-2"></i>
+                                    Carte interactive
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ is_active('/sites') ? 'active' : '' }}" href="{{ url('/sites') }}">
-                            <i class="fas fa-book me-2"></i>
-                            <span>Sites</span>
+                    
+                    <!-- Menu Communauté -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-users me-1"></i>
+                            Communauté
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ is_active('/sectors') ? 'active' : '' }}" href="{{ url('/sectors') }}">
-                            <i class="fas fa-location-dot me-2"></i>
-                            <span>Secteurs</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ is_active('/routes') ? 'active' : '' }}" href="{{ url('/routes') }}">
-                            <i class="fas fa-route me-2"></i>
-                            <span>Voies</span>
-                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/events') }}">
+                                    <i class="fas fa-calendar me-2"></i>
+                                    Événements
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/forum') }}">
+                                    <i class="fas fa-comments me-2"></i>
+                                    Forum
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/blog') }}">
+                                    <i class="fas fa-newspaper me-2"></i>
+                                    Blog
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url('/weather') }}">
+                                    <i class="fas fa-cloud-sun me-2"></i>
+                                    Météo
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                 </ul>
                 
                 <!-- Actions rapides -->
-                <div class="navbar-actions me-3">
-                    <button class="btn btn-action" data-bs-toggle="modal" data-bs-target="#searchModal" title="Recherche rapide">
+                <div class="navbar-nav me-3">
+                    <!-- Recherche mobile -->
+                    <button class="nav-link btn btn-link d-lg-none" data-bs-toggle="modal" data-bs-target="#searchModal">
                         <i class="fas fa-search"></i>
                     </button>
+                    
+                    <!-- Géolocalisation -->
+                    <button class="nav-link btn btn-link" id="locationBtn" title="Ma position">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    
                     {% if auth() %}
-                        <button class="btn btn-action" data-bs-toggle="modal" data-bs-target="#quickAddModal" title="Ajout rapide">
-                            <i class="fas fa-plus"></i>
+                    <!-- Notifications -->
+                    <div class="nav-item dropdown">
+                        <button class="nav-link btn btn-link position-relative" data-bs-toggle="dropdown">
+                            <i class="fas fa-bell"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notificationBadge">
+                                0
+                            </span>
                         </button>
+                        <div class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                            <h6 class="dropdown-header">Notifications</h6>
+                            <div id="notificationList" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Notifications chargées via JS -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ajout rapide -->
+                    <button class="nav-link btn btn-link" data-bs-toggle="modal" data-bs-target="#quickAddModal" title="Ajout rapide (Ctrl+N)">
+                        <i class="fas fa-plus"></i>
+                    </button>
                     {% endif %}
                 </div>
                 
                 <!-- Menu utilisateur -->
                 <ul class="navbar-nav">
                     {% if auth() %}
-                        <li class="nav-item dropdown user-dropdown">
-                            <a class="nav-link dropdown-toggle user-menu" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                                <div class="user-avatar">
-                                    <i class="fas fa-user-circle"></i>
-                                </div>
-                                <div class="user-info d-none d-lg-block">
-                                    <span class="user-name">{{ auth_user().prenom }}</span>
-                                    <small class="user-role">Grimpeur</small>
-                                </div>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i>
+                                {{ auth_user().prenom }}
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-modern dropdown-menu-end">
-                                <li class="dropdown-header">
-                                    <div class="user-dropdown-info">
-                                        <strong>{{ auth_user().prenom }} {{ auth_user().nom }}</strong>
-                                        <small class="text-muted">{{ auth_user().mail }}</small>
-                                    </div>
-                                </li>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">{{ auth_user().prenom }} {{ auth_user().nom }}</h6></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url('/profile') }}">
-                                        <i class="fas fa-user me-3"></i>Mon profil
+                                        <i class="fas fa-user me-2"></i>Mon profil
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url('/ascents') }}">
-                                        <i class="fas fa-chart-line me-3"></i>Mes ascensions
+                                        <i class="fas fa-chart-line me-2"></i>Mes ascensions
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url('/favorites') }}">
-                                        <i class="fas fa-heart me-3"></i>Mes favoris
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ url('/events') }}">
-                                        <i class="fas fa-calendar me-3"></i>Mes événements
+                                        <i class="fas fa-heart me-2"></i>Mes favoris
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
+                                {% if auth_user().autorisation in ['1', '2'] %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('/admin') }}">
+                                        <i class="fas fa-cog me-2"></i>Administration
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% endif %}
                                 <li>
                                     <a class="dropdown-item" href="{{ url('/settings') }}">
-                                        <i class="fas fa-cog me-3"></i>Paramètres
+                                        <i class="fas fa-sliders-h me-2"></i>Paramètres
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item text-danger" href="{{ url('/logout') }}">
-                                        <i class="fas fa-sign-out-alt me-3"></i>Déconnexion
+                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
                                     </a>
                                 </li>
                             </ul>
@@ -160,165 +302,131 @@
     <!-- Breadcrumbs modernes -->
     {% block breadcrumb %}
         {% if breadcrumbs is defined and breadcrumbs|length > 1 %}
-            <div class="breadcrumb-section">
+            <div class="bg-light border-bottom py-2">
                 <div class="container">
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb breadcrumb-modern">
-                            {% for crumb in breadcrumbs %}
-                                {% if loop.last %}
-                                    <li class="breadcrumb-item active" aria-current="page">{{ crumb.title }}</li>
-                                {% else %}
-                                    <li class="breadcrumb-item">
-                                        <a href="{{ crumb.url }}">{{ crumb.title }}</a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                        </ol>
-                    </nav>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                {% for crumb in breadcrumbs %}
+                                    {% if loop.last %}
+                                        <li class="breadcrumb-item active">{{ crumb.title }}</li>
+                                    {% else %}
+                                        <li class="breadcrumb-item">
+                                            <a href="{{ crumb.url }}">{{ crumb.title }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ol>
+                        </nav>
+                        
+                        <!-- Actions de page -->
+                        {% if page_actions is defined %}
+                            <div class="page-actions">
+                                {% for action in page_actions %}
+                                    <a href="{{ action.url }}" class="btn btn-sm {{ action.class|default('btn-primary') }}">
+                                        {% if action.icon %}<i class="{{ action.icon }} me-1"></i>{% endif %}
+                                        {{ action.label }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         {% endif %}
     {% endblock %}
     
     <!-- Contenu principal -->
-    <main class="flex-grow-1 main-content">
-        <!-- Messages flash modernes -->
+    <main class="flex-grow-1">
+        <!-- Messages flash -->
         {% include 'partials/flash.twig' %}
         
         <!-- Zone de contenu -->
         {% block content %}{% endblock %}
     </main>
     
-    <!-- Footer moderne -->
-    <footer class="footer-modern mt-auto">
-        <div class="footer-content">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-4 mb-4">
-                        <div class="footer-brand">
-                            <div class="brand-icon">
-                                <i class="fas fa-mountain"></i>
-                            </div>
-                            <h5>TopoclimbCH</h5>
-                        </div>
-                        <p class="footer-description">
-                            La référence pour les sites d'escalade en Suisse. 
-                            Découvrez, partagez et grimpez en toute sécurité.
-                        </p>
-                        <div class="social-links">
-                            <a href="#" class="social-link" title="Facebook" aria-label="Page Facebook">
-                                <i class="fab fa-facebook"></i>
-                            </a>
-                            <a href="#" class="social-link" title="Instagram" aria-label="Compte Instagram">
-                                <i class="fab fa-instagram"></i>
-                            </a>
-                            <a href="#" class="social-link" title="YouTube" aria-label="Chaîne YouTube">
-                                <i class="fab fa-youtube"></i>
-                            </a>
-                            <a href="#" class="social-link" title="GitHub" aria-label="Repository GitHub">
-                                <i class="fab fa-github"></i>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Exploration</h6>
-                        <ul class="footer-links">
-                            <li><a href="{{ url('/regions') }}">Régions</a></li>
-                            <li><a href="{{ url('/sites') }}">Sites</a></li>
-                            <li><a href="{{ url('/sectors') }}">Secteurs</a></li>
-                            <li><a href="{{ url('/routes') }}">Voies</a></li>
-                            <li><a href="{{ url('/events') }}">Événements</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Communauté</h6>
-                        <ul class="footer-links">
-                            <li><a href="{{ url('/forum') }}">Forum</a></li>
-                            <li><a href="{{ url('/blog') }}">Blog</a></li>
-                            <li><a href="{{ url('/guides') }}">Guides</a></li>
-                            <li><a href="{{ url('/weather') }}">Météo</a></li>
-                            <li><a href="{{ url('/safety') }}">Sécurité</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Support</h6>
-                        <ul class="footer-links">
-                            <li><a href="{{ url('/help') }}">Aide</a></li>
-                            <li><a href="{{ url('/contact') }}">Contact</a></li>
-                            <li><a href="{{ url('/about') }}">À propos</a></li>
-                            <li><a href="{{ url('/privacy') }}">Confidentialité</a></li>
-                            <li><a href="{{ url('/terms') }}">CGU</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <h6 class="footer-title">Newsletter</h6>
-                        <p class="footer-newsletter-text">
-                            Nouveaux sites, événements et conseils.
-                        </p>
-                        <form class="newsletter-form" method="post" action="{{ url('/newsletter') }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                            <div class="input-group input-group-modern">
-                                <input type="email" class="form-control" placeholder="Email" name="email" required aria-label="Adresse email">
-                                <button class="btn btn-newsletter" type="submit" aria-label="S'abonner">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            <div class="container">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <p class="copyright">
-                            &copy; {{ "now"|date("Y") }} TopoclimbCH. Tous droits réservés.
-                        </p>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <p class="made-with-love">
-                            Développé avec <i class="fas fa-heart text-danger"></i> en Suisse
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <!-- Bouton de retour en haut -->
+    <button id="backToTop" class="btn btn-primary position-fixed d-none" 
+            style="bottom: 2rem; right: 2rem; border-radius: 50%; width: 50px; height: 50px; z-index: 1000;">
+        <i class="fas fa-chevron-up"></i>
+    </button>
     
-    <!-- Modales globales -->
+    <!-- Footer -->
+    {% include 'partials/footer.twig' %}
+    
+    <!-- Modales -->
     
     <!-- Modale de recherche rapide -->
-    <div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal fade" id="searchModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content modal-modern">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title" id="searchModalLabel">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
                         <i class="fas fa-search me-2"></i>Recherche rapide
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form action="{{ url('/search') }}" method="get">
-                        <div class="search-input-group">
-                            <input type="text" class="form-control form-control-lg" name="q" placeholder="Rechercher un secteur, une voie, un site..." autocomplete="off" autofocus>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control form-control-lg" name="q" 
+                                   placeholder="Rechercher voies, secteurs, sites, guides..." 
+                                   autocomplete="off" autofocus>
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
+                        
+                        <!-- Filtres rapides -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3">
+                                <select class="form-select" name="type">
+                                    <option value="">Tout type</option>
+                                    <option value="route">Voies</option>
+                                    <option value="sector">Secteurs</option>
+                                    <option value="site">Sites</option>
+                                    <option value="region">Régions</option>
+                                    <option value="book">Guides</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" name="difficulty">
+                                    <option value="">Difficulté</option>
+                                    <option value="3">3a - 3c</option>
+                                    <option value="4">4a - 4c</option>
+                                    <option value="5">5a - 5c</option>
+                                    <option value="6">6a - 6c</option>
+                                    <option value="7">7a - 7c</option>
+                                    <option value="8">8a+</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" name="region">
+                                    <option value="">Région</option>
+                                    <!-- Options chargées dynamiquement -->
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" name="style">
+                                    <option value="">Style</option>
+                                    <option value="dalle">Dalle</option>
+                                    <option value="vertical">Vertical</option>
+                                    <option value="devers">Dévers</option>
+                                    <option value="toit">Toit</option>
+                                </select>
+                            </div>
+                        </div>
                     </form>
-                    <div class="search-suggestions mt-3">
+                    
+                    <!-- Suggestions -->
+                    <div class="search-suggestions">
                         <h6>Recherches populaires</h6>
-                        <div class="search-tags">
-                            <a href="{{ url('/search?q=Jura') }}" class="search-tag">Jura</a>
-                            <a href="{{ url('/search?q=Valais') }}" class="search-tag">Valais</a>
-                            <a href="{{ url('/search?q=5c') }}" class="search-tag">5c</a>
-                            <a href="{{ url('/search?q=dalle') }}" class="search-tag">Dalle</a>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ url('/search?q=Jura') }}" class="badge bg-secondary text-decoration-none">Jura</a>
+                            <a href="{{ url('/search?q=Valais') }}" class="badge bg-secondary text-decoration-none">Valais</a>
+                            <a href="{{ url('/search?q=5c') }}" class="badge bg-secondary text-decoration-none">5c</a>
+                            <a href="{{ url('/search?q=dalle') }}" class="badge bg-secondary text-decoration-none">Dalle</a>
+                            <a href="{{ url('/search?q=Bataille') }}" class="badge bg-secondary text-decoration-none">Bataille</a>
                         </div>
                     </div>
                 </div>
@@ -328,33 +436,53 @@
     
     {% if auth() %}
     <!-- Modale d'ajout rapide -->
-    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
+    <div class="modal fade" id="quickAddModal" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content modal-modern">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title" id="quickAddModalLabel">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
                         <i class="fas fa-plus me-2"></i>Ajout rapide
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="quick-add-options">
-                        <a href="{{ url('/routes/create') }}" class="quick-add-item">
-                            <i class="fas fa-route"></i>
-                            <span>Nouvelle voie</span>
-                        </a>
-                        <a href="{{ url('/sectors/create') }}" class="quick-add-item">
-                            <i class="fas fa-location-dot"></i>
-                            <span>Nouveau secteur</span>
-                        </a>
-                        <a href="{{ url('/events/create') }}" class="quick-add-item">
-                            <i class="fas fa-calendar-plus"></i>
-                            <span>Nouvel événement</span>
-                        </a>
-                        <a href="{{ url('/ascents/log') }}" class="quick-add-item">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Logger ascension</span>
-                        </a>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <a href="{{ url('/routes/create') }}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-route fa-2x mb-2"></i>
+                                <span>Nouvelle voie</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ url('/sectors/create') }}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-location-dot fa-2x mb-2"></i>
+                                <span>Nouveau secteur</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ url('/sites/create') }}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-mountain fa-2x mb-2"></i>
+                                <span>Nouveau site</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ url('/books/create') }}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-book fa-2x mb-2"></i>
+                                <span>Nouveau guide</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ url('/events/create') }}" class="btn btn-outline-dark w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-calendar-plus fa-2x mb-2"></i>
+                                <span>Nouvel événement</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{{ url('/ascents/log') }}" class="btn btn-outline-danger w-100 h-100 d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                <span>Logger ascension</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -362,52 +490,172 @@
     </div>
     {% endif %}
     
-    <!-- Loading overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="loading-spinner">
-            <div class="spinner-modern"></div>
-            <p>Chargement...</p>
+    <!-- Modale des raccourcis clavier -->
+    <div class="modal fade" id="shortcutsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-keyboard me-2"></i>Raccourcis clavier
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Navigation</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">K</kbd>
+                                </div>
+                                <span>Recherche rapide</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <kbd class="kbd">G</kbd> <kbd class="kbd">H</kbd>
+                                </div>
+                                <span>Aller à l'accueil</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <kbd class="kbd">Esc</kbd>
+                                </div>
+                                <span>Fermer modal</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Actions</h6>
+                            {% if auth() %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">N</kbd>
+                                </div>
+                                <span>Ajout rapide</span>
+                            </div>
+                            {% endif %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <kbd class="kbd">T</kbd>
+                                </div>
+                                <span>Changer thème</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <kbd class="kbd">?</kbd>
+                                </div>
+                                <span>Aide (cette fenêtre)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Libs externes optionnelles -->
-    {% block map_scripts %}{% endblock %}
-    
     <!-- Scripts de l'application -->
     <script src="{{ asset('js/components/common.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
     
-    <!-- Scripts spécifiques aux pages -->
+    <!-- Scripts spécifiques -->
     {% block scripts %}{% endblock %}
     
-    <!-- Script d'initialisation -->
+    <!-- Initialisation -->
     <script>
-        // Initialisation globale de l'application
         document.addEventListener('DOMContentLoaded', function() {
-            // Smooth scrolling pour les ancres
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
+            // Gestion des raccourcis clavier
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+K : Recherche rapide
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                     e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                });
+                    document.getElementById('searchModal') && new bootstrap.Modal(document.getElementById('searchModal')).show();
+                }
+                
+                {% if auth() %}
+                // Ctrl+N : Ajout rapide
+                if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                    e.preventDefault();
+                    document.getElementById('quickAddModal') && new bootstrap.Modal(document.getElementById('quickAddModal')).show();
+                }
+                {% endif %}
+                
+                // T : Toggle thème
+                if (e.key === 't' && !e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
+                    document.getElementById('themeToggle') && document.getElementById('themeToggle').click();
+                }
+                
+                // ? : Aide
+                if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
+                    e.preventDefault();
+                    document.getElementById('shortcutsModal') && new bootstrap.Modal(document.getElementById('shortcutsModal')).show();
+                }
+                
+                // G+H : Accueil
+                if (e.key === 'g' && !e.ctrlKey && !e.metaKey && !e.target.matches('input, textarea')) {
+                    window.addEventListener('keydown', function homeHandler(e2) {
+                        if (e2.key === 'h') {
+                            window.location.href = '{{ url('/') }}';
+                            window.removeEventListener('keydown', homeHandler);
+                        }
+                    }, { once: true });
+                }
             });
             
-            // Auto-fermeture des alertes
-            setTimeout(() => {
-                document.querySelectorAll('.alert[data-auto-dismiss]').forEach(alert => {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
+            // Bouton retour en haut
+            const backToTop = document.getElementById('backToTop');
+            if (backToTop) {
+                window.addEventListener('scroll', function() {
+                    if (window.scrollY > 300) {
+                        backToTop.classList.remove('d-none');
+                    } else {
+                        backToTop.classList.add('d-none');
+                    }
                 });
-            }, 5000);
+                
+                backToTop.addEventListener('click', function() {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+            
+            // Thème
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                const currentTheme = localStorage.getItem('theme') || 'light';
+                document.documentElement.setAttribute('data-theme', currentTheme);
+                
+                themeToggle.addEventListener('click', function() {
+                    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', theme);
+                    localStorage.setItem('theme', theme);
+                    
+                    // Changer l'icône
+                    const icon = themeToggle.querySelector('i');
+                    icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                });
+            }
+            
+            // Géolocalisation
+            const locationBtn = document.getElementById('locationBtn');
+            if (locationBtn) {
+                locationBtn.addEventListener('click', function() {
+                    if (navigator.geolocation) {
+                        locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        navigator.geolocation.getCurrentPosition(
+                            function(position) {
+                                console.log('Position:', position.coords.latitude, position.coords.longitude);
+                                locationBtn.innerHTML = '<i class="fas fa-crosshairs"></i>';
+                                // Ici vous pouvez utiliser la position pour actualiser la météo, etc.
+                            },
+                            function(error) {
+                                console.error('Erreur géolocalisation:', error);
+                                locationBtn.innerHTML = '<i class="fas fa-crosshairs"></i>';
+                            }
+                        );
+                    }
+                });
+            }
         });
     </script>
 </body>
