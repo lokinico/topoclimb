@@ -40,7 +40,7 @@ class SectorController extends BaseController
     /**
      * @var Database
      */
-    private Database $db;
+    protected Database $db;
 
     /**
      * Expositions valides pour validation
