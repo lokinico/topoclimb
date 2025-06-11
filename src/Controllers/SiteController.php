@@ -1,6 +1,5 @@
 <?php
 
-<?php
 
 namespace TopoclimbCH\Controllers;
 
