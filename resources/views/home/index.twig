@@ -13,44 +13,88 @@
             <p class="fade-in">{{ description|default('La plateforme de référence pour explorer les sites d\'escalade suisses. Plus de 1000 secteurs, 5000 voies et une communauté passionnée vous attendent.') }}</p>
             <div class="hero-actions fade-in">
                 <a href="{{ url('/regions') }}" class="btn btn-lg" style="background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
-                    <i class="fas fa-mountain"></i>
+                    <i class="fas fa-mountain me-2"></i>
                     Explorer les sites
                 </a>
                 <a href="{{ url('/routes') }}" class="btn btn-lg btn-outline-light">
-                    <i class="fas fa-route"></i>
+                    <i class="fas fa-route me-2"></i>
                     Parcourir les voies
+                </a>
+                <a href="{{ url('/books') }}" class="btn btn-lg btn-outline-light">
+                    <i class="fas fa-book me-2"></i>
+                    Guides d'escalade
                 </a>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Stats Section -->
+<!-- Stats Section Améliorée -->
 <section class="stats-grid">
     <div class="container">
         <div class="row g-4">
-            <div class="col-6 col-lg-3">
-                <div class="stat-item routes slide-in-up">
-                    <div class="stat-value">{{ stats.regions_count|default('12') }}</div>
+            <div class="col-6 col-lg-2">
+                <div class="stat-item regions slide-in-up">
+                    <div class="stat-value">{{ stats.regions_count|default('0') }}</div>
                     <div class="stat-label">Régions</div>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="stat-item difficulty slide-in-up" style="animation-delay: 0.1s;">
-                    <div class="stat-value">{{ stats.sectors_count|default('1,200+') }}</div>
+            <div class="col-6 col-lg-2">
+                <div class="stat-item sites slide-in-up" style="animation-delay: 0.1s;">
+                    <div class="stat-value">{{ stats.sites_count|default('0') }}</div>
+                    <div class="stat-label">Sites</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-2">
+                <div class="stat-item sectors slide-in-up" style="animation-delay: 0.2s;">
+                    <div class="stat-value">{{ stats.sectors_count|default('0') }}</div>
                     <div class="stat-label">Secteurs</div>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="stat-item length slide-in-up" style="animation-delay: 0.2s;">
-                    <div class="stat-value">{{ stats.routes_count|default('5,400+') }}</div>
+            <div class="col-6 col-lg-2">
+                <div class="stat-item routes slide-in-up" style="animation-delay: 0.3s;">
+                    <div class="stat-value">{{ stats.routes_count|default('0') }}</div>
                     <div class="stat-label">Voies</div>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="stat-item ascents slide-in-up" style="animation-delay: 0.3s;">
-                    <div class="stat-value">{{ stats.users_count|default('850+') }}</div>
+            <div class="col-6 col-lg-2">
+                <div class="stat-item books slide-in-up" style="animation-delay: 0.4s;">
+                    <div class="stat-value">{{ stats.books_count|default('0') }}</div>
+                    <div class="stat-label">Guides</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-2">
+                <div class="stat-item users slide-in-up" style="animation-delay: 0.5s;">
+                    <div class="stat-value">{{ stats.users_count|default('0') }}</div>
                     <div class="stat-label">Grimpeurs</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats secondaires -->
+        <div class="row g-4 mt-3">
+            <div class="col-6 col-lg-3">
+                <div class="stat-item-secondary slide-in-up" style="animation-delay: 0.6s;">
+                    <div class="stat-value-small">{{ stats.ascents_count|default('0') }}</div>
+                    <div class="stat-label-small">Ascensions loggées</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-item-secondary slide-in-up" style="animation-delay: 0.7s;">
+                    <div class="stat-value-small">{{ stats.active_users_month|default('0') }}</div>
+                    <div class="stat-label-small">Utilisateurs actifs ce mois</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-item-secondary slide-in-up" style="animation-delay: 0.8s;">
+                    <div class="stat-value-small">{{ stats.new_routes_month|default('0') }}</div>
+                    <div class="stat-label-small">Nouvelles voies ce mois</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="stat-item-secondary slide-in-up" style="animation-delay: 0.9s;">
+                    <div class="stat-value-small">{{ stats.photos_count|default('0') }}</div>
+                    <div class="stat-label-small">Photos partagées</div>
                 </div>
             </div>
         </div>
@@ -70,9 +114,17 @@
                 <form action="{{ url('/search') }}" method="get" class="search-form">
                     <div class="input-group input-group-modern shadow-modern">
                         <input type="text" class="form-control form-control-lg" name="q" 
-                               placeholder="Rechercher un secteur, une voie, une région..." 
+                               placeholder="Rechercher un secteur, une voie, une région, un guide..." 
                                style="border: none; font-size: 1.1rem;">
-                        <select name="difficulty" class="form-select" style="max-width: 150px; border: none; border-left: 1px solid var(--gray-300);">
+                        <select name="type" class="form-select" style="max-width: 120px; border: none; border-left: 1px solid var(--gray-300);">
+                            <option value="">Tout</option>
+                            <option value="route">Voies</option>
+                            <option value="sector">Secteurs</option>
+                            <option value="site">Sites</option>
+                            <option value="region">Régions</option>
+                            <option value="book">Guides</option>
+                        </select>
+                        <select name="difficulty" class="form-select" style="max-width: 120px; border: none; border-left: 1px solid var(--gray-300);">
                             <option value="">Difficulté</option>
                             <option value="3">3a - 3c</option>
                             <option value="4">4a - 4c</option>
@@ -96,6 +148,7 @@
                         <a href="{{ url('/search?q=dalle') }}" class="search-tag">Dalle</a>
                         <a href="{{ url('/search?q=dévers') }}" class="search-tag">Dévers</a>
                         <a href="{{ url('/search?q=5c') }}" class="search-tag">5c</a>
+                        <a href="{{ url('/search?type=book') }}" class="search-tag">Guides</a>
                     </div>
                 </div>
             </div>
@@ -120,9 +173,9 @@
                         </div>
                     </div>
                     <h4>Base de données complète</h4>
-                    <p class="text-muted">Plus de 1200 secteurs répertoriés dans toute la Suisse avec informations détaillées, coordonnées GPS et photos.</p>
-                    <a href="{{ url('/sectors') }}" class="btn btn-outline-primary">
-                        Explorer les secteurs
+                    <p class="text-muted">Régions, sites, secteurs et voies répertoriés dans toute la Suisse avec informations détaillées, coordonnées GPS et photos.</p>
+                    <a href="{{ url('/regions') }}" class="btn btn-outline-primary">
+                        Explorer les régions
                     </a>
                 </div>
             </div>
@@ -145,13 +198,28 @@
             <div class="col-lg-4 col-md-6">
                 <div class="info-card text-center hover-lift transition-modern">
                     <div class="mb-4">
+                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--info-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
+                            <i class="fas fa-book"></i>
+                        </div>
+                    </div>
+                    <h4>Guides d'escalade</h4>
+                    <p class="text-muted">Collection complète de guides et topos d'escalade suisses avec références croisées vers nos données.</p>
+                    <a href="{{ url('/books') }}" class="btn btn-outline-primary">
+                        Parcourir les guides
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 col-md-6">
+                <div class="info-card text-center hover-lift transition-modern">
+                    <div class="mb-4">
                         <div class="feature-icon" style="width: 80px; height: 80px; background: var(--warning-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
                             <i class="fas fa-cloud-sun"></i>
                         </div>
                     </div>
                     <h4>Conditions en temps réel</h4>
                     <p class="text-muted">Météo, état des voies et fermetures saisonnières mis à jour par la communauté.</p>
-                    <a href="{{ url('/conditions') }}" class="btn btn-outline-primary">
+                    <a href="{{ url('/weather') }}" class="btn btn-outline-primary">
                         Conditions actuelles
                     </a>
                 </div>
@@ -175,21 +243,6 @@
             <div class="col-lg-4 col-md-6">
                 <div class="info-card text-center hover-lift transition-modern">
                     <div class="mb-4">
-                        <div class="feature-icon" style="width: 80px; height: 80px; background: var(--info-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
-                            <i class="fas fa-mobile-alt"></i>
-                        </div>
-                    </div>
-                    <h4>Application mobile</h4>
-                    <p class="text-muted">Accédez à toutes les informations même hors ligne grâce à notre application mobile dédiée.</p>
-                    <a href="{{ url('/mobile') }}" class="btn btn-outline-primary">
-                        Télécharger
-                    </a>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6">
-                <div class="info-card text-center hover-lift transition-modern">
-                    <div class="mb-4">
                         <div class="feature-icon" style="width: 80px; height: 80px; background: var(--primary-gradient); border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-size: 2rem;">
                             <i class="fas fa-shield-alt"></i>
                         </div>
@@ -205,64 +258,239 @@
     </div>
 </section>
 
-<!-- Secteurs Populaires -->
-{% if popular_sectors is defined and popular_sectors|length > 0 %}
+<!-- Contenu populaire avec onglets -->
 <section style="padding: 4rem 0; background: var(--gray-50);">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-5">
-            <div>
-                <h2>Secteurs populaires</h2>
-                <p class="text-muted mb-0">Les destinations favorites de notre communauté</p>
-            </div>
-            <a href="{{ url('/sectors') }}" class="btn btn-outline-primary">
-                Voir tous les secteurs
-                <i class="fas fa-arrow-right ms-1"></i>
-            </a>
+        <div class="text-center mb-5">
+            <h2>Contenu populaire</h2>
+            <p class="text-muted">Les destinations et ressources favorites de notre communauté</p>
         </div>
         
-        <div class="row g-4">
-            {% for sector in popular_sectors|slice(0, 6) %}
-                <div class="col-lg-4 col-md-6">
-                    <div class="card card-modern">
-                        {% if sector.image %}
-                            <div style="height: 200px; background: url('{{ url('/uploads/' ~ sector.image) }}') center/cover; position: relative;">
-                                <div style="position: absolute; top: 1rem; right: 1rem;">
-                                    <span class="badge-modern badge-primary">{{ sector.routes_count }} voies</span>
-                                </div>
-                            </div>
-                        {% endif %}
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">
-                                    {{ sector.name }}
-                                </a>
-                            </h5>
-                            <p class="text-muted small mb-2">
-                                <i class="fas fa-map-marker-alt me-1"></i>
-                                {{ sector.region.name ?? 'Région non spécifiée' }}
-                                {% if sector.altitude %}
-                                    • {{ sector.altitude }}m
-                                {% endif %}
-                            </p>
-                            <p class="text-muted">{{ sector.description|slice(0, 120) }}...</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="difficulty-range">
-                                    {% if sector.min_difficulty and sector.max_difficulty %}
-                                        <small class="text-muted">{{ sector.min_difficulty }} - {{ sector.max_difficulty }}</small>
+        <!-- Navigation par onglets -->
+        <ul class="nav nav-pills nav-justified mb-5" id="popularContent" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="sectors-tab" data-bs-toggle="pill" data-bs-target="#sectors" type="button" role="tab">
+                    <i class="fas fa-location-dot me-2"></i>Secteurs populaires
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="books-tab" data-bs-toggle="pill" data-bs-target="#books" type="button" role="tab">
+                    <i class="fas fa-book me-2"></i>Guides récents
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="routes-tab" data-bs-toggle="pill" data-bs-target="#routes" type="button" role="tab">
+                    <i class="fas fa-route me-2"></i>Voies tendances
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="popularContentContent">
+            <!-- Secteurs populaires -->
+            <div class="tab-pane fade show active" id="sectors" role="tabpanel">
+                {% if popular_sectors is defined and popular_sectors|length > 0 %}
+                    <div class="row g-4">
+                        {% for sector in popular_sectors|slice(0, 6) %}
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card card-modern">
+                                    {% if sector.image %}
+                                        <div style="height: 200px; background: url('{{ url('/uploads/' ~ sector.image) }}') center/cover; position: relative;">
+                                            <div style="position: absolute; top: 1rem; right: 1rem;">
+                                                <span class="badge-modern badge-primary">{{ sector.routes_count }} voies</span>
+                                            </div>
+                                        </div>
                                     {% endif %}
+                                    <div class="card-body">
+                                        <h5 class="card-title">
+                                            <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">
+                                                {{ sector.name }}
+                                            </a>
+                                        </h5>
+                                        <p class="text-muted small mb-2">
+                                            <i class="fas fa-map-marker-alt me-1"></i>
+                                            {{ sector.region.name ?? sector.site.name ?? 'Région non spécifiée' }}
+                                            {% if sector.altitude %}
+                                                • {{ sector.altitude }}m
+                                            {% endif %}
+                                        </p>
+                                        <p class="text-muted">{{ sector.description|slice(0, 120) }}...</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="difficulty-range">
+                                                {% if sector.min_difficulty and sector.max_difficulty %}
+                                                    <small class="text-muted">{{ sector.min_difficulty }} - {{ sector.max_difficulty }}</small>
+                                                {% endif %}
+                                            </div>
+                                            <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-primary">
+                                                Découvrir
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
-                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-primary">
-                                    Découvrir
-                                </a>
                             </div>
-                        </div>
+                        {% endfor %}
                     </div>
-                </div>
-            {% endfor %}
+                    <div class="text-center mt-4">
+                        <a href="{{ url('/sectors') }}" class="btn btn-outline-primary">
+                            Voir tous les secteurs
+                            <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-location-dot fa-3x text-muted mb-3"></i>
+                        <h4>Aucun secteur trouvé</h4>
+                        <p class="text-muted">Les secteurs populaires s'afficheront ici une fois ajoutés.</p>
+                        {% if auth() %}
+                            <a href="{{ url('/sectors/create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Ajouter un secteur
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Guides/Books récents -->
+            <div class="tab-pane fade" id="books" role="tabpanel">
+                {% if recent_books is defined and recent_books|length > 0 %}
+                    <div class="row g-4">
+                        {% for book in recent_books|slice(0, 6) %}
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card card-modern">
+                                    {% if book.image %}
+                                        <div style="height: 200px; background: url('{{ url('/uploads/' ~ book.image) }}') center/cover; position: relative;">
+                                            <div style="position: absolute; top: 1rem; right: 1rem;">
+                                                <span class="badge-modern badge-info">{{ book.year ?? 'N/A' }}</span>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <div style="height: 200px; background: var(--primary-gradient); position: relative; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fas fa-book fa-4x text-white opacity-50"></i>
+                                            <div style="position: absolute; top: 1rem; right: 1rem;">
+                                                <span class="badge-modern badge-light">{{ book.year ?? 'N/A' }}</span>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h5 class="card-title">
+                                            <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none">
+                                                {{ book.name }}
+                                            </a>
+                                        </h5>
+                                        <p class="text-muted small mb-2">
+                                            <i class="fas fa-building me-1"></i>
+                                            {{ book.publisher ?? 'Éditeur non spécifié' }}
+                                            {% if book.region %}
+                                                • {{ book.region.name }}
+                                            {% endif %}
+                                        </p>
+                                        {% if book.isbn %}
+                                            <p class="text-muted small mb-2">
+                                                <i class="fas fa-barcode me-1"></i>
+                                                ISBN: {{ book.isbn }}
+                                            </p>
+                                        {% endif %}
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="sectors-count">
+                                                {% if book.sectors_count %}
+                                                    <small class="text-muted">{{ book.sectors_count }} secteurs</small>
+                                                {% endif %}
+                                            </div>
+                                            <a href="{{ url('/books/' ~ book.id) }}" class="btn btn-sm btn-primary">
+                                                Consulter
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-4">
+                        <a href="{{ url('/books') }}" class="btn btn-outline-primary">
+                            Voir tous les guides
+                            <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h4>Aucun guide trouvé</h4>
+                        <p class="text-muted">Les guides d'escalade récents s'afficheront ici une fois ajoutés.</p>
+                        {% if auth() %}
+                            <a href="{{ url('/books/create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Ajouter un guide
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Voies tendances -->
+            <div class="tab-pane fade" id="routes" role="tabpanel">
+                {% if trending_routes is defined and trending_routes|length > 0 %}
+                    <div class="row g-4">
+                        {% for route in trending_routes|slice(0, 6) %}
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card card-modern">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h5 class="card-title mb-0">
+                                                <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none">
+                                                    {{ route.name }}
+                                                </a>
+                                            </h5>
+                                            <span class="badge bg-primary">{{ route.difficulty ?? 'N/A' }}</span>
+                                        </div>
+                                        <p class="text-muted small mb-2">
+                                            <i class="fas fa-location-dot me-1"></i>
+                                            {{ route.sector.name ?? 'Secteur non spécifié' }}
+                                        </p>
+                                        {% if route.length %}
+                                            <p class="text-muted small mb-2">
+                                                <i class="fas fa-ruler me-1"></i>
+                                                {{ route.length }}m
+                                            </p>
+                                        {% endif %}
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="route-stats">
+                                                {% if route.beauty %}
+                                                    <small class="text-warning">
+                                                        {% for i in 1..route.beauty %}
+                                                            <i class="fas fa-star"></i>
+                                                        {% endfor %}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                            <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-sm btn-primary">
+                                                Voir détails
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-4">
+                        <a href="{{ url('/routes') }}" class="btn btn-outline-primary">
+                            Voir toutes les voies
+                            <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-route fa-3x text-muted mb-3"></i>
+                        <h4>Aucune voie trouvée</h4>
+                        <p class="text-muted">Les voies populaires s'afficheront ici une fois ajoutées.</p>
+                        {% if auth() %}
+                            <a href="{{ url('/routes/create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Ajouter une voie
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </section>
-{% endif %}
 
 <!-- Call-to-Action -->
 {% if not auth() %}
@@ -335,6 +563,105 @@
     </div>
 </section>
 {% endif %}
+
+<style>
+/* Styles supplémentaires pour les nouvelles fonctionnalités */
+.stat-item-secondary {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: var(--border-radius-lg);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stat-value-small {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.stat-label-small {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.nav-pills .nav-link {
+    background: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    border-radius: var(--border-radius-lg);
+    margin: 0 0.25rem;
+}
+
+.nav-pills .nav-link:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.nav-pills .nav-link.active {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    box-shadow: var(--shadow-md);
+}
+
+.search-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    margin: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.search-tag:hover {
+    background: var(--primary-hover);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.badge-modern {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-modern.badge-primary {
+    background: var(--primary-gradient);
+    color: white;
+}
+
+.badge-modern.badge-info {
+    background: var(--info-gradient);
+    color: white;
+}
+
+.badge-modern.badge-light {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+    .nav-pills .nav-link {
+        margin: 0.25rem 0;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .stat-item-secondary {
+        margin-bottom: 1rem;
+    }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -355,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, observerOptions);
     
     // Observer tous les éléments qui doivent s'animer
-    document.querySelectorAll('.info-card, .card-modern').forEach(el => {
+    document.querySelectorAll('.info-card, .card-modern, .stat-item-secondary').forEach(el => {
         observer.observe(el);
     });
     
@@ -372,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const statsObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                const statValue = entry.target.querySelector('.stat-value');
+                const statValue = entry.target.querySelector('.stat-value, .stat-value-small');
                 if (statValue && !statValue.hasAttribute('data-animated')) {
                     statValue.setAttribute('data-animated', 'true');
                     animateNumber(statValue);
@@ -381,7 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, observerOptions);
     
-    document.querySelectorAll('.stat-item').forEach(stat => {
+    document.querySelectorAll('.stat-item, .stat-item-secondary').forEach(stat => {
         statsObserver.observe(stat);
     });
     
@@ -389,7 +716,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = element.textContent;
         const number = parseInt(text.replace(/[^0-9]/g, ''));
         
-        if (isNaN(number)) return;
+        if (isNaN(number) || number === 0) return;
         
         const duration = 2000;
         const step = number / (duration / 16);
@@ -407,6 +734,22 @@ document.addEventListener('DOMContentLoaded', function() {
             element.textContent = formatted;
         }, 16);
     }
+    
+    // Gestion des onglets avec animation
+    const tabButtons = document.querySelectorAll('#popularContent button[data-bs-toggle="pill"]');
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', function() {
+            // Ajouter animation aux cartes nouvellement affichées
+            const target = document.querySelector(this.getAttribute('data-bs-target'));
+            if (target) {
+                const cards = target.querySelectorAll('.card-modern');
+                cards.forEach((card, index) => {
+                    card.style.animationDelay = `${index * 0.1}s`;
+                    card.classList.add('fade-in');
+                });
+            }
+        });
+    });
 });
 </script>
 {% endblock %}
