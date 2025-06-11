@@ -78,9 +78,7 @@ class AuthService
                 return false;
             }
 
-            // Créer l'objet User
-            $user = new User();
-            $user->fill($result);
+            // Créer l'objet User avec l'ID
             $user = User::fromDatabase($result);
 
             // AJOUT DE DEBUG
@@ -89,17 +87,21 @@ class AuthService
             error_log("DEBUG - User __get id: " . ($user->id ?? 'NULL'));
             error_log("DEBUG - User getId(): " . (method_exists($user, 'getId') ? $user->getId() : 'method not found'));
 
+            // SOLUTION DIRECTE : stocker l'ID en session AVANT login()
+            $userId = (int)$result['id'];
+            $this->session->set('auth_user_id', $userId);
+            $_SESSION['auth_user_id'] = $userId;
+
             // Connecter l'utilisateur (login() retourne void)
             $this->auth->login($user, $remember);
 
-            // Connecter l'utilisateur
-            $loginSuccess = $this->auth->login($user);
-
-            if ($loginSuccess && $remember) {
-                $this->setRememberToken($user);
+            // Vérifier que la connexion a réussi
+            if ($this->auth->check()) {
+                error_log("Connexion réussie pour: $email");
+                return true;
             }
 
-            return $loginSuccess;
+            return false;
         } catch (\Exception $e) {
             error_log("Erreur lors de la tentative de connexion: " . $e->getMessage());
             return false;
