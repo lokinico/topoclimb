@@ -235,16 +235,29 @@ class Auth
     /**
      * Connecte un utilisateur
      */
+
     public function login(User $user, bool $remember = false): void
     {
         $this->user = $user;
 
-        // Récupérer l'ID depuis le cache ou l'objet
+        // Récupérer l'ID de différentes manières
         $userId = null;
+
+        // Méthode 1 : cache (si disponible)
         if ($this->userDataCache && isset($this->userDataCache['id'])) {
             $userId = (int)$this->userDataCache['id'];
-        } elseif (isset($user->id)) {
+        }
+        // Méthode 2 : via __get magic method
+        elseif ($user->id) {
             $userId = (int)$user->id;
+        }
+        // Méthode 3 : via getAttribute (Model.php ligne 60)
+        elseif ($user->getAttribute('id')) {
+            $userId = (int)$user->getAttribute('id');
+        }
+        // Méthode 4 : via la méthode getId() si elle existe
+        elseif (method_exists($user, 'getId') && $user->getId()) {
+            $userId = (int)$user->getId();
         }
 
         if (!$userId) {
