@@ -3,6 +3,7 @@
 namespace TopoclimbCH\Controllers;
 
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\View;
 use TopoclimbCH\Services\RegionService;
 use TopoclimbCH\Services\SiteService;
 use TopoclimbCH\Services\SectorService;
