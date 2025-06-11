@@ -166,13 +166,15 @@ class ContainerBuilder
         $controllers = [
             'TopoclimbCH\\Controllers\\HomeController' => [
                 View::class,                              // Position 1: pour BaseController
-                Database::class,                          // Position 2
-                'TopoclimbCH\\Services\\RegionService',   // Position 3
-                'TopoclimbCH\\Services\\SiteService',     // Position 4
-                'TopoclimbCH\\Services\\SectorService',   // Position 5
-                'TopoclimbCH\\Services\\RouteService',    // Position 6
-                'TopoclimbCH\\Services\\UserService',     // Position 7
-                'TopoclimbCH\\Services\\WeatherService'   // Position 8
+                Session::class,                           // Position 2: pour BaseController
+                CsrfManager::class,                       // Position 3: pour BaseController
+                Database::class,                          // Position 4
+                'TopoclimbCH\\Services\\RegionService',   // Position 5
+                'TopoclimbCH\\Services\\SiteService',     // Position 6
+                'TopoclimbCH\\Services\\SectorService',   // Position 7
+                'TopoclimbCH\\Services\\RouteService',    // Position 8
+                'TopoclimbCH\\Services\\UserService',     // Position 9
+                'TopoclimbCH\\Services\\WeatherService'   // Position 10
             ],
             'TopoclimbCH\\Controllers\\AuthController' => [
                 View::class,

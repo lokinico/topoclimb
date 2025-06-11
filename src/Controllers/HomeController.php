@@ -29,16 +29,18 @@ class HomeController extends BaseController
 
     public function __construct(
         View $view,                      // Position 1: pour BaseController
-        Database $db,                    // Position 2
-        RegionService $regionService,    // Position 3
-        SiteService $siteService,        // Position 4
-        SectorService $sectorService,    // Position 5
-        RouteService $routeService,      // Position 6
-        UserService $userService,        // Position 7
-        ?WeatherService $weatherService = null // Position 8
+        Session $session,                // Position 2: pour BaseController  
+        CsrfManager $csrfManager,        // Position 3: pour BaseController
+        Database $db,                    // Position 4
+        RegionService $regionService,    // Position 5
+        SiteService $siteService,        // Position 6
+        SectorService $sectorService,    // Position 7
+        RouteService $routeService,      // Position 8
+        UserService $userService,        // Position 9
+        ?WeatherService $weatherService = null // Position 10
     ) {
-        parent::__construct($view);      // Passer View au BaseController
-        $this->db = $db;                 // Stocker Database
+        parent::__construct($view, $session, $csrfManager);  // 3 paramètres pour BaseController
+        $this->db = $db;
         $this->regionService = $regionService;
         $this->siteService = $siteService;
         $this->sectorService = $sectorService;
