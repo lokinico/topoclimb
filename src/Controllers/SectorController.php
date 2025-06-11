@@ -110,7 +110,7 @@ class SectorController extends BaseController
             $sortBy = in_array($request->query->get('sort_by'), $allowedSortFields)
                 ? $request->query->get('sort_by')
                 : 'name';
-            $sortDir = strtoupper($request->query->get('sort_dir')) === 'DESC' ? 'DESC' : 'ASC';
+            $sortDir = strtoupper($request->query->get('sort_dir', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
 
             // Paginer les résultats filtrés
             $paginatedSectors = Sector::filterAndPaginate(
