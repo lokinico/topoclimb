@@ -9,6 +9,7 @@ use Monolog\Handler\StreamHandler;
 use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\Config\FileLocator;
 use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Router;
@@ -16,10 +17,22 @@ use TopoclimbCH\Core\Router;
 class ContainerBuilder
 {
     /**
-     * Build and configure the dependency injection container with autowiring.
+     * Build and configure the dependency injection container with autowiring and caching.
      */
     public function build(): SymfonyContainerBuilder
     {
+        $environment = $_ENV['APP_ENV'] ?? 'production';
+        $cacheFile = BASE_PATH . '/cache/container/container.php';
+        
+        // In production, try to load cached container first
+        if ($environment === 'production' && file_exists($cacheFile)) {
+            require_once $cacheFile;
+            if (class_exists('CachedContainer')) {
+                return new \CachedContainer();
+            }
+        }
+
+        // Build container from scratch
         $container = new SymfonyContainerBuilder();
 
         // Enable autowiring and autoconfiguration
@@ -31,7 +44,7 @@ class ContainerBuilder
         $container->setParameter('db_name', $_ENV['DB_DATABASE'] ?? 'sh139940_');
         $container->setParameter('db_user', $_ENV['DB_USERNAME'] ?? 'root');
         $container->setParameter('db_password', $_ENV['DB_PASSWORD'] ?? '');
-        $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
+        $container->setParameter('environment', $environment);
         $container->setParameter('views_path', BASE_PATH . '/resources/views');
         $container->setParameter('cache_path', BASE_PATH . '/cache/views');
 
@@ -41,7 +54,32 @@ class ContainerBuilder
         // Register only special services that need custom configuration
         $this->registerSpecialServices($container);
 
+        // Compile container
+        $container->compile();
+
+        // Cache container in production
+        if ($environment === 'production') {
+            $this->cacheContainer($container, $cacheFile);
+        }
+
         return $container;
+    }
+
+    /**
+     * Cache the compiled container for production use.
+     */
+    private function cacheContainer(SymfonyContainerBuilder $container, string $cacheFile): void
+    {
+        $dumper = new PhpDumper($container);
+        $cachedContainer = $dumper->dump(['class' => 'CachedContainer']);
+        
+        // Ensure cache directory exists
+        $cacheDir = dirname($cacheFile);
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+        
+        file_put_contents($cacheFile, $cachedContainer);
     }
 
     /**
@@ -66,7 +104,7 @@ class ContainerBuilder
     }
 
     /**
-     * Auto-discover and register services with autowiring.
+     * Auto-discover and register services with autowiring (recursive).
      */
     private function autoDiscoverServices(SymfonyContainerBuilder $container, string $namespace, string $directory): void
     {
@@ -74,15 +112,24 @@ class ContainerBuilder
             return;
         }
 
-        $files = glob($directory . '*.php');
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
         
-        foreach ($files as $file) {
-            $className = $namespace . basename($file, '.php');
-            
-            if (class_exists($className)) {
-                $definition = $container->autowire($className, $className);
-                $definition->setPublic(true);
-                $definition->setAutoconfigured(true);
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                // Calculate relative path from base directory
+                $relativePath = substr($file->getPath(), strlen($directory));
+                $relativeNamespace = str_replace('/', '\\', $relativePath);
+                
+                // Build full class name
+                $className = $namespace . ($relativeNamespace ? $relativeNamespace . '\\' : '') . $file->getBasename('.php');
+                
+                if (class_exists($className)) {
+                    $definition = $container->autowire($className, $className);
+                    $definition->setPublic(true);
+                    $definition->setAutoconfigured(true);
+                }
             }
         }
     }
@@ -93,10 +140,17 @@ class ContainerBuilder
      */
     private function registerSpecialServices(SymfonyContainerBuilder $container): void
     {
-        // Logger - needs custom configuration
+        // Logger - needs custom configuration with StreamHandler
         $container->register(LoggerInterface::class, Logger::class)
             ->setPublic(true)
-            ->addArgument('app');
+            ->addArgument('app')
+            ->addMethodCall('pushHandler', [new Reference('logger.stream_handler')]);
+
+        // StreamHandler for logger - different levels based on environment
+        $logLevel = ($_ENV['APP_ENV'] ?? 'production') === 'development' ? Logger::DEBUG : Logger::INFO;
+        $container->register('logger.stream_handler', StreamHandler::class)
+            ->addArgument(BASE_PATH . '/logs/app.log')
+            ->addArgument($logLevel);
 
         // Database - now using dependency injection
         $container->autowire(Database::class, Database::class)

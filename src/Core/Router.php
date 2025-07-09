@@ -62,13 +62,26 @@ class Router
     }
 
     /**
-     * Load routes from a file
+     * Load routes from a file with caching support
      *
      * @param string $file Path to routes file
      * @return Router
      */
     public function loadRoutes(string $file): self
     {
+        $environment = $_ENV['APP_ENV'] ?? 'production';
+        $cacheFile = BASE_PATH . '/cache/routes/routes.php';
+        
+        // In production, try to load cached routes first
+        if ($environment === 'production' && file_exists($cacheFile)) {
+            $cachedRoutes = require $cacheFile;
+            if (is_array($cachedRoutes)) {
+                $this->routes = $cachedRoutes;
+                return $this;
+            }
+        }
+
+        // Load routes from original file
         if (file_exists($file)) {
             $routes = require $file;
 
@@ -91,7 +104,28 @@ class Router
             }
         }
 
+        // Cache routes in production
+        if ($environment === 'production') {
+            $this->cacheRoutes($cacheFile);
+        }
+
         return $this;
+    }
+
+    /**
+     * Cache the compiled routes for production use.
+     */
+    private function cacheRoutes(string $cacheFile): void
+    {
+        $cacheDir = dirname($cacheFile);
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+        
+        $cacheContent = "<?php\n\n// Cached routes generated on " . date('Y-m-d H:i:s') . "\n";
+        $cacheContent .= "return " . var_export($this->routes, true) . ";\n";
+        
+        file_put_contents($cacheFile, $cacheContent);
     }
 
     /**
