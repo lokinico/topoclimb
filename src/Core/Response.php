@@ -170,6 +170,24 @@ class Response extends SymfonyResponse
     }
 
     /**
+     * Ajoute des données supplémentaires à une réponse JSON existante
+     *
+     * @param array $additionalData
+     * @return static
+     */
+    public function withData(array $additionalData): static
+    {
+        $currentData = json_decode($this->getContent(), true);
+        
+        if (is_array($currentData)) {
+            $newData = array_merge($currentData, $additionalData);
+            $this->setContent(json_encode($newData));
+        }
+
+        return $this;
+    }
+
+    /**
      * Crée une réponse de redirection
      *
      * @param string $url URL de redirection

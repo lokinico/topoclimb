@@ -902,5 +902,71 @@ return [
         'path' => '/403',
         'controller' => \TopoclimbCH\Controllers\ErrorController::class,
         'action' => 'forbidden'
+    ],
+
+    // ========================================
+    // API REST v1 ENDPOINTS - MODERN API
+    // ========================================
+    
+    // Regions API
+    [
+        'method' => 'GET',
+        'path' => '/api/v1/regions',
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'action' => 'index',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/api/v1/regions',
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/v1/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'action' => 'show',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'PUT',
+        'path' => '/api/v1/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'action' => 'update',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'DELETE',
+        'path' => '/api/v1/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'action' => 'destroy',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/v1/regions/search',
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'action' => 'search',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
     ]
 ];
