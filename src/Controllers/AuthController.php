@@ -3,6 +3,7 @@
 namespace TopoclimbCH\Controllers;
 
 use TopoclimbCH\Core\Auth;
+use TopoclimbCH\Core\Database;
 use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
@@ -32,22 +33,23 @@ class AuthController extends BaseController
      * @param View $view
      * @param Session $session
      * @param CsrfManager $csrfManager
+     * @param Database $db
+     * @param Auth $auth
      * @param AuthService $authService
      */
     public function __construct(
         View $view,
         Session $session,
         CsrfManager $csrfManager,
+        Database $db,
+        Auth $auth,
         AuthService $authService
     ) {
-        parent::__construct($view, $session, $csrfManager);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
 
         // Injection pure des services
         $this->authService = $authService;
         $this->validationService = new ValidationService(); // ValidationService n'a pas de dépendances
-
-        // Récupérer Auth depuis AuthService
-        $this->auth = $this->authService->user() ? Auth::getInstance($session, null) : null;
     }
 
     /**
