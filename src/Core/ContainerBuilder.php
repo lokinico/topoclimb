@@ -132,12 +132,46 @@ class ContainerBuilder
                 // Build full class name
                 $className = $namespace . ($relativeNamespace ? $relativeNamespace . '\\' : '') . $file->getBasename('.php');
                 
-                if (class_exists($className)) {
+                if (class_exists($className) && $this->canAutowire($className)) {
                     $definition = $container->autowire($className, $className);
                     $definition->setPublic(true);
                     $definition->setAutoconfigured(true);
                 }
             }
+        }
+    }
+
+    /**
+     * Check if a class can be safely autowired (all dependencies exist).
+     */
+    private function canAutowire(string $className): bool
+    {
+        try {
+            $reflection = new \ReflectionClass($className);
+            $constructor = $reflection->getConstructor();
+            
+            if (!$constructor) {
+                return true; // No constructor, safe to autowire
+            }
+            
+            foreach ($constructor->getParameters() as $parameter) {
+                $type = $parameter->getType();
+                
+                if ($type && $type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+                    $dependencyClass = $type->getName();
+                    
+                    // Check if the dependency class exists
+                    if (!class_exists($dependencyClass) && !interface_exists($dependencyClass)) {
+                        error_log("Skipping autowiring for $className: dependency $dependencyClass not found");
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            error_log("Error checking autowiring for $className: " . $e->getMessage());
+            return false;
         }
     }
 
