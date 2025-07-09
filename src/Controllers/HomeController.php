@@ -3,6 +3,7 @@
 namespace TopoclimbCH\Controllers;
 
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
