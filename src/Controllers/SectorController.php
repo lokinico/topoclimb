@@ -776,7 +776,7 @@ class SectorController extends BaseController
      */
     private function canCreateSectors(): bool
     {
-        return $this->hasRole(['1', '2', '4']); // Admin, Moderator, Editor
+        return $this->hasRole(['0', '1', '2']); // Admin, Moderator, Editor
     }
 
     /**
@@ -784,7 +784,7 @@ class SectorController extends BaseController
      */
     private function canEditSectors(): bool
     {
-        return $this->hasRole(['1', '2', '4']); // Admin, Moderator, Editor
+        return $this->hasRole(['0', '1', '2']); // Admin, Moderator, Editor
     }
 
     /**
@@ -792,7 +792,7 @@ class SectorController extends BaseController
      */
     private function canDeleteSectors(): bool
     {
-        return $this->hasRole(['1', '2']); // Admin, Moderator seulement
+        return $this->hasRole(['0', '1']); // Admin, Moderator seulement
     }
 
     /**
@@ -1288,8 +1288,7 @@ class SectorController extends BaseController
      */
     private function getCurrentUserId(): ?int
     {
-        $userId = $_SESSION['auth_user_id'] ?? $this->session->get('user_id') ?? null;
-        return $userId ? (int) $userId : null;
+        return $this->auth ? $this->auth->id() : null;
     }
 
     /**
@@ -1297,7 +1296,7 @@ class SectorController extends BaseController
      */
     private function isAuthenticated(): bool
     {
-        return $this->getCurrentUserId() !== null;
+        return $this->auth ? $this->auth->check() : false;
     }
 
     /**
@@ -1309,7 +1308,7 @@ class SectorController extends BaseController
             return false;
         }
 
-        $userRole = $_SESSION['auth_user_role'] ?? $this->session->get('user_role') ?? '3';
+        $userRole = (string)$this->auth->role();
         return in_array($userRole, $allowedRoles);
     }
 }
