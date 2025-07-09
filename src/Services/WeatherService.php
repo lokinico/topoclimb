@@ -19,9 +19,9 @@ class WeatherService
         'lng_max' => 10.6
     ];
 
-    public function __construct(Database $db = null)
+    public function __construct(Database $db)
     {
-        $this->db = $db ?? Database::getInstance();
+        $this->db = $db;
     }
 
     /**

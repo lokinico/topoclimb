@@ -8,13 +8,6 @@ use PDOException;
 class Database
 {
     /**
-     * Instance unique de la classe Database (pattern Singleton)
-     *
-     * @var Database|null
-     */
-    private static ?Database $instance = null;
-
-    /**
      * Instance PDO pour la connexion à la base de données
      *
      * @var PDO|null
@@ -29,9 +22,9 @@ class Database
     private array $config;
 
     /**
-     * Constructeur privé pour empêcher l'instanciation directe (pattern Singleton)
+     * Constructeur public pour l'injection de dépendances
      */
-    private function __construct()
+    public function __construct()
     {
         $this->config = [
             'host' => $_ENV['DB_HOST'] ?? 'localhost',
@@ -49,21 +42,14 @@ class Database
     }
 
     /**
-     * Empêche le clonage de l'instance (pattern Singleton)
-     */
-    private function __clone() {}
-
-    /**
-     * Récupère l'instance unique de la classe Database (pattern Singleton)
-     *
+     * Récupère l'instance unique de la classe Database (legacy - kept for backward compatibility)
+     * @deprecated Use dependency injection instead
      * @return Database
      */
     public static function getInstance(): Database
     {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
+        // Return new instance for backward compatibility during transition
+        return new self();
     }
 
     /**

@@ -8,22 +8,23 @@ use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Symfony\Component\DependencyInjection\ContainerBuilder as SymfonyContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
-use TopoclimbCH\Controllers\HomeController;
-use TopoclimbCH\Controllers\ErrorController;
-use TopoclimbCH\Controllers\SectorController;
-use TopoclimbCH\Controllers\RouteController;
-use TopoclimbCH\Controllers\AuthController;
+use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Symfony\Component\Config\FileLocator;
 use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Router;
 
 class ContainerBuilder
 {
     /**
-     * Build and configure the dependency injection container.
+     * Build and configure the dependency injection container with autowiring.
      */
     public function build(): SymfonyContainerBuilder
     {
         $container = new SymfonyContainerBuilder();
+
+        // Enable autowiring and autoconfiguration
+        $container->setParameter('container.autowiring.strict_mode', false);
+        $container->setParameter('container.dumper.inline_factories', true);
 
         // Configuration variables
         $container->setParameter('db_host', $_ENV['DB_HOST'] ?? 'localhost');
@@ -33,65 +34,96 @@ class ContainerBuilder
         $container->setParameter('environment', $_ENV['APP_ENV'] ?? 'production');
         $container->setParameter('views_path', BASE_PATH . '/resources/views');
         $container->setParameter('cache_path', BASE_PATH . '/cache/views');
-        $container->setParameter('container.dumper.inline_factories', true);
-        $container->setParameter('container.autowiring.strict_mode', false);
 
-        // Services de base
-        $this->registerCoreServices($container);
+        // Configure autowiring for the src/ directory
+        $this->configureAutowiring($container);
 
-        // Services métier
-        $this->registerBusinessServices($container);
-
-        // Contrôleurs
-        $this->registerControllers($container);
-
-        // Middlewares
-        $this->registerMiddlewares($container);
+        // Register only special services that need custom configuration
+        $this->registerSpecialServices($container);
 
         return $container;
     }
 
     /**
-     * Register core services in the container.
+     * Configure autowiring for all services in the src/ directory.
      */
-    private function registerCoreServices(SymfonyContainerBuilder $container): void
+    private function configureAutowiring(SymfonyContainerBuilder $container): void
     {
-        // Logger
+        // Auto-register all services in the src/ directory
+        $container->registerForAutoconfiguration('TopoclimbCH\\Services\\*')
+            ->addTag('app.service');
+        
+        $container->registerForAutoconfiguration('TopoclimbCH\\Controllers\\*')
+            ->addTag('app.controller');
+            
+        $container->registerForAutoconfiguration('TopoclimbCH\\Middleware\\*')
+            ->addTag('app.middleware');
+
+        // Auto-discover services, controllers, and middleware
+        $this->autoDiscoverServices($container, 'TopoclimbCH\\Services\\', BASE_PATH . '/src/Services/');
+        $this->autoDiscoverServices($container, 'TopoclimbCH\\Controllers\\', BASE_PATH . '/src/Controllers/');
+        $this->autoDiscoverServices($container, 'TopoclimbCH\\Middleware\\', BASE_PATH . '/src/Middleware/');
+    }
+
+    /**
+     * Auto-discover and register services with autowiring.
+     */
+    private function autoDiscoverServices(SymfonyContainerBuilder $container, string $namespace, string $directory): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $files = glob($directory . '*.php');
+        
+        foreach ($files as $file) {
+            $className = $namespace . basename($file, '.php');
+            
+            if (class_exists($className)) {
+                $definition = $container->autowire($className, $className);
+                $definition->setPublic(true);
+                $definition->setAutoconfigured(true);
+            }
+        }
+    }
+
+    /**
+     * Register only special services that need custom configuration.
+     * Regular services are now auto-discovered and autowired.
+     */
+    private function registerSpecialServices(SymfonyContainerBuilder $container): void
+    {
+        // Logger - needs custom configuration
         $container->register(LoggerInterface::class, Logger::class)
             ->setPublic(true)
             ->addArgument('app');
 
-        // Database
-        $container->register(Database::class, Database::class)
-            ->setPublic(true)
-            ->setFactory([Database::class, 'getInstance']);
+        // Database - now using dependency injection
+        $container->autowire(Database::class, Database::class)
+            ->setPublic(true);
 
-        // Session
+        // Session - simple registration
         $container->register(Session::class, Session::class)
             ->setPublic(true);
 
-        // CORRECTION: CsrfManager AVANT Auth car Auth l'utilise
+        // CsrfManager - needs custom arguments
         $container->register(CsrfManager::class, CsrfManager::class)
             ->setPublic(true)
             ->addArgument(new Reference(Session::class))
             ->addArgument([]); // Array vide pour exemptedRoutes
 
-        // Auth
-        $container->register(Auth::class, Auth::class)
-            ->setPublic(true)
-            ->setFactory([Auth::class, 'getInstance'])
-            ->addArgument(new Reference(Session::class))
-            ->addArgument(new Reference(Database::class))
-            ->setLazy(true);
+        // Auth - now using dependency injection
+        $container->autowire(Auth::class, Auth::class)
+            ->setPublic(true);
 
-        // View
+        // View - needs custom configuration
         $container->register(View::class, View::class)
             ->setPublic(true)
             ->addArgument('%views_path%')
             ->addArgument('%cache_path%')
             ->addArgument(new Reference(CsrfManager::class));
 
-        // Router
+        // Router - needs custom configuration
         $container->register(Router::class, Router::class)
             ->setPublic(true)
             ->addArgument(new Reference(LoggerInterface::class))
@@ -100,219 +132,4 @@ class ContainerBuilder
         $container->setAlias('router', Router::class)->setPublic(true);
     }
 
-    /**
-     * Register business services in the container.
-     */
-    private function registerBusinessServices(SymfonyContainerBuilder $container): void
-    {
-        $services = [
-            // AJOUT: Mailer en premier car AuthService en dépend
-            'TopoclimbCH\\Services\\Mailer' => [
-                Database::class
-            ],
-            // CORRECTION: AuthService avec Mailer ajouté
-            'TopoclimbCH\\Services\\AuthService' => [
-                Auth::class,
-                Session::class,
-                Database::class,
-                'TopoclimbCH\\Services\\Mailer'
-            ],
-            'TopoclimbCH\\Services\\SectorService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\RouteService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\MediaService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\RegionService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\CountryService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\WeatherService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\ValidationService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\UserService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\SiteService' => [
-                Database::class
-            ],
-            'TopoclimbCH\\Services\\AscentService' => [
-                Database::class
-            ]
-        ];
-
-        foreach ($services as $id => $dependencies) {
-            if (!class_exists($id)) {
-                error_log("Warning: Service class $id does not exist");
-                continue;
-            }
-
-            $definition = $container->register($id, $id);
-            $definition->setPublic(true);
-
-            foreach ($dependencies as $dependency) {
-                $definition->addArgument(new Reference($dependency));
-            }
-        }
-    }
-
-    /**
-     * Register controllers in the container.
-     */
-    private function registerControllers(SymfonyContainerBuilder $container): void
-    {
-        $controllers = [
-            'TopoclimbCH\\Controllers\\HomeController' => [
-                View::class,                              // Position 1: pour BaseController
-                Session::class,                           // Position 2: pour BaseController
-                CsrfManager::class,                       // Position 3: pour BaseController
-                Database::class,                          // Position 4
-                'TopoclimbCH\\Services\\RegionService',   // Position 5
-                'TopoclimbCH\\Services\\SiteService',     // Position 6
-                'TopoclimbCH\\Services\\SectorService',   // Position 7
-                'TopoclimbCH\\Services\\RouteService',    // Position 8
-                'TopoclimbCH\\Services\\UserService',     // Position 9
-                'TopoclimbCH\\Services\\WeatherService'   // Position 10
-            ],
-            // CORRECTION: AuthController avec AuthService au lieu de Database
-            'TopoclimbCH\\Controllers\\AuthController' => [
-                View::class,                              // Position 1: View $view
-                Session::class,                           // Position 2: Session $session  
-                CsrfManager::class,                       // Position 3: CsrfManager $csrfManager
-                'TopoclimbCH\\Services\\AuthService'      // Position 4: AuthService $authService
-            ],
-            'TopoclimbCH\\Controllers\\SectorController' => [
-                View::class,                                    // 1
-                Session::class,                                 // 2
-                'TopoclimbCH\\Services\\SectorService',         // 3
-                'TopoclimbCH\\Services\\MediaService',          // 4
-                'TopoclimbCH\\Services\\ValidationService',     // 5 ← CORRIGÉ
-                Database::class,                                // 6 ← DÉPLACÉ
-                CsrfManager::class                              // 7
-            ],
-            'TopoclimbCH\\Controllers\\RouteController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class,
-                'TopoclimbCH\\Services\\RouteService',
-                'TopoclimbCH\\Services\\MediaService',
-                'TopoclimbCH\\Services\\SectorService',
-                'TopoclimbCH\\Services\\AuthService'
-            ],
-            'TopoclimbCH\\Controllers\\MediaController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class,
-                'TopoclimbCH\\Services\\MediaService',
-                Database::class
-            ],
-            // CORRECTION: RegionController avec le bon ordre des dépendances
-            'TopoclimbCH\\Controllers\\RegionController' => [
-                View::class,                                    // Position 1: View $view
-                Session::class,                                 // Position 2: Session $session  
-                CsrfManager::class,                            // Position 3: CsrfManager $csrfManager
-                'TopoclimbCH\\Services\\RegionService',        // Position 4: RegionService $regionService
-                'TopoclimbCH\\Services\\MediaService',         // Position 5: MediaService $mediaService ← CORRIGÉ
-                'TopoclimbCH\\Services\\WeatherService',       // Position 6: WeatherService $weatherService ← AJOUTÉ
-                Database::class,                               // Position 7: Database $db
-                Auth::class,                                   // Position 8: ?Auth $auth
-                'TopoclimbCH\\Services\\AuthService'           // Position 9: ?AuthService $authService
-            ],
-            'TopoclimbCH\\Controllers\\SiteController' => [
-                View::class,                              // Position 1
-                Session::class,                           // Position 2  
-                CsrfManager::class,                       // Position 3
-                'TopoclimbCH\\Services\\MediaService',    // Position 4 ← AJOUTÉ
-                'TopoclimbCH\\Services\\RegionService',   // Position 5
-                'TopoclimbCH\\Services\\SectorService'    // Position 6
-            ],
-            'TopoclimbCH\\Controllers\\ErrorController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class
-            ],
-            'TopoclimbCH\\Controllers\\UserController' => [
-                View::class,
-                Session::class,
-                CsrfManager::class,
-                'TopoclimbCH\\Services\\UserService',
-                'TopoclimbCH\\Services\\AscentService',
-                'TopoclimbCH\\Services\\AuthService',
-                Database::class
-            ],
-            // CORRECTION: AdminController avec le bon ordre correspondant au constructeur
-            'TopoclimbCH\\Controllers\\AdminController' => [
-                View::class,           // Position 1: View $view
-                Session::class,        // Position 2: Session $session  
-                CsrfManager::class,    // Position 3: CsrfManager $csrfManager
-                Database::class,       // Position 4: Database $db
-                Auth::class            // Position 5: Auth $auth
-            ]
-        ];
-
-        foreach ($controllers as $id => $dependencies) {
-            if (!class_exists($id)) {
-                error_log("Warning: Controller class $id does not exist");
-                continue;
-            }
-
-            $definition = $container->register($id, $id);
-            $definition->setPublic(true);
-
-            foreach ($dependencies as $dependency) {
-                $definition->addArgument(new Reference($dependency));
-            }
-        }
-    }
-
-    /**
-     * Register middlewares in the container.
-     */
-    private function registerMiddlewares(SymfonyContainerBuilder $container): void
-    {
-        $middlewares = [
-            'TopoclimbCH\\Middleware\\AuthMiddleware' => [
-                Session::class,
-                Database::class
-            ],
-            'TopoclimbCH\\Middleware\\AdminMiddleware' => [
-                Session::class,
-                Database::class
-            ],
-            'TopoclimbCH\\Middleware\\ModeratorMiddleware' => [
-                Session::class,
-                Database::class
-            ],
-            'TopoclimbCH\\Middleware\\PermissionMiddleware' => [
-                Session::class,
-                Database::class
-            ],
-            'TopoclimbCH\\Middleware\\CsrfMiddleware' => [
-                CsrfManager::class,
-                Session::class
-            ]
-        ];
-
-        foreach ($middlewares as $id => $dependencies) {
-            if (!class_exists($id)) {
-                error_log("Warning: Middleware class $id does not exist");
-                continue;
-            }
-
-            $definition = $container->register($id, $id);
-            $definition->setPublic(true);
-
-            foreach ($dependencies as $dependency) {
-                $definition->addArgument(new Reference($dependency));
-            }
-        }
-    }
 }

@@ -6,70 +6,47 @@ use TopoclimbCH\Models\User;
 
 class Auth
 {
-    private static ?Auth $instance = null;
     private ?User $user = null;
     private ?Session $session = null;
     private ?Database $db = null;
-    private bool $initialized = false;
 
     // Cache pour les données utilisateur
     private ?array $userDataCache = null;
 
-    private function __construct(?Session $session = null, ?Database $db = null)
-    {
-        if ($session !== null && $db !== null) {
-            $this->initialize($session, $db);
-        }
-    }
-
     /**
-     * Initialise ou réinitialise l'instance avec les dépendances
+     * Constructeur public pour l'injection de dépendances
      */
-    private function initialize(Session $session, Database $db): void
+    public function __construct(Session $session, Database $db)
     {
         $this->session = $session;
         $this->db = $db;
-        $this->initialized = true;
 
-        error_log("Auth::initialize - Initialisation effectuée");
+        error_log("Auth::__construct - Initialisation effectuée");
 
         // Charger l'utilisateur depuis la session
         $this->checkSession();
     }
 
     /**
-     * Récupère l'instance de Auth
+     * Récupère l'instance de Auth (legacy - kept for backward compatibility)
+     * @deprecated Use dependency injection instead
      */
     public static function getInstance(?Session $session = null, ?Database $db = null): self
     {
-        if (self::$instance === null) {
-            if ($session === null || $db === null) {
-                throw new \RuntimeException("Container must be provided first time");
-            }
-            self::$instance = new self($session, $db);
-            error_log("Auth::getInstance - Nouvelle instance créée");
-        } elseif ($session !== null && $db !== null && !self::$instance->initialized) {
-            self::$instance->initialize($session, $db);
-            error_log("Auth::getInstance - Instance existante initialisée");
+        if ($session === null || $db === null) {
+            throw new \RuntimeException("Session and Database must be provided");
         }
-
-        return self::$instance;
+        // Return new instance for backward compatibility during transition
+        return new self($session, $db);
     }
 
-    /**
-     * Vérifie si l'instance est initialisée
-     */
-    public function validate(): bool
-    {
-        return $this->initialized && $this->user !== null;
-    }
 
     /**
      * Vérifie si l'utilisateur est connecté
      */
     public function check(): bool
     {
-        if ($this->initialized && $this->user === null && $this->session !== null) {
+        if ($this->user === null && $this->session !== null) {
             $this->checkSession();
         }
 
@@ -81,7 +58,7 @@ class Auth
      */
     public function user(): ?User
     {
-        if ($this->user === null && $this->initialized) {
+        if ($this->user === null) {
             $this->checkSession();
         }
 
@@ -102,7 +79,7 @@ class Auth
         }
 
         // Si pas d'utilisateur chargé, essayer de le charger
-        if ($this->user === null && $this->initialized) {
+        if ($this->user === null) {
             $this->checkSession();
         }
 
