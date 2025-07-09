@@ -54,6 +54,9 @@ class ContainerBuilder
         // Register only special services that need custom configuration
         $this->registerSpecialServices($container);
 
+        // Register controllers with explicit configuration (temporary fix for complex dependencies)
+        $this->registerControllersExplicitly($container);
+
         // Compile container
         $container->compile();
 
@@ -101,6 +104,10 @@ class ContainerBuilder
         $this->autoDiscoverServices($container, 'TopoclimbCH\\Services\\', BASE_PATH . '/src/Services/');
         $this->autoDiscoverServices($container, 'TopoclimbCH\\Controllers\\', BASE_PATH . '/src/Controllers/');
         $this->autoDiscoverServices($container, 'TopoclimbCH\\Middleware\\', BASE_PATH . '/src/Middleware/');
+        
+        // Register BaseController explicitly since other controllers inherit from it
+        $container->autowire('TopoclimbCH\\Controllers\\BaseController', 'TopoclimbCH\\Controllers\\BaseController')
+            ->setPublic(false); // Abstract class, should not be public
     }
 
     /**
@@ -184,6 +191,63 @@ class ContainerBuilder
             ->addArgument(new Reference('service_container'));
 
         $container->setAlias('router', Router::class)->setPublic(true);
+    }
+
+    /**
+     * Register controllers with explicit dependencies (temporary fix for complex inheritance).
+     */
+    private function registerControllersExplicitly(SymfonyContainerBuilder $container): void
+    {
+        // For controllers with complex dependencies, we need to override the autowiring
+        // with explicit configuration
+        $controllers = [
+            'TopoclimbCH\\Controllers\\HomeController' => [
+                View::class,                              // BaseController
+                Session::class,                           // BaseController
+                CsrfManager::class,                       // BaseController
+                Database::class,                          // BaseController + HomeController
+                Auth::class,                              // BaseController
+                'TopoclimbCH\\Services\\RegionService',   // HomeController
+                'TopoclimbCH\\Services\\SiteService',     // HomeController
+                'TopoclimbCH\\Services\\SectorService',   // HomeController
+                'TopoclimbCH\\Services\\RouteService',    // HomeController
+                'TopoclimbCH\\Services\\UserService',     // HomeController
+                'TopoclimbCH\\Services\\WeatherService'   // HomeController
+            ],
+            'TopoclimbCH\\Controllers\\ErrorController' => [
+                View::class,                              // BaseController
+                Session::class,                           // BaseController
+                CsrfManager::class,                       // BaseController
+                Database::class,                          // BaseController (optional)
+                Auth::class                               // BaseController (optional)
+            ],
+            'TopoclimbCH\\Controllers\\AuthController' => [
+                View::class,                              // BaseController
+                Session::class,                           // BaseController
+                CsrfManager::class,                       // BaseController
+                Database::class,                          // BaseController (optional)
+                Auth::class,                              // BaseController (optional)
+                'TopoclimbCH\\Services\\AuthService'      // AuthController
+            ],
+            // Add other controllers as needed
+        ];
+
+        foreach ($controllers as $id => $dependencies) {
+            if (class_exists($id)) {
+                // Remove the autowired definition if it exists
+                if ($container->hasDefinition($id)) {
+                    $container->removeDefinition($id);
+                }
+                
+                // Register with explicit dependencies
+                $definition = $container->register($id, $id);
+                $definition->setPublic(true);
+
+                foreach ($dependencies as $dependency) {
+                    $definition->addArgument(new Reference($dependency));
+                }
+            }
+        }
     }
 
 }

@@ -24,22 +24,31 @@ abstract class BaseController
     protected CsrfManager $csrfManager;
     protected ?Database $db = null;
 
-    public function __construct(View $view, Session $session, CsrfManager $csrfManager)
-    {
+    public function __construct(
+        View $view, 
+        Session $session, 
+        CsrfManager $csrfManager,
+        ?Database $db = null,
+        ?Auth $auth = null
+    ) {
         $this->view = $view;
         $this->session = $session;
         $this->csrfManager = $csrfManager;
+        $this->db = $db;
+        $this->auth = $auth;
 
-        // Initialiser Auth et Database de manière sécurisée
-        try {
-            if (Container::getInstance() && Container::getInstance()->has(Database::class)) {
-                $this->db = Container::getInstance()->get(Database::class);
+        // Fallback to Container if dependencies not injected (for backward compatibility)
+        if (!$this->db || !$this->auth) {
+            try {
+                if (!$this->db && Container::getInstance() && Container::getInstance()->has(Database::class)) {
+                    $this->db = Container::getInstance()->get(Database::class);
+                }
+                if (!$this->auth && Container::getInstance() && Container::getInstance()->has(Auth::class)) {
+                    $this->auth = Container::getInstance()->get(Auth::class);
+                }
+            } catch (\Exception $e) {
+                error_log('Erreur initialisation BaseController: ' . $e->getMessage());
             }
-            if (Container::getInstance() && Container::getInstance()->has(Auth::class)) {
-                $this->auth = Container::getInstance()->get(Auth::class);
-            }
-        } catch (\Exception $e) {
-            error_log('Erreur initialisation BaseController: ' . $e->getMessage());
         }
     }
 

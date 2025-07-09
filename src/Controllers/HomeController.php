@@ -35,6 +35,7 @@ class HomeController extends BaseController
         Session $session,
         CsrfManager $csrfManager,
         Database $db,
+        Auth $auth,
         RegionService $regionService,
         SiteService $siteService,
         SectorService $sectorService,
@@ -42,8 +43,7 @@ class HomeController extends BaseController
         UserService $userService,
         ?WeatherService $weatherService = null
     ) {
-        parent::__construct($view, $session, $csrfManager);
-        $this->db = $db;
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->regionService = $regionService;
         $this->siteService = $siteService;
         $this->sectorService = $sectorService;
