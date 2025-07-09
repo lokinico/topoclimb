@@ -4,6 +4,9 @@ namespace TopoclimbCH\Controllers\Api;
 
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\ApiResponse;
+use TopoclimbCH\Core\Routing\Route;
+use TopoclimbCH\Core\Routing\Group;
+use TopoclimbCH\Core\Routing\Middleware;
 use TopoclimbCH\Services\RegionService;
 use TopoclimbCH\Models\Region;
 use Symfony\Component\HttpFoundation\Request;
@@ -11,6 +14,8 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * API Controller for Region resources
  */
+#[Group(prefix: '/api/v1/regions')]
+#[Middleware(['AuthMiddleware', 'PermissionMiddleware'])]
 class RegionApiController extends ApiController
 {
     private RegionService $regionService;
@@ -31,6 +36,7 @@ class RegionApiController extends ApiController
      * GET /api/v1/regions
      * List all regions with pagination and search
      */
+    #[Route('/', methods: 'GET', name: 'api.regions.index')]
     public function index(Request $request): Response
     {
         try {

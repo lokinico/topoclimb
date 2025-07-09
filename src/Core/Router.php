@@ -8,6 +8,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use TopoclimbCH\Exceptions\RouteNotFoundException;
+use TopoclimbCH\Core\Routing\AttributeRouteLoader;
 
 class Router
 {
@@ -62,7 +63,7 @@ class Router
     }
 
     /**
-     * Load routes from a file with caching support
+     * Load routes from a file with caching support and PHP attributes
      *
      * @param string $file Path to routes file
      * @return Router
@@ -104,12 +105,47 @@ class Router
             }
         }
 
+        // Load routes from PHP attributes
+        $this->loadAttributeRoutes();
+
         // Cache routes in production
         if ($environment === 'production') {
             $this->cacheRoutes($cacheFile);
         }
 
         return $this;
+    }
+
+    /**
+     * Load routes from PHP attributes
+     */
+    private function loadAttributeRoutes(): void
+    {
+        $loader = new AttributeRouteLoader();
+        
+        // Load from controllers directory
+        $controllersDir = BASE_PATH . '/src/Controllers';
+        $controllerNamespace = 'TopoclimbCH\\Controllers\\';
+        
+        $attributeRoutes = $loader->loadFromDirectory($controllersDir, $controllerNamespace);
+        
+        foreach ($attributeRoutes as $route) {
+            $method = $route['method'] ?? 'GET';
+            $path = $route['path'] ?? '/';
+            $controller = $route['controller'] ?? '';
+            $action = $route['action'] ?? '';
+            $middlewares = $route['middlewares'] ?? [];
+
+            if ($controller && $action) {
+                $this->addRoute($method, $path, [
+                    'controller' => $controller,
+                    'action' => $action,
+                    'middlewares' => $middlewares,
+                    'name' => $route['name'] ?? '',
+                    'source' => $route['source'] ?? 'attribute'
+                ]);
+            }
+        }
     }
 
     /**
