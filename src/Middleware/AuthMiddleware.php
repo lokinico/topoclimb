@@ -28,7 +28,7 @@ class AuthMiddleware
     {
         $this->session = $session;
         $this->db = $db;
-        $this->auth = Auth::getInstance();
+        $this->auth = new Auth($session, $db);
     }
 
     public function handle(Request $request, callable $next): Response

@@ -20,7 +20,7 @@ class AuthTest extends TestCase
         $this->session = $this->createMock(Session::class);
 
         // Initialiser Auth avec des dépendances
-        $this->auth = Auth::getInstance($this->session, $this->db);
+        $this->auth = new Auth($this->session, $this->db);
     }
 
     public function testLogout()

@@ -102,8 +102,14 @@ function auth(): ?\TopoclimbCH\Core\Auth
             return $container->get(\TopoclimbCH\Core\Auth::class);
         }
 
-        // Fallback : essayer d'obtenir Auth via getInstance
-        return \TopoclimbCH\Core\Auth::getInstance();
+        // Fallback : créer une nouvelle instance avec les dépendances du container
+        if ($container && $container->has(\TopoclimbCH\Core\Session::class) && $container->has(\TopoclimbCH\Core\Database::class)) {
+            $session = $container->get(\TopoclimbCH\Core\Session::class);
+            $database = $container->get(\TopoclimbCH\Core\Database::class);
+            return new \TopoclimbCH\Core\Auth($session, $database);
+        }
+        
+        return null;
     } catch (\Exception $e) {
         error_log('Error getting Auth instance: ' . $e->getMessage());
         return null;

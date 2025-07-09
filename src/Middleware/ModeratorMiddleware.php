@@ -15,7 +15,7 @@ class ModeratorMiddleware
 
     public function __construct(Session $session, Database $db)
     {
-        $this->auth = Auth::getInstance($session, $db);
+        $this->auth = new Auth($session, $db);
         $this->session = $session;
     }
 
