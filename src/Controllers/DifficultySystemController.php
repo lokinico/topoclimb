@@ -8,6 +8,7 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Models\DifficultySystem;
 use TopoclimbCH\Services\DifficultyService;
 use TopoclimbCH\Services\AuthService;
@@ -38,14 +39,15 @@ class DifficultySystemController extends BaseController
     public function __construct(
         View $view,
         Session $session,
+        CsrfManager $csrfManager,
+        Database $db,
+        Auth $auth,
         DifficultyService $difficultyService,
-        AuthService $authService,
-        Database $db
+        AuthService $authService
     ) {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->difficultyService = $difficultyService;
         $this->authService = $authService;
-        $this->db = $db;
     }
 
     /**
