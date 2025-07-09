@@ -136,6 +136,7 @@ class ContainerBuilder
                     $definition = $container->autowire($className, $className);
                     $definition->setPublic(true);
                     $definition->setAutoconfigured(true);
+                    $definition->setShared(true); // Force singleton behavior
                 }
             }
         }
@@ -184,6 +185,7 @@ class ContainerBuilder
         // Logger - needs custom configuration with StreamHandler
         $container->register(LoggerInterface::class, Logger::class)
             ->setPublic(true)
+            ->setShared(true)
             ->addArgument('app')
             ->addMethodCall('pushHandler', [new Reference('logger.stream_handler')]);
 
@@ -195,25 +197,30 @@ class ContainerBuilder
 
         // Database - now using dependency injection
         $container->autowire(Database::class, Database::class)
-            ->setPublic(true);
+            ->setPublic(true)
+            ->setShared(true);
 
         // Session - simple registration
         $container->register(Session::class, Session::class)
-            ->setPublic(true);
+            ->setPublic(true)
+            ->setShared(true);
 
         // CsrfManager - needs custom arguments
         $container->register(CsrfManager::class, CsrfManager::class)
             ->setPublic(true)
+            ->setShared(true)
             ->addArgument(new Reference(Session::class))
             ->addArgument([]); // Array vide pour exemptedRoutes
 
         // Auth - now using dependency injection
         $container->autowire(Auth::class, Auth::class)
-            ->setPublic(true);
+            ->setPublic(true)
+            ->setShared(true);
 
         // View - needs custom configuration
         $container->register(View::class, View::class)
             ->setPublic(true)
+            ->setShared(true)
             ->addArgument('%views_path%')
             ->addArgument('%cache_path%')
             ->addArgument(new Reference(CsrfManager::class));
@@ -221,6 +228,7 @@ class ContainerBuilder
         // Router - needs custom configuration
         $container->register(Router::class, Router::class)
             ->setPublic(true)
+            ->setShared(true)
             ->addArgument(new Reference(LoggerInterface::class))
             ->addArgument(new Reference('service_container'));
 

@@ -41,30 +41,33 @@ class View
 
         $this->registerFunctions();
         $this->registerFilters();
-        $this->addGlobalDefaults(); // NOUVEAU - variables globales par défaut
+        // Ne plus ajouter de globaux ici - déplacé vers render()
     }
 
     /**
-     * NOUVEAU - Ajoute les variables globales par défaut
+     * NOUVEAU - Récupère les variables globales par défaut (appelé au moment du rendu)
      */
-    private function addGlobalDefaults(): void
+    private function getGlobalDefaults(): array
     {
         try {
-            // Variables d'environnement de base
-            $this->addGlobal('app_name', env('APP_NAME', 'TopoclimbCH'));
-            $this->addGlobal('app_env', env('APP_ENV', 'development'));
-            $this->addGlobal('app_url', env('APP_URL', 'http://localhost'));
-            $this->addGlobal('app_locale', 'fr');
-            $this->addGlobal('now', new \DateTime());
+            return [
+                // Variables d'environnement de base
+                'app_name' => env('APP_NAME', 'TopoclimbCH'),
+                'app_env' => env('APP_ENV', 'development'),
+                'app_url' => env('APP_URL', 'http://localhost'),
+                'app_locale' => 'fr',
+                'now' => new \DateTime(),
 
-            // Messages flash si session disponible
-            $this->addGlobal('flash_messages', $this->getFlashMessages());
+                // Messages flash si session disponible
+                'flash_messages' => $this->getFlashMessages(),
 
-            // Infos auth si disponibles
-            $this->addGlobal('auth_user', $this->getAuthUser());
-            $this->addGlobal('csrf_token', $this->generateCsrfToken());
+                // Infos auth si disponibles
+                'auth_user' => $this->getAuthUser(),
+                'csrf_token' => $this->generateCsrfToken(),
+            ];
         } catch (\Exception $e) {
-            error_log("View: Error setting global defaults: " . $e->getMessage());
+            error_log("View: Error getting global defaults: " . $e->getMessage());
+            return [];
         }
     }
 
@@ -362,7 +365,7 @@ class View
     }
 
     /**
-     * GARDE LA MÉTHODE RENDER ORIGINALE
+     * GARDE LA MÉTHODE RENDER ORIGINALE avec ajout des globaux dynamiques
      */
     public function render(string $view, array $data = []): string
     {
@@ -370,7 +373,9 @@ class View
             $view .= '.twig';
         }
 
-        $data = array_merge($this->globalData, $data);
+        // Ajouter les données globales dynamiques au moment du rendu
+        $globalDefaults = $this->getGlobalDefaults();
+        $data = array_merge($this->globalData, $globalDefaults, $data);
 
         return $this->twig->render($view, $data);
     }
