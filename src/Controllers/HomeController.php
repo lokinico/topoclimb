@@ -460,12 +460,29 @@ class HomeController extends BaseController
                 $view = $this->view;
                 echo "View service available: " . get_class($view) . " ✅<br>";
                 
-                // Test basic template rendering without the complex homepage template
-                $testHtml = $view->render('layouts/test', ['message' => 'Test template rendering']);
-                echo "Basic template rendering: WORKS ✅<br>";
+                // Test with simple data first
+                $simpleData = ['title' => 'Test Page', 'message' => 'Hello World'];
+                $testHtml = $view->render('layouts/simple', $simpleData);
+                echo "Simple template test: WORKS ✅<br>";
+                
+                // Test homepage template with real data
+                $stats = $this->calculateStats();
+                $homepageData = [
+                    'title' => 'Découvrez l\'escalade en Suisse',
+                    'description' => 'Test homepage',
+                    'stats' => $stats,
+                    'popular_sectors' => [],
+                    'recent_books' => [],
+                    'trending_routes' => []
+                ];
+                $homepageHtml = $view->render('home/index', $homepageData);
+                echo "Homepage template test: WORKS ✅<br>";
+                
             } catch (\Exception $templateError) {
                 echo "<p style='color: red;'>Template system failed: " . htmlspecialchars($templateError->getMessage()) . "</p>";
                 echo "<p>File: " . htmlspecialchars($templateError->getFile()) . ":" . $templateError->getLine() . "</p>";
+                echo "<h3>Stack trace:</h3>";
+                echo "<pre>" . htmlspecialchars($templateError->getTraceAsString()) . "</pre>";
             }
 
             echo "<h2>🎯 All Component Tests Passed!</h2>";
