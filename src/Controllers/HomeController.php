@@ -368,8 +368,8 @@ class HomeController extends BaseController
             $stats = $this->calculateStats();
             echo "calculateStats(): " . count($stats) . " items ✅<br>";
             
-            $recentRoutes = $this->getRecentRoutes(3);
-            echo "getRecentRoutes(): " . count($recentRoutes) . " routes ✅<br>";
+            $popularSectors = $this->getPopularSectors(3);
+            echo "getPopularSectors(): " . count($popularSectors) . " sectors ✅<br>";
             
             $recentBooks = $this->getRecentBooks(3);
             echo "getRecentBooks(): " . count($recentBooks) . " books ✅<br>";
