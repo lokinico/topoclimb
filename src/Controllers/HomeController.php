@@ -455,35 +455,47 @@ class HomeController extends BaseController
             $trendingRoutes = $this->getTrendingRoutes(3);
             echo "getTrendingRoutes(): " . count($trendingRoutes) . " routes ✅<br>";
 
-            echo "<h2>🧪 Test Template System</h2>";
+            echo "<h2>🧪 Test Template Step by Step</h2>";
+            
+            // Step 1: Test View availability
             try {
                 $view = $this->view;
-                echo "View service available: " . get_class($view) . " ✅<br>";
-                
-                // Test with simple data first
+                echo "Step 1 - View service: " . get_class($view) . " ✅<br>";
+            } catch (\Exception $e) {
+                echo "Step 1 FAILED - View service: " . htmlspecialchars($e->getMessage()) . "<br>";
+                goto skip_templates;
+            }
+            
+            // Step 2: Test simple template
+            try {
                 $simpleData = ['title' => 'Test Page', 'message' => 'Hello World'];
                 $testHtml = $view->render('layouts/simple', $simpleData);
-                echo "Simple template test: WORKS ✅<br>";
-                
-                // Test homepage template with real data
+                echo "Step 2 - Simple template: WORKS ✅<br>";
+            } catch (\Exception $e) {
+                echo "Step 2 FAILED - Simple template: " . htmlspecialchars($e->getMessage()) . "<br>";
+                echo "Error in: " . $e->getFile() . ":" . $e->getLine() . "<br>";
+                goto skip_templates;
+            }
+            
+            // Step 3: Test homepage template
+            try {
                 $stats = $this->calculateStats();
                 $homepageData = [
-                    'title' => 'Découvrez l\'escalade en Suisse',
-                    'description' => 'Test homepage',
+                    'title' => 'Test Homepage',
+                    'description' => 'Test description',
                     'stats' => $stats,
                     'popular_sectors' => [],
                     'recent_books' => [],
                     'trending_routes' => []
                 ];
                 $homepageHtml = $view->render('home/index', $homepageData);
-                echo "Homepage template test: WORKS ✅<br>";
-                
-            } catch (\Exception $templateError) {
-                echo "<p style='color: red;'>Template system failed: " . htmlspecialchars($templateError->getMessage()) . "</p>";
-                echo "<p>File: " . htmlspecialchars($templateError->getFile()) . ":" . $templateError->getLine() . "</p>";
-                echo "<h3>Stack trace:</h3>";
-                echo "<pre>" . htmlspecialchars($templateError->getTraceAsString()) . "</pre>";
+                echo "Step 3 - Homepage template: WORKS ✅<br>";
+            } catch (\Exception $e) {
+                echo "Step 3 FAILED - Homepage template: " . htmlspecialchars($e->getMessage()) . "<br>";
+                echo "Error in: " . $e->getFile() . ":" . $e->getLine() . "<br>";
             }
+            
+            skip_templates:
 
             echo "<h2>🎯 All Component Tests Passed!</h2>";
             echo "<p style='color: green;'>All HomeController components are working. The issue is likely in the template rendering or response handling.</p>";
