@@ -15,6 +15,12 @@ return [
         'controller' => \TopoclimbCH\Controllers\HomeController::class,
         'action' => 'index'
     ],
+    [
+        'method' => 'GET',
+        'path' => '/debug-home',
+        'controller' => \TopoclimbCH\Controllers\HomeController::class,
+        'action' => 'debugTest'
+    ],
 
     // ========================================
     // ROUTES D'AUTHENTIFICATION

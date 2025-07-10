@@ -343,4 +343,49 @@ class HomeController extends BaseController
             ]
         ]);
     }
+
+    /**
+     * Debug test method to isolate homepage issues
+     */
+    public function debugTest(): void
+    {
+        echo "<h1>🔍 Debug Test HomeController</h1>";
+
+        try {
+            echo "<h2>📋 Services Check</h2>";
+            
+            // Test each service individually
+            echo "RegionService: " . get_class($this->regionService) . " ✅<br>";
+            echo "SiteService: " . get_class($this->siteService) . " ✅<br>";
+            echo "SectorService: " . get_class($this->sectorService) . " ✅<br>";
+            echo "RouteService: " . get_class($this->routeService) . " ✅<br>";
+            echo "UserService: " . get_class($this->userService) . " ✅<br>";
+            echo "WeatherService: " . get_class($this->weatherService) . " ✅<br>";
+
+            echo "<h2>🧪 Test Data Methods</h2>";
+            
+            // Test each private method
+            $stats = $this->getStats();
+            echo "getStats(): " . count($stats) . " items ✅<br>";
+            
+            $recentRoutes = $this->getRecentRoutes(3);
+            echo "getRecentRoutes(): " . count($recentRoutes) . " routes ✅<br>";
+            
+            $recentBooks = $this->getRecentBooks(3);
+            echo "getRecentBooks(): " . count($recentBooks) . " books ✅<br>";
+            
+            $trendingRoutes = $this->getTrendingRoutes(3);
+            echo "getTrendingRoutes(): " . count($trendingRoutes) . " routes ✅<br>";
+
+            echo "<h2>🎯 All Tests Passed!</h2>";
+            echo "<p style='color: green;'>HomeController is working correctly. The homepage should function now.</p>";
+            
+        } catch (\Exception $e) {
+            echo "<h2>❌ Error Found</h2>";
+            echo "<p style='color: red;'>Message: " . htmlspecialchars($e->getMessage()) . "</p>";
+            echo "<p>File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "</p>";
+            echo "<h3>Stack trace:</h3>";
+            echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+        }
+    }
 }
