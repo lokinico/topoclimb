@@ -38,11 +38,11 @@ class MapController extends BaseController
         try {
             // Récupérer les paramètres de filtrage
             $filters = [
-                'region_id' => $request->getQueryParam('region'),
-                'difficulty_min' => $request->getQueryParam('difficulty_min'),
-                'difficulty_max' => $request->getQueryParam('difficulty_max'),
-                'type' => $request->getQueryParam('type'),
-                'season' => $request->getQueryParam('season')
+                'region_id' => $request->getQuery('region'),
+                'difficulty_min' => $request->getQuery('difficulty_min'),
+                'difficulty_max' => $request->getQuery('difficulty_max'),
+                'type' => $request->getQuery('type'),
+                'season' => $request->getQuery('season')
             ];
 
             // Récupérer toutes les régions pour les filtres
@@ -54,7 +54,7 @@ class MapController extends BaseController
             // Statistiques pour l'interface
             $stats = $this->getMapStatistics();
 
-            return $this->render('map/index.twig', [
+            return $this->render('map/index', [
                 'title' => 'Carte Interactive - Sites d\'escalade en Suisse',
                 'sites' => $sites,
                 'regions' => $regions,
@@ -67,7 +67,7 @@ class MapController extends BaseController
         } catch (\Exception $e) {
             error_log("Erreur MapController::index: " . $e->getMessage());
             
-            return $this->render('map/index.twig', [
+            return $this->render('map/index', [
                 'title' => 'Carte Interactive - Sites d\'escalade en Suisse',
                 'sites' => [],
                 'regions' => [],
@@ -85,11 +85,11 @@ class MapController extends BaseController
     {
         try {
             $filters = [
-                'region_id' => $request->getQueryParam('region'),
-                'difficulty_min' => $request->getQueryParam('difficulty_min'),
-                'difficulty_max' => $request->getQueryParam('difficulty_max'),
-                'type' => $request->getQueryParam('type'),
-                'season' => $request->getQueryParam('season')
+                'region_id' => $request->getQuery('region'),
+                'difficulty_min' => $request->getQuery('difficulty_min'),
+                'difficulty_max' => $request->getQuery('difficulty_max'),
+                'type' => $request->getQuery('type'),
+                'season' => $request->getQuery('season')
             ];
 
             $sites = $this->getSitesForMap($filters);
@@ -116,7 +116,7 @@ class MapController extends BaseController
     public function apiSiteDetails(Request $request): Response
     {
         try {
-            $siteId = $request->getRouteParam('id');
+            $siteId = $request->getParam('id');
             
             $site = Site::find($siteId);
             if (!$site) {
@@ -167,10 +167,10 @@ class MapController extends BaseController
     public function apiGeoSearch(Request $request): Response
     {
         try {
-            $query = $request->getQueryParam('q');
-            $lat = $request->getQueryParam('lat');
-            $lng = $request->getQueryParam('lng');
-            $radius = $request->getQueryParam('radius', 50); // 50km par défaut
+            $query = $request->getQuery('q');
+            $lat = $request->getQuery('lat');
+            $lng = $request->getQuery('lng');
+            $radius = $request->getQuery('radius', 50); // 50km par défaut
 
             $results = [];
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Models;
+namespace TopoclimbCH\Models;
 
-use App\Core\Model;
+use TopoclimbCH\Core\Model;
 
 /**
  * Site Model - Sous-zones optionnelles des régions

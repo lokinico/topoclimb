@@ -273,6 +273,13 @@ class ContainerBuilder
                 Auth::class,                              // BaseController (optional)
                 'TopoclimbCH\\Services\\AuthService'      // AuthController
             ],
+            'TopoclimbCH\\Controllers\\MapController' => [
+                View::class,                              // BaseController
+                Session::class,                           // BaseController
+                CsrfManager::class,                       // BaseController
+                Database::class,                          // BaseController (optional)
+                Auth::class                               // BaseController (optional)
+            ],
             // Add other controllers as needed
         ];
 
