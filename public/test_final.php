@@ -17,7 +17,9 @@ try {
     echo "✅ Container construit: " . get_class($container) . "<br>";
 
     echo "<h2>🧪 Test Application</h2>";
-    $app = new \TopoclimbCH\Core\Application($container);
+    $router = $container->get(\TopoclimbCH\Core\Router::class);
+    $logger = $container->get(Psr\Log\LoggerInterface::class);
+    $app = new \TopoclimbCH\Core\Application($router, $logger, $container, 'production');
     echo "✅ Application initialisée<br>";
 
     echo "<h2>🎯 TOUS LES TESTS RÉUSSIS</h2>";
