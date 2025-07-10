@@ -1,8 +1,8 @@
 <?php
 
-namespace Tests\Integration;
+namespace TopoclimbCH\Tests\Integration;
 
-use Tests\TestCase;
+use TopoclimbCH\Tests\TestCase;
 use TopoclimbCH\Core\Request;
 
 class FullPageSuiteTest extends TestCase

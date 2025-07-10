@@ -32,7 +32,7 @@ class TestCase extends BaseTestCase
         // Nettoyer après chaque test
         $this->db = null;
         $this->container = null;
-        Container::resetInstance();
+        // Container::resetInstance(); // Method doesn't exist
 
         parent::tearDown();
     }

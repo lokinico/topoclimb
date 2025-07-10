@@ -1,8 +1,8 @@
 <?php
 
-namespace Tests\Integration\Routes;
+namespace TopoclimbCH\Tests\Integration\Routes;
 
-use Tests\TestCase;
+use TopoclimbCH\Tests\TestCase;
 use TopoclimbCH\Core\Request;
 
 class RouteAccessTest extends TestCase

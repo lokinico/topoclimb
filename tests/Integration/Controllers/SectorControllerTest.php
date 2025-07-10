@@ -1,8 +1,8 @@
 <?php
 
-namespace Tests\Integration\Controllers;
+namespace TopoclimbCH\Tests\Integration\Controllers;
 
-use Tests\TestCase;
+use TopoclimbCH\Tests\TestCase;
 use TopoclimbCH\Controllers\SectorController;
 use TopoclimbCH\Core\Request;
 use TopoclimbCH\Core\Response;

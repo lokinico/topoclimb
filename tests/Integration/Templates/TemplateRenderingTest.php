@@ -1,8 +1,8 @@
 <?php
 
-namespace Tests\Integration\Templates;
+namespace TopoclimbCH\Tests\Integration\Templates;
 
-use Tests\TestCase;
+use TopoclimbCH\Tests\TestCase;
 use TopoclimbCH\Core\Request;
 
 class TemplateRenderingTest extends TestCase

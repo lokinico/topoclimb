@@ -54,6 +54,16 @@ yarn-debug.log
 
 # PHPUnit
 /coverage/
+/tests/coverage/
+
+# Installation PHP temporaire
+php-*/
+*.tar.gz
+/tmp/php*
+
+# Scripts de test temporaires
+run_page_tests.sh
+run_simple_tests.php
 
 # Fichiers spécifiques à l'application
 config.php

@@ -81,13 +81,15 @@ function randomString(int $length = 16): string
  * @param mixed $value
  * @return void
  */
-function dd(mixed $value): void
-{
-    if (env('APP_ENV') === 'development') {
-        echo '<pre>';
-        var_dump($value);
-        echo '</pre>';
-        die();
+if (!function_exists('dd')) {
+    function dd(mixed $value): void
+    {
+        if (env('APP_ENV') === 'development') {
+            echo '<pre>';
+            var_dump($value);
+            echo '</pre>';
+            die();
+        }
     }
 }
 
