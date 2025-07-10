@@ -12,6 +12,9 @@
         </button>
         <ul class="nav-links">
             <li><a href="{{ url('/') }}" class="{{ is_active('/') ? 'active' : '' }}">Accueil</a></li>
+            <li><a href="{{ url('/map') }}" class="{{ is_active('/map') ? 'active' : '' }}">
+                <i class="fas fa-map-marked-alt"></i> Carte
+            </a></li>
             <li><a href="{{ url('/regions') }}" class="{{ is_active('/regions') ? 'active' : '' }}">Régions</a></li>
             <li><a href="{{ url('/sites') }}" class="{{ is_active('/sites') ? 'active' : '' }}">Sites</a></li>
             <li><a href="{{ url('/sectors') }}" class="{{ is_active('/sectors') ? 'active' : '' }}">Secteurs</a></li>

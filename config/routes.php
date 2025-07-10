@@ -23,6 +23,34 @@ return [
     ],
 
     // ========================================
+    // ROUTES CARTE INTERACTIVE
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/map',
+        'controller' => \TopoclimbCH\Controllers\MapController::class,
+        'action' => 'index'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/map/sites',
+        'controller' => \TopoclimbCH\Controllers\MapController::class,
+        'action' => 'apiSites'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/map/sites/{id}',
+        'controller' => \TopoclimbCH\Controllers\MapController::class,
+        'action' => 'apiSiteDetails'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/map/search',
+        'controller' => \TopoclimbCH\Controllers\MapController::class,
+        'action' => 'apiGeoSearch'
+    ],
+
+    // ========================================
     // ROUTES D'AUTHENTIFICATION
     // ========================================
     [
