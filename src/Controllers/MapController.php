@@ -28,6 +28,14 @@ class MapController extends BaseController
         ?Auth $auth = null
     ) {
         parent::__construct($view, $session, $csrfManager, $db, $auth);
+        
+        // Injecter la base de données dans les modèles pour éviter les problèmes de singleton
+        if ($this->db) {
+            \TopoclimbCH\Models\Region::setDatabase($this->db);
+            \TopoclimbCH\Models\Site::setDatabase($this->db);
+            \TopoclimbCH\Models\Sector::setDatabase($this->db);
+            \TopoclimbCH\Models\Route::setDatabase($this->db);
+        }
     }
 
     /**

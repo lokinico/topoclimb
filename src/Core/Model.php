@@ -87,6 +87,11 @@ abstract class Model
     protected static ?EventDispatcher $eventDispatcher = null;
 
     /**
+     * Instance de base de données injectée (statique pour être partagée entre tous les modèles)
+     */
+    protected static ?Database $db = null;
+
+    /**
      * Constructeur
      */
     public function __construct(array $attributes = [])
@@ -248,7 +253,21 @@ abstract class Model
      */
     protected static function getConnection(): PDO
     {
+        // Essayer d'utiliser l'instance injectée d'abord
+        if (isset(static::$db) && static::$db instanceof Database) {
+            return static::$db->getConnection();
+        }
+        
+        // Fallback vers l'instance singleton pour la compatibilité
         return Database::getInstance()->getConnection();
+    }
+
+    /**
+     * Définit l'instance de base de données à utiliser
+     */
+    public static function setDatabase(Database $database): void
+    {
+        static::$db = $database;
     }
 
     /**

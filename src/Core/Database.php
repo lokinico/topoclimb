@@ -24,21 +24,35 @@ class Database
     /**
      * Constructeur public pour l'injection de dépendances
      */
-    public function __construct()
+    public function __construct(array $config = null)
     {
-        $this->config = [
-            'host' => $_ENV['DB_HOST'] ?? 'localhost',
-            'database' => $_ENV['DB_DATABASE'] ?? 'sh139940_',
-            'username' => $_ENV['DB_USERNAME'] ?? 'root',
-            'password' => $_ENV['DB_PASSWORD'] ?? '',
-            'charset' => 'utf8mb4',
-            'port' => $_ENV['DB_PORT'] ?? 3306,
-            'options' => [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ]
-        ];
+        if ($config === null) {
+            // Configuration par défaut depuis les variables d'environnement
+            $this->config = [
+                'host' => $_ENV['DB_HOST'] ?? 'localhost',
+                'database' => $_ENV['DB_DATABASE'] ?? 'sh139940_',
+                'username' => $_ENV['DB_USERNAME'] ?? 'root',
+                'password' => $_ENV['DB_PASSWORD'] ?? '',
+                'charset' => 'utf8mb4',
+                'port' => $_ENV['DB_PORT'] ?? 3306,
+                'options' => [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
+            ];
+        } else {
+            // Configuration injectée
+            $this->config = array_merge([
+                'charset' => 'utf8mb4',
+                'port' => 3306,
+                'options' => [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
+            ], $config);
+        }
     }
 
     /**
