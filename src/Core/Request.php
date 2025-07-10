@@ -18,7 +18,7 @@ class Request extends SymfonyRequest
      *
      * @return self
      */
-    public static function createFromGlobals(): self
+    public static function createFromGlobals(): static
     {
         return parent::createFromGlobals();
     }
@@ -257,7 +257,7 @@ class Request extends SymfonyRequest
      * 
      * @return string|null
      */
-    private function getContentType(): ?string
+    public function getContentType(): ?string
     {
         $contentType = $this->headers->get('Content-Type');
         if (strpos($contentType, 'application/json') !== false) {
