@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 #[Group(prefix: '/api/v1/regions')]
 #[Middleware(['AuthMiddleware', 'PermissionMiddleware'])]
-class RegionApiController extends ApiController
+class RegionApiControllerV1 extends ApiController
 {
     private RegionService $regionService;
 

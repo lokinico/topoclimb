@@ -912,7 +912,7 @@ return [
     [
         'method' => 'GET',
         'path' => '/api/v1/regions',
-        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiControllerV1::class,
         'action' => 'index',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
@@ -922,7 +922,7 @@ return [
     [
         'method' => 'POST',
         'path' => '/api/v1/regions',
-        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiControllerV1::class,
         'action' => 'store',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
@@ -932,7 +932,7 @@ return [
     [
         'method' => 'GET',
         'path' => '/api/v1/regions/{id}',
-        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiControllerV1::class,
         'action' => 'show',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
@@ -942,7 +942,7 @@ return [
     [
         'method' => 'PUT',
         'path' => '/api/v1/regions/{id}',
-        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiControllerV1::class,
         'action' => 'update',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
@@ -952,7 +952,7 @@ return [
     [
         'method' => 'DELETE',
         'path' => '/api/v1/regions/{id}',
-        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiControllerV1::class,
         'action' => 'destroy',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
@@ -962,7 +962,7 @@ return [
     [
         'method' => 'GET',
         'path' => '/api/v1/regions/search',
-        'controller' => \TopoclimbCH\Controllers\Api\RegionApiController::class,
+        'controller' => \TopoclimbCH\Controllers\Api\RegionApiControllerV1::class,
         'action' => 'search',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
