@@ -490,8 +490,16 @@ class MediaService
         // Informations de base sur le fichier
         $metadata['file_size'] = filesize($fullPath);
 
-        // TODO: Utiliser FFmpeg si disponible pour extraire des métadonnées détaillées
-        // Pour l'instant, on retourne les informations de base
+        // Utiliser FFmpeg si disponible pour extraire des métadonnées détaillées
+        if ($this->isFFmpegAvailable()) {
+            try {
+                $ffmpegMetadata = $this->extractFFmpegMetadata($fullPath);
+                $metadata = array_merge($metadata, $ffmpegMetadata);
+            } catch (\Exception $e) {
+                // Log l'erreur mais continue avec les métadonnées de base
+                error_log("FFmpeg metadata extraction failed: " . $e->getMessage());
+            }
+        }
 
         return $metadata;
     }
@@ -505,7 +513,14 @@ class MediaService
 
         $metadata['file_size'] = filesize($fullPath);
 
-        // TODO: Utiliser une bibliothèque PDF pour extraire le nombre de pages, etc.
+        // Extraire les métadonnées PDF
+        try {
+            $pdfMetadata = $this->extractPdfMetadata($fullPath);
+            $metadata = array_merge($metadata, $pdfMetadata);
+        } catch (\Exception $e) {
+            // Log l'erreur mais continue avec les métadonnées de base
+            error_log("PDF metadata extraction failed: " . $e->getMessage());
+        }
 
         return $metadata;
     }
@@ -948,5 +963,323 @@ class MediaService
         $stats['total_size'] = (int)($sizeResult['total_size'] ?? 0);
 
         return $stats;
+    }
+
+    /**
+     * Vérifie si FFmpeg est disponible sur le système
+     */
+    private function isFFmpegAvailable(): bool
+    {
+        // Cache le résultat pour éviter les vérifications répétées
+        static $isAvailable = null;
+        
+        if ($isAvailable === null) {
+            $output = [];
+            $returnCode = 0;
+            exec('ffmpeg -version 2>/dev/null', $output, $returnCode);
+            $isAvailable = ($returnCode === 0);
+        }
+        
+        return $isAvailable;
+    }
+
+    /**
+     * Extrait les métadonnées vidéo avec FFmpeg
+     */
+    private function extractFFmpegMetadata(string $filePath): array
+    {
+        $metadata = [];
+        
+        // Échapper le chemin du fichier pour la sécurité
+        $escapedPath = escapeshellarg($filePath);
+        
+        // Commande FFprobe pour extraire les métadonnées JSON
+        $command = "ffprobe -v quiet -print_format json -show_format -show_streams $escapedPath 2>/dev/null";
+        
+        $output = shell_exec($command);
+        
+        if (!$output) {
+            throw new \Exception("FFprobe failed to extract metadata");
+        }
+        
+        $ffprobeData = json_decode($output, true);
+        
+        if (!$ffprobeData) {
+            throw new \Exception("Invalid JSON response from FFprobe");
+        }
+        
+        // Extraire les informations du format
+        if (isset($ffprobeData['format'])) {
+            $format = $ffprobeData['format'];
+            
+            if (isset($format['duration'])) {
+                $metadata['duration'] = (float)$format['duration'];
+                $metadata['duration_formatted'] = $this->formatDuration($metadata['duration']);
+            }
+            
+            if (isset($format['bit_rate'])) {
+                $metadata['bitrate'] = (int)$format['bit_rate'];
+            }
+            
+            if (isset($format['tags'])) {
+                $tags = $format['tags'];
+                $metadata['title'] = $tags['title'] ?? null;
+                $metadata['artist'] = $tags['artist'] ?? null;
+                $metadata['album'] = $tags['album'] ?? null;
+                $metadata['creation_time'] = $tags['creation_time'] ?? null;
+                $metadata['comment'] = $tags['comment'] ?? null;
+            }
+        }
+        
+        // Extraire les informations des streams vidéo
+        if (isset($ffprobeData['streams'])) {
+            foreach ($ffprobeData['streams'] as $stream) {
+                if ($stream['codec_type'] === 'video') {
+                    $metadata['width'] = (int)($stream['width'] ?? 0);
+                    $metadata['height'] = (int)($stream['height'] ?? 0);
+                    $metadata['resolution'] = $metadata['width'] . 'x' . $metadata['height'];
+                    $metadata['codec'] = $stream['codec_name'] ?? null;
+                    $metadata['pixel_format'] = $stream['pix_fmt'] ?? null;
+                    
+                    // Calculer le ratio d'aspect
+                    if ($metadata['width'] > 0 && $metadata['height'] > 0) {
+                        $gcd = $this->gcd($metadata['width'], $metadata['height']);
+                        $aspectW = $metadata['width'] / $gcd;
+                        $aspectH = $metadata['height'] / $gcd;
+                        $metadata['aspect_ratio'] = $aspectW . ':' . $aspectH;
+                    }
+                    
+                    // Frame rate
+                    if (isset($stream['r_frame_rate'])) {
+                        $fps = $stream['r_frame_rate'];
+                        if (strpos($fps, '/') !== false) {
+                            list($num, $den) = explode('/', $fps);
+                            if ((int)$den > 0) {
+                                $metadata['fps'] = round((int)$num / (int)$den, 2);
+                            }
+                        }
+                    }
+                    
+                    break; // Prendre seulement le premier stream vidéo
+                }
+            }
+            
+            // Extraire les informations des streams audio
+            foreach ($ffprobeData['streams'] as $stream) {
+                if ($stream['codec_type'] === 'audio') {
+                    $metadata['audio_codec'] = $stream['codec_name'] ?? null;
+                    $metadata['audio_channels'] = (int)($stream['channels'] ?? 0);
+                    $metadata['audio_sample_rate'] = (int)($stream['sample_rate'] ?? 0);
+                    break; // Prendre seulement le premier stream audio
+                }
+            }
+        }
+        
+        return $metadata;
+    }
+
+    /**
+     * Formate une durée en secondes vers un format lisible
+     */
+    private function formatDuration(float $seconds): string
+    {
+        $hours = floor($seconds / 3600);
+        $minutes = floor(($seconds % 3600) / 60);
+        $secs = floor($seconds % 60);
+        
+        if ($hours > 0) {
+            return sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
+        } else {
+            return sprintf('%02d:%02d', $minutes, $secs);
+        }
+    }
+
+    /**
+     * Calcule le plus grand commun diviseur (pour le ratio d'aspect)
+     */
+    private function gcd(int $a, int $b): int
+    {
+        while ($b !== 0) {
+            $temp = $b;
+            $b = $a % $b;
+            $a = $temp;
+        }
+        return $a;
+    }
+
+    /**
+     * Extrait les métadonnées d'un fichier PDF
+     */
+    private function extractPdfMetadata(string $filePath): array
+    {
+        $metadata = [];
+        
+        // Vérifier si pdfinfo est disponible (fait partie de poppler-utils)
+        if ($this->isPdfinfoAvailable()) {
+            $metadata = $this->extractPdfMetadataWithPdfinfo($filePath);
+        } else {
+            // Fallback: méthode basique de lecture des métadonnées PDF
+            $metadata = $this->extractPdfMetadataBasic($filePath);
+        }
+        
+        return $metadata;
+    }
+
+    /**
+     * Vérifie si pdfinfo est disponible
+     */
+    private function isPdfinfoAvailable(): bool
+    {
+        static $isAvailable = null;
+        
+        if ($isAvailable === null) {
+            $output = [];
+            $returnCode = 0;
+            exec('pdfinfo -v 2>/dev/null', $output, $returnCode);
+            $isAvailable = ($returnCode === 0);
+        }
+        
+        return $isAvailable;
+    }
+
+    /**
+     * Extrait les métadonnées PDF avec pdfinfo
+     */
+    private function extractPdfMetadataWithPdfinfo(string $filePath): array
+    {
+        $metadata = [];
+        $escapedPath = escapeshellarg($filePath);
+        
+        // Exécuter pdfinfo
+        $output = shell_exec("pdfinfo $escapedPath 2>/dev/null");
+        
+        if (!$output) {
+            throw new \Exception("pdfinfo failed to extract metadata");
+        }
+        
+        // Parser la sortie de pdfinfo
+        $lines = explode("\n", $output);
+        foreach ($lines as $line) {
+            if (strpos($line, ':') !== false) {
+                list($key, $value) = explode(':', $line, 2);
+                $key = trim($key);
+                $value = trim($value);
+                
+                switch ($key) {
+                    case 'Pages':
+                        $metadata['pages'] = (int)$value;
+                        break;
+                    case 'Title':
+                        $metadata['title'] = $value;
+                        break;
+                    case 'Author':
+                        $metadata['author'] = $value;
+                        break;
+                    case 'Subject':
+                        $metadata['subject'] = $value;
+                        break;
+                    case 'Creator':
+                        $metadata['creator'] = $value;
+                        break;
+                    case 'Producer':
+                        $metadata['producer'] = $value;
+                        break;
+                    case 'CreationDate':
+                        $metadata['creation_date'] = $value;
+                        break;
+                    case 'ModDate':
+                        $metadata['modification_date'] = $value;
+                        break;
+                    case 'Page size':
+                        $metadata['page_size'] = $value;
+                        break;
+                    case 'Encrypted':
+                        $metadata['encrypted'] = ($value === 'yes');
+                        break;
+                    case 'PDF version':
+                        $metadata['pdf_version'] = $value;
+                        break;
+                }
+            }
+        }
+        
+        return $metadata;
+    }
+
+    /**
+     * Méthode basique pour extraire les métadonnées PDF
+     * Lit directement le fichier PDF pour extraire les informations de base
+     */
+    private function extractPdfMetadataBasic(string $filePath): array
+    {
+        $metadata = [];
+        
+        // Lire les premiers 2048 octets du fichier pour rechercher les métadonnées
+        $handle = fopen($filePath, 'rb');
+        if (!$handle) {
+            throw new \Exception("Cannot open PDF file");
+        }
+        
+        $content = fread($handle, 2048);
+        fclose($handle);
+        
+        // Rechercher la version PDF
+        if (preg_match('/%PDF-(\d+\.\d+)/', $content, $matches)) {
+            $metadata['pdf_version'] = $matches[1];
+        }
+        
+        // Pour le nombre de pages, nous devons lire plus du fichier
+        // Cette méthode est basique et peut ne pas être 100% fiable
+        $metadata['pages'] = $this->countPdfPagesBasic($filePath);
+        
+        // Essayer d'extraire des métadonnées de base avec une approche regex
+        $fullContent = file_get_contents($filePath);
+        
+        // Rechercher les métadonnées dans le dictionnaire Info
+        if (preg_match('/\/Info\s*<<([^>]*)>>/s', $fullContent, $matches)) {
+            $infoContent = $matches[1];
+            
+            // Extraire le titre
+            if (preg_match('/\/Title\s*\(([^)]*)\)/', $infoContent, $titleMatch)) {
+                $metadata['title'] = $titleMatch[1];
+            }
+            
+            // Extraire l'auteur
+            if (preg_match('/\/Author\s*\(([^)]*)\)/', $infoContent, $authorMatch)) {
+                $metadata['author'] = $authorMatch[1];
+            }
+            
+            // Extraire le créateur
+            if (preg_match('/\/Creator\s*\(([^)]*)\)/', $infoContent, $creatorMatch)) {
+                $metadata['creator'] = $creatorMatch[1];
+            }
+        }
+        
+        return $metadata;
+    }
+
+    /**
+     * Compte le nombre de pages de façon basique
+     */
+    private function countPdfPagesBasic(string $filePath): int
+    {
+        $content = file_get_contents($filePath);
+        
+        // Méthode 1: Compter les objets Page
+        $pageCount = preg_match_all('/\/Type\s*\/Page[^s]/', $content);
+        
+        if ($pageCount > 0) {
+            return $pageCount;
+        }
+        
+        // Méthode 2: Rechercher /Count dans le catalogue de pages
+        if (preg_match('/\/Count\s+(\d+)/', $content, $matches)) {
+            return (int)$matches[1];
+        }
+        
+        // Méthode 3: Compter les références de pages
+        $pageCount = preg_match_all('/\/Page\s/', $content);
+        
+        return max(1, $pageCount); // Au moins 1 page
     }
 }

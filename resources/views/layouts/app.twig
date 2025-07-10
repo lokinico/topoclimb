@@ -17,6 +17,35 @@
     
     <!-- Styles spécifiques aux pages -->
     {% block styles %}{% endblock %}
+    
+    <!-- Google Analytics -->
+    {% if config('google_analytics_id') %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('google_analytics_id') }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ config('google_analytics_id') }}', {
+            cookie_flags: 'SameSite=None;Secure',
+            anonymize_ip: true,
+            custom_map: {
+                'custom_dimension_1': 'user_type',
+                'custom_dimension_2': 'region'
+            }
+        });
+        
+        // Track user type for climbing analytics
+        {% if auth() %}
+        gtag('config', '{{ config('google_analytics_id') }}', {
+            custom_map: {'custom_dimension_1': 'authenticated'}
+        });
+        {% else %}
+        gtag('config', '{{ config('google_analytics_id') }}', {
+            custom_map: {'custom_dimension_1': 'anonymous'}
+        });
+        {% endif %}
+    </script>
+    {% endif %}
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- Barre d'outils utilitaires -->
@@ -568,6 +597,9 @@
     <!-- Scripts de l'application -->
     <script src="{{ asset('js/components/common.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
+    {% if config('google_analytics_id') %}
+    <script src="{{ asset('js/analytics.js') }}"></script>
+    {% endif %}
     
     <!-- Scripts spécifiques -->
     {% block scripts %}{% endblock %}

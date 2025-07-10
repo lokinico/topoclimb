@@ -310,6 +310,28 @@ class View
             if (!$lat || !$lng) return '';
             return sprintf('%.6f, %.6f', $lat, $lng);
         }));
+
+        // Configuration function for accessing app settings
+        $this->twig->addFunction(new TwigFunction('config', function (string $key, $default = null) {
+            // Try to get from environment variables first
+            $envKey = strtoupper(str_replace('.', '_', $key));
+            if (isset($_ENV[$envKey])) {
+                return $_ENV[$envKey];
+            }
+            
+            // Try to get from database settings if available
+            try {
+                $db = \TopoclimbCH\Core\Database::getInstance();
+                $settings = $db->fetchOne("SELECT {$key} FROM app_settings WHERE id = 1");
+                if ($settings && isset($settings[$key]) && !empty($settings[$key])) {
+                    return $settings[$key];
+                }
+            } catch (\Exception $e) {
+                // Table might not exist, continue to default
+            }
+            
+            return $default;
+        }));
     }
 
     /**
