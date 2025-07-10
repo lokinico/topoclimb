@@ -24,8 +24,9 @@ class ContainerBuilder
         $environment = $_ENV['APP_ENV'] ?? 'production';
         $cacheFile = BASE_PATH . '/cache/container/container.php';
         
+        // TEMPORARILY DISABLE CONTAINER CACHING TO PREVENT CORRUPTION
         // In production, try to load cached container first
-        if ($environment === 'production' && file_exists($cacheFile)) {
+        if (false && $environment === 'production' && file_exists($cacheFile)) {
             require_once $cacheFile;
             if (class_exists('CachedContainer')) {
                 return new \CachedContainer();
@@ -60,8 +61,9 @@ class ContainerBuilder
         // Compile container
         $container->compile();
 
+        // TEMPORARILY DISABLE CONTAINER CACHING
         // Cache container in production
-        if ($environment === 'production') {
+        if (false && $environment === 'production') {
             $this->cacheContainer($container, $cacheFile);
         }
 
