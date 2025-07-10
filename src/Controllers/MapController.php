@@ -2,7 +2,7 @@
 
 namespace TopoclimbCH\Controllers;
 
-use TopoclimbCH\Core\Request;
+use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
@@ -38,11 +38,11 @@ class MapController extends BaseController
         try {
             // Récupérer les paramètres de filtrage
             $filters = [
-                'region_id' => $request->getQuery('region'),
-                'difficulty_min' => $request->getQuery('difficulty_min'),
-                'difficulty_max' => $request->getQuery('difficulty_max'),
-                'type' => $request->getQuery('type'),
-                'season' => $request->getQuery('season')
+                'region_id' => $request->query->get('region'),
+                'difficulty_min' => $request->query->get('difficulty_min'),
+                'difficulty_max' => $request->query->get('difficulty_max'),
+                'type' => $request->query->get('type'),
+                'season' => $request->query->get('season')
             ];
 
             // Récupérer toutes les régions pour les filtres
@@ -85,11 +85,11 @@ class MapController extends BaseController
     {
         try {
             $filters = [
-                'region_id' => $request->getQuery('region'),
-                'difficulty_min' => $request->getQuery('difficulty_min'),
-                'difficulty_max' => $request->getQuery('difficulty_max'),
-                'type' => $request->getQuery('type'),
-                'season' => $request->getQuery('season')
+                'region_id' => $request->query->get('region'),
+                'difficulty_min' => $request->query->get('difficulty_min'),
+                'difficulty_max' => $request->query->get('difficulty_max'),
+                'type' => $request->query->get('type'),
+                'season' => $request->query->get('season')
             ];
 
             $sites = $this->getSitesForMap($filters);
@@ -116,7 +116,7 @@ class MapController extends BaseController
     public function apiSiteDetails(Request $request): Response
     {
         try {
-            $siteId = $request->getParam('id');
+            $siteId = $request->attributes->get('id');
             
             $site = Site::find($siteId);
             if (!$site) {
@@ -167,10 +167,10 @@ class MapController extends BaseController
     public function apiGeoSearch(Request $request): Response
     {
         try {
-            $query = $request->getQuery('q');
-            $lat = $request->getQuery('lat');
-            $lng = $request->getQuery('lng');
-            $radius = $request->getQuery('radius', 50); // 50km par défaut
+            $query = $request->query->get('q');
+            $lat = $request->query->get('lat');
+            $lng = $request->query->get('lng');
+            $radius = $request->query->get('radius', 50); // 50km par défaut
 
             $results = [];
 
