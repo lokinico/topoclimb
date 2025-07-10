@@ -365,8 +365,8 @@ class HomeController extends BaseController
             echo "<h2>🧪 Test Data Methods</h2>";
             
             // Test each private method
-            $stats = $this->getStats();
-            echo "getStats(): " . count($stats) . " items ✅<br>";
+            $stats = $this->calculateStats();
+            echo "calculateStats(): " . count($stats) . " items ✅<br>";
             
             $recentRoutes = $this->getRecentRoutes(3);
             echo "getRecentRoutes(): " . count($recentRoutes) . " routes ✅<br>";
