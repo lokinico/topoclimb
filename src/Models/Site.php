@@ -15,8 +15,8 @@ use TopoclimbCH\Core\Model;
  */
 class Site extends Model
 {
-    protected string $table = 'climbing_sites';
-    protected string $primaryKey = 'id';
+    protected static string $table = 'climbing_sites';
+    protected static string $primaryKey = 'id';
 
     protected array $fillable = [
         'region_id',

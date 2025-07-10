@@ -13,8 +13,8 @@ use TopoclimbCH\Core\Model;
  */
 class BookSector extends Model
 {
-    protected string $table = 'climbing_book_sectors';
-    protected string $primaryKey = 'id';
+    protected static string $table = 'climbing_book_sectors';
+    protected static string $primaryKey = 'id';
 
     protected array $fillable = [
         'book_id',

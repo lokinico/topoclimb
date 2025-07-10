@@ -10,7 +10,7 @@ class MediaRelationship extends Model
     /**
      * @var string
      */
-    protected string $table = 'climbing_media_relationships';
+    protected static string $table = 'climbing_media_relationships';
 
     /**
      * @var array

@@ -13,8 +13,8 @@ use TopoclimbCH\Core\Model;
  */
 class BookRoute extends Model
 {
-    protected string $table = 'climbing_book_routes';
-    protected string $primaryKey = 'id';
+    protected static string $table = 'climbing_book_routes';
+    protected static string $primaryKey = 'id';
 
     protected array $fillable = [
         'book_id',
@@ -51,8 +51,8 @@ class BookRoute extends Model
  */
 class Book extends Model
 {
-    protected string $table = 'climbing_books';
-    protected string $primaryKey = 'id';
+    protected static string $table = 'climbing_books';
+    protected static string $primaryKey = 'id';
 
     protected array $fillable = [
         'region_id',
