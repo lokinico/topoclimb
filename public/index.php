@@ -14,12 +14,12 @@ use TopoclimbCH\Core\Container;
  * Point d'entrée principal de l'application TopoclimbCH
  */
 
-// Définir le chemin de base de l'application
-define('BASE_PATH', dirname(__DIR__));
+// Chargement du bootstrap
+require_once dirname(__DIR__) . '/bootstrap.php';
 
 // ============= DÉBUT CONFIGURATION DE LOGS AMÉLIORÉE =============
 // Créer un répertoire de logs s'il n'existe pas
-$logDir = BASE_PATH . '/logs';
+$logDir = BASE_PATH . '/storage/logs';
 if (!is_dir($logDir)) {
     mkdir($logDir, 0755, true);
 }
