@@ -198,7 +198,14 @@ if [ -d "storage/cache" ]; then
     success "Cache storage nettoyé"
 fi
 
-# Exécuter le script de nettoyage de l'app
+# Nettoyer spécifiquement le cache du container Symfony
+log "🧹 Nettoyage du cache container Symfony..."
+find . -name "*CachedContainer*" -delete 2>/dev/null || true
+find . -name "*cached_container*" -delete 2>/dev/null || true
+rm -rf storage/framework/cache/* 2>/dev/null || true
+success "Cache container nettoyé"
+
+# Exécuter les scripts de nettoyage de l'app
 if [ -f "clear_cache.php" ]; then
     if php clear_cache.php; then
         success "Script clear_cache.php exécuté"
@@ -207,6 +214,15 @@ if [ -f "clear_cache.php" ]; then
     fi
 else
     warning "Script clear_cache.php non trouvé"
+fi
+
+# Exécuter le nettoyage spécifique du container
+if [ -f "clear_container_cache.php" ]; then
+    if php clear_container_cache.php; then
+        success "Cache container Symfony nettoyé"
+    else
+        warning "Erreur dans clear_container_cache.php"
+    fi
 fi
 
 # =======================================================
