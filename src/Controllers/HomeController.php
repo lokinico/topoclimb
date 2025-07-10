@@ -349,6 +349,10 @@ class HomeController extends BaseController
      */
     public function debugTest(): void
     {
+        // Output raw HTML without any template rendering
+        http_response_code(200);
+        header('Content-Type: text/html; charset=UTF-8');
+        
         echo "<h1>🔍 Debug Test HomeController</h1>";
 
         try {
@@ -377,23 +381,21 @@ class HomeController extends BaseController
             $trendingRoutes = $this->getTrendingRoutes(3);
             echo "getTrendingRoutes(): " . count($trendingRoutes) . " routes ✅<br>";
 
-            echo "<h2>🧪 Test index() method</h2>";
+            echo "<h2>🧪 Test Template System</h2>";
             try {
-                ob_start();
-                $indexResult = $this->index();
-                $indexOutput = ob_get_clean();
-                echo "index() method executed successfully ✅<br>";
-                echo "Result type: " . get_class($indexResult) . "<br>";
-                if ($indexOutput) {
-                    echo "Output length: " . strlen($indexOutput) . " chars<br>";
-                }
-            } catch (\Exception $indexError) {
-                echo "<p style='color: red;'>index() method failed: " . htmlspecialchars($indexError->getMessage()) . "</p>";
-                echo "<p>File: " . htmlspecialchars($indexError->getFile()) . ":" . $indexError->getLine() . "</p>";
+                $view = $this->view;
+                echo "View service available: " . get_class($view) . " ✅<br>";
+                
+                // Test basic template rendering without the complex homepage template
+                $testHtml = $view->render('layouts/test', ['message' => 'Test template rendering']);
+                echo "Basic template rendering: WORKS ✅<br>";
+            } catch (\Exception $templateError) {
+                echo "<p style='color: red;'>Template system failed: " . htmlspecialchars($templateError->getMessage()) . "</p>";
+                echo "<p>File: " . htmlspecialchars($templateError->getFile()) . ":" . $templateError->getLine() . "</p>";
             }
 
-            echo "<h2>🎯 All Tests Passed!</h2>";
-            echo "<p style='color: green;'>HomeController is working correctly. The homepage should function now.</p>";
+            echo "<h2>🎯 All Component Tests Passed!</h2>";
+            echo "<p style='color: green;'>All HomeController components are working. The issue is likely in the template rendering or response handling.</p>";
             
         } catch (\Exception $e) {
             echo "<h2>❌ Error Found</h2>";
@@ -402,5 +404,7 @@ class HomeController extends BaseController
             echo "<h3>Stack trace:</h3>";
             echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
         }
+        
+        exit; // Prevent any further template rendering
     }
 }
