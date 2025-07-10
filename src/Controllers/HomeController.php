@@ -377,6 +377,21 @@ class HomeController extends BaseController
             $trendingRoutes = $this->getTrendingRoutes(3);
             echo "getTrendingRoutes(): " . count($trendingRoutes) . " routes ✅<br>";
 
+            echo "<h2>🧪 Test index() method</h2>";
+            try {
+                ob_start();
+                $indexResult = $this->index();
+                $indexOutput = ob_get_clean();
+                echo "index() method executed successfully ✅<br>";
+                echo "Result type: " . get_class($indexResult) . "<br>";
+                if ($indexOutput) {
+                    echo "Output length: " . strlen($indexOutput) . " chars<br>";
+                }
+            } catch (\Exception $indexError) {
+                echo "<p style='color: red;'>index() method failed: " . htmlspecialchars($indexError->getMessage()) . "</p>";
+                echo "<p>File: " . htmlspecialchars($indexError->getFile()) . ":" . $indexError->getLine() . "</p>";
+            }
+
             echo "<h2>🎯 All Tests Passed!</h2>";
             echo "<p style='color: green;'>HomeController is working correctly. The homepage should function now.</p>";
             
