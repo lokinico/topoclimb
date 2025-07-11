@@ -2,7 +2,7 @@
 
 namespace TopoclimbCH\Controllers;
 
-// use Symfony\Component\HttpFoundation\Request; // Commenté pour éviter les conflits
+use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
@@ -39,7 +39,7 @@ class MapController extends BaseController
     /**
      * Affiche la carte principale avec tous les sites d'escalade
      */
-    public function index(): Response
+    public function index(?Request $request = null): Response
     {
         try {
             // Récupérer les paramètres de filtrage depuis $_GET
@@ -111,7 +111,7 @@ class MapController extends BaseController
     /**
      * API pour récupérer les données des sites en format JSON
      */
-    public function apiSites(): Response
+    public function apiSites(?Request $request = null): Response
     {
         try {
             $filters = [
@@ -160,7 +160,7 @@ class MapController extends BaseController
     /**
      * API pour récupérer les détails d'un site spécifique
      */
-    public function apiSiteDetails(): Response
+    public function apiSiteDetails(?Request $request = null): Response
     {
         try {
             // Récupérer l'ID depuis l'URL (assumé être passé en paramètre)
@@ -214,7 +214,7 @@ class MapController extends BaseController
     /**
      * API pour la recherche géographique
      */
-    public function apiGeoSearch(): Response
+    public function apiGeoSearch(?Request $request = null): Response
     {
         try {
             $query = $_GET['q'] ?? null;
