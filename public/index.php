@@ -242,13 +242,13 @@ try {
     );
 
     // Log avant d'exécuter l'application
-    error_log("Avant app->run() pour " . $_SERVER['REQUEST_URI']);
+    error_log("Avant app->run() pour " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
 
     // Exécuter l'application qui gère tout le cycle requête/réponse
     $app->run();
 
     // Log après l'exécution (si l'application n'a pas terminé le script)
-    error_log("Après app->run() pour " . $_SERVER['REQUEST_URI'] . " - Ce message ne devrait pas apparaître normalement");
+    error_log("Après app->run() pour " . ($_SERVER['REQUEST_URI'] ?? 'unknown') . " - Ce message ne devrait pas apparaître normalement");
 } catch (\Throwable $e) {
     // Log l'erreur simplement
     if (isset($logger)) {
