@@ -13,7 +13,7 @@ use TopoclimbCH\Services\SiteService;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\RouteService;
 use TopoclimbCH\Services\UserService;
-use TopoclimbCH\Services\WeatherService;
+// use TopoclimbCH\Services\WeatherService; // Service pas encore implémenté
 use TopoclimbCH\Models\Region;
 use TopoclimbCH\Models\Site;
 use TopoclimbCH\Models\Sector;
@@ -29,7 +29,7 @@ class HomeController extends BaseController
     private SectorService $sectorService;
     private RouteService $routeService;
     private UserService $userService;
-    private ?WeatherService $weatherService;
+    // private ?WeatherService $weatherService; // Service pas encore implémenté
 
     public function __construct(
         View $view,
@@ -41,8 +41,8 @@ class HomeController extends BaseController
         SiteService $siteService,
         SectorService $sectorService,
         RouteService $routeService,
-        UserService $userService,
-        ?WeatherService $weatherService = null
+        UserService $userService
+        // ?WeatherService $weatherService = null // Service pas encore implémenté
     ) {
         parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->regionService = $regionService;
@@ -50,7 +50,7 @@ class HomeController extends BaseController
         $this->sectorService = $sectorService;
         $this->routeService = $routeService;
         $this->userService = $userService;
-        $this->weatherService = $weatherService;
+        // $this->weatherService = $weatherService; // Service pas encore implémenté
     }
     public function index(): Response
     {
@@ -364,7 +364,7 @@ class HomeController extends BaseController
             echo "SectorService: " . get_class($this->sectorService) . " ✅<br>";
             echo "RouteService: " . get_class($this->routeService) . " ✅<br>";
             echo "UserService: " . get_class($this->userService) . " ✅<br>";
-            echo "WeatherService: " . get_class($this->weatherService) . " ✅<br>";
+            echo "WeatherService: (pas encore implémenté) ⚠️<br>";
 
             echo "<h2>🧪 Test Data Methods</h2>";
             

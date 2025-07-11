@@ -337,7 +337,7 @@ abstract class Model
      * @param string $direction Direction du tri (ASC/DESC)
      * @return array
      */
-    public static function where($criteria, $value = null, string $orderBy = null, string $direction = 'ASC'): array
+    public static function where($criteria, $value = null, ?string $orderBy = null, string $direction = 'ASC'): array
     {
         $argCount = func_num_args();
 
@@ -396,7 +396,7 @@ abstract class Model
     /**
      * Récupère tous les modèles
      */
-    public static function all(string $orderBy = null, string $direction = 'ASC'): array
+    public static function all(?string $orderBy = null, string $direction = 'ASC'): array
     {
         return static::where([], null, $orderBy, $direction);
     }
@@ -606,7 +606,7 @@ abstract class Model
     /**
      * Définit une relation hasMany
      */
-    protected function hasMany(string $relatedClass, string $foreignKey = null, string $localKey = null): array
+    protected function hasMany(string $relatedClass, ?string $foreignKey = null, ?string $localKey = null): array
     {
         $localKey = $localKey ?? static::$primaryKey;
         $foreignKey = $foreignKey ?? strtolower((new ReflectionClass(static::class))->getShortName()) . '_id';
@@ -621,7 +621,7 @@ abstract class Model
     /**
      * Définit une relation belongsTo
      */
-    protected function belongsTo(string $relatedClass, string $foreignKey = null, string $otherKey = null): ?object
+    protected function belongsTo(string $relatedClass, ?string $foreignKey = null, ?string $otherKey = null): ?object
     {
         $otherKey = $otherKey ?? (new ReflectionClass($relatedClass))->getShortName() . '_id';
         $foreignKey = $foreignKey ?? $relatedClass::$primaryKey;
@@ -636,7 +636,7 @@ abstract class Model
     /**
      * Définit une relation belongsToMany (many-to-many)
      */
-    protected function belongsToMany(string $relatedClass, string $pivotTable = null, string $foreignPivotKey = null, string $relatedPivotKey = null): array
+    protected function belongsToMany(string $relatedClass, ?string $pivotTable = null, ?string $foreignPivotKey = null, ?string $relatedPivotKey = null): array
     {
         $foreignPivotKey = $foreignPivotKey ?? strtolower((new ReflectionClass(static::class))->getShortName()) . '_id';
         $relatedPivotKey = $relatedPivotKey ?? strtolower((new ReflectionClass($relatedClass))->getShortName()) . '_id';

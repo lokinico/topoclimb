@@ -1,21 +1,10 @@
-# Activation du module rewrite
+# Redirection simplifiée vers public/
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Rediriger si le domaine ne commence pas par www. (en production)
-    # RewriteCond %{HTTP_HOST} !^www\. [NC]
-    # RewriteRule ^(.*)$ https://www.%{HTTP_HOST}/$1 [R=301,L]
-    
-    # Forcer HTTPS (en production)
-    # RewriteCond %{HTTPS} !=on
-    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-    
-    # Ne pas rediriger les fichiers réels
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    
-    # Rediriger toutes les requêtes vers index.php
-    RewriteRule ^(.*)$ index.php [QSA,L]
+    # Redirection directe vers public/ si pas déjà dedans
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
 </IfModule>
 
 # Protection des fichiers sensibles

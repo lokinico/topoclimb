@@ -14,8 +14,16 @@ use TopoclimbCH\Core\Container;
  * Point d'entrée principal de l'application TopoclimbCH
  */
 
-// Chargement du bootstrap
+// Chargement du bootstrap AVANT toute configuration
 require_once dirname(__DIR__) . '/bootstrap.php';
+
+// CRITIQUE: Configuration des sessions AVANT toute sortie
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.use_strict_mode', 1);
+    ini_set('session.use_trans_sid', 0);
+    ini_set('session.gc_maxlifetime', 86400); // 24h pour éviter expirations prématurées
+}
 
 // ============= DÉBUT CONFIGURATION DE LOGS AMÉLIORÉE =============
 // Créer un répertoire de logs s'il n'existe pas
@@ -56,60 +64,7 @@ $requestInfo = [
 // Log de démarrage d'exécution
 error_log("========== DÉBUT DE REQUÊTE ==========");
 error_log("URI: " . $requestInfo['uri'] . " | Méthode: " . $requestInfo['method'] . " | IP: " . $requestInfo['ip']);
-
-// Gestionnaire d'exceptions global amélioré
-set_exception_handler(function (\Throwable $e) use ($requestInfo) {
-    $errorDetails = [
-        'timestamp' => date('Y-m-d H:i:s'),
-        'message' => $e->getMessage(),
-        'code' => $e->getCode(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'type' => get_class($e),
-        'request_uri' => $requestInfo['uri'],
-        'request_method' => $requestInfo['method'],
-        'session_id' => session_status() === PHP_SESSION_ACTIVE ? session_id() : 'inactive'
-    ];
-
-    // Log détaillé de l'exception
-    error_log("=============== EXCEPTION DÉTAILLÉE ===============");
-    foreach ($errorDetails as $key => $value) {
-        error_log("$key: $value");
-    }
-
-    // Trace d'appel complète
-    error_log("------ TRACE D'APPEL ------");
-    error_log($e->getTraceAsString());
-
-    // Si une exception précédente existe, l'inclure aussi
-    if ($e->getPrevious()) {
-        error_log("------ EXCEPTION PRÉCÉDENTE ------");
-        error_log("Message: " . $e->getPrevious()->getMessage());
-        error_log("Type: " . get_class($e->getPrevious()));
-        error_log("Fichier: " . $e->getPrevious()->getFile() . " (ligne " . $e->getPrevious()->getLine() . ")");
-    }
-
-    // Données de session si disponibles
-    if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION)) {
-        error_log("------ DONNÉES DE SESSION ------");
-        foreach ($_SESSION as $key => $value) {
-            $valueStr = is_scalar($value) ? (string)$value : json_encode($value);
-            error_log("$key: " . (strlen($valueStr) > 1000 ? substr($valueStr, 0, 1000) . "..." : $valueStr));
-        }
-    }
-
-    error_log("==================================================");
-
-    // Redirection avec le traitement d'erreur normal du script
-    // Ne pas appeler exit pour que le gestionnaire d'erreurs standard fonctionne aussi
-});
 // ============= FIN CONFIGURATION DE LOGS AMÉLIORÉE =============
-
-// Optimisation critique des sessions avant tout
-ini_set('session.use_only_cookies', 1);
-ini_set('session.use_strict_mode', 1);
-ini_set('session.use_trans_sid', 0);
-ini_set('session.gc_maxlifetime', 86400); // 24h pour éviter expirations prématurées
 
 // Charger l'autoloader de Composer
 require BASE_PATH . '/vendor/autoload.php';
@@ -165,6 +120,48 @@ if (session_status() === PHP_SESSION_NONE) {
         error_log("Session active mais sans auth_user_id");
     }
 }
+
+// ============= GESTIONNAIRE D'ERREURS GLOBAL =============
+// Gestionnaire d'exceptions global amélioré (APRÈS les sessions)
+set_exception_handler(function (\Throwable $e) use ($requestInfo) {
+    $errorDetails = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'message' => $e->getMessage(),
+        'code' => $e->getCode(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'type' => get_class($e),
+        'request_uri' => $requestInfo['uri'],
+        'request_method' => $requestInfo['method'],
+        'session_id' => session_status() === PHP_SESSION_ACTIVE ? session_id() : 'inactive'
+    ];
+
+    // Log détaillé de l'exception
+    error_log("=============== EXCEPTION DÉTAILLÉE ===============");
+    foreach ($errorDetails as $key => $value) {
+        error_log("$key: $value");
+    }
+
+    // Trace d'appel complète
+    error_log("------ TRACE D'APPEL ------");
+    error_log($e->getTraceAsString());
+
+    error_log("==================================================");
+
+    // Afficher une erreur basique selon l'environnement
+    $environment = $_ENV['APP_ENV'] ?? 'production';
+    http_response_code(500);
+    
+    if ($environment === 'development') {
+        echo "<h1>Erreur serveur</h1>";
+        echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<p><strong>Fichier:</strong> " . htmlspecialchars($e->getFile()) . " (ligne " . $e->getLine() . ")</p>";
+    } else {
+        echo "<h1>Erreur temporaire</h1><p>Le site est temporairement indisponible. Veuillez réessayer plus tard.</p>";
+    }
+    exit;
+});
+// ============= FIN GESTIONNAIRE D'ERREURS =============
 
 // Variables pour les services principaux
 $container = null;
@@ -253,97 +250,15 @@ try {
     // Log après l'exécution (si l'application n'a pas terminé le script)
     error_log("Après app->run() pour " . $_SERVER['REQUEST_URI'] . " - Ce message ne devrait pas apparaître normalement");
 } catch (\Throwable $e) {
-    // Log l'erreur
+    // Log l'erreur simplement
     if (isset($logger)) {
-        $logger->error($e->getMessage(), [
-            'exception' => $e,
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString()
-        ]);
+        $logger->error($e->getMessage(), ['exception' => $e]);
     } else {
-        error_log("[ERREUR CRITIQUE] " . $e->getMessage() . "\n" . $e->getTraceAsString());
+        error_log("[ERREUR CRITIQUE] " . $e->getMessage());
     }
 
-    // Gestion spéciale des erreurs d'authentification
-    if (
-        isset($session) &&
-        // Vérifier si l'erreur est liée à l'authentification
-        (
-            (strpos($e->getMessage(), 'Auth') !== false) ||
-            (strpos($e->getMessage(), 'auth') !== false) ||
-            (strpos($e->getFile(), 'Auth.php') !== false)
-        ) &&
-        // IMPORTANT: Ne jamais rediriger vers login pour les erreurs dans SectorController
-        (strpos($e->getFile(), 'SectorController.php') === false) &&
-        // Éviter les redirections infinies
-        ($requestInfo['uri'] !== '/login')
-    ) {
-        error_log("Tentative de nettoyage de la session après erreur Auth (non liée à SectorController)");
-
-        // Nettoyage complet des données d'authentification
-        unset($_SESSION['auth_user_id']);
-        unset($_SESSION['is_authenticated']);
-
-        if (method_exists($session, 'remove')) {
-            $session->remove('auth_user_id');
-            $session->remove('is_authenticated');
-        }
-
-        // Sauvegarde URL courante pour y revenir après login
-        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
-        if ($currentUrl !== '/login' && $currentUrl !== '/logout') {
-            $_SESSION['intended_url'] = $currentUrl;
-            if (method_exists($session, 'set')) {
-                $session->set('intended_url', $currentUrl);
-            }
-        }
-
-        if (method_exists($session, 'flash')) {
-            $session->flash('error', 'Problème d\'authentification. Veuillez vous reconnecter.');
-        }
-
-        if (method_exists($session, 'persist')) {
-            $session->persist();
-        }
-
-        // Rediriger vers login
-        header('Location: /login');
-        exit;
-    }
-
-    // Afficher une erreur basique en cas de problème
-    http_response_code(500);
-    if ($environment === 'development') {
-        echo "<h1>Erreur serveur</h1>";
-        echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<p><strong>Fichier:</strong> " . htmlspecialchars($e->getFile()) . " (ligne " . $e->getLine() . ")</p>";
-        echo "<h2>Trace</h2>";
-        echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
-
-        // Afficher les informations de session qui pourraient être utiles
-        if (isset($_SESSION)) {
-            echo "<h2>Informations de session</h2>";
-            echo "<pre>";
-            // Afficher de manière sécurisée les données sensibles
-            foreach ($_SESSION as $key => $value) {
-                if (is_string($value)) {
-                    $displayValue = (strlen($value) > 100 || strpos($key, 'token') !== false || strpos($key, 'password') !== false)
-                        ? substr($value, 0, 8) . '...'
-                        : $value;
-                } else {
-                    $displayValue = gettype($value);
-                }
-                echo htmlspecialchars($key) . ' => ' . htmlspecialchars(is_string($displayValue) ? $displayValue : json_encode($displayValue)) . "\n";
-            }
-            echo "</pre>";
-        }
-    } else {
-        include BASE_PATH . '/resources/views/errors/500.php';
-    }
-
-    // Log de fin de requête en erreur
-    error_log("========== FIN DE REQUÊTE (ERREUR 500) ==========");
+    // Le gestionnaire d'exceptions global s'occupera du reste
+    throw $e;
 }
 
 // Log de fin de requête normale (si on arrive jusqu'ici)

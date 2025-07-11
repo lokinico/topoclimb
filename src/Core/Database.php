@@ -24,7 +24,7 @@ class Database
     /**
      * Constructeur public pour l'injection de dépendances
      */
-    public function __construct(array $config = null)
+    public function __construct(?array $config = null)
     {
         if ($config === null) {
             // Configuration par défaut depuis les variables d'environnement

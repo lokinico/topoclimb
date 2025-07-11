@@ -19,7 +19,7 @@ class View
     /**
      * GARDE LE CONSTRUCTEUR ORIGINAL avec améliorations optionnelles
      */
-    public function __construct(string $viewsPath = null, string $cachePath = null, CsrfManager $csrfManager = null)
+    public function __construct(?string $viewsPath = null, ?string $cachePath = null, ?CsrfManager $csrfManager = null)
     {
         $viewsPath = $viewsPath ?? BASE_PATH . '/resources/views';
         $cachePath = $cachePath ?? BASE_PATH . '/cache/views';
@@ -472,7 +472,7 @@ class View
     /**
      * Render JSON pour AJAX
      */
-    public function json(array $data, string $template = null): string
+    public function json(array $data, ?string $template = null): string
     {
         if ($template && $this->exists($template)) {
             $data['html'] = $this->render($template, $data);

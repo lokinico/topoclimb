@@ -2,7 +2,7 @@
 
 namespace TopoclimbCH\Controllers;
 
-use Symfony\Component\HttpFoundation\Request;
+// use Symfony\Component\HttpFoundation\Request; // Commenté pour éviter les conflits
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Session;
@@ -41,16 +41,16 @@ class MapController extends BaseController
     /**
      * Affiche la carte principale avec tous les sites d'escalade
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
         try {
-            // Récupérer les paramètres de filtrage
+            // Récupérer les paramètres de filtrage depuis $_GET
             $filters = [
-                'region_id' => $request->query->get('region'),
-                'difficulty_min' => $request->query->get('difficulty_min'),
-                'difficulty_max' => $request->query->get('difficulty_max'),
-                'type' => $request->query->get('type'),
-                'season' => $request->query->get('season')
+                'region_id' => $_GET['region'] ?? null,
+                'difficulty_min' => $_GET['difficulty_min'] ?? null,
+                'difficulty_max' => $_GET['difficulty_max'] ?? null,
+                'type' => $_GET['type'] ?? null,
+                'season' => $_GET['season'] ?? null
             ];
 
             // Récupérer toutes les régions pour les filtres
@@ -89,15 +89,15 @@ class MapController extends BaseController
     /**
      * API pour récupérer les données des sites en format JSON
      */
-    public function apiSites(Request $request): Response
+    public function apiSites(): Response
     {
         try {
             $filters = [
-                'region_id' => $request->query->get('region'),
-                'difficulty_min' => $request->query->get('difficulty_min'),
-                'difficulty_max' => $request->query->get('difficulty_max'),
-                'type' => $request->query->get('type'),
-                'season' => $request->query->get('season')
+                'region_id' => $_GET['region'] ?? null,
+                'difficulty_min' => $_GET['difficulty_min'] ?? null,
+                'difficulty_max' => $_GET['difficulty_max'] ?? null,
+                'type' => $_GET['type'] ?? null,
+                'season' => $_GET['season'] ?? null
             ];
 
             $sites = $this->getSitesForMap($filters);
@@ -121,10 +121,13 @@ class MapController extends BaseController
     /**
      * API pour récupérer les détails d'un site spécifique
      */
-    public function apiSiteDetails(Request $request): Response
+    public function apiSiteDetails(): Response
     {
         try {
-            $siteId = $request->attributes->get('id');
+            // Récupérer l'ID depuis l'URL (assumé être passé en paramètre)
+            $pathInfo = $_SERVER['PATH_INFO'] ?? $_SERVER['REQUEST_URI'] ?? '';
+            preg_match('/\/api\/map\/sites\/(\d+)/', $pathInfo, $matches);
+            $siteId = $matches[1] ?? null;
             
             $site = Site::find($siteId);
             if (!$site) {
@@ -172,13 +175,13 @@ class MapController extends BaseController
     /**
      * API pour la recherche géographique
      */
-    public function apiGeoSearch(Request $request): Response
+    public function apiGeoSearch(): Response
     {
         try {
-            $query = $request->query->get('q');
-            $lat = $request->query->get('lat');
-            $lng = $request->query->get('lng');
-            $radius = $request->query->get('radius', 50); // 50km par défaut
+            $query = $_GET['q'] ?? null;
+            $lat = $_GET['lat'] ?? null;
+            $lng = $_GET['lng'] ?? null;
+            $radius = $_GET['radius'] ?? 50; // 50km par défaut
 
             $results = [];
 

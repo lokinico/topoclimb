@@ -45,7 +45,7 @@ class ErrorController extends BaseController
      * @param \Throwable|null $exception
      * @return Response
      */
-    public function serverError(Request $request, \Throwable $exception = null): Response
+    public function serverError(Request $request, ?\Throwable $exception = null): Response
     {
         $response = new Response();
         $response->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR);
