@@ -189,7 +189,7 @@ class SectorController extends BaseController
             $stats = $this->calculateSectorStatsSecure($routes);
 
             return $this->render('sectors/show', [
-                'title' => htmlspecialchars($sector['name'], ENT_QUOTES, 'UTF-8'),
+                'title' => htmlspecialchars($sector->name, ENT_QUOTES, 'UTF-8'),
                 'sector' => $sector,
                 'exposures' => $exposures,
                 'media' => $media,
@@ -406,7 +406,7 @@ class SectorController extends BaseController
             $media = $this->mediaService->getMediaForEntity('sector', (int) $id);
 
             return $this->render('sectors/form', [
-                'title' => 'Modifier le secteur ' . htmlspecialchars($sector['name'], ENT_QUOTES, 'UTF-8'),
+                'title' => 'Modifier le secteur ' . htmlspecialchars($sector->name, ENT_QUOTES, 'UTF-8'),
                 'sector' => $sector,
                 'regions' => $regions,
                 'books' => $books,
@@ -547,7 +547,7 @@ class SectorController extends BaseController
 
                 // Show confirmation page avec informations sur les dépendances
                 return $this->render('sectors/delete', [
-                    'title' => 'Supprimer le secteur ' . htmlspecialchars($sector['name'], ENT_QUOTES, 'UTF-8'),
+                    'title' => 'Supprimer le secteur ' . htmlspecialchars($sector->name, ENT_QUOTES, 'UTF-8'),
                     'sector' => $sector,
                     'dependencies' => $dependencies,
                     'csrf_token' => $this->createCsrfToken()
@@ -1144,20 +1144,20 @@ class SectorController extends BaseController
     /**
      * Enrich route data securely for API
      */
-    private function enrichRouteDataSecure(array $route): array
+    private function enrichRouteDataSecure($route): array
     {
         return [
-            'id' => (int) $route['id'],
-            'name' => htmlspecialchars($route['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-            'number' => $route['number'] ?? null,
-            'difficulty' => htmlspecialchars($route['difficulty'] ?? '', ENT_QUOTES, 'UTF-8'),
-            'beauty' => (int) ($route['beauty'] ?? 0),
-            'style' => htmlspecialchars($route['style'] ?? '', ENT_QUOTES, 'UTF-8'),
-            'length' => $route['length'] ? (float) $route['length'] : null,
-            'equipment' => htmlspecialchars($route['equipment'] ?? '', ENT_QUOTES, 'UTF-8'),
-            'comment' => htmlspecialchars($route['comment'] ?? '', ENT_QUOTES, 'UTF-8'),
-            'lengthFormatted' => $route['length'] ? $route['length'] . 'm' : null,
-            'ascents_count' => $this->getRouteAscentsCountSecure((int) $route['id'])
+            'id' => (int) $route->id,
+            'name' => htmlspecialchars($route->name ?? '', ENT_QUOTES, 'UTF-8'),
+            'number' => $route->number ?? null,
+            'difficulty' => htmlspecialchars($route->difficulty ?? '', ENT_QUOTES, 'UTF-8'),
+            'beauty' => (int) ($route->beauty ?? 0),
+            'style' => htmlspecialchars($route->style ?? '', ENT_QUOTES, 'UTF-8'),
+            'length' => $route->length ? (float) $route->length : null,
+            'equipment' => htmlspecialchars($route->equipment ?? '', ENT_QUOTES, 'UTF-8'),
+            'comment' => htmlspecialchars($route->comment ?? '', ENT_QUOTES, 'UTF-8'),
+            'lengthFormatted' => $route->length ? $route->length . 'm' : null,
+            'ascents_count' => $this->getRouteAscentsCountSecure((int) $route->id)
         ];
     }
 

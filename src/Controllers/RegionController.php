@@ -243,7 +243,7 @@ class RegionController extends BaseController
         ];
 
         return [
-            'title' => $region['name'],
+            'title' => $region->name,
             'region' => $region,
             'sectors' => $sectors,
             'media' => $media,
@@ -561,24 +561,24 @@ class RegionController extends BaseController
 
             $this->requireEntity($region, 'Région non trouvée');
 
-            if (!$region['coordinates_lat'] || !$region['coordinates_lng']) {
+            if (!$region->coordinates_lat || !$region->coordinates_lng) {
                 return new JsonResponse(['error' => 'Coordonnées non disponibles pour cette région'], 400);
             }
 
             // Validation des coordonnées suisses
-            if (!$this->areCoordinatesInSwitzerland($region['coordinates_lat'], $region['coordinates_lng'])) {
+            if (!$this->areCoordinatesInSwitzerland($region->coordinates_lat, $region->coordinates_lng)) {
                 return new JsonResponse(['error' => 'Coordonnées invalides'], 400);
             }
 
             // Log de la requête météo
-            $this->logAction('get_weather', ['region_id' => $id, 'region_name' => $region['name']]);
+            $this->logAction('get_weather', ['region_id' => $id, 'region_name' => $region->name]);
 
             return new JsonResponse([
                 'success' => true,
-                'region' => $region['name'],
+                'region' => $region->name,
                 'coordinates' => [
-                    'lat' => (float)$region['coordinates_lat'],
-                    'lng' => (float)$region['coordinates_lng']
+                    'lat' => (float)$region->coordinates_lat,
+                    'lng' => (float)$region->coordinates_lng
                 ],
                 'message' => 'Données météo disponibles'
             ]);
@@ -678,20 +678,20 @@ class RegionController extends BaseController
             // Formatage sécurisé des données
             $data = array_map(function ($sector) {
                 return [
-                    'id' => (int)$sector['id'],
-                    'name' => $sector['name'],
-                    'routes_count' => (int)($sector['routes_count'] ?? 0),
-                    'altitude' => $sector['altitude'] ? (int)$sector['altitude'] : null,
-                    'access_time' => $sector['access_time'] ? (int)$sector['access_time'] : null,
-                    'coordinates_lat' => $sector['coordinates_lat'] ? (float)$sector['coordinates_lat'] : null,
-                    'coordinates_lng' => $sector['coordinates_lng'] ? (float)$sector['coordinates_lng'] : null
+                    'id' => (int)$sector->id,
+                    'name' => $sector->name,
+                    'routes_count' => (int)($sector->routes_count ?? 0),
+                    'altitude' => $sector->altitude ? (int)$sector->altitude : null,
+                    'access_time' => $sector->access_time ? (int)$sector->access_time : null,
+                    'coordinates_lat' => $sector->coordinates_lat ? (float)$sector->coordinates_lat : null,
+                    'coordinates_lng' => $sector->coordinates_lng ? (float)$sector->coordinates_lng : null
                 ];
             }, $sectors);
 
             return new JsonResponse([
                 'success' => true,
                 'data' => $data,
-                'region' => ['id' => (int)$region['id'], 'name' => $region['name']],
+                'region' => ['id' => (int)$region->id, 'name' => $region->name],
                 'count' => count($data)
             ]);
         } catch (ValidationException $e) {
