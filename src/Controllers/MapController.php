@@ -24,18 +24,16 @@ class MapController extends BaseController
         View $view,
         Session $session,
         CsrfManager $csrfManager,
-        ?Database $db = null,
-        ?Auth $auth = null
+        Database $db,
+        Auth $auth
     ) {
         parent::__construct($view, $session, $csrfManager, $db, $auth);
         
         // Injecter la base de données dans les modèles pour éviter les problèmes de singleton
-        if ($this->db) {
-            \TopoclimbCH\Models\Region::setDatabase($this->db);
-            \TopoclimbCH\Models\Site::setDatabase($this->db);
-            \TopoclimbCH\Models\Sector::setDatabase($this->db);
-            \TopoclimbCH\Models\Route::setDatabase($this->db);
-        }
+        \TopoclimbCH\Models\Region::setDatabase($this->db);
+        \TopoclimbCH\Models\Site::setDatabase($this->db);
+        \TopoclimbCH\Models\Sector::setDatabase($this->db);
+        \TopoclimbCH\Models\Route::setDatabase($this->db);
     }
 
     /**
@@ -44,6 +42,16 @@ class MapController extends BaseController
     public function index(): Response
     {
         try {
+            error_log("MapController::index - Début du traitement");
+            
+            // Vérifier que la base de données est injectée
+            if (!$this->db) {
+                error_log("MapController::index - Erreur: Base de données non injectée");
+                throw new \Exception("Base de données non accessible dans MapController");
+            }
+            
+            error_log("MapController::index - Base de données OK");
+            
             // Récupérer les paramètres de filtrage depuis $_GET
             $filters = [
                 'region_id' => $_GET['region'] ?? null,
@@ -53,16 +61,39 @@ class MapController extends BaseController
                 'season' => $_GET['season'] ?? null
             ];
 
-            // Récupérer toutes les régions pour les filtres
-            $regions = Region::all();
+            // Initialiser les variables par défaut
+            $regions = [];
+            $sites = [];
+            $stats = ['total_sites' => 0, 'total_routes' => 0, 'total_regions' => 0];
+            $dbError = null;
 
-            // Récupérer les sites avec coordonnées pour la carte
-            $sites = $this->getSitesForMap($filters);
+            try {
+                error_log("MapController::index - Récupération des régions");
+                // Récupérer toutes les régions pour les filtres
+                $regions = Region::all();
+                error_log("MapController::index - Régions récupérées: " . count($regions));
 
-            // Statistiques pour l'interface
-            $stats = $this->getMapStatistics();
+                error_log("MapController::index - Récupération des sites");
+                // Récupérer les sites avec coordonnées pour la carte
+                $sites = $this->getSitesForMap($filters);
+                error_log("MapController::index - Sites récupérés: " . count($sites));
 
-            return $this->render('map/index', [
+                error_log("MapController::index - Calcul des statistiques");
+                // Statistiques pour l'interface
+                $stats = $this->getMapStatistics();
+                error_log("MapController::index - Statistiques calculées");
+                
+            } catch (\Exception $dbException) {
+                error_log("MapController::index - Erreur DB: " . $dbException->getMessage());
+                $dbError = "La base de données est temporairement inaccessible. La carte sera disponible dès que le service sera rétabli.";
+                
+                // Données par défaut quand la DB est inaccessible
+                $regions = [];
+                $sites = [];
+                $stats = ['total_sites' => 0, 'total_routes' => 0, 'total_regions' => 0];
+            }
+
+            $data = [
                 'title' => 'Carte Interactive - Sites d\'escalade en Suisse',
                 'sites' => $sites,
                 'regions' => $regions,
@@ -70,7 +101,14 @@ class MapController extends BaseController
                 'stats' => $stats,
                 'meta_description' => 'Découvrez tous les sites d\'escalade de Suisse sur notre carte interactive. Trouvez votre prochaine voie d\'escalade avec filtres par région, difficulté et type.',
                 'meta_keywords' => 'carte escalade suisse, sites escalade, voies escalade, carte interactive, climbing switzerland'
-            ]);
+            ];
+            
+            // Ajouter l'erreur DB si elle existe
+            if ($dbError) {
+                $data['db_error'] = $dbError;
+            }
+            
+            return $this->render('map/index', $data);
 
         } catch (\Exception $e) {
             error_log("Erreur MapController::index: " . $e->getMessage());
@@ -215,7 +253,9 @@ class MapController extends BaseController
     private function getSitesForMap(array $filters): array
     {
         try {
+            error_log("MapController::getSitesForMap - Début");
             $sites = Site::all();
+            error_log("MapController::getSitesForMap - Sites bruts récupérés: " . count($sites));
             $sitesForMap = [];
 
             foreach ($sites as $site) {
@@ -258,6 +298,7 @@ class MapController extends BaseController
 
         } catch (\Exception $e) {
             error_log("Erreur getSitesForMap: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             return [];
         }
     }
@@ -284,10 +325,15 @@ class MapController extends BaseController
     private function getMapStatistics(): array
     {
         try {
+            error_log("MapController::getMapStatistics - Début");
             $totalSites = count(Site::all());
+            error_log("MapController::getMapStatistics - Total sites: " . $totalSites);
             $totalRegions = count(Region::all());
+            error_log("MapController::getMapStatistics - Total régions: " . $totalRegions);
             $totalSectors = count(Sector::all());
+            error_log("MapController::getMapStatistics - Total secteurs: " . $totalSectors);
             $totalRoutes = count(Route::all());
+            error_log("MapController::getMapStatistics - Total voies: " . $totalRoutes);
 
             return [
                 'total_sites' => $totalSites,
