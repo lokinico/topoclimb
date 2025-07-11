@@ -37,7 +37,7 @@
         <form action="{{ site ? url('/sites/' ~ site.id) : url('/sites') }}" 
               method="post" 
               enctype="multipart/form-data" 
-              class="site-form">
+              class="site-form" autocomplete="on">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if site %}
@@ -432,7 +432,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     Annuler
                 </button>
-                <form method="POST" action="{{ url('/sites/' ~ site.id) }}" class="d-inline">
+                <form method="POST" action="{{ url('/sites/' ~ site.id) }}" class="d-inline" autocomplete="on">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="_method" value="DELETE">
                     <button type="submit" class="btn btn-danger">

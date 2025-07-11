@@ -48,7 +48,7 @@
     <!-- Form Container -->
     <div class="form-container">
         <form method="POST" action="{{ region.id ? url('/regions/' ~ region.id) : url('/regions') }}" 
-              class="region-form" id="region-form" enctype="multipart/form-data">
+              class="region-form" id="region-form" enctype="multipart/form-data" autocomplete="on">
             
             {% if region.id %}
                 <input type="hidden" name="_method" value="PUT">

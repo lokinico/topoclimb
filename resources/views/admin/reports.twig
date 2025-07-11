@@ -335,7 +335,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="/admin/reports/export" method="POST">
+            <form action="/admin/reports/export" method="POST" autocomplete="on">
                 {{ csrf_field() }}
                 <input type="hidden" name="period" value="{{ period }}">
                 

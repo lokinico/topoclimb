@@ -21,9 +21,9 @@
     </div>
     
     <div class="form-container">
-        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors') }}"              method="post" 
+        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors') }}" method="post" 
               enctype="multipart/form-data" 
-              class="form form-horizontal">
+              class="form form-horizontal" autocomplete="on">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             
@@ -56,14 +56,14 @@
             <div class="form-group">
                 <label for="name">Nom</label>
                 <input type="text" name="name" id="name" class="form-control" value="{{ sector.name }}" 
-                       required maxlength="255" aria-describedby="name-help">
+                       required maxlength="255" aria-describedby="name-help" autocomplete="off">
                 <small id="name-help" class="form-text text-muted">Nom complet du secteur</small>
             </div>
             
             <div class="form-group">
                 <label for="code">Code</label>
                 <input type="text" name="code" id="code" class="form-control" value="{{ sector.code }}" 
-                       required maxlength="50" aria-describedby="code-help">
+                       required maxlength="50" aria-describedby="code-help" autocomplete="off">
                 <small id="code-help" class="form-text text-muted">Identifiant unique du secteur</small>
             </div>
             

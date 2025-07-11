@@ -32,7 +32,7 @@
 <div class="row">
     <!-- Configuration principale -->
     <div class="col-lg-8">
-        <form id="settingsForm" method="POST" action="/admin/settings">
+        <form id="settingsForm" method="POST" action="/admin/settings" autocomplete="on">
             {{ csrf_field() }}
             
             <!-- Paramètres généraux -->
@@ -48,12 +48,12 @@
                         <div class="col-md-6">
                             <label for="app_name" class="form-label">Nom de l'application</label>
                             <input type="text" class="form-control" id="app_name" name="app_name" 
-                                   value="{{ settings.app_name }}" required>
+                                   value="{{ settings.app_name }}" required autocomplete="organization">
                         </div>
                         <div class="col-md-6">
                             <label for="app_url" class="form-label">URL de l'application</label>
                             <input type="url" class="form-control" id="app_url" name="app_url" 
-                                   value="{{ settings.app_url }}" required>
+                                   value="{{ settings.app_url }}" required autocomplete="url">
                         </div>
                     </div>
                     
@@ -61,12 +61,12 @@
                         <div class="col-md-6">
                             <label for="admin_email" class="form-label">Email administrateur</label>
                             <input type="email" class="form-control" id="admin_email" name="admin_email" 
-                                   value="{{ settings.admin_email ?? 'admin@topoclimb.ch' }}">
+                                   value="{{ settings.admin_email ?? 'admin@topoclimb.ch' }}" autocomplete="email">
                         </div>
                         <div class="col-md-6">
                             <label for="contact_email" class="form-label">Email de contact</label>
                             <input type="email" class="form-control" id="contact_email" name="contact_email" 
-                                   value="{{ settings.contact_email ?? 'contact@topoclimb.ch' }}">
+                                   value="{{ settings.contact_email ?? 'contact@topoclimb.ch' }}" autocomplete="email">
                         </div>
                     </div>
                     
@@ -221,12 +221,12 @@
                         <div class="col-md-6">
                             <label for="mail_from_name" class="form-label">Nom expéditeur</label>
                             <input type="text" class="form-control" id="mail_from_name" name="mail_from_name" 
-                                   value="{{ settings.mail_from_name ?? 'TopoclimbCH' }}">
+                                   value="{{ settings.mail_from_name ?? 'TopoclimbCH' }}" autocomplete="organization">
                         </div>
                         <div class="col-md-6">
                             <label for="mail_from_address" class="form-label">Email expéditeur</label>
                             <input type="email" class="form-control" id="mail_from_address" name="mail_from_address" 
-                                   value="{{ settings.mail_from_address ?? 'noreply@topoclimb.ch' }}">
+                                   value="{{ settings.mail_from_address ?? 'noreply@topoclimb.ch' }}" autocomplete="email">
                         </div>
                     </div>
                     
@@ -372,7 +372,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="importForm" enctype="multipart/form-data">
+            <form id="importForm" enctype="multipart/form-data" autocomplete="on">
                 {{ csrf_field() }}
                 <div class="modal-body">
                     <div class="alert alert-warning">
@@ -382,7 +382,7 @@
                     
                     <div class="mb-3">
                         <label for="configFile" class="form-label">Fichier de configuration</label>
-                        <input type="file" class="form-control" id="configFile" name="config_file" accept=".json,.txt" required>
+                        <input type="file" class="form-control" id="configFile" name="config_file" accept=".json,.txt" required autocomplete="off">
                         <div class="form-text">Formats acceptés: JSON, TXT</div>
                     </div>
                     

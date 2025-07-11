@@ -37,19 +37,19 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form id="userForm" method="POST" action="/admin/users/{{ user.id }}/edit">
+                <form id="userForm" method="POST" action="/admin/users/{{ user.id }}/edit" autocomplete="on">
                     {{ csrf_field() }}
                     
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="prenom" name="prenom" 
-                                   value="{{ user.prenom }}" required>
+                                   value="{{ user.prenom }}" required autocomplete="given-name">
                         </div>
                         <div class="col-md-6">
                             <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="nom" name="nom" 
-                                   value="{{ user.nom }}" required>
+                                   value="{{ user.nom }}" required autocomplete="family-name">
                         </div>
                     </div>
                     
@@ -57,13 +57,13 @@
                         <div class="col-md-6">
                             <label for="username" class="form-label">Nom d'utilisateur <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="username" name="username" 
-                                   value="{{ user.username }}" required>
+                                   value="{{ user.username }}" required autocomplete="username">
                             <div class="form-text">Doit être unique sur la plateforme</div>
                         </div>
                         <div class="col-md-6">
                             <label for="mail" class="form-label">Email <span class="text-danger">*</span></label>
                             <input type="email" class="form-control" id="mail" name="mail" 
-                                   value="{{ user.mail }}" required>
+                                   value="{{ user.mail }}" required autocomplete="email">
                         </div>
                     </div>
                     
@@ -71,7 +71,7 @@
                         <div class="col-md-6">
                             <label for="ville" class="form-label">Ville</label>
                             <input type="text" class="form-control" id="ville" name="ville" 
-                                   value="{{ user.ville }}">
+                                   value="{{ user.ville }}" autocomplete="address-level2">
                         </div>
                         <div class="col-md-6">
                             <label for="autorisation" class="form-label">Rôle <span class="text-danger">*</span></label>
@@ -100,11 +100,11 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="password" class="form-label">Nouveau mot de passe</label>
-                            <input type="password" class="form-control" id="password" name="password">
+                            <input type="password" class="form-control" id="password" name="password" autocomplete="new-password">
                         </div>
                         <div class="col-md-6">
                             <label for="password_confirm" class="form-label">Confirmer le mot de passe</label>
-                            <input type="password" class="form-control" id="password_confirm" name="password_confirm">
+                            <input type="password" class="form-control" id="password_confirm" name="password_confirm" autocomplete="new-password">
                         </div>
                     </div>
                 </form>

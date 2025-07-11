@@ -35,27 +35,27 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="prenom" class="form-label">Prénom</label>
-                                    <input type="text" class="form-control" id="prenom" name="prenom" value="{{ auth_user().prenom }}" required>
+                                    <input type="text" class="form-control" id="prenom" name="prenom" value="{{ auth_user().prenom }}" required autocomplete="given-name">
                                 </div>
                                 <div class="col-md-6">
                                     <label for="nom" class="form-label">Nom</label>
-                                    <input type="text" class="form-control" id="nom" name="nom" value="{{ auth_user().nom }}" required>
+                                    <input type="text" class="form-control" id="nom" name="nom" value="{{ auth_user().nom }}" required autocomplete="family-name">
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label for="username" class="form-label">Nom d'utilisateur</label>
-                                <input type="text" class="form-control" id="username" name="username" value="{{ auth_user().username }}" required>
+                                <input type="text" class="form-control" id="username" name="username" value="{{ auth_user().username }}" required autocomplete="username">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" name="email" value="{{ auth_user().mail }}" required>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ auth_user().mail }}" required autocomplete="email">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="ville" class="form-label">Ville</label>
-                                <input type="text" class="form-control" id="ville" name="ville" value="{{ auth_user().ville }}">
+                                <input type="text" class="form-control" id="ville" name="ville" value="{{ auth_user().ville }}" autocomplete="address-level2">
                             </div>
                             
                             <button type="submit" class="btn btn-primary">Enregistrer</button>
@@ -76,17 +76,17 @@
                             
                             <div class="mb-3">
                                 <label for="current_password" class="form-label">Mot de passe actuel</label>
-                                <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                <input type="password" class="form-control" id="current_password" name="current_password" required autocomplete="current-password">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="new_password" class="form-label">Nouveau mot de passe</label>
-                                <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                <input type="password" class="form-control" id="new_password" name="new_password" required autocomplete="new-password">
                             </div>
                             
                             <div class="mb-3">
                                 <label for="new_password_confirmation" class="form-label">Confirmer le nouveau mot de passe</label>
-                                <input type="password" class="form-control" id="new_password_confirmation" name="new_password_confirmation" required>
+                                <input type="password" class="form-control" id="new_password_confirmation" name="new_password_confirmation" required autocomplete="new-password">
                             </div>
                             
                             <button type="submit" class="btn btn-primary">Changer le mot de passe</button>
