@@ -1,556 +1,501 @@
 {% extends "layouts/app.twig" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Carte Interactive - Sites d'Escalade Suisse{% endblock %}
 
 {% block meta %}
-    <meta name="description" content="{{ meta_description }}">
-    <meta name="keywords" content="{{ meta_keywords }}">
+    <meta name="description" content="Découvrez tous les sites d'escalade de Suisse sur notre carte interactive moderne avec les tuiles officielles suisses.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Open Graph pour les réseaux sociaux -->
-    <meta property="og:title" content="{{ title }}">
-    <meta property="og:description" content="{{ meta_description }}">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="/map">
-    
-    <!-- Leaflet CSS pour la carte -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
           crossorigin="" />
     
-    <!-- CSS spécifique à la carte -->
+    <!-- CSS moderne pour la carte -->
     <link rel="stylesheet" href="/css/pages/map.css">
 {% endblock %}
 
 {% block content %}
-<div class="map-page">
-    <!-- Alerte erreur base de données -->
-    {% if db_error %}
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <strong>Service temporairement indisponible :</strong> {{ db_error }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endif %}
-
-    <!-- Header de la page -->
-    <div class="map-header">
+<div class="modern-map-page">
+    <!-- Header moderne -->
+    <div class="map-hero">
         <div class="container">
-            <h1 class="map-title">
-                <i class="fas fa-map-marked-alt"></i>
+            <h1 class="hero-title">
+                <i class="fas fa-mountain"></i>
                 Carte Interactive des Sites d'Escalade
             </h1>
-            <p class="map-description">
-                Découvrez tous les sites d'escalade de Suisse sur notre carte interactive. 
-                Utilisez les filtres pour trouver votre prochaine aventure verticale !
+            <p class="hero-subtitle">
+                Explorez les plus beaux sites d'escalade de Suisse avec les tuiles officielles swisstopo
             </p>
             
-            <!-- Statistiques -->
-            <div class="map-stats">
-                <div class="stat-item">
-                    <span class="stat-number">{{ stats.total_sites }}</span>
-                    <span class="stat-label">Sites</span>
+            <!-- Stats compactes -->
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="number">{{ stats.total_sites ?? 0 }}</span>
+                    <span class="label">Sites</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-number">{{ stats.total_routes }}</span>
-                    <span class="stat-label">Voies</span>
+                <div class="stat">
+                    <span class="number">{{ stats.total_routes ?? 0 }}</span>
+                    <span class="label">Voies</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-number">{{ stats.total_regions }}</span>
-                    <span class="stat-label">Régions</span>
+                <div class="stat">
+                    <span class="number">{{ stats.total_regions ?? 8 }}</span>
+                    <span class="label">Régions</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Interface principale -->
-    <div class="map-interface">
-        <!-- Panneau de filtres -->
-        <div class="map-sidebar">
-            <div class="filters-panel">
-                <h3>
-                    <i class="fas fa-filter"></i>
-                    Filtres
-                </h3>
-                
-                <form class="filters-form" id="map-filters">
-                    <!-- Filtre par région -->
-                    <div class="filter-group">
-                        <label for="filter-region">Région</label>
-                        <select id="filter-region" name="region">
-                            <option value="">Toutes les régions</option>
-                            {% for region in regions %}
-                                <option value="{{ region.id }}" {% if filters.region_id == region.id %}selected{% endif %}>
-                                    {{ region.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Filtre par difficulté -->
-                    <div class="filter-group">
-                        <label>Difficulté</label>
-                        <div class="difficulty-range">
-                            <select id="filter-difficulty-min" name="difficulty_min">
-                                <option value="">Min</option>
-                                <option value="3a">3a</option>
-                                <option value="4a">4a</option>
-                                <option value="5a">5a</option>
-                                <option value="6a">6a</option>
-                                <option value="7a">7a</option>
-                                <option value="8a">8a</option>
-                                <option value="9a">9a</option>
-                            </select>
-                            <span>à</span>
-                            <select id="filter-difficulty-max" name="difficulty_max">
-                                <option value="">Max</option>
-                                <option value="3c">3c</option>
-                                <option value="4c">4c</option>
-                                <option value="5c">5c</option>
-                                <option value="6c">6c</option>
-                                <option value="7c">7c</option>
-                                <option value="8c">8c</option>
-                                <option value="9c">9c</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Filtre par type -->
-                    <div class="filter-group">
-                        <label for="filter-type">Type d'escalade</label>
-                        <select id="filter-type" name="type">
-                            <option value="">Tous types</option>
-                            <option value="sport">Sport</option>
-                            <option value="trad">Trad</option>
-                            <option value="mixed">Mixte</option>
-                            <option value="alpine">Alpine</option>
-                            <option value="boulder">Bloc</option>
-                            <option value="multi-pitch">Grande voie</option>
-                        </select>
-                    </div>
-
-                    <!-- Filtre par saison -->
-                    <div class="filter-group">
-                        <label for="filter-season">Saison</label>
-                        <select id="filter-season" name="season">
-                            <option value="">Toute l'année</option>
-                            <option value="spring">Printemps</option>
-                            <option value="summer">Été</option>
-                            <option value="autumn">Automne</option>
-                            <option value="winter">Hiver</option>
-                        </select>
-                    </div>
-
-                    <!-- Boutons d'action -->
-                    <div class="filter-actions">
-                        <button type="button" id="apply-filters" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                            Appliquer
-                        </button>
-                        <button type="button" id="reset-filters" class="btn btn-secondary">
-                            <i class="fas fa-undo"></i>
-                            Réinitialiser
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Recherche géographique -->
-            <div class="search-panel">
-                <h3>
-                    <i class="fas fa-search-location"></i>
-                    Recherche
-                </h3>
-                
-                <div class="search-form">
-                    <input type="text" id="geo-search" placeholder="Nom de site ou localité...">
-                    <button type="button" id="search-button" class="btn btn-primary">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-
-                <!-- Bouton de géolocalisation -->
-                <button type="button" id="locate-user" class="btn btn-outline locate-btn">
-                    <i class="fas fa-location-arrow"></i>
-                    Ma position
+    <!-- Interface carte moderne -->
+    <div class="map-wrapper">
+        <!-- Panneau de contrôles moderne -->
+        <div class="map-controls-panel">
+            <!-- Recherche rapide -->
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Rechercher un site..." autocomplete="off">
+                <button id="search-btn" class="search-btn">
+                    <i class="fas fa-search"></i>
                 </button>
-
-                <!-- Résultats de recherche -->
-                <div id="search-results" class="search-results" style="display: none;">
-                    <!-- Les résultats seront affichés ici -->
-                </div>
             </div>
 
-            <!-- Légende -->
-            <div class="legend-panel">
-                <h3>
-                    <i class="fas fa-info-circle"></i>
-                    Légende
-                </h3>
-                <div class="legend-items">
-                    <div class="legend-item">
-                        <div class="marker marker-sport"></div>
-                        <span>Sites d'escalade sportive</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="marker marker-trad"></div>
-                        <span>Sites d'escalade traditionnelle</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="marker marker-mixed"></div>
-                        <span>Sites mixtes</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="marker marker-boulder"></div>
-                        <span>Sites de bloc</span>
-                    </div>
+            <!-- Filtres compacts -->
+            <div class="filters-compact">
+                <select id="region-filter" class="modern-select">
+                    <option value="">Toutes les régions</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id }}">{{ region.name }}</option>
+                    {% endfor %}
+                </select>
+                
+                <select id="type-filter" class="modern-select">
+                    <option value="">Tous types</option>
+                    <option value="sport">Sport</option>
+                    <option value="trad">Trad</option>
+                    <option value="mixed">Mixte</option>
+                    <option value="boulder">Bloc</option>
+                </select>
+                
+                <button id="my-location" class="location-btn" title="Ma position">
+                    <i class="fas fa-crosshairs"></i>
+                </button>
+            </div>
+
+            <!-- Légende moderne -->
+            <div class="legend-modern">
+                <div class="legend-item">
+                    <div class="marker-dot sport"></div>
+                    <span>Sport</span>
+                </div>
+                <div class="legend-item">
+                    <div class="marker-dot trad"></div>
+                    <span>Trad</span>
+                </div>
+                <div class="legend-item">
+                    <div class="marker-dot mixed"></div>
+                    <span>Mixte</span>
+                </div>
+                <div class="legend-item">
+                    <div class="marker-dot boulder"></div>
+                    <span>Bloc</span>
                 </div>
             </div>
         </div>
 
         <!-- Carte principale -->
-        <div class="map-container">
-            <div id="climbing-map" class="climbing-map">
-                <!-- La carte Leaflet sera initialisée ici -->
-            </div>
+        <div class="map-container-modern">
+            <div id="swiss-climbing-map"></div>
             
-            <!-- Contrôles de la carte -->
-            <div class="map-controls">
-                <button type="button" id="fullscreen-toggle" class="map-control-btn" title="Plein écran">
+            <!-- Boutons d'action flottants -->
+            <div class="floating-controls">
+                <button id="fullscreen-btn" class="control-btn" title="Plein écran">
                     <i class="fas fa-expand"></i>
                 </button>
-                <button type="button" id="center-switzerland" class="map-control-btn" title="Centrer sur la Suisse">
+                <button id="center-ch-btn" class="control-btn" title="Centrer sur la Suisse">
                     <i class="fas fa-home"></i>
+                </button>
+                <button id="layers-btn" class="control-btn" title="Changer de fond">
+                    <i class="fas fa-layer-group"></i>
                 </button>
             </div>
 
-            <!-- Indicateur de chargement -->
-            <div id="map-loading" class="map-loading">
-                <div class="spinner"></div>
+            <!-- Indicateur de chargement moderne -->
+            <div id="loading-indicator" class="loading-modern">
+                <div class="loading-spinner"></div>
                 <span>Chargement des sites...</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Popup d'information sur les sites -->
-    <div id="site-popup" class="site-popup" style="display: none;">
-        <div class="popup-content">
-            <div class="popup-header">
-                <h4 class="popup-title"></h4>
-                <button type="button" class="popup-close">&times;</button>
-            </div>
-            <div class="popup-body">
-                <!-- Le contenu sera chargé dynamiquement -->
             </div>
         </div>
     </div>
 </div>
 
-{% if error %}
-    <div class="alert alert-error">
-        <i class="fas fa-exclamation-triangle"></i>
-        {{ error }}
+<!-- Popup moderne pour les détails -->
+<div id="site-modal" class="site-modal">
+    <div class="modal-content-modern">
+        <div class="modal-header-modern">
+            <h3 id="modal-title"></h3>
+            <button id="modal-close" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body-modern" id="modal-body">
+            <!-- Contenu chargé dynamiquement -->
+        </div>
     </div>
-{% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
-            crossorigin=""></script>
-    
-    <!-- Map Manager Component -->
-    <script src="/js/components/map-manager.js"></script>
-    
-    <!-- Carte interactive script -->
-    <script>
-        // Configuration initiale
-        const mapConfig = {
-            center: [46.8, 8.2], // Centre de la Suisse
-            zoom: 8,
-            maxZoom: 18,
-            minZoom: 6
-        };
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+        crossorigin=""></script>
 
-        // Données des sites
-        const sitesData = {{ sites|json_encode|raw }};
+<script>
+// Configuration moderne pour la Suisse
+const SwissMapConfig = {
+    center: [46.8182, 8.2275], // Centre de la Suisse
+    zoom: 8,
+    maxZoom: 18,
+    minZoom: 6,
+    bounds: [[45.818, 5.956], [47.808, 10.492]] // Limites de la Suisse
+};
+
+// Sites d'escalade (données du serveur)
+const climbingSites = {{ sites|json_encode|raw }};
+
+// Variables globales
+let map;
+let markersLayer;
+let currentLayer = 'swisstopo';
+
+// Initialisation de la carte moderne
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSwissMap();
+    initializeControls();
+    hideLoading();
+});
+
+function initializeSwissMap() {
+    // Créer la carte
+    map = L.map('swiss-climbing-map', {
+        center: SwissMapConfig.center,
+        zoom: SwissMapConfig.zoom,
+        maxZoom: SwissMapConfig.maxZoom,
+        minZoom: SwissMapConfig.minZoom,
+        maxBounds: SwissMapConfig.bounds,
+        maxBoundsViscosity: 1.0,
+        zoomControl: false
+    });
+
+    // Ajouter les contrôles de zoom en bas à droite
+    L.control.zoom({
+        position: 'bottomright'
+    }).addTo(map);
+
+    // Ajouter les tuiles suisses officielles (swisstopo)
+    addSwissTiles();
+
+    // Ajouter les marqueurs des sites
+    addClimbingSiteMarkers();
+
+    console.log('Carte suisse initialisée avec', climbingSites.length, 'sites');
+}
+
+function addSwissTiles() {
+    // Tuiles swisstopo officielles (gratuites)
+    const swisstopoLayer = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
+        attribution: '&copy; <a href="https://www.swisstopo.admin.ch/">swisstopo</a>',
+        bounds: SwissMapConfig.bounds,
+        maxNativeZoom: 18
+    });
+
+    // Couche de secours OpenStreetMap
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+
+    // Couche satellite suisse
+    const satelliteLayer = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', {
+        attribution: '&copy; <a href="https://www.swisstopo.admin.ch/">swisstopo</a>',
+        bounds: SwissMapConfig.bounds
+    });
+
+    // Ajouter la couche par défaut
+    swisstopoLayer.addTo(map);
+
+    // Stocker les couches pour le basculement
+    window.mapLayers = {
+        swisstopo: swisstopoLayer,
+        satellite: satelliteLayer,
+        osm: osmLayer
+    };
+}
+
+function addClimbingSiteMarkers() {
+    markersLayer = L.layerGroup().addTo(map);
+    
+    climbingSites.forEach(site => {
+        if (site.latitude && site.longitude) {
+            // Créer un marqueur moderne
+            const marker = createModernMarker(site);
+            marker.addTo(markersLayer);
+        }
+    });
+}
+
+function createModernMarker(site) {
+    // Déterminer le type principal du site
+    const siteType = determineSiteType(site);
+    
+    // Créer l'icône moderne
+    const icon = L.divIcon({
+        className: 'modern-marker',
+        html: `<div class="marker-modern ${siteType}">
+                 <i class="fas fa-mountain"></i>
+               </div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+    });
+
+    // Créer le marqueur
+    const marker = L.marker([site.latitude, site.longitude], { icon: icon });
+
+    // Contenu de la popup moderne
+    const popupContent = `
+        <div class="popup-modern">
+            <h4>${site.name}</h4>
+            <div class="popup-info">
+                <div class="info-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${site.region_name || 'Région non spécifiée'}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-route"></i>
+                    <span>${site.route_count || 0} voies</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-layer-group"></i>
+                    <span>${site.sector_count || 0} secteurs</span>
+                </div>
+            </div>
+            <div class="popup-actions">
+                <button onclick="showSiteDetails(${site.id})" class="btn-modern primary">
+                    <i class="fas fa-eye"></i> Voir détails
+                </button>
+                <button onclick="getDirections(${site.latitude}, ${site.longitude})" class="btn-modern secondary">
+                    <i class="fas fa-directions"></i> Itinéraire
+                </button>
+            </div>
+        </div>
+    `;
+
+    marker.bindPopup(popupContent, {
+        maxWidth: 300,
+        className: 'leaflet-popup-modern'
+    });
+
+    return marker;
+}
+
+function determineSiteType(site) {
+    // Logique simple pour déterminer le type principal
+    // TODO: Améliorer avec les vraies données des voies
+    return 'sport'; // Par défaut
+}
+
+function initializeControls() {
+    // Recherche
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    
+    searchBtn.addEventListener('click', () => performSearch(searchInput.value));
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') performSearch(searchInput.value);
+    });
+
+    // Filtres
+    document.getElementById('region-filter').addEventListener('change', applyFilters);
+    document.getElementById('type-filter').addEventListener('change', applyFilters);
+
+    // Boutons d'action
+    document.getElementById('my-location').addEventListener('click', locateUser);
+    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+    document.getElementById('center-ch-btn').addEventListener('click', () => {
+        map.setView(SwissMapConfig.center, SwissMapConfig.zoom);
+    });
+    document.getElementById('layers-btn').addEventListener('click', switchMapLayer);
+
+    // Modal
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('site-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'site-modal') closeModal();
+    });
+}
+
+function performSearch(query) {
+    if (!query.trim()) return;
+    
+    // Recherche simple dans les sites
+    const results = climbingSites.filter(site => 
+        site.name.toLowerCase().includes(query.toLowerCase()) ||
+        (site.region_name && site.region_name.toLowerCase().includes(query.toLowerCase()))
+    );
+
+    if (results.length > 0) {
+        // Centrer sur le premier résultat
+        const site = results[0];
+        map.setView([site.latitude, site.longitude], 12);
         
-        // Initialisation de la carte
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeClimbingMap();
+        // Ouvrir la popup
+        markersLayer.eachLayer(layer => {
+            if (layer.getLatLng().lat === site.latitude && layer.getLatLng().lng === site.longitude) {
+                layer.openPopup();
+            }
         });
+    } else {
+        alert('Aucun site trouvé pour: ' + query);
+    }
+}
 
-        function initializeClimbingMap() {
-            // Créer la carte
-            const map = L.map('climbing-map', {
-                center: mapConfig.center,
-                zoom: mapConfig.zoom,
-                maxZoom: mapConfig.maxZoom,
-                minZoom: mapConfig.minZoom,
-                zoomControl: false
-            });
+function applyFilters() {
+    const regionFilter = document.getElementById('region-filter').value;
+    const typeFilter = document.getElementById('type-filter').value;
+    
+    // Filtrer les marqueurs
+    markersLayer.clearLayers();
+    
+    const filteredSites = climbingSites.filter(site => {
+        let passRegion = !regionFilter || site.region_id == regionFilter;
+        let passType = !typeFilter || determineSiteType(site) === typeFilter;
+        return passRegion && passType;
+    });
+    
+    // Ajouter les marqueurs filtrés
+    filteredSites.forEach(site => {
+        if (site.latitude && site.longitude) {
+            const marker = createModernMarker(site);
+            marker.addTo(markersLayer);
+        }
+    });
+}
 
-            // Ajouter les contrôles de zoom personnalisés
-            L.control.zoom({
-                position: 'topright'
-            }).addTo(map);
+function locateUser() {
+    if (!navigator.geolocation) {
+        alert("Géolocalisation non disponible");
+        return;
+    }
 
-            // Ajouter les tuiles de carte
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            // Ajouter les marqueurs des sites
-            addSiteMarkers(map, sitesData);
-
-            // Initialiser les contrôles
-            initializeMapControls(map);
+    navigator.geolocation.getCurrentPosition(
+        position => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
             
-            // Initialiser les filtres
-            initializeFilters(map);
+            map.setView([lat, lng], 12);
             
-            // Initialiser la recherche
-            initializeSearch(map);
-
-            // Masquer l'indicateur de chargement
-            document.getElementById('map-loading').style.display = 'none';
-        }
-
-        function addSiteMarkers(map, sites) {
-            const markersLayer = L.layerGroup().addTo(map);
+            // Ajouter un marqueur temporaire
+            const userIcon = L.divIcon({
+                className: 'user-location-marker',
+                html: '<div class="user-marker"><i class="fas fa-user"></i></div>',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
             
-            sites.forEach(site => {
-                // Créer une icône personnalisée basée sur le type de site
-                const icon = createSiteIcon(site);
-                
-                // Créer le marqueur
-                const marker = L.marker([site.latitude, site.longitude], { icon: icon })
-                    .bindPopup(createSitePopupContent(site))
-                    .addTo(markersLayer);
+            const userMarker = L.marker([lat, lng], { icon: userIcon })
+                .bindPopup('Votre position')
+                .addTo(map)
+                .openPopup();
 
-                // Ajouter l'événement de clic pour plus de détails
-                marker.on('click', function() {
-                    showSiteDetails(site.id);
-                });
-            });
-
-            // Stocker la couche pour les filtres
-            window.mapMarkersLayer = markersLayer;
+            // Supprimer après 10 secondes
+            setTimeout(() => map.removeLayer(userMarker), 10000);
+        },
+        error => {
+            alert("Impossible d'obtenir votre position");
         }
+    );
+}
 
-        function createSiteIcon(site) {
-            // Utiliser des couleurs différentes selon le type de site
-            let iconColor = '#007bff'; // Bleu par défaut
+function switchMapLayer() {
+    // Basculer entre les couches
+    const layers = window.mapLayers;
+    
+    // Supprimer la couche actuelle
+    map.removeLayer(layers[currentLayer]);
+    
+    // Passer à la suivante
+    if (currentLayer === 'swisstopo') {
+        currentLayer = 'satellite';
+    } else if (currentLayer === 'satellite') {
+        currentLayer = 'osm';
+    } else {
+        currentLayer = 'swisstopo';
+    }
+    
+    // Ajouter la nouvelle couche
+    layers[currentLayer].addTo(map);
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.querySelector('.map-wrapper').requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+function showSiteDetails(siteId) {
+    const site = climbingSites.find(s => s.id == siteId);
+    if (!site) return;
+
+    // Contenu du modal
+    document.getElementById('modal-title').textContent = site.name;
+    document.getElementById('modal-body').innerHTML = `
+        <div class="site-details">
+            <div class="detail-section">
+                <h4><i class="fas fa-info-circle"></i> Informations générales</h4>
+                <p><strong>Région:</strong> ${site.region_name}</p>
+                <p><strong>Altitude:</strong> ${site.altitude || 'Non spécifiée'} m</p>
+                <p><strong>Secteurs:</strong> ${site.sector_count || 0}</p>
+                <p><strong>Voies:</strong> ${site.route_count || 0}</p>
+            </div>
             
-            // TODO: Déterminer le type principal du site et ajuster la couleur
-            // Cela nécessiterait d'analyser les types de voies du site
+            <div class="detail-section">
+                <h4><i class="fas fa-route"></i> Accès</h4>
+                <p>${site.access_info || 'Informations d\'accès non disponibles'}</p>
+            </div>
             
-            return L.divIcon({
-                className: 'custom-climbing-marker',
-                html: `<div class="marker-pin" style="background-color: ${iconColor}">
-                         <i class="fas fa-mountain"></i>
-                       </div>`,
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34]
-            });
-        }
+            <div class="detail-actions">
+                <a href="/sites/${site.id}" class="btn-modern primary">
+                    <i class="fas fa-external-link-alt"></i> Page complète
+                </a>
+                <button onclick="getDirections(${site.latitude}, ${site.longitude})" class="btn-modern secondary">
+                    <i class="fas fa-directions"></i> Itinéraire GPS
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('site-modal').style.display = 'flex';
+}
 
-        function createSitePopupContent(site) {
-            return `
-                <div class="site-popup-content">
-                    <h5>${site.name}</h5>
-                    <p><strong>Région:</strong> ${site.region_name}</p>
-                    <p><strong>Secteurs:</strong> ${site.sector_count}</p>
-                    <p><strong>Voies:</strong> ${site.route_count}</p>
-                    ${site.approach_time ? `<p><strong>Approche:</strong> ${site.approach_time} min</p>` : ''}
-                    <a href="${site.url}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-eye"></i> Voir détails
-                    </a>
-                </div>
-            `;
-        }
+function closeModal() {
+    document.getElementById('site-modal').style.display = 'none';
+}
 
-        function initializeMapControls(map) {
-            // Plein écran
-            document.getElementById('fullscreen-toggle').addEventListener('click', function() {
-                toggleFullscreen();
-            });
+function getDirections(lat, lng) {
+    // Ouvrir Google Maps avec l'itinéraire
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, '_blank');
+}
 
-            // Centrer sur la Suisse
-            document.getElementById('center-switzerland').addEventListener('click', function() {
-                map.setView(mapConfig.center, mapConfig.zoom);
-            });
-        }
+function hideLoading() {
+    document.getElementById('loading-indicator').style.display = 'none';
+}
 
-        function initializeFilters(map) {
-            const applyButton = document.getElementById('apply-filters');
-            const resetButton = document.getElementById('reset-filters');
-
-            applyButton.addEventListener('click', function() {
-                applyMapFilters(map);
-            });
-
-            resetButton.addEventListener('click', function() {
-                resetMapFilters(map);
-            });
-        }
-
-        function initializeSearch(map) {
-            const searchInput = document.getElementById('geo-search');
-            const searchButton = document.getElementById('search-button');
-            const locateButton = document.getElementById('locate-user');
-
-            searchButton.addEventListener('click', function() {
-                performGeoSearch(map, searchInput.value);
-            });
-
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    performGeoSearch(map, searchInput.value);
-                }
-            });
-
-            locateButton.addEventListener('click', function() {
-                locateUser(map);
-            });
-        }
-
-        function applyMapFilters(map) {
-            const formData = new FormData(document.getElementById('map-filters'));
-            const params = new URLSearchParams(formData);
-
-            // Afficher l'indicateur de chargement
-            document.getElementById('map-loading').style.display = 'flex';
-
-            // Faire une requête AJAX pour récupérer les sites filtrés
-            fetch(`/api/map/sites?${params.toString()}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Effacer les marqueurs existants
-                        window.mapMarkersLayer.clearLayers();
-                        
-                        // Ajouter les nouveaux marqueurs
-                        addSiteMarkers(map, data.sites);
-                    } else {
-                        console.error('Erreur lors du filtrage:', data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur de requête:', error);
-                })
-                .finally(() => {
-                    document.getElementById('map-loading').style.display = 'none';
-                });
-        }
-
-        function resetMapFilters(map) {
-            // Réinitialiser le formulaire
-            document.getElementById('map-filters').reset();
-            
-            // Recharger tous les sites
-            window.mapMarkersLayer.clearLayers();
-            addSiteMarkers(map, sitesData);
-        }
-
-        function performGeoSearch(map, query) {
-            if (!query.trim()) return;
-
-            const resultsDiv = document.getElementById('search-results');
-            resultsDiv.innerHTML = '<div class="loading">Recherche...</div>';
-            resultsDiv.style.display = 'block';
-
-            fetch(`/api/map/search?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.results.length > 0) {
-                        displaySearchResults(map, data.results);
-                    } else {
-                        resultsDiv.innerHTML = '<div class="no-results">Aucun résultat trouvé</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur de recherche:', error);
-                    resultsDiv.innerHTML = '<div class="error">Erreur lors de la recherche</div>';
-                });
-        }
-
-        function displaySearchResults(map, results) {
-            const resultsDiv = document.getElementById('search-results');
-            
-            const resultsHtml = results.map(result => `
-                <div class="search-result-item" onclick="goToLocation(${result.latitude}, ${result.longitude})">
-                    <h6>${result.name}</h6>
-                    <small>${result.type === 'site' ? 'Site d\'escalade' : result.type}</small>
-                    ${result.distance ? `<small class="distance">${result.distance} km</small>` : ''}
-                </div>
-            `).join('');
-
-            resultsDiv.innerHTML = resultsHtml;
-        }
-
-        function goToLocation(lat, lng) {
-            map.setView([lat, lng], 15);
-            document.getElementById('search-results').style.display = 'none';
-        }
-
-        function locateUser(map) {
-            if (!navigator.geolocation) {
-                alert("La géolocalisation n'est pas prise en charge par votre navigateur");
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                position => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    
-                    map.setView([lat, lng], 12);
-                    
-                    // Ajouter un marqueur temporaire
-                    const userMarker = L.marker([lat, lng])
-                        .bindPopup('Votre position')
-                        .addTo(map)
-                        .openPopup();
-
-                    // Supprimer le marqueur après 5 secondes
-                    setTimeout(() => {
-                        map.removeLayer(userMarker);
-                    }, 5000);
-                },
-                error => {
-                    console.error("Erreur de géolocalisation:", error);
-                    alert("Impossible d'obtenir votre position");
-                }
-            );
-        }
-
-        function toggleFullscreen() {
-            const mapContainer = document.querySelector('.map-interface');
-            
-            if (!document.fullscreenElement) {
-                mapContainer.requestFullscreen().catch(err => {
-                    console.error('Erreur plein écran:', err);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        function showSiteDetails(siteId) {
-            // TODO: Charger et afficher les détails du site dans une popup
-            fetch(`/api/map/sites/${siteId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Afficher les détails dans une popup ou modal
-                        console.log('Détails du site:', data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur détails site:', error);
-                });
-        }
-    </script>
+// Améliorer la responsivité
+window.addEventListener('resize', () => {
+    if (map) {
+        setTimeout(() => map.invalidateSize(), 100);
+    }
+});
+</script>
 {% endblock %}
