@@ -259,7 +259,7 @@ class MapController extends BaseController
 
             foreach ($sites as $site) {
                 // Vérifier que le site a des coordonnées
-                if (empty($site['latitude']) || empty($site['longitude'])) {
+                if (empty($site->latitude) || empty($site->longitude)) {
                     continue;
                 }
 
@@ -270,31 +270,31 @@ class MapController extends BaseController
 
                 try {
                     // Récupérer les informations supplémentaires
-                    $region = Region::find($site['region_id']);
-                    $sectors = Sector::where('site_id', $site['id'])->get();
+                    $region = Region::find($site->region_id);
+                    $sectors = Sector::where('site_id', $site->id)->get();
                     $routeCount = 0;
                     
                     foreach ($sectors as $sector) {
-                        $routes = Route::where('sector_id', $sector['id'])->get();
+                        $routes = Route::where('sector_id', $sector->id)->get();
                         $routeCount += count($routes);
                     }
 
                     $sitesForMap[] = [
-                        'id' => $site['id'],
-                        'name' => $site['name'],
-                        'latitude' => (float) $site['latitude'],
-                        'longitude' => (float) $site['longitude'],
-                        'region_name' => $region ? $region['name'] : 'Région inconnue',
-                        'region_id' => $site['region_id'],
-                        'description' => $site['description'] ?? '',
-                        'approach_time' => $site['approach_time'] ?? null,
+                        'id' => $site->id,
+                        'name' => $site->name,
+                        'latitude' => (float) $site->latitude,
+                        'longitude' => (float) $site->longitude,
+                        'region_name' => $region ? $region->name : 'Région inconnue',
+                        'region_id' => $site->region_id,
+                        'description' => $site->description ?? '',
+                        'approach_time' => $site->approach_time ?? null,
                         'sector_count' => count($sectors),
                         'route_count' => $routeCount,
-                        'url' => '/sites/' . $site['id']
+                        'url' => '/sites/' . $site->id
                     ];
                     
                 } catch (\Exception $siteException) {
-                    error_log("MapController::getSitesForMap - Erreur lors du traitement du site " . $site['name'] . ": " . $siteException->getMessage());
+                    error_log("MapController::getSitesForMap - Erreur lors du traitement du site " . $site->name . ": " . $siteException->getMessage());
                     // Continuer avec le site suivant
                     continue;
                 }
@@ -312,10 +312,10 @@ class MapController extends BaseController
     /**
      * Vérifie si un site passe les filtres
      */
-    private function passeFilters(array $site, array $filters): bool
+    private function passeFilters($site, array $filters): bool
     {
         // Filtre par région
-        if (!empty($filters['region_id']) && $site['region_id'] != $filters['region_id']) {
+        if (!empty($filters['region_id']) && $site->region_id != $filters['region_id']) {
             return false;
         }
 
