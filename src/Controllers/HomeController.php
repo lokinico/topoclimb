@@ -183,13 +183,13 @@ class HomeController extends BaseController
 
             foreach ($sectors as &$sector) {
                 // Ajouter les informations de région/site
-                $sector->region = $sector->region_name ? ['name' => $sector->region_name] : null;
-                $sector->site = $sector->site_name ? ['name' => $sector->site_name] : null;
+                $sector['region'] = $sector['region_name'] ? ['name' => $sector['region_name']] : null;
+                $sector['site'] = $sector['site_name'] ? ['name' => $sector['site_name']] : null;
 
                 // Formater les données
-                $sector->routes_count = (int)$sector->routes_count;
-                $sector->ascents_count = (int)$sector->ascents_count;
-                $sector->avg_rating = $sector->avg_rating ? round((float)$sector->avg_rating, 1) : null;
+                $sector['routes_count'] = (int)$sector['routes_count'];
+                $sector['ascents_count'] = (int)$sector['ascents_count'];
+                $sector['avg_rating'] = $sector['avg_rating'] ? round((float)$sector['avg_rating'], 1) : null;
             }
 
             return $sectors;
@@ -222,11 +222,11 @@ class HomeController extends BaseController
 
             foreach ($books as &$book) {
                 // Ajouter les informations de région
-                $book->region = $book->region_name ? ['name' => $book->region_name] : null;
+                $book['region'] = $book['region_name'] ? ['name' => $book['region_name']] : null;
 
                 // Formater les données
-                $book->sectors_count = (int)$book->sectors_count;
-                $book->year = $book->year ? (int)$book->year : null;
+                $book['sectors_count'] = (int)$book['sectors_count'];
+                $book['year'] = $book['year'] ? (int)$book['year'] : null;
             }
 
             return $books;
@@ -262,13 +262,13 @@ class HomeController extends BaseController
 
             foreach ($routes as &$route) {
                 // Ajouter les informations de secteur
-                $route->sector = $route->sector_name ? ['name' => $route->sector_name] : null;
+                $route['sector'] = $route['sector_name'] ? ['name' => $route['sector_name']] : null;
 
                 // Formater les données
-                $route->recent_ascents = (int)$route->recent_ascents;
-                $route->avg_rating = $route->avg_rating ? round((float)$route->avg_rating, 1) : null;
-                $route->beauty = $route->beauty ? (int)$route->beauty : null;
-                $route->length = $route->length ? round((float)$route->length, 1) : null;
+                $route['recent_ascents'] = (int)$route['recent_ascents'];
+                $route['avg_rating'] = $route['avg_rating'] ? round((float)$route['avg_rating'], 1) : null;
+                $route['beauty'] = $route['beauty'] ? (int)$route['beauty'] : null;
+                $route['length'] = $route['length'] ? round((float)$route['length'], 1) : null;
             }
 
             return $routes;
