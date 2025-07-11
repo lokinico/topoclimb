@@ -65,6 +65,9 @@ php-*/
 run_page_tests.sh
 run_simple_tests.php
 
+# Scripts avec secrets - ne pas partager
+validate_fixes.sh
+
 # Fichiers spécifiques à l'application
 config.php
 
