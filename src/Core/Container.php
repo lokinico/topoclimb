@@ -22,7 +22,7 @@ class Container
     /**
      * Récupère l'instance unique
      */
-    public static function getInstance(SymfonyContainerBuilder $container = null): ?self
+    public static function getInstance(?SymfonyContainerBuilder $container = null): ?self
     {
         if (self::$instance === null) {
             if ($container === null) {
