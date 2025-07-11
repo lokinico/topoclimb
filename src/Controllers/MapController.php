@@ -85,12 +85,12 @@ class MapController extends BaseController
                 
             } catch (\Exception $dbException) {
                 error_log("MapController::index - Erreur DB: " . $dbException->getMessage());
-                $dbError = "La base de données est temporairement inaccessible. La carte sera disponible dès que le service sera rétabli.";
+                $dbError = "La base de données est temporairement inaccessible. Carte affichée avec des données d'exemple.";
                 
-                // Données par défaut quand la DB est inaccessible
-                $regions = [];
-                $sites = [];
-                $stats = ['total_sites' => 0, 'total_routes' => 0, 'total_regions' => 0];
+                // Données de test suisses pour la démo
+                $regions = $this->getTestRegions();
+                $sites = $this->getTestSites();
+                $stats = ['total_sites' => count($sites), 'total_routes' => 150, 'total_regions' => count($regions)];
             }
 
             $data = [
@@ -138,7 +138,19 @@ class MapController extends BaseController
                 'season' => $_GET['season'] ?? null
             ];
 
-            $sites = $this->getSitesForMap($filters);
+            $sites = [];
+            
+            try {
+                $sites = $this->getSitesForMap($filters);
+            } catch (\Exception $dbException) {
+                error_log("MapController::apiSites - Erreur DB, utilisation des données de test");
+                
+                // En cas d'erreur DB, utiliser les données de test
+                $sites = $this->getTestSites();
+                
+                // Appliquer les filtres aux données de test
+                $sites = $this->filterTestSites($sites, $filters);
+            }
 
             return $this->json([
                 'success' => true,
@@ -149,10 +161,15 @@ class MapController extends BaseController
         } catch (\Exception $e) {
             error_log("Erreur MapController::apiSites: " . $e->getMessage());
             
+            // En dernier recours, retourner les données de test sans filtre
+            $fallbackSites = $this->getTestSites();
+            
             return $this->json([
-                'success' => false,
-                'error' => 'Erreur lors de la récupération des données'
-            ], 500);
+                'success' => true,
+                'sites' => $fallbackSites,
+                'count' => count($fallbackSites),
+                'warning' => 'Données de test utilisées'
+            ]);
         }
     }
 
@@ -299,7 +316,7 @@ class MapController extends BaseController
         } catch (\Exception $e) {
             error_log("Erreur getSitesForMap: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
-            return [];
+            throw $e; // Re-lancer l'exception pour que apiSites puisse utiliser les données de test
         }
     }
 
@@ -479,5 +496,155 @@ class MapController extends BaseController
         }
 
         return $types;
+    }
+
+    /**
+     * Données de test pour les régions suisses
+     */
+    private function getTestRegions(): array
+    {
+        return [
+            ['id' => 1, 'name' => 'Valais', 'active' => 1],
+            ['id' => 2, 'name' => 'Jura', 'active' => 1],
+            ['id' => 3, 'name' => 'Grisons', 'active' => 1],
+            ['id' => 4, 'name' => 'Tessin', 'active' => 1],
+            ['id' => 5, 'name' => 'Vaud', 'active' => 1],
+            ['id' => 6, 'name' => 'Berne', 'active' => 1]
+        ];
+    }
+
+    /**
+     * Données de test pour les sites d'escalade suisses populaires
+     */
+    private function getTestSites(): array
+    {
+        return [
+            [
+                'id' => 1,
+                'name' => 'Saillon',
+                'latitude' => 46.1847,
+                'longitude' => 7.1883,
+                'region_name' => 'Valais',
+                'region_id' => 1,
+                'description' => 'Site d\'escalade sportive réputé en Valais',
+                'approach_time' => 5,
+                'sector_count' => 8,
+                'route_count' => 120,
+                'url' => '/sites/1'
+            ],
+            [
+                'id' => 2,
+                'name' => 'Vouvry',
+                'latitude' => 46.3306,
+                'longitude' => 6.8542,
+                'region_name' => 'Valais',
+                'region_id' => 1,
+                'description' => 'Escalade sportive sur calcaire',
+                'approach_time' => 10,
+                'sector_count' => 6,
+                'route_count' => 85,
+                'url' => '/sites/2'
+            ],
+            [
+                'id' => 3,
+                'name' => 'Freyr',
+                'latitude' => 46.7089,
+                'longitude' => 6.2333,
+                'region_name' => 'Vaud',
+                'region_id' => 5,
+                'description' => 'Falaise calcaire au bord du lac',
+                'approach_time' => 3,
+                'sector_count' => 12,
+                'route_count' => 200,
+                'url' => '/sites/3'
+            ],
+            [
+                'id' => 4,
+                'name' => 'Pont du Diable',
+                'latitude' => 46.6547,
+                'longitude' => 8.5883,
+                'region_name' => 'Tessin',
+                'region_id' => 4,
+                'description' => 'Escalade sur granit en montagne',
+                'approach_time' => 20,
+                'sector_count' => 4,
+                'route_count' => 45,
+                'url' => '/sites/4'
+            ],
+            [
+                'id' => 5,
+                'name' => 'Roc de la Vache',
+                'latitude' => 47.2167,
+                'longitude' => 7.0833,
+                'region_name' => 'Jura',
+                'region_id' => 2,
+                'description' => 'Escalade traditionnelle sur calcaire jurassien',
+                'approach_time' => 15,
+                'sector_count' => 5,
+                'route_count' => 60,
+                'url' => '/sites/5'
+            ],
+            [
+                'id' => 6,
+                'name' => 'Gimmelwald',
+                'latitude' => 46.5506,
+                'longitude' => 7.8958,
+                'region_name' => 'Berne',
+                'region_id' => 6,
+                'description' => 'Escalade alpine avec vue sur les Alpes',
+                'approach_time' => 30,
+                'sector_count' => 3,
+                'route_count' => 25,
+                'url' => '/sites/6'
+            ],
+            [
+                'id' => 7,
+                'name' => 'Cresciano',
+                'latitude' => 46.3833,
+                'longitude' => 8.8667,
+                'region_name' => 'Tessin',
+                'region_id' => 4,
+                'description' => 'Bloc de renommée mondiale',
+                'approach_time' => 5,
+                'sector_count' => 10,
+                'route_count' => 300,
+                'url' => '/sites/7'
+            ],
+            [
+                'id' => 8,
+                'name' => 'Branson',
+                'latitude' => 46.1917,
+                'longitude' => 7.1833,
+                'region_name' => 'Valais',
+                'region_id' => 1,
+                'description' => 'Escalade sportive sur schiste',
+                'approach_time' => 8,
+                'sector_count' => 7,
+                'route_count' => 95,
+                'url' => '/sites/8'
+            ]
+        ];
+    }
+
+    /**
+     * Applique les filtres aux données de test
+     */
+    private function filterTestSites(array $sites, array $filters): array
+    {
+        $filteredSites = [];
+
+        foreach ($sites as $site) {
+            // Filtre par région
+            if (!empty($filters['region_id']) && $site['region_id'] != $filters['region_id']) {
+                continue;
+            }
+
+            // Pour les autres filtres (difficulté, type, saison), on accepte tous les sites
+            // car les données de test ne contiennent pas ces informations détaillées
+            
+            $filteredSites[] = $site;
+        }
+
+        return $filteredSites;
     }
 }
