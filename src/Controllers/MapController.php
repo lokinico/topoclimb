@@ -42,16 +42,6 @@ class MapController extends BaseController
     public function index(): Response
     {
         try {
-            error_log("MapController::index - Début du traitement");
-            
-            // Vérifier que la base de données est injectée
-            if (!$this->db) {
-                error_log("MapController::index - Erreur: Base de données non injectée");
-                throw new \Exception("Base de données non accessible dans MapController");
-            }
-            
-            error_log("MapController::index - Base de données OK");
-            
             // Récupérer les paramètres de filtrage depuis $_GET
             $filters = [
                 'region_id' => $_GET['region'] ?? null,
@@ -68,20 +58,14 @@ class MapController extends BaseController
             $dbError = null;
 
             try {
-                error_log("MapController::index - Récupération des régions");
                 // Récupérer toutes les régions pour les filtres
                 $regions = Region::all();
-                error_log("MapController::index - Régions récupérées: " . count($regions));
 
-                error_log("MapController::index - Récupération des sites");
                 // Récupérer les sites avec coordonnées pour la carte
                 $sites = $this->getSitesForMap($filters);
-                error_log("MapController::index - Sites récupérés: " . count($sites));
 
-                error_log("MapController::index - Calcul des statistiques");
                 // Statistiques pour l'interface
                 $stats = $this->getMapStatistics();
-                error_log("MapController::index - Statistiques calculées");
                 
             } catch (\Exception $dbException) {
                 error_log("MapController::index - Erreur DB: " . $dbException->getMessage());
@@ -270,9 +254,7 @@ class MapController extends BaseController
     private function getSitesForMap(array $filters): array
     {
         try {
-            error_log("MapController::getSitesForMap - Début");
             $sites = Site::all();
-            error_log("MapController::getSitesForMap - Sites bruts récupérés: " . count($sites));
             $sitesForMap = [];
 
             foreach ($sites as $site) {
@@ -286,29 +268,36 @@ class MapController extends BaseController
                     continue;
                 }
 
-                // Récupérer les informations supplémentaires
-                $region = Region::find($site['region_id']);
-                $sectors = Sector::where('site_id', $site['id'])->get();
-                $routeCount = 0;
-                
-                foreach ($sectors as $sector) {
-                    $routes = Route::where('sector_id', $sector['id'])->get();
-                    $routeCount += count($routes);
-                }
+                try {
+                    // Récupérer les informations supplémentaires
+                    $region = Region::find($site['region_id']);
+                    $sectors = Sector::where('site_id', $site['id'])->get();
+                    $routeCount = 0;
+                    
+                    foreach ($sectors as $sector) {
+                        $routes = Route::where('sector_id', $sector['id'])->get();
+                        $routeCount += count($routes);
+                    }
 
-                $sitesForMap[] = [
-                    'id' => $site['id'],
-                    'name' => $site['name'],
-                    'latitude' => (float) $site['latitude'],
-                    'longitude' => (float) $site['longitude'],
-                    'region_name' => $region ? $region['name'] : 'Région inconnue',
-                    'region_id' => $site['region_id'],
-                    'description' => $site['description'] ?? '',
-                    'approach_time' => $site['approach_time'] ?? null,
-                    'sector_count' => count($sectors),
-                    'route_count' => $routeCount,
-                    'url' => '/sites/' . $site['id']
-                ];
+                    $sitesForMap[] = [
+                        'id' => $site['id'],
+                        'name' => $site['name'],
+                        'latitude' => (float) $site['latitude'],
+                        'longitude' => (float) $site['longitude'],
+                        'region_name' => $region ? $region['name'] : 'Région inconnue',
+                        'region_id' => $site['region_id'],
+                        'description' => $site['description'] ?? '',
+                        'approach_time' => $site['approach_time'] ?? null,
+                        'sector_count' => count($sectors),
+                        'route_count' => $routeCount,
+                        'url' => '/sites/' . $site['id']
+                    ];
+                    
+                } catch (\Exception $siteException) {
+                    error_log("MapController::getSitesForMap - Erreur lors du traitement du site " . $site['name'] . ": " . $siteException->getMessage());
+                    // Continuer avec le site suivant
+                    continue;
+                }
             }
 
             return $sitesForMap;
@@ -342,15 +331,10 @@ class MapController extends BaseController
     private function getMapStatistics(): array
     {
         try {
-            error_log("MapController::getMapStatistics - Début");
             $totalSites = count(Site::all());
-            error_log("MapController::getMapStatistics - Total sites: " . $totalSites);
             $totalRegions = count(Region::all());
-            error_log("MapController::getMapStatistics - Total régions: " . $totalRegions);
             $totalSectors = count(Sector::all());
-            error_log("MapController::getMapStatistics - Total secteurs: " . $totalSectors);
             $totalRoutes = count(Route::all());
-            error_log("MapController::getMapStatistics - Total voies: " . $totalRoutes);
 
             return [
                 'total_sites' => $totalSites,
