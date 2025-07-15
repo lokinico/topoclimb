@@ -1,0 +1,73 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">À propos de TopoclimbCH</h1>
+            
+            <div class="prose max-w-none">
+                <p class="text-lg text-gray-700 mb-6 leading-relaxed">
+                    TopoclimbCH est la plateforme de référence pour découvrir et explorer les sites d'escalade en Suisse. 
+                    Notre mission est de connecter la communauté des grimpeurs suisses et de faciliter l'accès aux informations 
+                    sur les voies d'escalade à travers tout le pays.
+                </p>
+
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Notre Vision</h2>
+                <p class="text-gray-700 mb-6">
+                    Nous croyons que l'escalade est plus qu'un sport - c'est une passion qui unit les gens et les connecte 
+                    à la nature. TopoclimbCH aspire à être le point de rencontre digital de cette communauté, offrant 
+                    des outils modernes pour planifier, documenter et partager les aventures d'escalade.
+                </p>
+
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Nos Fonctionnalités</h2>
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">🗺️ Cartographie Interactive</h3>
+                        <p class="text-gray-700">Explorez les sites d'escalade suisses avec notre carte interactive basée sur les données officielles Swisstopo.</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">🌤️ Météo Intégrée</h3>
+                        <p class="text-gray-700">Consultez les prévisions météo MeteoSwiss pour planifier vos sorties d'escalade en toute sécurité.</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">📚 Guides Numériques</h3>
+                        <p class="text-gray-700">Accédez à une bibliothèque complète de guides d'escalade et topos numériques pour tous les niveaux.</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">👥 Communauté</h3>
+                        <p class="text-gray-700">Partagez vos ascensions, découvrez de nouveaux partenaires d'escalade et contribuez à la base de données.</p>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">L'Équipe</h2>
+                <p class="text-gray-700 mb-6">
+                    TopoclimbCH est développé par une équipe passionnée de grimpeurs et développeurs suisses. 
+                    Nous combinons notre amour pour l'escalade avec notre expertise technique pour créer 
+                    la meilleure expérience possible pour la communauté.
+                </p>
+
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-2">🤝 Contribuer au Projet</h3>
+                    <p class="text-blue-800">
+                        TopoclimbCH est un projet communautaire. Nous encourageons tous les grimpeurs à contribuer 
+                        en ajoutant des informations sur les voies, en partageant des photos, et en aidant 
+                        à maintenir la qualité des données.
+                    </p>
+                </div>
+
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Contact</h2>
+                <p class="text-gray-700">
+                    Pour toute question, suggestion ou collaboration, n'hésitez pas à 
+                    <a href="/contact" class="text-blue-600 hover:text-blue-800 underline">nous contacter</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

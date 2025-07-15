@@ -219,7 +219,7 @@ class WeatherService
                 continue;
             }
 
-            $fields = str_getcsv($line, ';');
+            $fields = str_getcsv($line, ';', '"', '\\');
             if (count($fields) >= 10) {
                 $data = [
                     'station_id' => $fields[0] ?? '',
@@ -635,8 +635,7 @@ class WeatherService
             ];
 
             $this->db->query(
-                "INSERT INTO weather_cache (cache_key, data, expires_at) VALUES (?, ?, ?) 
-                 ON DUPLICATE KEY UPDATE data = VALUES(data), expires_at = VALUES(expires_at)",
+                "INSERT OR REPLACE INTO weather_cache (cache_key, data, expires_at) VALUES (?, ?, ?)",
                 [$key, json_encode($cacheData), date('Y-m-d H:i:s', $expiry)]
             );
         } catch (\Exception $e) {
@@ -648,7 +647,7 @@ class WeatherService
     {
         try {
             $cached = $this->db->fetchOne(
-                "SELECT data, expires_at FROM weather_cache WHERE cache_key = ? AND expires_at > NOW()",
+                "SELECT data, expires_at FROM weather_cache WHERE cache_key = ? AND expires_at > datetime('now')",
                 [$key]
             );
 
@@ -671,7 +670,7 @@ class WeatherService
     public function clearExpiredCache(): int
     {
         try {
-            $result = $this->db->query("DELETE FROM weather_cache WHERE expires_at < NOW()");
+            $result = $this->db->query("DELETE FROM weather_cache WHERE expires_at < datetime('now')");
             return $this->db->getLastStatement()->rowCount();
         } catch (\Exception $e) {
             error_log("Weather cache cleanup error: " . $e->getMessage());

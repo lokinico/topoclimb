@@ -1,0 +1,328 @@
+{
+    "timestamp": 1752559441,
+    "date": "2025-07-15 08:04:01",
+    "summary": {
+        "total_tests": 34,
+        "passed": 7,
+        "failed": 24,
+        "warnings": 3
+    },
+    "details": {
+        "forms": [
+            {
+                "path": "\/login",
+                "description": "Formulaire de connexion",
+                "status": "warning",
+                "missing_fields": [
+                    "_token"
+                ]
+            },
+            {
+                "path": "\/register",
+                "description": "Formulaire d'inscription",
+                "status": "warning",
+                "missing_fields": [
+                    "first_name",
+                    "last_name",
+                    "_token"
+                ]
+            },
+            {
+                "path": "\/forgot-password",
+                "description": "Formulaire mot de passe oubli\u00e9",
+                "status": "warning",
+                "missing_fields": [
+                    "_token"
+                ]
+            }
+        ],
+        "pages": [
+            {
+                "path": "\/",
+                "description": "Page d'accueil",
+                "status": "success",
+                "status_code": 200
+            },
+            {
+                "path": "\/login",
+                "description": "Page de connexion",
+                "status": "success",
+                "status_code": 200
+            },
+            {
+                "path": "\/register",
+                "description": "Page d'inscription",
+                "status": "success",
+                "status_code": 200
+            },
+            {
+                "path": "\/forgot-password",
+                "description": "Mot de passe oubli\u00e9",
+                "status": "success",
+                "status_code": 200
+            },
+            {
+                "path": "\/about",
+                "description": "\u00c0 propos",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/contact",
+                "description": "Contact",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/privacy",
+                "description": "Politique de confidentialit\u00e9",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/terms",
+                "description": "Conditions d'utilisation",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            }
+        ],
+        "crud_operations": [
+            {
+                "path": "\/regions",
+                "description": "Liste regions",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/regions\/create",
+                "description": "Formulaire cr\u00e9ation regions",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/sites",
+                "description": "Liste sites",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/sites\/create",
+                "description": "Formulaire cr\u00e9ation sites",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/sectors",
+                "description": "Liste sectors",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/sectors\/create",
+                "description": "Formulaire cr\u00e9ation sectors",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/routes",
+                "description": "Liste routes",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/routes\/create",
+                "description": "Formulaire cr\u00e9ation routes",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/books",
+                "description": "Liste books",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/books\/create",
+                "description": "Formulaire cr\u00e9ation books",
+                "status": "error",
+                "status_code": 500,
+                "error": "HTTP Error"
+            }
+        ],
+        "authentication": [
+            {
+                "path": "\/admin",
+                "test": "admin_access",
+                "status": "success",
+                "status_code": 302,
+                "message": "Page correctement prot\u00e9g\u00e9e"
+            },
+            {
+                "path": "\/profile",
+                "test": "user_profile",
+                "status": "error",
+                "status_code": 500,
+                "message": "Page devrait \u00eatre prot\u00e9g\u00e9e"
+            },
+            {
+                "path": "\/settings",
+                "test": "user_settings",
+                "status": "error",
+                "status_code": 500,
+                "message": "Page devrait \u00eatre prot\u00e9g\u00e9e"
+            },
+            {
+                "path": "\/admin\/users",
+                "test": "admin_users",
+                "status": "error",
+                "status_code": 500,
+                "message": "Page devrait \u00eatre prot\u00e9g\u00e9e"
+            }
+        ],
+        "weather_integration": [
+            {
+                "test": "health_check",
+                "status": "success",
+                "message": "Test m\u00e9t\u00e9o r\u00e9ussi",
+                "data": [
+                    "status",
+                    "message",
+                    "source"
+                ]
+            },
+            {
+                "test": "current_weather",
+                "status": "success",
+                "message": "Test m\u00e9t\u00e9o r\u00e9ussi",
+                "data": [
+                    "temperature",
+                    "feels_like",
+                    "humidity",
+                    "pressure",
+                    "wind_speed",
+                    "wind_direction",
+                    "visibility",
+                    "weather_code",
+                    "weather_main",
+                    "weather_description",
+                    "weather_icon",
+                    "precipitation",
+                    "sunshine",
+                    "location",
+                    "country",
+                    "source",
+                    "station_distance",
+                    "timestamp"
+                ]
+            },
+            {
+                "test": "detailed_weather",
+                "status": "success",
+                "message": "Test m\u00e9t\u00e9o r\u00e9ussi",
+                "data": [
+                    "current",
+                    "forecast",
+                    "climbing_conditions",
+                    "source",
+                    "updated_at"
+                ]
+            },
+            {
+                "test": "forecast",
+                "status": "success",
+                "message": "Test m\u00e9t\u00e9o r\u00e9ussi",
+                "data": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ]
+            }
+        ],
+        "media_management": [
+            {
+                "path": "\/media",
+                "description": "Test media_index",
+                "status": "error",
+                "status_code": 404,
+                "error": "HTTP Error"
+            },
+            {
+                "path": "\/regions\/1\/media",
+                "description": "Test media_upload_form",
+                "status": "error",
+                "status_code": 404,
+                "error": "HTTP Error"
+            },
+            {
+                "test": "media_service_init",
+                "status": "success",
+                "message": "MediaService initialis\u00e9 correctement"
+            }
+        ],
+        "api_endpoints": [
+            {
+                "endpoint": "\/api\/regions",
+                "description": "Liste des r\u00e9gions",
+                "status": "error",
+                "status_code": 500
+            },
+            {
+                "endpoint": "\/api\/regions\/search",
+                "description": "Recherche de r\u00e9gions",
+                "status": "error",
+                "status_code": 500
+            },
+            {
+                "endpoint": "\/api\/sites",
+                "description": "Liste des sites",
+                "status": "error",
+                "status_code": 500
+            },
+            {
+                "endpoint": "\/api\/sites\/search",
+                "description": "Recherche de sites",
+                "status": "error",
+                "status_code": 500
+            },
+            {
+                "endpoint": "\/api\/map\/sites",
+                "description": "Sites pour la carte",
+                "status": "success",
+                "response_type": "json"
+            },
+            {
+                "endpoint": "\/api\/map\/search",
+                "description": "Recherche g\u00e9ographique",
+                "status": "success",
+                "response_type": "json"
+            },
+            {
+                "endpoint": "\/api\/books\/search",
+                "description": "Recherche de guides",
+                "status": "error",
+                "status_code": 500
+            }
+        ],
+        "summary": {
+            "total_tests": 34,
+            "passed": 7,
+            "failed": 24,
+            "warnings": 3
+        }
+    }
+}

@@ -1,0 +1,105 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">Contact</h1>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Formulaire de contact -->
+                <div>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Nous Contacter</h2>
+                    <p class="text-gray-700 mb-6">
+                        Vous avez une question, une suggestion ou souhaitez collaborer avec nous ? 
+                        N'hésitez pas à nous écrire !
+                    </p>
+                    
+                    <form action="/contact" method="POST" class="space-y-6">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
+                            <input type="text" id="name" name="name" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                            <input type="email" id="email" name="email" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">Sujet *</label>
+                            <select id="subject" name="subject" required 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Choisir un sujet</option>
+                                <option value="general">Question générale</option>
+                                <option value="bug">Signaler un bug</option>
+                                <option value="feature">Suggestion de fonctionnalité</option>
+                                <option value="data">Correction de données</option>
+                                <option value="partnership">Partenariat</option>
+                                <option value="other">Autre</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="message" class="block text-sm font-medium text-gray-700 mb-2">Message *</label>
+                            <textarea id="message" name="message" rows="6" required 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      placeholder="Décrivez votre demande en détail..."></textarea>
+                        </div>
+                        
+                        <button type="submit" 
+                                class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150">
+                            Envoyer le Message
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Informations de contact -->
+                <div>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Informations</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">📧 Email</h3>
+                            <p class="text-gray-700">contact@topoclimb.ch</p>
+                            <p class="text-sm text-gray-600 mt-1">Réponse sous 24-48h</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">🐛 Signaler un Bug</h3>
+                            <p class="text-gray-700">bugs@topoclimb.ch</p>
+                            <p class="text-sm text-gray-600 mt-1">Pour les problèmes techniques</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">💡 Suggestions</h3>
+                            <p class="text-gray-700">suggestions@topoclimb.ch</p>
+                            <p class="text-sm text-gray-600 mt-1">Vos idées d'amélioration</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">🤝 Partenariats</h3>
+                            <p class="text-gray-700">partenaires@topoclimb.ch</p>
+                            <p class="text-sm text-gray-600 mt-1">Collaborations professionnelles</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-6">
+                        <h3 class="text-lg font-semibold text-blue-900 mb-2">💬 Réseaux Sociaux</h3>
+                        <p class="text-blue-800 mb-3">Suivez-nous pour les dernières nouvelles :</p>
+                        <div class="space-y-2">
+                            <p class="text-blue-700">📘 Facebook: @TopoclimbCH</p>
+                            <p class="text-blue-700">📷 Instagram: @topoclimb_ch</p>
+                            <p class="text-blue-700">🐦 Twitter: @TopoclimbCH</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -291,9 +291,9 @@ class HomeController extends BaseController
     /**
      * Page À propos
      */
-    public function about(): void
+    public function about(): Response
     {
-        $this->render('pages/about', [
+        return $this->render('pages/about', [
             'title' => 'À propos de TopoclimbCH',
             'breadcrumbs' => [
                 ['title' => 'Accueil', 'url' => '/'],
@@ -305,9 +305,9 @@ class HomeController extends BaseController
     /**
      * Page Contact
      */
-    public function contact(): void
+    public function contact(): Response
     {
-        $this->render('pages/contact', [
+        return $this->render('pages/contact', [
             'title' => 'Contact',
             'breadcrumbs' => [
                 ['title' => 'Accueil', 'url' => '/'],
@@ -319,9 +319,9 @@ class HomeController extends BaseController
     /**
      * Page Politique de confidentialité
      */
-    public function privacy(): void
+    public function privacy(): Response
     {
-        $this->render('pages/privacy', [
+        return $this->render('pages/privacy', [
             'title' => 'Politique de confidentialité',
             'breadcrumbs' => [
                 ['title' => 'Accueil', 'url' => '/'],
@@ -333,9 +333,9 @@ class HomeController extends BaseController
     /**
      * Page Conditions d'utilisation
      */
-    public function terms(): void
+    public function terms(): Response
     {
-        $this->render('pages/terms', [
+        return $this->render('pages/terms', [
             'title' => 'Conditions d\'utilisation',
             'breadcrumbs' => [
                 ['title' => 'Accueil', 'url' => '/'],

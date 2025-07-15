@@ -75,21 +75,38 @@ class Database
     public function getConnection(): PDO
     {
         if ($this->connection === null) {
-            $dsn = sprintf(
-                "mysql:host=%s;port=%s;dbname=%s;charset=%s",
-                $this->config['host'],
-                $this->config['port'],
-                $this->config['database'],
-                $this->config['charset']
-            );
+            // Supporter SQLite et MySQL
+            $driver = $_ENV['DB_DRIVER'] ?? 'mysql';
+            
+            if ($driver === 'sqlite') {
+                // Configuration SQLite
+                $dbPath = $this->config['database'];
+                if (strpos($dbPath, '/') !== 0) {
+                    $dbPath = BASE_PATH . '/' . $dbPath;
+                }
+                $dsn = "sqlite:" . $dbPath;
+            } else {
+                // Configuration MySQL (par défaut)
+                $dsn = sprintf(
+                    "mysql:host=%s;port=%s;dbname=%s;charset=%s",
+                    $this->config['host'],
+                    $this->config['port'],
+                    $this->config['database'],
+                    $this->config['charset']
+                );
+            }
 
             try {
-                $this->connection = new PDO(
-                    $dsn,
-                    $this->config['username'],
-                    $this->config['password'],
-                    $this->config['options']
-                );
+                if ($driver === 'sqlite') {
+                    $this->connection = new PDO($dsn, null, null, $this->config['options']);
+                } else {
+                    $this->connection = new PDO(
+                        $dsn,
+                        $this->config['username'],
+                        $this->config['password'],
+                        $this->config['options']
+                    );
+                }
             } catch (PDOException $e) {
                 throw new PDOException("Erreur de connexion à la base de données : " . $e->getMessage());
             }
