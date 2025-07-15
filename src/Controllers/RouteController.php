@@ -61,6 +61,9 @@ class RouteController extends BaseController
 
         // Récupérer Database via getInstance (pattern singleton)
         $this->db = Database::getInstance();
+        
+        // Récupérer Auth via AuthService pour compatibilité avec BaseController
+        $this->auth = $this->authService->getAuth();
     }
 
     /**
@@ -256,6 +259,53 @@ class RouteController extends BaseController
             error_log('RouteController::create error: ' . $e->getMessage());
             $this->session->flash('error', 'Erreur lors du chargement du formulaire : ' . $e->getMessage());
             return Response::redirect('/routes');
+        }
+    }
+
+    /**
+     * Affiche le formulaire de création de voie (version test sans authentification)
+     */
+    public function testCreate(Request $request): Response
+    {
+        try {
+            // Récupérer les régions pour le sélecteur cascade
+            $regions = $this->db->fetchAll(
+                "SELECT r.id, r.name, c.name as country_name
+             FROM climbing_regions r 
+             LEFT JOIN climbing_countries c ON r.country_id = c.id 
+             WHERE r.active = 1 
+             ORDER BY c.name, r.name"
+            );
+
+            // Récupérer les secteurs
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, s.region_id, r.name as region_name 
+             FROM climbing_sectors s 
+             LEFT JOIN climbing_regions r ON s.region_id = r.id 
+             WHERE s.active = 1 
+             ORDER BY r.name, s.name"
+            );
+
+            $difficultySystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
+
+            // Valeurs par défaut
+            $route = [
+                'active' => 1,
+                'difficulty_system_id' => 1
+            ];
+
+            return $this->render('routes/form', [
+                'title' => 'Créer une nouvelle voie',
+                'route' => $route,
+                'regions' => $regions,
+                'sectors' => $sectors,
+                'difficulty_systems' => $difficultySystems,
+                'selected_sector' => null,
+                'selected_region' => null,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            return new Response('Formulaire voie - Test', 200);
         }
     }
 

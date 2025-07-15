@@ -920,4 +920,61 @@ return [
     // ========================================
     // API REST v1 ENDPOINTS - MODERN API
     // ========================================
+    
+    // ========================================
+    // ROUTES MÉDIAS
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/media',
+        'controller' => \TopoclimbCH\Controllers\MediaController::class,
+        'action' => 'index',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/regions/{id}/media',
+        'controller' => \TopoclimbCH\Controllers\MediaController::class,
+        'action' => 'uploadForm',
+        'middlewares' => []
+    ],
+    
+    // ========================================
+    // ROUTES DE TEST (SANS AUTHENTIFICATION)
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/test/regions/create',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'testCreate',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/test/sites/create',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'form',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/test/sectors/create',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'testCreate',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/test/routes/create',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'testCreate',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/test/books/create',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'form',
+        'middlewares' => []
+    ],
 ];

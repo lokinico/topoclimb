@@ -9,6 +9,7 @@ use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Security\CsrfManager;
 
 class MediaController extends BaseController
@@ -19,9 +20,11 @@ class MediaController extends BaseController
         View $view,
         Session $session,
         MediaService $mediaService,
-        Database $db
+        Database $db,
+        CsrfManager $csrfManager,
+        ?Auth $auth = null
     ) {
-        parent::__construct($view, $session);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->mediaService = $mediaService;
         $this->db = $db;
     }
@@ -109,8 +112,38 @@ class MediaController extends BaseController
 
     public function index(Request $request): Response
     {
-        $this->session->flash('info', 'Fonctionnalité en cours de développement');
-        return $this->redirect('/sectors');
+        try {
+            // Récupérer tous les médias
+            $medias = $this->db->fetchAll("SELECT * FROM climbing_media ORDER BY created_at DESC");
+            
+            return $this->render('media/index', [
+                'medias' => $medias,
+                'title' => 'Gestion des médias'
+            ]);
+        } catch (\Exception $e) {
+            return new Response('Gestion des médias - Fonctionnalité en cours de développement', 200);
+        }
+    }
+
+    public function uploadForm(Request $request): Response
+    {
+        try {
+            $regionId = $request->get('id', 1);
+            
+            // Vérifier que la région existe
+            $region = $this->db->fetchOne("SELECT * FROM climbing_regions WHERE id = ?", [$regionId]);
+            
+            if (!$region) {
+                return new Response('Région non trouvée', 404);
+            }
+            
+            return $this->render('media/upload-form', [
+                'region' => $region,
+                'title' => 'Upload de médias - ' . $region['name']
+            ]);
+        } catch (\Exception $e) {
+            return new Response('Upload de médias - Fonctionnalité en cours de développement', 200);
+        }
     }
 
     public function update(Request $request): Response

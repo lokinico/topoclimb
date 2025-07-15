@@ -25,6 +25,14 @@ class AuthService
         $this->mailer = $mailer;
     }
 
+    /**
+     * Récupère l'instance Auth pour compatibilité avec BaseController
+     */
+    public function getAuth(): Auth
+    {
+        return $this->auth;
+    }
+
     public function check(): bool
     {
         return $this->auth->check();

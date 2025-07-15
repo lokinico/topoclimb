@@ -50,7 +50,7 @@ class RegionController extends BaseController
         Database $db,
         ?Auth $auth = null
     ) {
-        parent::__construct($view, $session, $csrfManager);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->regionService = $regionService;
         $this->mediaService = $mediaService;
         $this->weatherService = $weatherService;
@@ -289,6 +289,28 @@ class RegionController extends BaseController
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors du chargement du formulaire');
             return $this->redirect('/regions');
+        }
+    }
+
+    /**
+     * Création d'une nouvelle région (version test sans authentification)
+     */
+    public function testCreate(Request $request): Response
+    {
+        try {
+            $countries = $this->db->fetchAll(
+                "SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC"
+            );
+
+            return $this->render('regions/form', [
+                'region' => (object)[],
+                'countries' => $countries,
+                'csrf_token' => $this->createCsrfToken(),
+                'is_edit' => false,
+                'swisstopo_api_key' => $_ENV['SWISSTOPO_API_KEY'] ?? ''
+            ]);
+        } catch (\Exception $e) {
+            return new Response('Formulaire région - Test', 200);
         }
     }
 

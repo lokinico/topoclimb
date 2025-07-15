@@ -7,6 +7,7 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Models\Book;
 use TopoclimbCH\Models\Region;
 use TopoclimbCH\Models\Sector;
@@ -24,9 +25,10 @@ class BookController extends BaseController
         Session $session,
         Database $db,
         MediaService $mediaService,
-        CsrfManager $csrfManager
+        CsrfManager $csrfManager,
+        ?Auth $auth = null
     ) {
-        parent::__construct($view, $session, $csrfManager);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->db = $db;
         $this->mediaService = $mediaService;
     }

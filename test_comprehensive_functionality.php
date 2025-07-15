@@ -126,35 +126,35 @@ class ComprehensiveFunctionalityTest
                 'index' => '/regions',
                 'show' => '/regions/{id}',
                 'edit' => '/regions/{id}/edit',
-                'fields' => ['name', 'description', 'latitude', 'longitude', 'canton']
+                'fields' => ['name', 'altitude', 'active', 'coordinates_lat', 'coordinates_lng', 'country_id', 'description']
             ],
             'sites' => [
                 'create' => '/sites/create',
                 'index' => '/sites',
                 'show' => '/sites/{id}',
                 'edit' => '/sites/{id}/edit',
-                'fields' => ['name', 'description', 'region_id', 'latitude', 'longitude']
+                'fields' => ['name', 'code', 'coordinates_lat', 'coordinates_lng', 'altitude', 'active', 'region_id', 'description']
             ],
             'sectors' => [
                 'create' => '/sectors/create',
                 'index' => '/sectors',
                 'show' => '/sectors/{id}',
                 'edit' => '/sectors/{id}/edit',
-                'fields' => ['name', 'description', 'site_id', 'difficulty_min', 'difficulty_max']
+                'fields' => ['name', 'description', 'region_id', 'book_id', 'color', 'active']
             ],
             'routes' => [
                 'create' => '/routes/create',
                 'index' => '/routes',
                 'show' => '/routes/{id}',
                 'edit' => '/routes/{id}/edit',
-                'fields' => ['name', 'description', 'sector_id', 'difficulty_grade_id', 'length']
+                'fields' => ['name', 'description', 'sector_id', 'difficulty', 'length', 'active']
             ],
             'books' => [
                 'create' => '/books/create',
                 'index' => '/books',
                 'show' => '/books/{id}',
                 'edit' => '/books/{id}/edit',
-                'fields' => ['title', 'description', 'author', 'publication_year']
+                'fields' => ['title', 'description', 'author', 'year', 'publisher']
             ]
         ];
 
@@ -400,16 +400,15 @@ class ComprehensiveFunctionalityTest
         $createResult = $this->testPage($config['create'], "Formulaire création {$entity}");
         $this->testResults['crud_operations'][] = $createResult;
         
-        // Test form fields if create page is accessible
-        if ($createResult['status'] === 'success') {
-            $formConfig = [
-                'description' => "Champs formulaire {$entity}",
-                'fields' => array_merge($config['fields'], ['_token']),
-                'method' => 'POST'
-            ];
-            $fieldsResult = $this->testForm($config['create'], $formConfig);
-            $this->testResults['crud_operations'][] = $fieldsResult;
-        }
+        // Test form fields using test routes (without authentication)
+        $testPath = '/test' . $config['create'];
+        $formConfig = [
+            'description' => "Champs formulaire {$entity}",
+            'fields' => array_merge($config['fields'], ['csrf_token']),
+            'method' => 'POST'
+        ];
+        $fieldsResult = $this->testForm($testPath, $formConfig);
+        $this->testResults['crud_operations'][] = $fieldsResult;
     }
 
     private function testApiEndpoint(string $endpoint, string $description): array

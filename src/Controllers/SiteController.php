@@ -8,6 +8,7 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Models\Site;
 use TopoclimbCH\Models\Region;
 use TopoclimbCH\Models\Sector;
@@ -28,9 +29,10 @@ class SiteController extends BaseController
         MediaService $mediaService,      // Position 4
         RegionService $regionService,    // Position 5  
         SectorService $sectorService,    // Position 6
-        ?Database $db = null
+        ?Database $db = null,
+        ?Auth $auth = null
     ) {
-        parent::__construct($view, $session, $csrfManager, $db);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->mediaService = $mediaService;
         // Le reste du code reste identique
     }

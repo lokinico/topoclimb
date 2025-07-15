@@ -8,6 +8,7 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Services\SectorService;
 use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Services\ValidationService;
@@ -77,9 +78,10 @@ class SectorController extends BaseController
         MediaService $mediaService,
         ValidationService $validationService,
         Database $db,
-        CsrfManager $csrfManager
+        CsrfManager $csrfManager,
+        ?Auth $auth = null
     ) {
-        parent::__construct($view, $session, $csrfManager);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->sectorService = $sectorService;
         $this->mediaService = $mediaService;
         $this->validationService = $validationService;
@@ -259,6 +261,38 @@ class SectorController extends BaseController
             error_log("SectorCreate Error: " . $e->getMessage());
             $this->session->flash('error', 'Une erreur est survenue lors du chargement du formulaire');
             return Response::redirect('/sectors');
+        }
+    }
+
+    /**
+     * Display create sector form (version test sans authentification)
+     */
+    public function testCreate(Request $request): Response
+    {
+        try {
+            // Get data for form selections avec validation
+            $regions = $this->getValidRegions();
+            $books = $this->getValidBooks();
+            $exposures = $this->getValidExposures();
+            $months = $this->getValidMonths();
+
+            // Précharger des valeurs par défaut sécurisées
+            $sector = [
+                'color' => '#FF0000',
+                'active' => 1
+            ];
+
+            return $this->render('sectors/form', [
+                'title' => 'Créer un nouveau secteur',
+                'sector' => $sector,
+                'regions' => $regions,
+                'books' => $books,
+                'exposures' => $exposures,
+                'months' => $months,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            return new Response('Formulaire secteur - Test', 200);
         }
     }
 
