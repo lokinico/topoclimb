@@ -713,20 +713,20 @@ class RegionController extends BaseController
             // Formatage sécurisé des données
             $data = array_map(function ($sector) {
                 return [
-                    'id' => (int)$sector->id,
-                    'name' => $sector->name,
-                    'routes_count' => (int)($sector->routes_count ?? 0),
-                    'altitude' => $sector->altitude ? (int)$sector->altitude : null,
-                    'access_time' => $sector->access_time ? (int)$sector->access_time : null,
-                    'coordinates_lat' => $sector->coordinates_lat ? (float)$sector->coordinates_lat : null,
-                    'coordinates_lng' => $sector->coordinates_lng ? (float)$sector->coordinates_lng : null
+                    'id' => (int)$sector['id'],
+                    'name' => $sector['name'],
+                    'routes_count' => (int)($sector['routes_count'] ?? 0),
+                    'altitude' => $sector['altitude'] ? (int)$sector['altitude'] : null,
+                    'access_time' => $sector['access_time'] ? (int)$sector['access_time'] : null,
+                    'coordinates_lat' => $sector['coordinates_lat'] ? (float)$sector['coordinates_lat'] : null,
+                    'coordinates_lng' => $sector['coordinates_lng'] ? (float)$sector['coordinates_lng'] : null
                 ];
             }, $sectors);
 
             return new JsonResponse([
                 'success' => true,
                 'data' => $data,
-                'region' => ['id' => (int)$region->id, 'name' => $region->name],
+                'region' => ['id' => (int)$region['id'], 'name' => $region['name']],
                 'count' => count($data)
             ]);
         } catch (ValidationException $e) {

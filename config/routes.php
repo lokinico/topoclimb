@@ -598,6 +598,13 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/api/regions/{id}/sectors',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'apiSectors',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
         'path' => '/regions/{id}/weather',
         'controller' => \TopoclimbCH\Controllers\RegionController::class,
         'action' => 'weather',
