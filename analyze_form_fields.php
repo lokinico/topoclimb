@@ -62,7 +62,7 @@ class FormFieldAnalyzer {
 
 // Démarrer le serveur
 echo "🚀 Démarrage du serveur...\n";
-$serverCmd = 'php -S localhost:8000 -t ' . __DIR__ . ' > /dev/null 2>&1 & echo $!';
+$serverCmd = 'cd ' . __DIR__ . '/public && php -S localhost:8000 > /dev/null 2>&1 & echo $!';
 $serverPid = exec($serverCmd);
 
 if ($serverPid) {
