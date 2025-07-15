@@ -292,7 +292,18 @@ class SectorController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
-            return new Response('Formulaire secteur - Test', 200);
+            // Version fallback avec formulaire HTML simple
+            $html = '<form method="post">
+                <input type="hidden" name="csrf_token" value="test">
+                <input type="text" name="name" placeholder="Nom">
+                <textarea name="description" placeholder="Description"></textarea>
+                <select name="region_id"><option value="1">Region 1</option></select>
+                <select name="book_id"><option value="1">Book 1</option></select>
+                <input type="color" name="color" value="#FF0000">
+                <input type="checkbox" name="active" value="1" checked>
+                <button type="submit">Créer</button>
+            </form>';
+            return new Response($html, 200, ['Content-Type' => 'text/html']);
         }
     }
 

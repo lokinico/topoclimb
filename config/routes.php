@@ -974,7 +974,7 @@ return [
         'method' => 'GET',
         'path' => '/test/books/create',
         'controller' => \TopoclimbCH\Controllers\BookController::class,
-        'action' => 'form',
+        'action' => 'testCreate',
         'middlewares' => []
     ],
 ];

@@ -154,7 +154,7 @@ class ComprehensiveFunctionalityTest
                 'index' => '/books',
                 'show' => '/books/{id}',
                 'edit' => '/books/{id}/edit',
-                'fields' => ['title', 'description', 'author', 'year', 'publisher']
+                'fields' => ['name', 'description', 'author', 'year', 'publisher']
             ]
         ];
 

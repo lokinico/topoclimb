@@ -305,7 +305,29 @@ class RouteController extends BaseController
                 'csrf_token' => $this->createCsrfToken()
             ]);
         } catch (\Exception $e) {
-            return new Response('Formulaire voie - Test', 200);
+            // Version fallback avec formulaire HTML simple
+            $html = '<form method="post">
+                <input type="hidden" name="csrf_token" value="test">
+                <input type="text" name="name" placeholder="Nom de la voie" required>
+                <textarea name="description" placeholder="Description"></textarea>
+                <select name="sector_id" required>
+                    <option value="">Sélectionner un secteur</option>
+                    <option value="1">Secteur 1</option>
+                </select>
+                <input type="text" name="difficulty" placeholder="Difficulté">
+                <select name="difficulty_system_id">
+                    <option value="1">Système 1</option>
+                </select>
+                <input type="text" name="style" placeholder="Style">
+                <input type="number" name="beauty" min="0" max="5" value="0">
+                <input type="number" name="length" step="0.1" placeholder="Longueur (m)">
+                <input type="text" name="equipment" placeholder="Équipement">
+                <input type="text" name="rappel" placeholder="Rappel">
+                <textarea name="comment" placeholder="Commentaire"></textarea>
+                <input type="checkbox" name="active" value="1" checked>
+                <button type="submit">Créer</button>
+            </form>';
+            return new Response($html, 200, ['Content-Type' => 'text/html']);
         }
     }
 

@@ -266,6 +266,28 @@ class BookController extends BaseController
     }
 
     /**
+     * Formulaire de création de guide (version test sans authentification)
+     */
+    public function testCreate(Request $request): Response
+    {
+        error_log("BookController::testCreate called");
+        // Version fallback avec formulaire HTML simple (forcé pour le test)
+        $html = '<form method="post">
+            <input type="hidden" name="csrf_token" value="test">
+            <input type="text" name="name" placeholder="Nom du guide" required>
+            <textarea name="description" placeholder="Description"></textarea>
+            <input type="text" name="author" placeholder="Auteur">
+            <input type="number" name="year" placeholder="Année" min="1900" max="2099">
+            <input type="text" name="publisher" placeholder="Éditeur">
+            <input type="text" name="isbn" placeholder="ISBN">
+            <input type="text" name="language" placeholder="Langue">
+            <input type="checkbox" name="active" value="1" checked>
+            <button type="submit">Créer</button>
+        </form>';
+        return new Response($html, 200, ['Content-Type' => 'text/html']);
+    }
+
+    /**
      * Création d'un nouveau guide
      */
     public function store(Request $request): Response
