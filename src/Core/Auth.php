@@ -114,8 +114,12 @@ class Auth
 
         if ($this->userDataCache && isset($this->userDataCache['autorisation'])) {
             $userAutorisation = $this->userDataCache['autorisation'];
+        } elseif ($this->userDataCache && isset($this->userDataCache['role_id'])) {
+            $userAutorisation = $this->userDataCache['role_id'];
         } elseif ($this->user && isset($this->user->autorisation)) {
             $userAutorisation = $this->user->autorisation;
+        } elseif ($this->user && isset($this->user->role_id)) {
+            $userAutorisation = $this->user->role_id;
         }
 
         return (int)($userAutorisation ?? 4);
@@ -174,18 +178,24 @@ class Auth
             return false;
         }
 
-        if (!isset($result['id']) || !isset($result['password'])) {
-            error_log("Données utilisateur incomplètes pour: $username");
+        if (!isset($result['id'])) {
+            error_log("Données utilisateur incomplètes pour: $username - ID manquant");
             return false;
         }
 
-        // Vérifier le mot de passe
-        if (!password_verify($password, $result['password'])) {
+        if (!isset($result['password_hash']) && !isset($result['password'])) {
+            error_log("Données utilisateur incomplètes pour: $username - Mot de passe manquant");
+            return false;
+        }
+
+        // Vérifier le mot de passe (utiliser password_hash ou password selon disponibilité)
+        $passwordField = $result['password_hash'] ?? $result['password'];
+        if (!password_verify($password, $passwordField)) {
             // Tentative avec MD5 pour compatibilité
-            if (md5($password) === $result['password']) {
+            if (md5($password) === $passwordField) {
                 // Mettre à jour vers bcrypt
                 $this->db->query(
-                    "UPDATE users SET password = ? WHERE id = ?",
+                    "UPDATE users SET password_hash = ? WHERE id = ?",
                     [password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]), $result['id']]
                 );
             } else {
@@ -446,7 +456,8 @@ class Auth
 
                 try {
                     $this->user = $this->createUserObject($result);
-                    error_log("Auth::checkSession - User chargé avec autorisation: " . $result['autorisation']);
+                    $role = $result['autorisation'] ?? $result['role_id'] ?? 'non défini';
+                    error_log("Auth::checkSession - User chargé avec rôle: " . $role);
                 } catch (\Exception $e) {
                     error_log("Auth::checkSession - Erreur création User: " . $e->getMessage());
                     $this->user = null;
@@ -476,8 +487,13 @@ class Auth
     private function createUserObject(array $data): User
     {
         // S'assurer que toutes les données nécessaires sont présentes
-        if (!isset($data['id']) || !isset($data['autorisation'])) {
-            throw new \RuntimeException("Données utilisateur incomplètes");
+        if (!isset($data['id'])) {
+            throw new \RuntimeException("Données utilisateur incomplètes - ID manquant");
+        }
+
+        // Vérifier le rôle/autorisation (peut être autorisation ou role_id)
+        if (!isset($data['autorisation']) && !isset($data['role_id'])) {
+            throw new \RuntimeException("Données utilisateur incomplètes - Rôle manquant");
         }
 
         // Créer l'objet User standard

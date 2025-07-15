@@ -141,7 +141,7 @@ abstract class BaseController
     {
         $this->requireAuth();
 
-        $userRole = (int)($this->auth->user()->autorisation ?? 5);
+        $userRole = $this->auth->role();
 
         if (!in_array($userRole, $allowedRoles)) {
             $this->flash('error', $message);
@@ -240,7 +240,7 @@ abstract class BaseController
                     'username' => $user->username,
                     'nom' => $user->nom,
                     'prenom' => $user->prenom,
-                    'autorisation' => $user->autorisation
+                    'autorisation' => $user->autorisation ?? $user->role_id ?? 5
                 ];
             }
 
@@ -420,7 +420,7 @@ abstract class BaseController
         // Ajouter ici la logique de permissions spécifique à votre application
         // En fonction du rôle utilisateur et de l'action demandée
 
-        $userRole = (int)($this->auth->user()->autorisation ?? 5);
+        $userRole = $this->auth->role();
 
         // Exemple de logique de permissions
         $permissions = [

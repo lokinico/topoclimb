@@ -8,6 +8,7 @@ use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Models\User;
 use TopoclimbCH\Models\UserAscent;
 use TopoclimbCH\Models\Route;
@@ -24,15 +25,18 @@ class UserController extends BaseController
     protected AscentService $ascentService;
     protected AuthService $authService;
 
-    public function __construct(View $view, Session $session, CsrfManager $csrfManager)
+    public function __construct(View $view, Session $session, CsrfManager $csrfManager, ?Auth $auth = null, ?Database $db = null)
     {
-        parent::__construct($view, $session, $csrfManager);
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
 
         // Créer les services à la demande plutôt que par injection
-        $this->db = Database::getInstance();
+        $this->db = $db ?? Database::getInstance();
         $this->userService = new UserService($this->db);
         $this->ascentService = new AscentService($this->db);
-        $this->authService = new AuthService($this->auth, $session, $this->db);
+        
+        // Utiliser l'Auth passé en paramètre ou créer un nouveau
+        $authInstance = $auth ?? new Auth($session, $this->db);
+        $this->authService = new AuthService($authInstance, $session, $this->db, new \TopoclimbCH\Services\Mailer($this->db));
     }
 
     /**

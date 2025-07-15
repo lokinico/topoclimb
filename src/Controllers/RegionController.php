@@ -280,7 +280,8 @@ class RegionController extends BaseController
                 'region' => (object)[],
                 'countries' => $countries,
                 'csrf_token' => $this->createCsrfToken(),
-                'is_edit' => false
+                'is_edit' => false,
+                'swisstopo_api_key' => $_ENV['SWISSTOPO_API_KEY'] ?? ''
             ]);
         } catch (AuthorizationException $e) {
             $this->flash('error', $e->getMessage());
@@ -643,7 +644,7 @@ class RegionController extends BaseController
             $sql .= " ORDER BY r.name ASC LIMIT ?";
             $params[] = $limit;
 
-            $regions = $this->db->query($sql, $params);
+            $regions = $this->db->fetchAll($sql, $params);
 
             return new JsonResponse([
                 'success' => true,

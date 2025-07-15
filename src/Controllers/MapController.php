@@ -258,43 +258,54 @@ class MapController extends BaseController
             $sitesForMap = [];
 
             foreach ($sites as $site) {
+                // Accéder aux propriétés directement
+                $siteData = [
+                    'id' => $site->id,
+                    'name' => $site->name,
+                    'latitude' => $site->latitude,
+                    'longitude' => $site->longitude,
+                    'region_id' => $site->region_id,
+                    'description' => $site->description,
+                    'approach_time' => $site->approach_time
+                ];
+                
                 // Vérifier que le site a des coordonnées
-                if (empty($site['latitude']) || empty($site['longitude'])) {
+                if (empty($siteData['latitude']) || empty($siteData['longitude'])) {
                     continue;
                 }
 
                 // Appliquer les filtres
-                if (!$this->passeFilters($site, $filters)) {
+                if (!$this->passeFilters($siteData, $filters)) {
                     continue;
                 }
 
                 try {
                     // Récupérer les informations supplémentaires
-                    $region = Region::find($site['region_id']);
-                    $sectors = Sector::where('site_id', $site['id'])->get();
+                    $region = Region::find($siteData['region_id']);
+                    $sectors = Sector::where('site_id', $siteData['id'])->get();
                     $routeCount = 0;
                     
                     foreach ($sectors as $sector) {
-                        $routes = Route::where('sector_id', $sector['id'])->get();
+                        $routes = Route::where('sector_id', $sector->id)->get();
                         $routeCount += count($routes);
                     }
 
                     $sitesForMap[] = [
-                        'id' => $site['id'],
-                        'name' => $site['name'],
-                        'latitude' => (float) $site['latitude'],
-                        'longitude' => (float) $site['longitude'],
-                        'region_name' => $region ? $region['name'] : 'Région inconnue',
-                        'region_id' => $site['region_id'],
-                        'description' => $site['description'] ?? '',
-                        'approach_time' => $site['approach_time'] ?? null,
+                        'id' => $siteData['id'],
+                        'name' => $siteData['name'],
+                        'latitude' => (float) $siteData['latitude'],
+                        'longitude' => (float) $siteData['longitude'],
+                        'region_name' => $region ? $region->name : 'Région inconnue',
+                        'region_id' => $siteData['region_id'],
+                        'description' => $siteData['description'] ?? '',
+                        'approach_time' => $siteData['approach_time'] ?? null,
                         'sector_count' => count($sectors),
                         'route_count' => $routeCount,
-                        'url' => '/sites/' . $site['id']
+                        'url' => '/sites/' . $siteData['id']
                     ];
                     
                 } catch (\Exception $siteException) {
-                    error_log("MapController::getSitesForMap - Erreur lors du traitement du site " . $site['name'] . ": " . $siteException->getMessage());
+                    error_log("MapController::getSitesForMap - Erreur lors du traitement du site " . $siteData['name'] . ": " . $siteException->getMessage());
                     // Continuer avec le site suivant
                     continue;
                 }

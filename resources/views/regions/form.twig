@@ -382,9 +382,9 @@
 <script>
 // Pass data to JavaScript
 window.formData = {
-    region: {{ region|json_encode|raw ?? 'null' }},
+    region: {{ region is defined ? (region|json_encode|raw) : 'null' }},
     countries: {{ countries|json_encode|raw }},
-    swisstopoApiKey: '{{ env('SWISSTOPO_API_KEY') }}',
+    swisstopoApiKey: '{{ swisstopo_api_key ?? '' }}',
     nominatimApiUrl: 'https://nominatim.openstreetmap.org',
     csrfToken: '{{ csrf_token }}'
 };
