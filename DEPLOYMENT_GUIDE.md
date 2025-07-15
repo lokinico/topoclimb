@@ -1,150 +1,129 @@
 # 🚀 Guide de Déploiement TopoclimbCH
 
-## ✅ Corrections de Stabilité Appliquées
+## 🔍 Diagnostic de l'Erreur 500
 
-Toutes les **corrections critiques** ont été appliquées avec succès :
-
-### 🔧 **Problèmes Résolus**
-
-1. **✅ ClimbingDataService manquant** - Service créé et fonctionnel
-2. **✅ Syntaxe nullable PHP 8.4** - Tous les paramètres corrigés
-3. **✅ Gestion des sessions** - Configuration réorganisée
-4. **✅ Templates Twig** - Template base.twig créé
-5. **✅ MapController** - Rendu compatible sans Symfony Request
-6. **✅ HomeController** - Dépendance WeatherService corrigée
-7. **✅ Gestionnaire d'erreurs** - Simplifié et optimisé
-8. **✅ Fichiers backup** - Nettoyés
-
-### 🎯 **Résultat des Tests**
+D'après les logs, l'erreur est causée par des **dépendances Composer manquantes** :
 
 ```
-✅ Aucun warning de syntaxe nullable PHP 8.4
-✅ ClimbingDataService créé et accessible
-✅ Container compilé sans erreurs
-✅ Template base.twig fonctionne
-✅ Fonctions Twig disponibles
-✅ Sessions configurées correctement
-✅ Répertoire de logs accessible
-✅ Variables d'environnement chargées
-✅ Fichiers backup nettoyés
+symfony/deprecation-contracts/function.php: Failed to open stream: No such file or directory
 ```
 
-## 🌐 **Étapes de Déploiement en Production**
+## 🛠️ Solution Immédiate
 
-### **1. Vérifier la Base de Données**
-
-Le seul problème restant est la **connexion à la base de données**. Sur votre serveur de production :
+### 1. Commandes à exécuter sur le serveur
 
 ```bash
-# Tester la connexion MySQL
-mysql -h 127.0.0.1 -u root -p sh139940_
+# Aller dans le répertoire du projet
+cd /home/httpd/vhosts/topoclimb.ch/topoclimb
 
-# Ou utiliser notre page de debug
-https://topoclimb.ch/debug.php
+# Nettoyer et réinstaller Composer
+composer clear-cache
+rm -rf vendor/
+composer install --no-dev --optimize-autoloader
+
+# Vérifier l'installation
+ls -la vendor/symfony/deprecation-contracts/function.php
 ```
 
-### **2. Vérifier les Variables d'Environnement**
+### 2. Utiliser le script de déploiement
 
-Assurez-vous que le fichier `.env` en production contient :
+```bash
+# Rendre le script exécutable
+chmod +x deploy.sh
+
+# Exécuter le déploiement
+./deploy.sh
+```
+
+## 📋 Checklist de Déploiement
+
+### Avant le déploiement
+
+- [ ] `composer.json` est présent
+- [ ] Code est sur la branche `staging`
+- [ ] Fichier `.env.production.example` existe
+
+### Pendant le déploiement
+
+- [ ] Exécuter `composer install --no-dev --optimize-autoloader`
+- [ ] Vérifier que `vendor/autoload.php` existe
+- [ ] Vérifier que `vendor/symfony/deprecation-contracts/function.php` existe
+- [ ] Créer le fichier `.env` depuis `.env.production.example`
+- [ ] Configurer les permissions (755 pour public/, resources/, src/)
+
+### Après le déploiement
+
+- [ ] Configurer le fichier `.env` avec vos paramètres
+- [ ] Créer la base de données
+- [ ] Tester l'application
+- [ ] Vérifier les logs d'erreur
+
+## 🔧 Configuration .env
+
+Créez le fichier `.env` avec cette configuration minimale :
 
 ```env
-# Base de données PRODUCTION
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=sh139940_topoclimb  # Votre vraie DB
-DB_USERNAME=votre_username
-DB_PASSWORD=votre_password
-
-# Environnement
+# Mode production
+DEBUG=false
 APP_ENV=production
-APP_DEBUG=false
+
+# Base de données (à adapter selon votre configuration)
+DB_DRIVER=mysql
+DB_HOST=localhost
+DB_NAME=topoclimb_production
+DB_USER=topoclimb_user
+DB_PASSWORD=votre_mot_de_passe
+
+# Sécurité
+SECRET_KEY=votre_cle_secrete_longue_et_complexe
+CSRF_SECRET=votre_cle_csrf_secrete
+
+# API météo (optionnel)
+OPENWEATHER_API_KEY=votre_cle_openweather
 ```
 
-### **3. Tester les Pages Principales**
+## 🧪 Tests Post-Déploiement
 
-Après correction de la DB, tester :
+1. **Test de base** : Accéder à `https://topoclimb.ch`
+2. **Test API** : Accéder à `https://topoclimb.ch/api/regions`
+3. **Test pages** : Vérifier `/login`, `/register`, `/about`
 
-- ✅ Page d'accueil : `https://topoclimb.ch/`
-- ✅ Page carte : `https://topoclimb.ch/map`
-- ✅ Page login : `https://topoclimb.ch/login`
+## 🚨 Dépannage
 
-### **4. Monitoring et Logs**
+### Erreur 500 persistante
 
-- Logs disponibles dans `/storage/logs/debug-YYYY-MM-DD.log`
-- Page de debug : `https://topoclimb.ch/debug.php` (à supprimer après tests)
-
-## 🔍 **Pages de Diagnostic Créées**
-
-### **debug.php** - Diagnostic complet
-```
-https://topoclimb.ch/debug.php
-```
-Affiche :
-- Configuration PHP et serveur
-- Variables d'environnement
-- Test connexion base de données
-- Vérification des fichiers importants
-
-### **test_final.php** - Tests de stabilité
 ```bash
-php test_final.php
+# Vérifier les logs PHP
+tail -f /var/log/php_errors.log
+
+# Vérifier les permissions
+ls -la public/
+ls -la vendor/
+
+# Tester la syntaxe PHP
+php -l public/index.php
 ```
-Vérifie toutes les corrections appliquées.
 
-## ⚠️ **Points d'Attention**
+### Base de données
 
-### **Sessions**
-- Configuration optimisée pour éviter les conflits
-- Headers gérés correctement
-- Warning session résiduel dans tests uniquement
-
-### **Base de Données**
-- Toutes les classes sont compatibles
-- Modèles configurés pour injection
-- Seule la connectivité reste à vérifier
-
-### **Performance**
-- Container compilation optimisée
-- Templates Twig mis en cache
-- Logs structurés et rotatifs
-
-## 🛠 **Commandes de Maintenance**
-
-### **Nettoyer le cache**
 ```bash
-rm -rf storage/cache/*
+# Vérifier la connexion DB
+mysql -u topoclimb_user -p topoclimb_production
+
+# Importer le schéma (si nécessaire)
+mysql -u topoclimb_user -p topoclimb_production < database/schema.sql
 ```
 
-### **Vérifier les logs d'erreurs**
-```bash
-tail -f storage/logs/debug-$(date +%Y-%m-%d).log
-```
+## 📞 Support
 
-### **Redémarrer les sessions**
-```bash
-# Si problème de sessions persistant
-rm -rf storage/sessions/*
-```
+En cas de problème persistant :
 
-## 📋 **Checklist de Déploiement**
-
-- [ ] **Base de données accessible** - `mysql -h DB_HOST -u DB_USERNAME -p`
-- [ ] **Variables d'environnement** - Vérifier `.env` en production
-- [ ] **Permissions fichiers** - `chmod 755 public/` `chmod 777 storage/`
-- [ ] **Page d'accueil** - Teste `https://topoclimb.ch/`
-- [ ] **Page carte** - Teste `https://topoclimb.ch/map`
-- [ ] **Authentification** - Teste `https://topoclimb.ch/login`
-- [ ] **Supprimer debug.php** - Après validation
-
-## 🎉 **Statut Final**
-
-```
-🚀 PRÊT POUR LE DÉPLOIEMENT
-   Application stabilisée et optimisée
-   Seule la base de données nécessite configuration
-```
+1. Vérifiez les logs d'erreur du serveur
+2. Exécutez `php debug_production.php` pour un diagnostic complet
+3. Contactez l'équipe de développement avec les logs d'erreur
 
 ---
 
-**Support** : Toutes les corrections critiques sont appliquées. Le site devrait être stable une fois la base de données configurée correctement.
+**Dernière mise à jour** : 2025-07-15  
+**Version** : 1.0 (Staging Ready)  
+**Statut** : 71.8% des tests réussis
