@@ -350,7 +350,7 @@
 // Configuration et données
 const RegionsConfig = {
     data: {{ regions|json_encode|raw }},
-    weatherApiKey: "{{ env('OPENWEATHER_API_KEY') ?? '' }}",
+    weatherApiKey: "{{ weather_api_key|default('') }}",
     mapCenter: [46.8182, 8.2275],
     mapZoom: 8
 };

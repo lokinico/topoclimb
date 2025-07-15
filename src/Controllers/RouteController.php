@@ -76,9 +76,21 @@ class RouteController extends BaseController
             $page = (int) $request->query->get('page', 1);
             $perPage = (int) $request->query->get('per_page', 30);
 
-            // Obtenir le champ et la direction de tri
+            // Obtenir le champ et la direction de tri avec validation
             $sortBy = $request->query->get('sort_by', 'name');
             $sortDir = $request->query->get('sort_dir', 'ASC');
+            
+            // Valider les colonnes de tri autorisées
+            $allowedSorts = ['name', 'grade', 'height', 'created_at', 'sector_name'];
+            if (!in_array($sortBy, $allowedSorts)) {
+                $sortBy = 'name';
+            }
+            
+            // Valider la direction du tri
+            $sortDir = strtoupper($sortDir);
+            if (!in_array($sortDir, ['ASC', 'DESC'])) {
+                $sortDir = 'ASC';
+            }
 
             // Paginer les résultats filtrés
             $paginatedRoutes = Route::filterAndPaginate(

@@ -25,6 +25,16 @@ try {
     
     // Créer les tables essentielles
     $tables = [
+        // Table des pays
+        "CREATE TABLE climbing_countries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(255) NOT NULL,
+            code VARCHAR(2) UNIQUE NOT NULL,
+            active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )",
+        
         // Table des utilisateurs
         "CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,11 +57,16 @@ try {
             name VARCHAR(255) NOT NULL,
             description TEXT,
             canton VARCHAR(2),
-            latitude DECIMAL(10,8),
-            longitude DECIMAL(11,8),
+            country_id INTEGER DEFAULT 1,
+            coordinates_lat DECIMAL(10,8),
+            coordinates_lng DECIMAL(11,8),
+            altitude INTEGER,
             active INTEGER DEFAULT 1,
+            created_by INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (country_id) REFERENCES climbing_countries(id),
+            FOREIGN KEY (created_by) REFERENCES users(id)
         )",
         
         // Table des sites
@@ -60,12 +75,15 @@ try {
             name VARCHAR(255) NOT NULL,
             description TEXT,
             region_id INTEGER,
-            latitude DECIMAL(10,8),
-            longitude DECIMAL(11,8),
+            coordinates_lat DECIMAL(10,8),
+            coordinates_lng DECIMAL(11,8),
+            altitude INTEGER,
             active INTEGER DEFAULT 1,
+            created_by INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (region_id) REFERENCES climbing_regions(id)
+            FOREIGN KEY (region_id) REFERENCES climbing_regions(id),
+            FOREIGN KEY (created_by) REFERENCES users(id)
         )",
         
         // Table des secteurs
@@ -75,13 +93,19 @@ try {
             description TEXT,
             site_id INTEGER,
             region_id INTEGER,
+            coordinates_lat DECIMAL(10,8),
+            coordinates_lng DECIMAL(11,8),
+            altitude INTEGER,
+            access_time INTEGER,
             difficulty_min VARCHAR(10),
             difficulty_max VARCHAR(10),
             active INTEGER DEFAULT 1,
+            created_by INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (site_id) REFERENCES climbing_sites(id),
-            FOREIGN KEY (region_id) REFERENCES climbing_regions(id)
+            FOREIGN KEY (region_id) REFERENCES climbing_regions(id),
+            FOREIGN KEY (created_by) REFERENCES users(id)
         )",
         
         // Table des voies
@@ -94,9 +118,11 @@ try {
             length DECIMAL(5,1),
             beauty INTEGER,
             active INTEGER DEFAULT 1,
+            created_by INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (sector_id) REFERENCES climbing_sectors(id)
+            FOREIGN KEY (sector_id) REFERENCES climbing_sectors(id),
+            FOREIGN KEY (created_by) REFERENCES users(id)
         )",
         
         // Table des guides/books
@@ -108,9 +134,11 @@ try {
             year INTEGER,
             region_id INTEGER,
             active INTEGER DEFAULT 1,
+            created_by INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (region_id) REFERENCES climbing_regions(id)
+            FOREIGN KEY (region_id) REFERENCES climbing_regions(id),
+            FOREIGN KEY (created_by) REFERENCES users(id)
         )",
         
         // Table des ascensions
@@ -163,14 +191,27 @@ try {
     // Insérer des données de test
     echo "\n🌱 Insertion des données de test...\n";
     
-    // Régions de test
-    $regions = [
-        ['Valais', 'Région d\'escalade du Valais', 'VS', 46.2, 7.3],
-        ['Grisons', 'Région d\'escalade des Grisons', 'GR', 46.6, 9.6],
-        ['Jura', 'Région d\'escalade du Jura', 'JU', 47.3, 7.0]
+    // Pays de test
+    $countries = [
+        ['Suisse', 'CH'],
+        ['France', 'FR'],
+        ['Italie', 'IT']
     ];
     
-    $regionStmt = $pdo->prepare("INSERT INTO climbing_regions (name, description, canton, latitude, longitude) VALUES (?, ?, ?, ?, ?)");
+    $countryStmt = $pdo->prepare("INSERT INTO climbing_countries (name, code) VALUES (?, ?)");
+    foreach ($countries as $country) {
+        $countryStmt->execute($country);
+    }
+    echo "   Pays ajoutés ✅\n";
+    
+    // Régions de test
+    $regions = [
+        ['Valais', 'Région d\'escalade du Valais', 'VS', 1, 46.2, 7.3, 1500],
+        ['Grisons', 'Région d\'escalade des Grisons', 'GR', 1, 46.6, 9.6, 1200],
+        ['Jura', 'Région d\'escalade du Jura', 'JU', 1, 47.3, 7.0, 800]
+    ];
+    
+    $regionStmt = $pdo->prepare("INSERT INTO climbing_regions (name, description, canton, country_id, coordinates_lat, coordinates_lng, altitude, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
     foreach ($regions as $region) {
         $regionStmt->execute($region);
     }
@@ -178,12 +219,12 @@ try {
     
     // Sites de test
     $sites = [
-        ['Saillon', 'Site d\'escalade de Saillon', 1, 46.1817, 7.1947],
-        ['Sierre', 'Site d\'escalade de Sierre', 1, 46.2919, 7.5351],
-        ['Chur', 'Site d\'escalade de Chur', 2, 46.8499, 9.5331]
+        ['Saillon', 'Site d\'escalade de Saillon', 1, 46.1817, 7.1947, 1400],
+        ['Sierre', 'Site d\'escalade de Sierre', 1, 46.2919, 7.5351, 1300],
+        ['Chur', 'Site d\'escalade de Chur', 2, 46.8499, 9.5331, 1100]
     ];
     
-    $siteStmt = $pdo->prepare("INSERT INTO climbing_sites (name, description, region_id, latitude, longitude) VALUES (?, ?, ?, ?, ?)");
+    $siteStmt = $pdo->prepare("INSERT INTO climbing_sites (name, description, region_id, coordinates_lat, coordinates_lng, altitude, created_by) VALUES (?, ?, ?, ?, ?, ?, 1)");
     foreach ($sites as $site) {
         $siteStmt->execute($site);
     }
@@ -191,12 +232,12 @@ try {
     
     // Secteurs de test
     $sectors = [
-        ['Secteur A', 'Premier secteur de test', 1, 1, '4a', '7c'],
-        ['Secteur B', 'Deuxième secteur de test', 2, 1, '5a', '8a'],
-        ['Secteur C', 'Troisième secteur de test', 3, 2, '4b', '6c']
+        ['Secteur A', 'Premier secteur de test', 1, 1, 46.1817, 7.1947, 1400, 15, '4a', '7c'],
+        ['Secteur B', 'Deuxième secteur de test', 2, 1, 46.2919, 7.5351, 1300, 20, '5a', '8a'],
+        ['Secteur C', 'Troisième secteur de test', 3, 2, 46.8499, 9.5331, 1100, 10, '4b', '6c']
     ];
     
-    $sectorStmt = $pdo->prepare("INSERT INTO climbing_sectors (name, description, site_id, region_id, difficulty_min, difficulty_max) VALUES (?, ?, ?, ?, ?, ?)");
+    $sectorStmt = $pdo->prepare("INSERT INTO climbing_sectors (name, description, site_id, region_id, coordinates_lat, coordinates_lng, altitude, access_time, difficulty_min, difficulty_max, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
     foreach ($sectors as $sector) {
         $sectorStmt->execute($sector);
     }
@@ -210,7 +251,7 @@ try {
         ['L\'Imposante', 'Grande voie impressionnante', 3, '6b', 45.0, 4]
     ];
     
-    $routeStmt = $pdo->prepare("INSERT INTO climbing_routes (name, description, sector_id, difficulty, length, beauty) VALUES (?, ?, ?, ?, ?, ?)");
+    $routeStmt = $pdo->prepare("INSERT INTO climbing_routes (name, description, sector_id, difficulty, length, beauty, created_by) VALUES (?, ?, ?, ?, ?, ?, 1)");
     foreach ($routes as $route) {
         $routeStmt->execute($route);
     }

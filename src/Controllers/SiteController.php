@@ -27,9 +27,10 @@ class SiteController extends BaseController
         CsrfManager $csrfManager,
         MediaService $mediaService,      // Position 4
         RegionService $regionService,    // Position 5  
-        SectorService $sectorService     // Position 6
+        SectorService $sectorService,    // Position 6
+        ?Database $db = null
     ) {
-        parent::__construct($view, $session, $csrfManager);
+        parent::__construct($view, $session, $csrfManager, $db);
         $this->mediaService = $mediaService;
         // Le reste du code reste identique
     }
@@ -44,6 +45,28 @@ class SiteController extends BaseController
             $perPage = (int) $request->query->get('per_page', 20);
             $sortBy = $request->query->get('sort_by', 'name');
             $sortDir = $request->query->get('sort_dir', 'ASC');
+            
+            // Valider les colonnes de tri autorisées et mapper aux colonnes avec préfixes
+            $allowedSorts = ['name', 'created_at', 'region_name', 'routes_count', 'sectors_count'];
+            if (!in_array($sortBy, $allowedSorts)) {
+                $sortBy = 'name';
+            }
+            
+            // Mapper les colonnes de tri vers les colonnes avec préfixes de table
+            $sortMapping = [
+                'name' => 's.name',
+                'created_at' => 's.created_at',
+                'region_name' => 'r.name',
+                'routes_count' => 'routes_count',
+                'sectors_count' => 'sectors_count'
+            ];
+            $sortBy = $sortMapping[$sortBy];
+            
+            // Valider la direction du tri
+            $sortDir = strtoupper($sortDir);
+            if (!in_array($sortDir, ['ASC', 'DESC'])) {
+                $sortDir = 'ASC';
+            }
             $regionId = $request->query->get('region_id');
             $search = $request->query->get('search');
 

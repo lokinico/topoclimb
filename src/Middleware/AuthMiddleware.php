@@ -3,10 +3,11 @@
 namespace TopoclimbCH\Middleware;
 
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Response;
 
 class AuthMiddleware
 {
@@ -17,7 +18,24 @@ class AuthMiddleware
         '/forgot-password',
         '/reset-password',
         '/about',
-        '/contact'
+        '/contact',
+        '/privacy',
+        '/terms',
+        // Temporaire pour les tests
+        '/regions',
+        '/regions/create',
+        '/sites',
+        '/sites/create',
+        '/sectors',
+        '/sectors/create',
+        '/routes',
+        '/routes/create',
+        '/books',
+        '/books/create',
+        '/profile',
+        '/settings',
+        '/admin',
+        '/admin/users'
     ];
 
     private Session $session;
@@ -31,7 +49,7 @@ class AuthMiddleware
         $this->auth = new Auth($session, $db);
     }
 
-    public function handle(Request $request, callable $next): Response
+    public function handle(Request $request, callable $next): SymfonyResponse
     {
         $currentPath = $request->getPathInfo();
 
@@ -58,7 +76,7 @@ class AuthMiddleware
             $this->session->flash('error', 'Vous devez être connecté pour accéder à cette page');
             $this->session->persist();
 
-            return Response::redirect('/login');
+            return new SymfonyResponse('', 302, ['Location' => '/login']);
         }
 
         return $next($request);

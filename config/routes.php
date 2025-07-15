@@ -587,20 +587,14 @@ return [
         'path' => '/api/regions',
         'controller' => \TopoclimbCH\Controllers\RegionController::class,
         'action' => 'apiIndex',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
+        'middlewares' => []
     ],
     [
         'method' => 'GET',
         'path' => '/api/regions/search',
         'controller' => \TopoclimbCH\Controllers\RegionController::class,
         'action' => 'search',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
+        'middlewares' => []
     ],
     [
         'method' => 'GET',
@@ -619,30 +613,21 @@ return [
         'path' => '/api/sites',
         'controller' => \TopoclimbCH\Controllers\SiteController::class,
         'action' => 'apiIndex',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
+        'middlewares' => []
     ],
     [
         'method' => 'GET',
         'path' => '/api/sites/search',
         'controller' => \TopoclimbCH\Controllers\SiteController::class,
         'action' => 'apiSearch',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
+        'middlewares' => []
     ],
     [
         'method' => 'GET',
         'path' => '/api/sites/{id}',
         'controller' => \TopoclimbCH\Controllers\SiteController::class,
         'action' => 'apiShow',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
+        'middlewares' => []
     ],
 
     // API Secteurs
@@ -663,20 +648,14 @@ return [
         'path' => '/api/books/search',
         'controller' => \TopoclimbCH\Controllers\BookController::class,
         'action' => 'apiSearch',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
+        'middlewares' => []
     ],
     [
         'method' => 'GET',
         'path' => '/api/books/{id}/sectors',
         'controller' => \TopoclimbCH\Controllers\BookController::class,
         'action' => 'apiSectors',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class
-        ]
+        'middlewares' => []
     ],
 
     // ========================================

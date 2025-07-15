@@ -74,6 +74,9 @@ class RegionController extends BaseController
             // Log de l'action
             $this->logAction('view_regions_list', ['filters' => $filters]);
 
+            // Ajouter la clé API météo
+            $data['weather_api_key'] = $_ENV['OPENWEATHER_API_KEY'] ?? '';
+            
             return $this->render('regions/index', $data);
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors du chargement des régions');
@@ -82,6 +85,7 @@ class RegionController extends BaseController
                 'regions' => [],
                 'countries' => [],
                 'filters' => [],
+                'weather_api_key' => $_ENV['OPENWEATHER_API_KEY'] ?? '',
                 'stats' => ['total_regions' => 0, 'total_sectors' => 0, 'total_routes' => 0],
                 'error' => 'Impossible de charger les régions actuellement.'
             ]);
@@ -113,11 +117,19 @@ class RegionController extends BaseController
             $filters['search'] = substr($filters['search'], 0, 100);
         }
 
-        // Valider les colonnes de tri autorisées
+        // Valider les colonnes de tri autorisées et mapper aux colonnes avec préfixes
         $allowedSorts = ['name', 'created_at', 'country_name'];
         if (!in_array($filters['sort'], $allowedSorts)) {
             $filters['sort'] = 'name';
         }
+        
+        // Mapper les colonnes de tri vers les colonnes avec préfixes de table
+        $sortMapping = [
+            'name' => 'r.name',
+            'created_at' => 'r.created_at',
+            'country_name' => 'c.name'
+        ];
+        $filters['sort'] = $sortMapping[$filters['sort']];
 
         // Valider l'ordre de tri
         if (!in_array(strtolower($filters['order']), ['asc', 'desc'])) {
