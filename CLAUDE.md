@@ -35,6 +35,166 @@ Ce guide explique comment utiliser Claude Code AI et Gemini CLI efficacement ave
 └── composer.json           # Dépendances PHP
 ```
 
+## 📋 ROADMAP ET PROCHAINES ÉTAPES - TopoclimbCH
+
+### 🎯 STATUT ACTUEL (Janvier 2025)
+- ✅ **100% de tests réussis** (40/40 tests)
+- ✅ **Système de base fonctionnel** (CRUD, Auth, API, Météo)
+- ✅ **Intégration météo MeteoSwiss** complète
+- ✅ **APIs REST** opérationnelles
+- ✅ **Gestion des médias** fonctionnelle
+- ✅ **Carte interactive** avec tuiles suisses
+
+### 🔴 PRIORITÉ HAUTE (À développer immédiatement)
+
+#### 🗺️ Géolocalisation et Navigation GPS
+- [ ] Implémentation GPS pour localiser les utilisateurs
+- [ ] Navigation vers les sites d'escalade
+- [ ] Intégration avancée avec les cartes suisses Swisstopo
+- [ ] Calcul d'itinéraires d'accès aux sites
+
+#### 📱 Synchronisation Mobile et Mode Hors-ligne
+- [ ] Mode hors-ligne pour l'application mobile
+- [ ] Synchronisation des données entre appareils
+- [ ] Cache local pour les informations essentielles
+- [ ] Téléchargement préventif des données de régions
+
+#### 🔒 Sécurité et Maintenance Système
+- [ ] Système de backup automatique des données
+- [ ] Monitoring et métriques de performance (logs, erreurs)
+- [ ] Surveillance des erreurs et alertes
+- [ ] Optimisation des performances base de données
+
+### 🟡 PRIORITÉ MOYENNE (Développement continu)
+
+#### 👥 Fonctionnalités Communautaires
+- [ ] Système de notifications en temps réel
+- [ ] Commentaires et évaluations sur les voies
+- [ ] Favoris et listes personnalisées
+- [ ] Événements et sorties communautaires
+- [ ] Système de modération et signalement
+
+#### 🎨 Interface et Expérience Utilisateur
+- [ ] Amélioration de l'interface utilisateur (UI/UX)
+- [ ] Traduction multilingue (DE, EN, IT)
+- [ ] Système de photos et galeries pour les voies
+- [ ] Responsive design mobile avancé
+
+#### 🔌 Intégration et Performance
+- [ ] API REST complète pour développeurs tiers
+- [ ] Cache Redis pour optimiser les performances
+- [ ] Optimisation des requêtes SQL
+- [ ] CDN pour les médias et assets
+
+### 🟢 PRIORITÉ BASSE (Fonctionnalités avancées)
+
+#### 📊 Analyse et Statistiques
+- [ ] Statistiques et analyse des ascensions
+- [ ] Système de badges et récompenses
+- [ ] Recommandations personnalisées
+- [ ] Tableaux de bord personnalisés
+
+#### 📄 Export et Intégration Externe
+- [ ] Export des données (GPX, PDF, etc.)
+- [ ] Génération automatique de topos PDF
+- [ ] Intégration avec les réseaux sociaux
+- [ ] Import de données depuis autres plateformes
+
+### 🔧 DÉTAILS TECHNIQUES PAR FONCTIONNALITÉ
+
+#### Géolocalisation (Priorité 1)
+```php
+// Service à créer
+class GeolocationService {
+    public function getCurrentPosition(): array
+    public function calculateDistance(float $lat1, float $lng1, float $lat2, float $lng2): float
+    public function findNearestSites(float $lat, float $lng, int $radius = 10): array
+    public function generateDirections(int $siteId): array
+}
+```
+
+#### Mode Hors-ligne (Priorité 2)
+```javascript
+// Service Worker pour cache
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open('topoclimb-v1').then(cache => {
+            return cache.addAll([
+                '/offline.html',
+                '/css/app.css',
+                '/js/app.js',
+                '/api/regions',
+                '/api/sites'
+            ]);
+        })
+    );
+});
+```
+
+#### Système de Notifications (Priorité 3)
+```php
+// Service à créer
+class NotificationService {
+    public function sendNotification(int $userId, string $type, array $data): void
+    public function getUnreadNotifications(int $userId): array
+    public function markAsRead(int $notificationId): void
+    public function subscribeToUpdates(int $userId, string $type): void
+}
+```
+
+### 🎯 PLAN DE DÉVELOPPEMENT RECOMMANDÉ
+
+#### Phase 1 (1-2 mois) - Base Mobile
+1. Géolocalisation GPS
+2. Mode hors-ligne basique
+3. Monitoring système
+
+#### Phase 2 (2-3 mois) - Communauté
+1. Commentaires et évaluations
+2. Système de favoris
+3. Notifications en temps réel
+
+#### Phase 3 (3-4 mois) - Avancé
+1. Statistiques et analytics
+2. Export de données
+3. API publique
+
+### 🔧 COMMANDES DÉVELOPPEMENT UTILES
+
+```bash
+# Tester les nouvelles fonctionnalités
+php test_comprehensive_fixed.php
+
+# Analyser l'architecture avec Gemini CLI
+gemini -p "@./ Analyze current TopoclimbCH architecture for [FEATURE] implementation"
+
+# Vérifier les performances
+php -S localhost:8000 -t public/
+ab -n 100 -c 10 http://localhost:8000/
+
+# Monitoring des logs
+tail -f storage/logs/debug-$(date +%Y-%m-%d).log
+```
+
+### 📱 SPÉCIFICATIONS TECHNIQUES
+
+#### Stack Technologique Actuel
+- **Backend**: PHP 8.4, Framework MVC personnalisé
+- **Frontend**: Twig, Bootstrap 5, JavaScript ES6
+- **Base de données**: SQLite/MySQL avec support dual
+- **APIs**: REST JSON, MeteoSwiss, Swisstopo
+- **Cache**: File-based (à migrer vers Redis)
+
+#### Prochaines Technologies à Intégrer
+- **PWA**: Service Workers, Cache API
+- **WebRTC**: Notifications push
+- **WebGL**: Cartes 3D avancées
+- **WebAssembly**: Calculs géographiques performants
+
+---
+
+**Note importante**: Cette roadmap est mise à jour automatiquement. Consultez ce fichier pour connaître les priorités actuelles du développement TopoclimbCH.
+
 ## Commandes Gemini CLI pour TopoclimbCH
 
 ### Analyse globale du projet avec Gemini CLI
