@@ -1,6 +1,9 @@
 # Fichiers d'environnement
 .env
-.env.backup
+.env.*
+!.env.example
+!.env.production.example
+.env.backup*
 .env.local
 .env.production
 
