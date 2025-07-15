@@ -64,6 +64,8 @@ php-*/
 # Scripts de test temporaires
 run_page_tests.sh
 run_simple_tests.php
+test_*.php
+test_results_*.json
 
 # Scripts avec secrets - ne pas partager
 validate_fixes.sh
@@ -77,8 +79,24 @@ config.php
 .ftpignore
 .htpasswd
 
+# Base de données de développement
+*.db
+*.sqlite
+*.sqlite3
+test.db
+init_test_db.php
+
+# Fichiers de développement
+bootstrap.php
+COLUMNS.sql
+kcu.sql
+*.sql
+
+# Documentation développeur
+CLAUDE.md
+*.md
+README*
+
 # Autres
 *.bak
-*.sql
-*.sqlite
 phpDocumentor.phar
