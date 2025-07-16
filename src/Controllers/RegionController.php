@@ -63,13 +63,20 @@ class RegionController extends BaseController
     public function index(Request $request): Response
     {
         try {
+            error_log("DEBUG: Début index() - validation des filtres");
+            
             // Validation et nettoyage des filtres
             $filters = $this->validateAndSanitizeFilters($request);
+            error_log("DEBUG: Filtres validés: " . json_encode($filters));
 
+            error_log("DEBUG: Récupération des données en transaction");
+            
             // Récupération sécurisée des données
             $data = $this->executeInTransaction(function () use ($filters) {
                 return $this->getRegionsData($filters);
             });
+            
+            error_log("DEBUG: Données récupérées, clés: " . implode(', ', array_keys($data)));
 
             // Log de l'action
             $this->logAction('view_regions_list', ['filters' => $filters]);
@@ -79,13 +86,17 @@ class RegionController extends BaseController
             
             // DEBUG: Log des données envoyées au template
             error_log("DEBUG RegionController - Données envoyées au template:");
-            error_log("- Nombre de régions: " . count($data['regions'] ?? []));
-            error_log("- Filtres: " . json_encode($data['filters'] ?? []));
-            error_log("- Stats: " . json_encode($data['stats'] ?? []));
-            if (!empty($data['regions'])) {
-                foreach (array_slice($data['regions'], 0, 3) as $region) {
-                    error_log("- Région: {$region['name']} (ID: {$region['id']})");
-                }
+            
+            try {
+                error_log("- Nombre de régions: " . count($data['regions'] ?? []));
+            } catch (\Exception $e) {
+                error_log("- ERREUR lors du count des régions: " . $e->getMessage());
+            }
+            
+            try {
+                error_log("- Filtres: " . json_encode($data['filters'] ?? []));
+            } catch (\Exception $e) {
+                error_log("- ERREUR lors du json_encode des filtres: " . $e->getMessage());
             }
             
             error_log("DEBUG: Avant render du template regions/index");
