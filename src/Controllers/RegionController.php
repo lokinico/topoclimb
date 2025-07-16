@@ -88,7 +88,17 @@ class RegionController extends BaseController
                 }
             }
             
-            return $this->render('regions/index', $data);
+            error_log("DEBUG: Avant render du template regions/index");
+            
+            try {
+                $response = $this->render('regions/index', $data);
+                error_log("DEBUG: Template rendu avec succès");
+                return $response;
+            } catch (\Exception $e) {
+                error_log("DEBUG: Erreur lors du rendu du template: " . $e->getMessage());
+                error_log("DEBUG: Fichier: " . $e->getFile() . ":" . $e->getLine());
+                throw $e;
+            }
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors du chargement des régions');
 
