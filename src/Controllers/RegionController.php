@@ -87,16 +87,16 @@ class RegionController extends BaseController
             // DEBUG: Log des données envoyées au template
             error_log("DEBUG RegionController - Données envoyées au template:");
             
-            try {
-                error_log("- Nombre de régions: " . count($data['regions'] ?? []));
-            } catch (\Exception $e) {
-                error_log("- ERREUR lors du count des régions: " . $e->getMessage());
-            }
-            
-            try {
-                error_log("- Filtres: " . json_encode($data['filters'] ?? []));
-            } catch (\Exception $e) {
-                error_log("- ERREUR lors du json_encode des filtres: " . $e->getMessage());
+            // Vérifier le type de $data['regions']
+            if (isset($data['regions'])) {
+                error_log("- Type de regions: " . gettype($data['regions']));
+                if (is_array($data['regions'])) {
+                    error_log("- Nombre de régions: " . count($data['regions']));
+                } else {
+                    error_log("- ERREUR: regions n'est pas un tableau!");
+                }
+            } else {
+                error_log("- regions n'est pas défini dans data");
             }
             
             error_log("DEBUG: Avant render du template regions/index");
