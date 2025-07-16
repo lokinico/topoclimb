@@ -2,12 +2,36 @@
 
 /**
  * Script de diagnostic pour vérifier les fichiers déployés
+ * Utilise l'autoloader Plesk
  */
 
 header('Content-Type: text/plain');
 
 echo "=== DIAGNOSTIC DE DÉPLOIEMENT TOPOCLIMB ===\n";
-echo "Date: " . date('Y-m-d H:i:s') . "\n\n";
+echo "Date: " . date('Y-m-d H:i:s') . "\n";
+echo "Répertoire actuel: " . __DIR__ . "\n\n";
+
+// Vérifier les autoloaders disponibles
+echo "=== AUTOLOADERS DISPONIBLES ===\n";
+$local_autoloader = __DIR__ . '/vendor/autoload.php';
+$plesk_autoloader = '/tmp/vendor/autoload.php';
+
+if (file_exists($local_autoloader)) {
+    echo "✅ Autoloader local trouvé: $local_autoloader\n";
+} else {
+    echo "❌ Autoloader local manquant: $local_autoloader\n";
+}
+
+if (file_exists($plesk_autoloader)) {
+    echo "✅ Autoloader Plesk trouvé: $plesk_autoloader\n";
+    // Charger l'autoloader Plesk pour les tests
+    require_once $plesk_autoloader;
+    echo "✅ Autoloader Plesk chargé avec succès\n";
+} else {
+    echo "❌ Autoloader Plesk manquant: $plesk_autoloader\n";
+}
+
+echo "\n";
 
 // Vérifier les fichiers critiques
 $criticalFiles = [
