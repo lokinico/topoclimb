@@ -15,7 +15,14 @@ echo "Répertoire parent: " . dirname(__DIR__) . "\n\n";
 echo "=== AUTOLOADERS ===\n";
 $app_root = dirname(__DIR__);
 $local_autoloader = $app_root . '/vendor/autoload.php';
-$plesk_autoloader = '/tmp/vendor/autoload.php';
+
+// Chemins possibles pour l'autoloader Plesk
+$plesk_paths = [
+    '/tmp/vendor/autoload.php',
+    '/home/httpd/vhosts/topoclimb.ch/topoclimb/vendor/autoload.php',
+    '/home/httpd/vhosts/topoclimb.ch/vendor/autoload.php',
+    '/opt/plesk/php/8.4/bin/composer/vendor/autoload.php'
+];
 
 if (file_exists($local_autoloader)) {
     echo "✅ Autoloader local: $local_autoloader\n";
@@ -23,10 +30,22 @@ if (file_exists($local_autoloader)) {
     echo "❌ Autoloader local manquant: $local_autoloader\n";
 }
 
-if (file_exists($plesk_autoloader)) {
-    echo "✅ Autoloader Plesk: $plesk_autoloader\n";
-} else {
-    echo "❌ Autoloader Plesk manquant: $plesk_autoloader\n";
+echo "\n=== RECHERCHE AUTOLOADER PLESK ===\n";
+$plesk_found = false;
+foreach ($plesk_paths as $path) {
+    if (file_exists($path)) {
+        echo "✅ Autoloader Plesk trouvé: $path\n";
+        $plesk_found = true;
+        break;
+    }
+}
+
+if (!$plesk_found) {
+    echo "❌ Aucun autoloader Plesk trouvé dans les chemins standards\n";
+    echo "Chemins vérifiés:\n";
+    foreach ($plesk_paths as $path) {
+        echo "  - $path\n";
+    }
 }
 
 // Vérifier les fichiers critiques
