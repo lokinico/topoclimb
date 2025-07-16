@@ -119,6 +119,16 @@
         <div class="container">
             <!-- Grille des régions -->
             <div class="regions-grid" id="regions-grid">
+                <!-- DEBUG: Afficher le nombre de régions -->
+                <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">
+                    <strong>DEBUG:</strong> 
+                    regions is defined: {{ regions is defined ? 'OUI' : 'NON' }}<br>
+                    regions length: {{ regions|length }}<br>
+                    {% if regions is defined and regions|length > 0 %}
+                        Première région: {{ regions[0].name ?? 'nom manquant' }}
+                    {% endif %}
+                </div>
+                
                 {% if regions is defined and regions|length > 0 %}
                     {% for region in regions %}
                         <article class="region-card" data-region-id="{{ region.id }}" 

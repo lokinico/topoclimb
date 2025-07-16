@@ -77,6 +77,17 @@ class RegionController extends BaseController
             // Ajouter la clé API météo
             $data['weather_api_key'] = $_ENV['OPENWEATHER_API_KEY'] ?? '';
             
+            // DEBUG: Log des données envoyées au template
+            error_log("DEBUG RegionController - Données envoyées au template:");
+            error_log("- Nombre de régions: " . count($data['regions'] ?? []));
+            error_log("- Filtres: " . json_encode($data['filters'] ?? []));
+            error_log("- Stats: " . json_encode($data['stats'] ?? []));
+            if (!empty($data['regions'])) {
+                foreach (array_slice($data['regions'], 0, 3) as $region) {
+                    error_log("- Région: {$region['name']} (ID: {$region['id']})");
+                }
+            }
+            
             return $this->render('regions/index', $data);
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors du chargement des régions');
