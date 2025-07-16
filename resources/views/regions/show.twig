@@ -3,8 +3,8 @@
 {% block title %}{{ region.name }} - TopoclimbCH{% endblock %}
 
 {% block content %}
-<div class="region-header">
-    <div class="d-flex justify-content-between align-items-start mb-4">
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
@@ -13,9 +13,7 @@
                     <li class="breadcrumb-item active">{{ region.name }}</li>
                 </ol>
             </nav>
-            
-            <h1 class="display-4 mb-2">{{ region.name }}</h1>
-            
+            <h1>{{ region.name }}</h1>
             <div class="region-meta d-flex flex-wrap gap-3 text-muted">
                 {% if region.altitude %}
                     <span><strong>Altitude:</strong> {{ region.altitude }}m</span>
@@ -27,341 +25,266 @@
                 <span><strong>Voies:</strong> {{ stats.routes_count ?? 0 }}</span>
             </div>
         </div>
-        
-        <div class="region-actions">
-            <div class="btn-group">
-                <a href="{{ url('/regions/' ~ region.id ~ '/edit') }}" class="btn btn-outline-primary">
-                    <i class="fa fa-edit"></i> Modifier
-                </a>
-                <a href="{{ url('/sectors/create?region_id=' ~ region.id) }}" class="btn btn-primary">
-                    <i class="fa fa-plus"></i> Nouveau secteur
-                </a>
-            </div>
+        <div class="header-actions">
+            <a href="{{ url('/regions/' ~ region.id ~ '/edit') }}" class="btn btn-outline-primary me-2">
+                <i class="fa fa-edit"></i> Modifier
+            </a>
+            <a href="{{ url('/sectors/create?region_id=' ~ region.id) }}" class="btn btn-primary">
+                <i class="fa fa-plus mr-1"></i> Nouveau secteur
+            </a>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- Contenu principal -->
-    <div class="col-lg-8">
-        <!-- Description -->
-        {% if region.description %}
-            <div class="description-section mb-4">
-                <h3>Description</h3>
-                <div class="card">
+<!-- Description -->
+{% if region.description %}
+    <div class="description-section mb-4">
+        <div class="card">
+            <div class="card-body">
+                <p class="mb-0">{{ region.description|nl2br }}</p>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Filtres -->
+<div class="filters-section mb-4">
+    <form method="GET" action="{{ url('/regions/' ~ region.id) }}" class="filters-form">
+        <div class="row">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Recherche</label>
+                <input type="text" name="search" id="search" class="form-control" 
+                       value="{{ currentFilters.search ?? '' }}" 
+                       placeholder="Nom du secteur, code...">
+            </div>
+            
+            <div class="col-md-3">
+                <label for="site_id" class="form-label">Site</label>
+                <select name="site_id" id="site_id" class="form-control">
+                    <option value="">Tous les sites</option>
+                    {% for site in sites %}
+                        <option value="{{ site.id }}" 
+                                {% if (currentFilters.site_id ?? '') == site.id %}selected{% endif %}>
+                            {{ site.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="difficulty" class="form-label">Difficulté</label>
+                <select name="difficulty" id="difficulty" class="form-control">
+                    <option value="">Toutes difficultés</option>
+                    {% for difficulty in difficulties %}
+                        <option value="{{ difficulty }}" 
+                                {% if (currentFilters.difficulty ?? '') == difficulty %}selected{% endif %}>
+                            {{ difficulty }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fa fa-search"></i> Rechercher
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Résultats -->
+<div class="results-section">
+    {% if sectors|length > 0 %}
+        <div class="results-info mb-3">
+            <span class="text-muted">
+                {{ sectors|length }} secteur(s) trouvé(s)
+            </span>
+        </div>
+
+        <div class="sectors-grid">
+            {% for sector in sectors %}
+                <div class="sector-card card h-100">
                     <div class="card-body">
-                        <p class="mb-0">{{ region.description|nl2br }}</p>
+                        <div class="sector-header d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title mb-1">
+                                    <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">
+                                        {{ sector.name }}
+                                    </a>
+                                </h5>
+                                
+                                <div class="sector-meta small text-muted">
+                                    {% if sector.code %}
+                                        <span class="sector-code">{{ sector.code }}</span>
+                                    {% endif %}
+                                    {% if sector.site_name %}
+                                        {% if sector.code %} • {% endif %}
+                                        <span class="sector-site">{{ sector.site_name }}</span>
+                                    {% endif %}
+                                    {% if sector.altitude %}
+                                        {% if sector.code or sector.site_name %} • {% endif %}
+                                        <span class="sector-altitude">{{ sector.altitude }}m</span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if sector.description %}
+                                    <div class="sector-description mt-2">
+                                        <small class="text-muted">
+                                            {{ sector.description|slice(0, 80) }}{% if sector.description|length > 80 %}...{% endif %}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="sector-actions dropdown">
+                                <button class="btn btn-link btn-sm" type="button" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url('/sectors/' ~ sector.id) }}">
+                                            <i class="fa fa-eye mr-2"></i> Voir détails
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url('/sectors/' ~ sector.id ~ '/edit') }}">
+                                            <i class="fa fa-edit mr-2"></i> Modifier
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url('/routes/create?sector_id=' ~ sector.id) }}">
+                                            <i class="fa fa-plus mr-2"></i> Nouvelle voie
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sector-stats">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="stat-value text-primary">{{ sector.routes_count|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Voies</div>
+                                </div>
+                                <div class="col-4">
+                                    {% if sector.avg_beauty and sector.avg_beauty > 0 %}
+                                        <div class="stat-value">
+                                            {% for i in 1..5 %}
+                                                {% if i <= sector.avg_beauty %}
+                                                    <i class="fa fa-star text-warning"></i>
+                                                {% else %}
+                                                    <i class="fa fa-star text-muted"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <div class="stat-label small text-muted">Beauté</div>
+                                    {% else %}
+                                        <div class="stat-value">-</div>
+                                        <div class="stat-label small text-muted">Beauté</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-4">
+                                    {% if sector.avg_difficulty %}
+                                        <div class="stat-value text-info">{{ sector.avg_difficulty }}</div>
+                                        <div class="stat-label small text-muted">Difficulté</div>
+                                    {% else %}
+                                        <div class="stat-value">-</div>
+                                        <div class="stat-label small text-muted">Difficulté</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-outline-primary btn-sm">
+                                Voir détails
+                            </a>
+                            
+                            {% if sector.coordinates_lat and sector.coordinates_lng %}
+                                <a href="https://www.google.com/maps?q={{ sector.coordinates_lat }},{{ sector.coordinates_lng }}" 
+                                   target="_blank" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fa fa-map-marker-alt"></i> Carte
+                                </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% endif %}
+            {% endfor %}
+        </div>
 
-        <!-- Accès -->
-        {% if region.access_info %}
-            <div class="access-section mb-4">
-                <h3>Informations d'accès</h3>
-                <div class="card">
-                    <div class="card-body">
-                        <p class="mb-0">{{ region.access_info|nl2br }}</p>
-                    </div>
-                </div>
+    {% else %}
+        <div class="empty-state text-center py-5">
+            <div class="empty-icon mb-3">
+                <i class="fa fa-mountain fa-3x text-muted"></i>
             </div>
-        {% endif %}
-
-        <!-- Secteurs -->
-        <div class="sectors-section mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>Secteurs ({{ stats.sectors_count ?? 0 }})</h3>
-                <a href="{{ url('/sectors/create?region_id=' ~ region.id) }}" class="btn btn-sm btn-outline-primary">
-                    <i class="fa fa-plus"></i> Ajouter secteur
+            <h3 class="text-muted">Aucun secteur trouvé</h3>
+            <p class="text-muted">
+                {% if currentFilters.search or currentFilters.site_id or currentFilters.difficulty %}
+                    Aucun secteur ne correspond à vos critères de recherche.
+                {% else %}
+                    Cette région n'a pas encore de secteurs d'escalade.
+                {% endif %}
+            </p>
+            <div class="mt-3">
+                {% if currentFilters.search or currentFilters.site_id or currentFilters.difficulty %}
+                    <a href="{{ url('/regions/' ~ region.id) }}" class="btn btn-secondary me-2">
+                        Voir tous les secteurs
+                    </a>
+                {% endif %}
+                <a href="{{ url('/sectors/create?region_id=' ~ region.id) }}" class="btn btn-primary">
+                    Créer le premier secteur
                 </a>
             </div>
-
-            {% if sectors|length > 0 %}
-                <div class="sectors-grid">
-                    {% for sector in sectors %}
-                        <div class="sector-card card">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-1">
-                                        <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">
-                                            {{ sector.name }}
-                                        </a>
-                                    </h5>
-                                    {% if sector.code %}
-                                        <span class="badge bg-secondary">{{ sector.code }}</span>
-                                    {% endif %}
-                                </div>
-
-                                {% if sector.description %}
-                                    <p class="card-text text-muted small mb-2">
-                                        {{ sector.description|slice(0, 100) }}{% if sector.description|length > 100 %}...{% endif %}
-                                    </p>
-                                {% endif %}
-
-                                <div class="sector-stats d-flex justify-content-between text-center">
-                                    <div>
-                                        <div class="stat-value">{{ sector.routes_count|default(0) }}</div>
-                                        <div class="stat-label small text-muted">Voies</div>
-                                    </div>
-                                    {% if sector.altitude %}
-                                        <div>
-                                            <div class="stat-value">{{ sector.altitude }}m</div>
-                                            <div class="stat-label small text-muted">Altitude</div>
-                                        </div>
-                                    {% endif %}
-                                    {% if sector.access_time %}
-                                        <div>
-                                            <div class="stat-value">{{ sector.access_time }}min</div>
-                                            <div class="stat-label small text-muted">Accès</div>
-                                        </div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="sector-actions mt-3">
-                                    <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-outline-primary">
-                                        Voir détails
-                                    </a>
-                                    {% if sector.coordinates_lat and sector.coordinates_lng %}
-                                        <a href="https://www.google.com/maps?q={{ sector.coordinates_lat }},{{ sector.coordinates_lng }}" 
-                                           target="_blank" class="btn btn-sm btn-outline-secondary">
-                                            <i class="fa fa-map-marker-alt"></i>
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-sectors text-center py-4">
-                    <div class="empty-icon mb-3">
-                        <i class="fa fa-mountain fa-2x text-muted"></i>
-                    </div>
-                    <h5 class="text-muted">Aucun secteur</h5>
-                    <p class="text-muted">Cette région n'a pas encore de secteurs d'escalade.</p>
-                    <a href="{{ url('/sectors/create?region_id=' ~ region.id) }}" class="btn btn-primary">
-                        Créer le premier secteur
-                    </a>
-                </div>
-            {% endif %}
         </div>
-
-        <!-- Galerie photos -->
-        {% if media and media|length > 0 %}
-            <div class="gallery-section mb-4">
-                <h3>Galerie photos</h3>
-                <div class="media-gallery row">
-                    {% for item in media %}
-                        <div class="col-md-4 mb-3">
-                            <div class="media-item">
-                                {% if item.file_path %}
-                                    {% set image_url = item.file_path starts with 'http' ? item.file_path : url(item.file_path starts with '/' ? item.file_path : '/' ~ item.file_path) %}
-                                    <img src="{{ image_url }}" 
-                                         class="img-fluid rounded" 
-                                         alt="{{ item.title|default('Image de la région') }}"
-                                         data-bs-toggle="modal" 
-                                         data-bs-target="#mediaModal{{ item.id }}"
-                                         style="cursor: pointer; height: 200px; width: 100%; object-fit: cover;">
-                                {% else %}
-                                    <div class="placeholder-image d-flex align-items-center justify-content-center bg-light rounded" 
-                                         style="height: 200px;">
-                                        <span class="text-muted">Image non disponible</span>
-                                    </div>
-                                {% endif %}
-                                
-                                {% if item.title %}
-                                    <div class="media-caption mt-2">
-                                        <small class="text-muted">{{ item.title }}</small>
-                                    </div>
-                                {% endif %}
-                            </div>
-
-                            <!-- Modal pour affichage plein écran -->
-                            <div class="modal fade" id="mediaModal{{ item.id }}" tabindex="-1">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">{{ item.title|default('Image de la région') }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body text-center">
-                                            <img src="{{ image_url }}" class="img-fluid" alt="{{ item.title|default('Image de la région') }}">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Statistiques -->
-        <div class="statistics-card card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Statistiques</h5>
-            </div>
-            <div class="card-body">
-                <div class="stats-grid">
-                    <div class="stat-item text-center p-3">
-                        <div class="stat-value h3 text-primary mb-1">{{ stats.sectors_count ?? 0 }}</div>
-                        <div class="stat-label text-muted">Secteurs</div>
-                    </div>
-                    <div class="stat-item text-center p-3">
-                        <div class="stat-value h3 text-success mb-1">{{ stats.routes_count ?? 0 }}</div>
-                        <div class="stat-label text-muted">Voies</div>
-                    </div>
-                    {% if stats.avg_difficulty %}
-                        <div class="stat-item text-center p-3">
-                            <div class="stat-value h3 text-info mb-1">{{ stats.avg_difficulty }}</div>
-                            <div class="stat-label text-muted">Difficulté moy.</div>
-                        </div>
-                    {% endif %}
-                    {% if stats.avg_route_length %}
-                        <div class="stat-item text-center p-3">
-                            <div class="stat-value h3 text-warning mb-1">{{ stats.avg_route_length }}m</div>
-                            <div class="stat-label text-muted">Longueur moy.</div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Difficultés disponibles -->
-        {% if stats.difficulties and stats.difficulties|length > 0 %}
-            <div class="difficulties-card card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Difficultés disponibles</h5>
-                </div>
-                <div class="card-body">
-                    <div class="difficulties-list">
-                        {% for difficulty in stats.difficulties %}
-                            <span class="badge bg-secondary me-1 mb-1">{{ difficulty.difficulty }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-
-        <!-- Localisation -->
-        {% if region.coordinates_lat and region.coordinates_lng %}
-            <div class="location-card card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Localisation</h5>
-                </div>
-                <div class="card-body">
-                    <div class="coordinates mb-3">
-                        <small class="text-muted d-block">Coordonnées GPS:</small>
-                        <code>{{ region.coordinates_lat|number_format(6) }}, {{ region.coordinates_lng|number_format(6) }}</code>
-                    </div>
-                    
-                    <div class="map-container mb-3">
-                        <div id="regionMap" style="height: 200px; border-radius: 0.375rem;"></div>
-                    </div>
-                    
-                    <div class="map-actions">
-                        <a href="https://www.google.com/maps?q={{ region.coordinates_lat }},{{ region.coordinates_lng }}" 
-                           target="_blank" class="btn btn-outline-primary btn-sm w-100">
-                            <i class="fa fa-external-link-alt"></i> Ouvrir dans Google Maps
-                        </a>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-
-        <!-- Informations supplémentaires -->
-        <div class="info-card card">
-            <div class="card-header">
-                <h5 class="mb-0">Informations</h5>
-            </div>
-            <div class="card-body">
-                {% if region.best_season %}
-                    <div class="info-item mb-2">
-                        <strong>Meilleure saison:</strong> {{ region.best_season }}
-                    </div>
-                {% endif %}
-                {% if region.parking_info %}
-                    <div class="info-item mb-2">
-                        <strong>Parking:</strong> {{ region.parking_info }}
-                    </div>
-                {% endif %}
-                {% if region.created_at %}
-                    <div class="info-item">
-                        <strong>Créé le:</strong> {{ region.created_at|format_date('d/m/Y') }}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
-<!-- Leaflet pour la carte -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialiser la carte si les coordonnées sont disponibles
-    {% if region.coordinates_lat and region.coordinates_lng %}
-        const map = L.map('regionMap', {
-            scrollWheelZoom: false,
-            zoomControl: true
-        }).setView([{{ region.coordinates_lat }}, {{ region.coordinates_lng }}], 10);
-
-        // Couche de base OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Marker pour la région
-        const regionMarker = L.marker([{{ region.coordinates_lat }}, {{ region.coordinates_lng }}])
-            .addTo(map)
-            .bindPopup('<strong>{{ region.name }}</strong>');
-
-        // Ajouter les secteurs sur la carte si ils ont des coordonnées
-        {% for sector in sectors %}
-            {% if sector.coordinates_lat and sector.coordinates_lng %}
-                L.marker([{{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}], {
-                    icon: L.divIcon({
-                        className: 'sector-marker',
-                        html: '<div class="sector-marker-content">S</div>',
-                        iconSize: [20, 20]
-                    })
-                })
-                .addTo(map)
-                .bindPopup('<strong>{{ sector.name }}</strong><br>{{ sector.routes_count|default(0) }} voies');
-            {% endif %}
-        {% endfor %}
-
-        // Permettre le zoom au clic
-        map.on('click', function() {
-            if (map.scrollWheelZoom.enabled()) {
-                map.scrollWheelZoom.disable();
-            } else {
-                map.scrollWheelZoom.enable();
-            }
+    // Auto-submit du formulaire de filtres avec délai
+    const searchInput = document.getElementById('search');
+    const siteSelect = document.getElementById('site_id');
+    const difficultySelect = document.getElementById('difficulty');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.form.submit();
+            }, 500);
         });
-    {% endif %}
+    }
+
+    if (siteSelect) {
+        siteSelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
+
+    if (difficultySelect) {
+        difficultySelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
 });
 </script>
 
 <style>
 .sectors-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
     gap: 1.5rem;
 }
 
 .sector-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e9ecef;
 }
 
 .sector-card:hover {
@@ -369,48 +292,82 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
 }
 
-.stat-item {
-    border-radius: 0.375rem;
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sector-actions .btn-link {
+    color: #6c757d;
+    padding: 0.25rem;
+}
+
+.sector-actions .btn-link:hover {
+    color: #495057;
+}
+
+.filters-form {
     background: #f8f9fa;
-}
-
-.difficulties-list .badge {
-    font-size: 0.8rem;
-}
-
-.media-gallery img {
-    transition: transform 0.2s ease;
-}
-
-.media-gallery img:hover {
-    transform: scale(1.05);
-}
-
-.sector-marker-content {
-    background: #007bff;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.empty-sectors {
-    background: #f8f9fa;
+    padding: 1.5rem;
     border-radius: 0.5rem;
-    border: 2px dashed #dee2e6;
+    border: 1px solid #e9ecef;
+}
+
+.empty-state {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.empty-icon i {
+    opacity: 0.5;
+}
+
+.sector-meta {
+    line-height: 1.4;
+}
+
+.sector-description {
+    margin-top: 0.5rem;
+}
+
+.card-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid rgba(0,0,0,.125);
+}
+
+.description-section {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.region-meta {
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .sectors-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filters-form .row {
+        gap: 1rem 0;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 }
 </style>
 {% endblock %}
