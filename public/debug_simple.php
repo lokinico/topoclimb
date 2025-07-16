@@ -34,22 +34,41 @@ try {
     }
     
     echo "6. Test de comptage...\n";
-    $count = $db->query("SELECT COUNT(*) as count FROM climbing_regions");
-    echo "📊 Nombre total de régions: " . $count[0]['count'] . "\n";
+    $count = $db->fetchOne("SELECT COUNT(*) as count FROM climbing_regions");
+    echo "📊 Nombre total de régions: " . $count['count'] . "\n";
     
     echo "7. Test de données actives...\n";
-    $active_count = $db->query("SELECT COUNT(*) as count FROM climbing_regions WHERE active = 1");
-    echo "📊 Nombre de régions actives: " . $active_count[0]['count'] . "\n";
+    $active_count = $db->fetchOne("SELECT COUNT(*) as count FROM climbing_regions WHERE active = 1");
+    echo "📊 Nombre de régions actives: " . $active_count['count'] . "\n";
     
     echo "8. Test de vos régions spécifiques...\n";
     $your_regions = ['Gastlosen', 'Charmey', 'Fribourg'];
     foreach ($your_regions as $region_name) {
-        $region = $db->query("SELECT id, name, country_id FROM climbing_regions WHERE name = ? AND active = 1", [$region_name]);
-        if (!empty($region)) {
-            echo "✅ $region_name trouvée (ID: {$region[0]['id']}, country_id: {$region[0]['country_id']})\n";
+        $region = $db->fetchOne("SELECT id, name, country_id FROM climbing_regions WHERE name = ? AND active = 1", [$region_name]);
+        if ($region) {
+            echo "✅ $region_name trouvée (ID: {$region['id']}, country_id: {$region['country_id']})\n";
         } else {
             echo "❌ $region_name non trouvée\n";
         }
+    }
+    
+    echo "9. Test de la requête exacte du contrôleur...\n";
+    $regions = $db->fetchAll("SELECT r.id, r.name, r.description, r.coordinates_lat, r.coordinates_lng,
+                                     r.altitude, r.created_at, c.name as country_name, c.code as country_code
+                              FROM climbing_regions r 
+                              LEFT JOIN climbing_countries c ON r.country_id = c.id 
+                              WHERE r.active = 1
+                              ORDER BY r.name ASC
+                              LIMIT 10");
+    echo "📊 Résultats de la requête complète: " . count($regions) . "\n";
+    
+    if (count($regions) > 0) {
+        echo "🗺️ Régions trouvées:\n";
+        foreach ($regions as $region) {
+            echo "  - {$region['name']} (country: {$region['country_name']}) - ID: {$region['id']}\n";
+        }
+    } else {
+        echo "❌ Aucune région trouvée avec la requête complète\n";
     }
     
 } catch (Exception $e) {
