@@ -25,8 +25,8 @@ try {
     $db = $container->get(\TopoclimbCH\Core\Database::class);
     echo "✅ Base de données récupérée\n";
     
-    echo "5. Test de requête simple...\n";
-    $result = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='climbing_regions'");
+    echo "5. Test de requête simple (MySQL)...\n";
+    $result = $db->query("SHOW TABLES LIKE 'climbing_regions'");
     if (!empty($result)) {
         echo "✅ Table climbing_regions trouvée\n";
     } else {
@@ -40,6 +40,17 @@ try {
     echo "7. Test de données actives...\n";
     $active_count = $db->query("SELECT COUNT(*) as count FROM climbing_regions WHERE active = 1");
     echo "📊 Nombre de régions actives: " . $active_count[0]['count'] . "\n";
+    
+    echo "8. Test de vos régions spécifiques...\n";
+    $your_regions = ['Gastlosen', 'Charmey', 'Fribourg'];
+    foreach ($your_regions as $region_name) {
+        $region = $db->query("SELECT id, name, country_id FROM climbing_regions WHERE name = ? AND active = 1", [$region_name]);
+        if (!empty($region)) {
+            echo "✅ $region_name trouvée (ID: {$region[0]['id']}, country_id: {$region[0]['country_id']})\n";
+        } else {
+            echo "❌ $region_name non trouvée\n";
+        }
+    }
     
 } catch (Exception $e) {
     echo "❌ ERREUR à l'étape en cours\n";
