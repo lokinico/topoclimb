@@ -26,9 +26,18 @@ find storage/cache -name "*.php" -type f -delete 2>/dev/null || true
 find storage/logs -name "*.log" -type f -delete 2>/dev/null || true
 find storage/sessions -name "sess_*" -type f -delete 2>/dev/null || true
 
+# Nettoyer spécifiquement le cache Twig
+rm -rf cache/views/* 2>/dev/null || true
+rm -rf cache/container/* 2>/dev/null || true
+rm -rf cache/routes/* 2>/dev/null || true
+
 # Nettoyer le cache temporaire
 find /tmp -name "CachedContainer*" -type f -delete 2>/dev/null || true
 find /tmp -name "cached_container*" -type f -delete 2>/dev/null || true
+
+# Forcer la recompilation des templates Twig
+echo "🔄 Forçage recompilation templates Twig..."
+find resources/views -name "*.twig" -type f -exec touch {} \; 2>/dev/null || true
 
 # Exécuter le script de nettoyage du cache optimisé pour déploiement
 if [ -f "clear_opcache_deploy.php" ]; then
@@ -36,6 +45,14 @@ if [ -f "clear_opcache_deploy.php" ]; then
     php clear_opcache_deploy.php
 else
     echo "⚠️ Script de nettoyage OPcache non trouvé"
+fi
+
+# Forcer la recompilation des templates Twig
+if [ -f "force_twig_refresh.php" ]; then
+    echo "🔄 Forçage de la recompilation des templates Twig..."
+    php force_twig_refresh.php
+else
+    echo "⚠️ Script de forçage Twig non trouvé"
 fi
 
 echo "✅ Cache nettoyé"
