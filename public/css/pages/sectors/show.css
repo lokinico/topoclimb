@@ -1,12 +1,16 @@
-/* public/css/pages/sectors/show.css */
-/* Styles spécifiques à la page de détail des secteurs */
+/* ===============================================
+   SECTEURS - STYLES SPÉCIFIQUES
+   =============================================== */
 
-/* Hero spécifique aux secteurs (étend .hero-modern) */
+/* Inclure les styles communs en premier */
+@import url('../../common.css');
+
+/* Hero spécifique aux secteurs */
 .sector-hero {
   background: var(--primary-gradient);
   color: white;
-  padding: 3rem 0;
-  margin-bottom: 2rem;
+  padding: var(--spacing-3xl) 0;
+  margin-bottom: var(--spacing-xl);
   position: relative;
   overflow: hidden;
 }
@@ -27,15 +31,58 @@
   z-index: 2;
 }
 
+.sector-hero .breadcrumb-item,
+.sector-hero .breadcrumb-item a {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sector-hero .breadcrumb-item.active {
+  color: white;
+}
+
+.sector-hero h1 {
+  color: white;
+  font-size: 3rem;
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-md);
+}
+
+.sector-hero p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.125rem;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Statistiques spécifiques aux secteurs */
+.sector-stat.routes {
+  background: var(--secondary-gradient);
+  color: white;
+}
+
+.sector-stat.difficulty {
+  background: var(--danger-gradient);
+  color: white;
+}
+
+.sector-stat.length {
+  background: var(--warning-gradient);
+  color: white;
+}
+
+.sector-stat.ascents {
+  background: var(--success-gradient);
+  color: white;
+}
+
 /* Expositions spécifiques */
 .exposure-badge {
   display: inline-block;
   background: var(--danger-gradient);
   color: white;
-  padding: 0.25rem 0.75rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-full);
   font-size: 0.8rem;
-  margin: 0.25rem;
+  margin: var(--spacing-xs);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -44,12 +91,12 @@
 .exposure-primary {
   background: var(--primary-gradient) !important;
   font-size: 0.9rem;
-  padding: 0.5rem 1rem;
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 /* Mois et saisons */
 .month-badge {
-  padding: 0.25rem 0.5rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-full);
   font-size: 0.75rem;
   margin: 0.1rem;
@@ -70,7 +117,7 @@
 
 .month-average {
   background: var(--warning-gradient);
-  color: var(--text-dark);
+  color: white;
 }
 
 .month-poor {
@@ -85,17 +132,7 @@
 
 /* Voies du secteur */
 .route-card {
-  border: none;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  transition: var(--transition);
-  margin-bottom: 1rem;
-  overflow: hidden;
-}
-
-.route-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  /* Utilise les styles .card du CSS commun */
 }
 
 .route-number {
@@ -114,7 +151,7 @@
 .difficulty-badge {
   background: var(--primary-gradient);
   color: white;
-  padding: 0.25rem 0.75rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-full);
   font-weight: var(--font-weight-bold);
   font-size: 0.9rem;
@@ -122,8 +159,8 @@
 
 /* Indicateurs de style d'escalade */
 .style-indicator {
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--border-radius);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
   font-size: 0.8rem;
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
@@ -166,7 +203,7 @@
 }
 
 .beauty-stars i {
-  color: #ffc107;
+  color: var(--warning-color);
   font-size: 0.9rem;
 }
 
@@ -180,39 +217,39 @@
   height: 12px;
   border-radius: var(--border-radius-full);
   display: inline-block;
-  margin-right: 0.5rem;
+  margin-right: var(--spacing-sm);
 }
 
 .equipment-poor {
-  background: #dc3545;
+  background: var(--danger-color);
 }
 
 .equipment-adequate {
-  background: #fd7e14;
+  background: var(--warning-color);
 }
 
 .equipment-good {
-  background: #28a745;
+  background: var(--success-color);
 }
 
 .equipment-excellent {
-  background: #20c997;
+  background: var(--info-color);
 }
 
 /* Filtres des voies */
 .route-filter-tabs {
-  background: var(--gray-50);
+  background: var(--bg-secondary);
   border-radius: var(--border-radius-lg);
-  padding: 0.5rem;
-  margin-bottom: 2rem;
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
   box-shadow: var(--shadow-sm);
 }
 
 .route-filter-tabs .nav-pills .nav-link {
-  border-radius: var(--border-radius);
-  margin: 0 0.25rem;
+  border-radius: var(--border-radius-md);
+  margin: 0 var(--spacing-xs);
   font-weight: var(--font-weight-medium);
-  transition: var(--transition);
+  transition: var(--transition-normal);
 }
 
 .route-filter-tabs .nav-pills .nav-link.active {
@@ -240,13 +277,13 @@
 .routes-grid-view .route-title {
   font-size: 1.1rem;
   font-weight: var(--font-weight-semibold);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-sm);
 }
 
 .routes-grid-view .route-meta {
   margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid var(--gray-200);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
 }
 
 /* Widget météo spécifique */
@@ -254,16 +291,16 @@
   background: var(--secondary-gradient);
   color: white;
   border-radius: var(--border-radius-lg);
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
   box-shadow: 0 8px 25px rgba(116, 185, 255, 0.2);
 }
 
 .weather-status {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .weather-icon {
@@ -278,15 +315,15 @@
 .weather-details {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
 }
 
 .weather-detail {
   text-align: center;
-  padding: 0.75rem;
+  padding: var(--spacing-sm);
   background: rgba(255, 255, 255, 0.1);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-md);
 }
 
 .weather-detail-value {
@@ -326,7 +363,7 @@
   right: 0;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
   color: white;
-  padding: 1.5rem;
+  padding: var(--spacing-lg);
 }
 
 .media-overlay h5 {
@@ -358,48 +395,6 @@
   font-size: 1rem;
 }
 
-/* Carte interactive */
-.map-container {
-  border-radius: var(--border-radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-}
-
-.map-overlay {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1000;
-  background: white;
-  border-radius: var(--border-radius);
-  padding: 0.5rem;
-  box-shadow: var(--shadow);
-}
-
-.map-popup h6 {
-  margin-bottom: 0.5rem;
-  color: var(--text-dark);
-}
-
-.map-popup p {
-  margin-bottom: 1rem;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-/* Marker personnalisé pour la carte */
-.sector-marker {
-  background: var(--primary-gradient);
-  border-radius: var(--border-radius-full);
-  box-shadow: var(--shadow);
-}
-
-.sector-marker-content {
-  color: white;
-  font-size: 1rem;
-}
-
 /* Équipements recommandés */
 .equipment-list {
   list-style: none;
@@ -410,8 +405,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--gray-200);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .equipment-item:last-child {
@@ -425,8 +420,8 @@
 .equipment-quantity {
   background: var(--gray-200);
   color: var(--text-muted);
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--border-radius);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
   font-size: 0.8rem;
   font-weight: var(--font-weight-semibold);
 }
@@ -434,8 +429,8 @@
 .equipment-mandatory {
   background: var(--danger-gradient);
   color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--border-radius);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
   font-size: 0.7rem;
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
@@ -447,15 +442,15 @@
   background: var(--warning-gradient);
   color: white;
   border-radius: var(--border-radius-lg);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
   border-left: 4px solid #d63031;
 }
 
 .closure-period {
   font-weight: var(--font-weight-bold);
   font-size: 1.1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-sm);
 }
 
 .closure-reason {
@@ -466,7 +461,11 @@
 /* Responsive spécifique aux secteurs */
 @media (max-width: 768px) {
   .sector-hero {
-    padding: 2rem 0;
+    padding: var(--spacing-xl) 0;
+  }
+  
+  .sector-hero h1 {
+    font-size: 2.5rem;
   }
 
   .route-filter-tabs {
@@ -485,7 +484,7 @@
   .equipment-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
   }
 
   .swiper-button-next,
@@ -495,8 +494,12 @@
 }
 
 @media (max-width: 576px) {
+  .sector-hero h1 {
+    font-size: 2rem;
+  }
+  
   .route-card .card-body {
-    padding: 1rem;
+    padding: var(--spacing-md);
   }
 
   .weather-details {
@@ -506,7 +509,7 @@
   .exposure-badge,
   .month-badge {
     font-size: 0.7rem;
-    padding: 0.2rem 0.5rem;
+    padding: 0.2rem var(--spacing-sm);
   }
 
   .weather-temp {
