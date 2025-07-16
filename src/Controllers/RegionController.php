@@ -186,20 +186,23 @@ class RegionController extends BaseController
     }
 
     /**
-     * Affichage sécurisé d'une région
+     * Affichage sécurisé d'une région avec filtres
      */
     public function show(Request $request): Response
     {
         try {
             $id = $this->validateId($request->attributes->get('id'), 'ID de région');
 
+            // Validation et nettoyage des filtres
+            $filters = $this->validateRegionFilters($request);
+
             // Récupération sécurisée
-            $data = $this->executeInTransaction(function () use ($id) {
-                return $this->getRegionDetails($id);
+            $data = $this->executeInTransaction(function () use ($id, $filters) {
+                return $this->getRegionDetails($id, $filters);
             });
 
             // Log de l'action
-            $this->logAction('view_region', ['region_id' => $id]);
+            $this->logAction('view_region', ['region_id' => $id, 'filters' => $filters]);
 
             return $this->render('regions/show', $data);
         } catch (ValidationException $e) {
@@ -212,9 +215,33 @@ class RegionController extends BaseController
     }
 
     /**
-     * Récupération sécurisée des détails d'une région
+     * Validation des filtres pour la page région
      */
-    private function getRegionDetails(int $id): array
+    private function validateRegionFilters(Request $request): array
+    {
+        $filters = [
+            'search' => $request->query->get('search', ''),
+            'site_id' => $request->query->get('site_id', ''),
+            'difficulty' => $request->query->get('difficulty', '')
+        ];
+
+        // Validation et nettoyage
+        if (strlen($filters['search']) > 100) {
+            $filters['search'] = substr($filters['search'], 0, 100);
+        }
+        
+        if ($filters['site_id'] && !is_numeric($filters['site_id'])) {
+            $filters['site_id'] = '';
+        }
+
+        // Nettoyer les valeurs vides
+        return array_filter($filters, fn($value) => $value !== '' && $value !== null);
+    }
+
+    /**
+     * Récupération sécurisée des détails d'une région avec filtres
+     */
+    private function getRegionDetails(int $id, array $filters = []): array
     {
         $region = $this->db->fetchOne(
             "SELECT r.*, c.name as country_name, c.code as country_code 
@@ -226,16 +253,62 @@ class RegionController extends BaseController
 
         $this->requireEntity($region, 'Région non trouvée');
 
-        // Récupération des secteurs avec sécurité
-        $sectors = $this->db->query(
-            "SELECT s.id, s.name, s.altitude, s.access_time, s.coordinates_lat, s.coordinates_lng,
-                    COUNT(r.id) as routes_count 
-             FROM climbing_sectors s 
-             LEFT JOIN climbing_routes r ON s.id = r.sector_id AND r.active = 1
-             WHERE s.region_id = ? AND s.active = 1
-             GROUP BY s.id
-             ORDER BY s.name ASC
-             LIMIT 100", // Limite de sécurité
+        // Construction de la requête des secteurs avec filtres
+        $sectorsQuery = "SELECT s.id, s.name, s.code, s.altitude, s.access_time, s.coordinates_lat, s.coordinates_lng,
+                                s.description, si.name as site_name, si.id as site_id,
+                                COUNT(r.id) as routes_count,
+                                ROUND(AVG(r.difficulty_value), 1) as avg_difficulty,
+                                ROUND(AVG(r.beauty_rating), 1) as avg_beauty
+                         FROM climbing_sectors s 
+                         LEFT JOIN climbing_sites si ON s.site_id = si.id
+                         LEFT JOIN climbing_routes r ON s.id = r.sector_id AND r.active = 1
+                         WHERE s.region_id = ? AND s.active = 1";
+        
+        $sectorsParams = [$id];
+
+        // Appliquer les filtres
+        if (isset($filters['search'])) {
+            $sectorsQuery .= " AND (s.name LIKE ? OR s.code LIKE ? OR s.description LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $sectorsParams[] = $searchTerm;
+            $sectorsParams[] = $searchTerm;
+            $sectorsParams[] = $searchTerm;
+        }
+
+        if (isset($filters['site_id'])) {
+            $sectorsQuery .= " AND s.site_id = ?";
+            $sectorsParams[] = (int)$filters['site_id'];
+        }
+
+        if (isset($filters['difficulty'])) {
+            $sectorsQuery .= " AND EXISTS (
+                SELECT 1 FROM climbing_routes ro 
+                WHERE ro.sector_id = s.id AND ro.difficulty = ? AND ro.active = 1
+            )";
+            $sectorsParams[] = $filters['difficulty'];
+        }
+
+        $sectorsQuery .= " GROUP BY s.id ORDER BY s.name ASC LIMIT 100";
+        
+        $sectors = $this->db->query($sectorsQuery, $sectorsParams);
+
+        // Récupération des sites pour les filtres
+        $sites = $this->db->query(
+            "SELECT DISTINCT si.id, si.name 
+             FROM climbing_sites si
+             JOIN climbing_sectors s ON si.id = s.site_id
+             WHERE s.region_id = ? AND si.active = 1 AND s.active = 1
+             ORDER BY si.name ASC",
+            [$id]
+        );
+
+        // Récupération des difficultés disponibles
+        $difficulties = $this->db->query(
+            "SELECT DISTINCT r.difficulty
+             FROM climbing_routes r
+             JOIN climbing_sectors s ON r.sector_id = s.id
+             WHERE s.region_id = ? AND r.active = 1 AND s.active = 1 AND r.difficulty IS NOT NULL
+             ORDER BY r.difficulty ASC",
             [$id]
         );
 
@@ -258,6 +331,9 @@ class RegionController extends BaseController
             'title' => $region->name,
             'region' => $region,
             'sectors' => $sectors,
+            'sites' => $sites,
+            'difficulties' => array_column($difficulties, 'difficulty'),
+            'currentFilters' => $filters,
             'media' => $media,
             'stats' => $stats
         ];
