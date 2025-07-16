@@ -4,7 +4,7 @@ header('Content-Type: text/plain');
 echo "=== VÉRIFICATION TEMPLATE ===\n";
 echo "Date: " . date('Y-m-d H:i:s') . "\n\n";
 
-$template_path = __DIR__ . '/resources/views/regions/index.twig';
+$template_path = dirname(__DIR__) . '/resources/views/regions/index.twig';
 
 if (file_exists($template_path)) {
     $content = file_get_contents($template_path);
