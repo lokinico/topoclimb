@@ -16,8 +16,14 @@ cp .env .env.backup 2>/dev/null || echo "⚠️  Pas de fichier .env à sauvegar
 
 # Mise à jour du code (si vous utilisez Git)
 echo "📥 Mise à jour du code..."
-git fetch origin
-git reset --hard origin/main  # Changé vers main car nous avons fusionné les changements
+if [ -d ".git" ]; then
+    echo "Git détecté, mise à jour du code..."
+    git fetch origin
+    git reset --hard origin/main
+else
+    echo "⚠️  Git non configuré - le code doit être mis à jour manuellement"
+    echo "   Assurez-vous d'avoir uploadé les derniers fichiers"
+fi
 
 # Nettoyer Composer
 echo "🧹 Nettoyage Composer..."
