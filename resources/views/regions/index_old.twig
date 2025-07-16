@@ -1,0 +1,736 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Régions d'escalade en Suisse - TopoclimbCH{% endblock %}
+
+{% block meta %}
+    <meta name="description" content="Découvrez toutes les régions d'escalade de Suisse : Valais, Jura, Grisons... Sites, secteurs et voies documentés.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- CSS commun -->
+    <link rel="stylesheet" href="/css/common.css">
+{% endblock %}
+
+{% block content %}
+<div class="regions-page-modern">
+    <!-- Hero Section Moderne -->
+    <section class="regions-hero">
+        <div class="hero-bg">
+            <div class="hero-pattern"></div>
+            <div class="hero-overlay"></div>
+        </div>
+        
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <i class="fas fa-mountain"></i>
+                    Régions d'Escalade Suisse
+                </h1>
+                <p class="hero-subtitle">
+                    Explorez les plus beaux massifs d'escalade de Suisse, du Valais au Jura, 
+                    des Grisons au Tessin. Sites authentiques, voies variées, conditions météo en temps réel.
+                </p>
+                
+                <!-- Statistiques Hero -->
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <span class="stat-number">{{ regions|length }}</span>
+                        <span class="stat-label">Régions</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="stat-number">{{ total_sites ?? 0 }}</span>
+                        <span class="stat-label">Sites</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="stat-number">{{ total_routes ?? 0 }}</span>
+                        <span class="stat-label">Voies</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interface de recherche et filtres modernes -->
+    <section class="regions-controls">
+        <div class="container">
+            <div class="controls-grid">
+                <!-- Recherche instantanée -->
+                <div class="search-modern">
+                    <div class="search-input-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="region-search" placeholder="Rechercher une région..." autocomplete="off">
+                        <button id="search-clear" class="search-clear" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtres compacts -->
+                <div class="filters-modern">
+                    <select id="filter-difficulty" class="filter-select">
+                        <option value="">Toutes difficultés</option>
+                        <option value="beginner">Débutant (3a-4c)</option>
+                        <option value="intermediate">Intermédiaire (5a-6b)</option>
+                        <option value="advanced">Avancé (6c+)</option>
+                    </select>
+                    
+                    <select id="filter-season" class="filter-select">
+                        <option value="">Toute l'année</option>
+                        <option value="spring">Printemps</option>
+                        <option value="summer">Été</option>
+                        <option value="autumn">Automne</option>
+                        <option value="winter">Hiver</option>
+                    </select>
+                    
+                    <select id="filter-style" class="filter-select">
+                        <option value="">Tous styles</option>
+                        <option value="sport">Sport</option>
+                        <option value="trad">Trad</option>
+                        <option value="mixed">Mixte</option>
+                        <option value="boulder">Bloc</option>
+                    </select>
+                </div>
+
+                <!-- Actions rapides -->
+                <div class="quick-actions">
+                    <button id="view-map" class="action-btn">
+                        <i class="fas fa-map"></i>
+                        <span>Vue carte</span>
+                    </button>
+                    <button id="show-weather" class="action-btn weather-btn">
+                        <i class="fas fa-cloud-sun"></i>
+                        <span>Météo</span>
+                    </button>
+                    <button id="reset-filters" class="action-btn secondary">
+                        <i class="fas fa-refresh"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contenu principal -->
+    <section class="regions-content">
+        <div class="container">
+            <!-- Grille des régions -->
+            <div class="regions-grid" id="regions-grid">
+                {% if regions is defined and regions|length > 0 %}
+                    {% for region in regions %}
+                        <article class="region-card" data-region-id="{{ region.id }}" 
+                                 data-difficulty="{{ region.difficulty_level ?? 'all' }}"
+                                 data-season="{{ region.best_season ?? 'all' }}"
+                                 data-style="{{ region.main_style ?? 'all' }}">
+                            
+                            <!-- Image de la région -->
+                            <div class="card-image-container">
+                                {% if region.cover_image %}
+                                    <img src="{{ region.cover_image }}" alt="Région {{ region.name }}" loading="lazy" class="card-image">
+                                {% else %}
+                                    <div class="card-placeholder">
+                                        <i class="fas fa-mountain"></i>
+                                        <span>{{ region.name }}</span>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Overlay avec badges -->
+                                <div class="card-overlay">
+                                    <div class="card-badges">
+                                        {% if region.difficulty_level %}
+                                            <span class="badge difficulty">{{ region.difficulty_level }}</span>
+                                        {% endif %}
+                                        {% if region.best_season %}
+                                            <span class="badge season">{{ region.best_season }}</span>
+                                        {% endif %}
+                                        {% if region.weather_available %}
+                                            <span class="badge weather" title="Météo disponible">
+                                                <i class="fas fa-cloud-sun"></i>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Actions rapides -->
+                                    <div class="card-quick-actions">
+                                        <button class="quick-action" onclick="viewOnMap({{ region.id }})" title="Voir sur la carte">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </button>
+                                        {% if region.weather_available %}
+                                            <button class="quick-action" onclick="showRegionWeather({{ region.id }})" title="Météo actuelle">
+                                                <i class="fas fa-cloud-sun"></i>
+                                            </button>
+                                        {% endif %}
+                                        <button class="quick-action" onclick="shareRegion({{ region.id }})" title="Partager">
+                                            <i class="fas fa-share-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Contenu de la carte -->
+                            <div class="card-content">
+                                <!-- En-tête -->
+                                <div class="card-header">
+                                    <h2 class="region-name">{{ region.name }}</h2>
+                                    {% if region.country_name %}
+                                        <span class="region-country">{{ region.country_name }}</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Description courte -->
+                                {% if region.description %}
+                                    <p class="region-description">
+                                        {{ region.description|slice(0, 140) }}{{ region.description|length > 140 ? '...' : '' }}
+                                    </p>
+                                {% endif %}
+                                
+                                <!-- Statistiques -->
+                                <div class="region-stats">
+                                    <div class="stat-item">
+                                        <i class="fas fa-map-marked-alt"></i>
+                                        <span>{{ region.sites_count ?? 0 }} sites</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span>{{ region.sectors_count ?? 0 }} secteurs</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="fas fa-route"></i>
+                                        <span>{{ region.routes_count ?? 0 }} voies</span>
+                                    </div>
+                                    {% if region.altitude %}
+                                        <div class="stat-item">
+                                            <i class="fas fa-mountain"></i>
+                                            <span>{{ region.altitude }}m</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Informations utiles -->
+                                {% if region.access_difficulty or region.approach_time %}
+                                    <div class="region-info">
+                                        {% if region.access_difficulty %}
+                                            <div class="info-item">
+                                                <i class="fas fa-hiking"></i>
+                                                <span>Accès {{ region.access_difficulty }}</span>
+                                            </div>
+                                        {% endif %}
+                                        {% if region.approach_time %}
+                                            <div class="info-item">
+                                                <i class="fas fa-clock"></i>
+                                                <span>{{ region.approach_time }} min</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Actions principales -->
+                                <div class="card-actions">
+                                    <a href="/regions/{{ region.id }}" class="btn-primary">
+                                        <i class="fas fa-eye"></i>
+                                        Découvrir
+                                    </a>
+                                    <button onclick="viewOnMap({{ region.id }})" class="btn-secondary">
+                                        <i class="fas fa-map"></i>
+                                        Carte
+                                    </button>
+                                    {% if region.weather_available %}
+                                        <button onclick="showRegionWeather({{ region.id }})" class="btn-weather">
+                                            <i class="fas fa-cloud-sun"></i>
+                                            Météo
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <!-- État vide -->
+                    <div class="empty-state-modern">
+                        <div class="empty-icon">
+                            <i class="fas fa-mountain"></i>
+                        </div>
+                        <h3 class="empty-title">Aucune région trouvée</h3>
+                        <p class="empty-description">
+                            Aucune région ne correspond à vos critères de recherche. 
+                            Essayez de modifier vos filtres ou votre recherche.
+                        </p>
+                        <button onclick="resetAllFilters()" class="btn-primary">
+                            <i class="fas fa-refresh"></i>
+                            Réinitialiser les filtres
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Modal Carte -->
+<div class="modal-modern" id="map-modal">
+    <div class="modal-content-large">
+        <div class="modal-header-modern">
+            <h3>
+                <i class="fas fa-map"></i>
+                Carte des Régions d'Escalade
+            </h3>
+            <button class="modal-close" onclick="closeMapModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body-large">
+            <div id="regions-map" class="map-large"></div>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-color sport"></div>
+                    <span>Sport</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color trad"></div>
+                    <span>Trad</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color mixed"></div>
+                    <span>Mixte</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color boulder"></div>
+                    <span>Bloc</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Météo -->
+<div class="modal-modern" id="weather-modal">
+    <div class="modal-content-weather">
+        <div class="modal-header-modern">
+            <h3 id="weather-title">
+                <i class="fas fa-cloud-sun"></i>
+                Conditions Météorologiques
+            </h3>
+            <button class="modal-close" onclick="closeWeatherModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body-modern" id="weather-content">
+            <div class="weather-loading">
+                <div class="loading-spinner"></div>
+                <p>Chargement des données météo...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Toast -->
+<div class="toast-notification" id="toast-notification">
+    <div class="toast-content">
+        <div class="toast-icon">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="toast-message"></div>
+        <button class="toast-close" onclick="hideToast()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+        crossorigin=""></script>
+
+<script>
+// Configuration et données
+const RegionsConfig = {
+    data: {{ regions|json_encode|raw }},
+    weatherApiKey: "{{ weather_api_key|default('') }}",
+    mapCenter: [46.8182, 8.2275],
+    mapZoom: 8
+};
+
+// Variables globales
+let regionsMap = null;
+let filteredRegions = RegionsConfig.data;
+let searchTimeout = null;
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    initializeRegionsPage();
+});
+
+function initializeRegionsPage() {
+    setupSearchFunctionality();
+    setupFilters();
+    setupQuickActions();
+    updateDisplayedRegions();
+    
+    console.log('Page régions initialisée avec', RegionsConfig.data.length, 'régions');
+}
+
+// === RECHERCHE ===
+function setupSearchFunctionality() {
+    const searchInput = document.getElementById('region-search');
+    const clearBtn = document.getElementById('search-clear');
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch(this.value);
+        }, 300);
+        
+        // Afficher/masquer le bouton clear
+        clearBtn.style.display = this.value.length > 0 ? 'block' : 'none';
+    });
+    
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            clearTimeout(searchTimeout);
+            performSearch(this.value);
+        }
+    });
+    
+    clearBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        this.style.display = 'none';
+        performSearch('');
+        searchInput.focus();
+    });
+}
+
+function performSearch(query) {
+    if (!query.trim()) {
+        filteredRegions = RegionsConfig.data;
+    } else {
+        const searchTerm = query.toLowerCase();
+        filteredRegions = RegionsConfig.data.filter(region => 
+            region.name.toLowerCase().includes(searchTerm) ||
+            (region.description && region.description.toLowerCase().includes(searchTerm)) ||
+            (region.country_name && region.country_name.toLowerCase().includes(searchTerm))
+        );
+    }
+    
+    applyFilters();
+    updateDisplayedRegions();
+    
+    if (query.trim() && filteredRegions.length === 0) {
+        showToast('Aucune région trouvée pour "' + query + '"', 'info');
+    }
+}
+
+// === FILTRES ===
+function setupFilters() {
+    const filters = ['filter-difficulty', 'filter-season', 'filter-style'];
+    
+    filters.forEach(filterId => {
+        document.getElementById(filterId).addEventListener('change', applyFilters);
+    });
+}
+
+function applyFilters() {
+    const difficulty = document.getElementById('filter-difficulty').value;
+    const season = document.getElementById('filter-season').value;
+    const style = document.getElementById('filter-style').value;
+    
+    filteredRegions = filteredRegions.filter(region => {
+        let passDifficulty = !difficulty || region.difficulty_level === difficulty;
+        let passSeason = !season || region.best_season === season;
+        let passStyle = !style || region.main_style === style;
+        
+        return passDifficulty && passSeason && passStyle;
+    });
+    
+    updateDisplayedRegions();
+}
+
+function resetAllFilters() {
+    document.getElementById('region-search').value = '';
+    document.getElementById('search-clear').style.display = 'none';
+    document.getElementById('filter-difficulty').value = '';
+    document.getElementById('filter-season').value = '';
+    document.getElementById('filter-style').value = '';
+    
+    filteredRegions = RegionsConfig.data;
+    updateDisplayedRegions();
+    
+    showToast('Filtres réinitialisés', 'success');
+}
+
+// === ACTIONS RAPIDES ===
+function setupQuickActions() {
+    document.getElementById('view-map').addEventListener('click', openMapModal);
+    document.getElementById('show-weather').addEventListener('click', openWeatherOverview);
+    document.getElementById('reset-filters').addEventListener('click', resetAllFilters);
+}
+
+// === AFFICHAGE ===
+function updateDisplayedRegions() {
+    const grid = document.getElementById('regions-grid');
+    const cards = grid.querySelectorAll('.region-card');
+    
+    // Masquer toutes les cartes
+    cards.forEach(card => {
+        card.style.display = 'none';
+    });
+    
+    // Afficher les cartes filtrées
+    let visibleCount = 0;
+    filteredRegions.forEach(region => {
+        const card = grid.querySelector(`[data-region-id="${region.id}"]`);
+        if (card) {
+            card.style.display = 'block';
+            visibleCount++;
+        }
+    });
+    
+    // Gérer l'état vide
+    let emptyState = grid.querySelector('.empty-state-modern');
+    if (visibleCount === 0 && !emptyState) {
+        emptyState = createEmptyState();
+        grid.appendChild(emptyState);
+    } else if (visibleCount > 0 && emptyState) {
+        emptyState.remove();
+    }
+    
+    console.log(`Affichage de ${visibleCount} régions sur ${RegionsConfig.data.length}`);
+}
+
+function createEmptyState() {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty-state-modern';
+    emptyDiv.innerHTML = `
+        <div class="empty-icon">
+            <i class="fas fa-search"></i>
+        </div>
+        <h3 class="empty-title">Aucune région trouvée</h3>
+        <p class="empty-description">
+            Aucune région ne correspond à vos critères de recherche.
+        </p>
+        <button onclick="resetAllFilters()" class="btn-primary">
+            <i class="fas fa-refresh"></i>
+            Réinitialiser les filtres
+        </button>
+    `;
+    return emptyDiv;
+}
+
+// === CARTE ===
+function openMapModal() {
+    document.getElementById('map-modal').style.display = 'flex';
+    
+    setTimeout(() => {
+        if (!regionsMap) {
+            initializeRegionsMap();
+        } else {
+            regionsMap.invalidateSize();
+        }
+    }, 100);
+}
+
+function closeMapModal() {
+    document.getElementById('map-modal').style.display = 'none';
+}
+
+function initializeRegionsMap() {
+    regionsMap = L.map('regions-map', {
+        center: RegionsConfig.mapCenter,
+        zoom: RegionsConfig.mapZoom
+    });
+    
+    // Tuiles suisses
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
+        attribution: '&copy; <a href="https://www.swisstopo.admin.ch/">swisstopo</a>'
+    }).addTo(regionsMap);
+    
+    // Ajouter les marqueurs des régions
+    RegionsConfig.data.forEach(region => {
+        if (region.coordinates_lat && region.coordinates_lng) {
+            const marker = L.marker([region.coordinates_lat, region.coordinates_lng])
+                .bindPopup(createRegionPopup(region))
+                .addTo(regionsMap);
+        }
+    });
+}
+
+function createRegionPopup(region) {
+    return `
+        <div class="map-popup-modern">
+            <h4>${region.name}</h4>
+            <div class="popup-stats">
+                <span><i class="fas fa-map-marked-alt"></i> ${region.sites_count || 0} sites</span>
+                <span><i class="fas fa-route"></i> ${region.routes_count || 0} voies</span>
+            </div>
+            <div class="popup-actions">
+                <a href="/regions/${region.id}" class="popup-btn primary">Découvrir</a>
+                <button onclick="showRegionWeather(${region.id})" class="popup-btn secondary">Météo</button>
+            </div>
+        </div>
+    `;
+}
+
+function viewOnMap(regionId) {
+    const region = RegionsConfig.data.find(r => r.id == regionId);
+    if (region && region.coordinates_lat && region.coordinates_lng) {
+        openMapModal();
+        setTimeout(() => {
+            if (regionsMap) {
+                regionsMap.setView([region.coordinates_lat, region.coordinates_lng], 12);
+            }
+        }, 200);
+    } else {
+        showToast('Coordonnées non disponibles pour cette région', 'warning');
+    }
+}
+
+// === MÉTÉO ===
+function openWeatherOverview() {
+    showToast('Affichage des conditions météo générales', 'info');
+    // TODO: Implémenter vue météo générale
+}
+
+function showRegionWeather(regionId) {
+    const region = RegionsConfig.data.find(r => r.id == regionId);
+    if (!region) return;
+    
+    document.getElementById('weather-title').innerHTML = `
+        <i class="fas fa-cloud-sun"></i>
+        Météo - ${region.name}
+    `;
+    
+    document.getElementById('weather-modal').style.display = 'flex';
+    loadWeatherData(region);
+}
+
+function closeWeatherModal() {
+    document.getElementById('weather-modal').style.display = 'none';
+}
+
+function loadWeatherData(region) {
+    const content = document.getElementById('weather-content');
+    content.innerHTML = `
+        <div class="weather-loading">
+            <div class="loading-spinner"></div>
+            <p>Chargement des données météo pour ${region.name}...</p>
+        </div>
+    `;
+    
+    // Simuler chargement météo (à remplacer par vraie API)
+    setTimeout(() => {
+        content.innerHTML = `
+            <div class="weather-current">
+                <div class="weather-main">
+                    <div class="weather-icon">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                    <div class="weather-temp">15°C</div>
+                    <div class="weather-desc">Ensoleillé</div>
+                </div>
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <i class="fas fa-eye"></i>
+                        <span>Visibilité: 10km</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-wind"></i>
+                        <span>Vent: 5 km/h</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-tint"></i>
+                        <span>Humidité: 65%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="weather-recommendation">
+                <div class="recommendation good">
+                    <i class="fas fa-thumbs-up"></i>
+                    <span>Bonnes conditions pour l'escalade</span>
+                </div>
+            </div>
+        `;
+    }, 1500);
+}
+
+// === PARTAGE ===
+function shareRegion(regionId) {
+    const region = RegionsConfig.data.find(r => r.id == regionId);
+    if (!region) return;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: `Région d'escalade ${region.name}`,
+            text: `Découvrez la région d'escalade ${region.name} sur TopoclimbCH`,
+            url: window.location.origin + `/regions/${region.id}`
+        });
+    } else {
+        // Fallback: copier l'URL
+        const url = window.location.origin + `/regions/${region.id}`;
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Lien copié dans le presse-papiers', 'success');
+        });
+    }
+}
+
+// === NOTIFICATIONS ===
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast-notification');
+    const messageEl = toast.querySelector('.toast-message');
+    const iconEl = toast.querySelector('.toast-icon i');
+    
+    messageEl.textContent = message;
+    
+    // Icône selon le type
+    const icons = {
+        info: 'fas fa-info-circle',
+        success: 'fas fa-check-circle',
+        warning: 'fas fa-exclamation-triangle',
+        error: 'fas fa-times-circle'
+    };
+    
+    iconEl.className = icons[type] || icons.info;
+    toast.className = `toast-notification show ${type}`;
+    
+    // Auto-hide après 4 secondes
+    setTimeout(() => {
+        hideToast();
+    }, 4000);
+}
+
+function hideToast() {
+    const toast = document.getElementById('toast-notification');
+    toast.className = 'toast-notification';
+}
+
+// === ÉVÉNEMENTS GLOBAUX ===
+// Fermer les modals en cliquant à l'extérieur
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-modern')) {
+        e.target.style.display = 'none';
+    }
+});
+
+// Raccourcis clavier
+document.addEventListener('keydown', function(e) {
+    // Échap pour fermer les modals
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-modern').forEach(modal => {
+            modal.style.display = 'none';
+        });
+        hideToast();
+    }
+    
+    // Ctrl+F pour focus sur la recherche
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('region-search').focus();
+    }
+});
+
+// Optimisation responsive
+window.addEventListener('resize', function() {
+    if (regionsMap) {
+        setTimeout(() => regionsMap.invalidateSize(), 100);
+    }
+});
+</script>
+{% endblock %}
