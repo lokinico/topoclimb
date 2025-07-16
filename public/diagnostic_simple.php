@@ -123,4 +123,54 @@ echo "Working Directory: " . getcwd() . "\n";
 echo "Script Directory: " . __DIR__ . "\n";
 echo "App Root: " . $app_root . "\n";
 
+// Vérifier les données en base
+echo "\n=== DONNÉES EN BASE ===\n";
+try {
+    // Essayer de charger l'autoloader pour accéder à la base
+    if (file_exists($app_root . '/vendor/autoload.php')) {
+        require_once $app_root . '/vendor/autoload.php';
+        require_once $app_root . '/bootstrap.php';
+        
+        // Vérifier la connexion à la base
+        $db_file = $app_root . '/topoclimb.db';
+        if (file_exists($db_file)) {
+            echo "✅ Base de données SQLite trouvée: $db_file\n";
+            
+            $pdo = new PDO("sqlite:$db_file");
+            
+            // Compter les régions
+            $stmt = $pdo->query("SELECT COUNT(*) FROM regions");
+            $region_count = $stmt->fetchColumn();
+            echo "📊 Nombre de régions: $region_count\n";
+            
+            // Compter les secteurs
+            $stmt = $pdo->query("SELECT COUNT(*) FROM sectors");
+            $sector_count = $stmt->fetchColumn();
+            echo "📊 Nombre de secteurs: $sector_count\n";
+            
+            // Compter les voies
+            $stmt = $pdo->query("SELECT COUNT(*) FROM routes");
+            $route_count = $stmt->fetchColumn();
+            echo "📊 Nombre de voies: $route_count\n";
+            
+            // Lister quelques régions
+            $stmt = $pdo->query("SELECT id, name, slug FROM regions LIMIT 5");
+            $regions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($regions)) {
+                echo "🗺️ Régions disponibles:\n";
+                foreach ($regions as $region) {
+                    echo "  - {$region['name']} (ID: {$region['id']}, slug: {$region['slug']})\n";
+                }
+            }
+            
+        } else {
+            echo "❌ Base de données non trouvée: $db_file\n";
+        }
+    } else {
+        echo "❌ Impossible de charger l'autoloader\n";
+    }
+} catch (Exception $e) {
+    echo "❌ Erreur lors de la vérification base: " . $e->getMessage() . "\n";
+}
+
 echo "\n=== FIN DU DIAGNOSTIC ===\n";
