@@ -9,8 +9,8 @@ echo "Date: " . date('Y-m-d H:i:s') . "\n\n";
 
 try {
     // Charger l'application
-    require_once __DIR__ . '/vendor/autoload.php';
-    require_once __DIR__ . '/bootstrap.php';
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
+    require_once dirname(__DIR__) . '/bootstrap.php';
     
     // Récupérer la base de données
     $containerBuilder = new \TopoclimbCH\Core\ContainerBuilder();

@@ -11,6 +11,7 @@ echo "Répertoire: " . __DIR__ . "\n\n";
 // Vérifier les chemins d'autoloader
 $autoloader_paths = [
     __DIR__ . '/vendor/autoload.php',
+    dirname(__DIR__) . '/vendor/autoload.php',
     '/tmp/vendor/autoload.php',
     '/home/httpd/vhosts/topoclimb.ch/topoclimb/vendor/autoload.php'
 ];
@@ -28,7 +29,7 @@ foreach ($autoloader_paths as $path) {
 
 // Tester le chargement de l'autoloader
 echo "\n=== TEST CHARGEMENT ===\n";
-$autoloader = __DIR__ . '/vendor/autoload.php';
+$autoloader = dirname(__DIR__) . '/vendor/autoload.php';
 if (file_exists($autoloader)) {
     echo "Tentative de chargement de: $autoloader\n";
     try {

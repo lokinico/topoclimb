@@ -9,11 +9,11 @@ echo "Date: " . date('Y-m-d H:i:s') . "\n\n";
 
 try {
     echo "1. Chargement de l'autoloader...\n";
-    require_once __DIR__ . '/vendor/autoload.php';
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
     echo "✅ Autoloader chargé\n";
     
     echo "2. Chargement du bootstrap...\n";
-    require_once __DIR__ . '/bootstrap.php';
+    require_once dirname(__DIR__) . '/bootstrap.php';
     echo "✅ Bootstrap chargé\n";
     
     echo "3. Création du container...\n";
