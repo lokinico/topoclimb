@@ -1,8 +1,8 @@
 #!/bin/bash
-# Script de déploiement TopoclimbCH
+# Script de déploiement TopoclimbCH pour Plesk
 
-echo "🚀 Déploiement TopoclimbCH"
-echo "========================="
+echo "🚀 Déploiement TopoclimbCH (Plesk)"
+echo "================================="
 
 # Vérifier que nous sommes dans le bon répertoire
 if [ ! -f "composer.json" ]; then
@@ -25,30 +25,18 @@ else
     echo "   Assurez-vous d'avoir uploadé les derniers fichiers"
 fi
 
-# Nettoyer Composer
-echo "🧹 Nettoyage Composer..."
-composer clear-cache
+# Note: Plesk gère Composer automatiquement dans /tmp
+echo "📚 Dépendances Composer gérées par Plesk..."
+echo "   Les dépendances sont disponibles dans /tmp/vendor/"
 
-# Supprimer le répertoire vendor existant
-echo "🗑️  Suppression de vendor..."
-rm -rf vendor/
-
-# Réinstaller les dépendances
-echo "📚 Installation des dépendances..."
-composer install --no-dev --optimize-autoloader --no-interaction
-
-# Vérifier l'installation
-echo "✅ Vérification de l'installation..."
-if [ ! -f "vendor/autoload.php" ]; then
-    echo "❌ Erreur: vendor/autoload.php non trouvé après installation"
+# Vérifier que l'autoloader Plesk est disponible
+if [ ! -f "/tmp/vendor/autoload.php" ]; then
+    echo "❌ Erreur: /tmp/vendor/autoload.php non trouvé"
+    echo "   Vérifiez que Composer est configuré dans Plesk"
     exit 1
 fi
 
-# Vérifier les fichiers Symfony
-if [ ! -f "vendor/symfony/deprecation-contracts/function.php" ]; then
-    echo "❌ Erreur: symfony/deprecation-contracts/function.php non trouvé"
-    exit 1
-fi
+echo "✅ Autoloader Plesk trouvé"
 
 # Vérifier que bootstrap.php existe
 if [ ! -f "bootstrap.php" ]; then

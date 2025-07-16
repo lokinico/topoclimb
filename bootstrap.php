@@ -16,12 +16,17 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 
 // Chargement de l'autoloader Composer
+// Vérifier d'abord le vendor local, puis le vendor Plesk
 $autoloadFile = __DIR__ . '/vendor/autoload.php';
-if (!file_exists($autoloadFile)) {
-    die('Erreur: vendor/autoload.php non trouvé. Exécutez "composer install"');
-}
+$plesk_autoloadFile = '/tmp/vendor/autoload.php';
 
-require_once $autoloadFile;
+if (file_exists($autoloadFile)) {
+    require_once $autoloadFile;
+} elseif (file_exists($plesk_autoloadFile)) {
+    require_once $plesk_autoloadFile;
+} else {
+    die('Erreur: vendor/autoload.php non trouvé. Vérifiez la configuration Composer.');
+}
 
 // Chargement des variables d'environnement
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
