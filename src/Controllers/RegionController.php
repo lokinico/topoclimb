@@ -63,20 +63,13 @@ class RegionController extends BaseController
     public function index(Request $request): Response
     {
         try {
-            error_log("DEBUG: Début index() - validation des filtres");
-            
             // Validation et nettoyage des filtres
             $filters = $this->validateAndSanitizeFilters($request);
-            error_log("DEBUG: Filtres validés: " . json_encode($filters));
 
-            error_log("DEBUG: Récupération des données en transaction");
-            
             // Récupération sécurisée des données
             $data = $this->executeInTransaction(function () use ($filters) {
                 return $this->getRegionsData($filters);
             });
-            
-            error_log("DEBUG: Données récupérées, clés: " . implode(', ', array_keys($data)));
 
             // Log de l'action
             $this->logAction('view_regions_list', ['filters' => $filters]);
@@ -84,32 +77,7 @@ class RegionController extends BaseController
             // Ajouter la clé API météo
             $data['weather_api_key'] = $_ENV['OPENWEATHER_API_KEY'] ?? '';
             
-            // DEBUG: Log des données envoyées au template
-            error_log("DEBUG RegionController - Données envoyées au template:");
-            
-            // Vérifier le type de $data['regions']
-            if (isset($data['regions'])) {
-                error_log("- Type de regions: " . gettype($data['regions']));
-                if (is_array($data['regions'])) {
-                    error_log("- Nombre de régions: " . count($data['regions']));
-                } else {
-                    error_log("- ERREUR: regions n'est pas un tableau!");
-                }
-            } else {
-                error_log("- regions n'est pas défini dans data");
-            }
-            
-            error_log("DEBUG: Avant render du template regions/index");
-            
-            try {
-                $response = $this->render('regions/index', $data);
-                error_log("DEBUG: Template rendu avec succès");
-                return $response;
-            } catch (\Exception $e) {
-                error_log("DEBUG: Erreur lors du rendu du template: " . $e->getMessage());
-                error_log("DEBUG: Fichier: " . $e->getFile() . ":" . $e->getLine());
-                throw $e;
-            }
+            return $this->render('regions/index', $data);
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors du chargement des régions');
 
@@ -199,7 +167,7 @@ class RegionController extends BaseController
         $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);
         $sql .= " LIMIT 500"; // Limite de sécurité
 
-        $regions = $this->db->query($sql, $params);
+        $regions = $this->db->fetchAll($sql, $params);
 
         // Récupération des pays pour les filtres
         $countries = $this->db->fetchAll(
