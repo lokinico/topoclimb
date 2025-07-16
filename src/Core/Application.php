@@ -105,6 +105,7 @@ class Application
         if ($response instanceof \Symfony\Component\HttpFoundation\Response) {
             error_log("Sending response...");
             $response->send();
+            exit(); // Arrêter l'exécution après l'envoi de la réponse
         } else {
             error_log("WARNING: Unknown response type: " . get_class($response));
             if (is_string($response)) {

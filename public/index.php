@@ -247,8 +247,8 @@ try {
     // Exécuter l'application qui gère tout le cycle requête/réponse
     $app->run();
 
-    // Log après l'exécution (si l'application n'a pas terminé le script)
-    error_log("Après app->run() pour " . ($_SERVER['REQUEST_URI'] ?? 'unknown') . " - Ce message ne devrait pas apparaître normalement");
+    // Cette ligne ne devrait jamais être atteinte car app->run() fait exit()
+    error_log("ERREUR: Code exécuté après app->run() - ceci ne devrait pas arriver");
 } catch (\Throwable $e) {
     // Log l'erreur simplement
     if (isset($logger)) {
