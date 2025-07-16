@@ -17,7 +17,7 @@ cp .env .env.backup 2>/dev/null || echo "⚠️  Pas de fichier .env à sauvegar
 # Mise à jour du code (si vous utilisez Git)
 echo "📥 Mise à jour du code..."
 git fetch origin
-git reset --hard origin/staging  # ou origin/main selon votre branche
+git reset --hard origin/main  # Changé vers main car nous avons fusionné les changements
 
 # Nettoyer Composer
 echo "🧹 Nettoyage Composer..."
@@ -44,6 +44,12 @@ if [ ! -f "vendor/symfony/deprecation-contracts/function.php" ]; then
     exit 1
 fi
 
+# Vérifier que bootstrap.php existe
+if [ ! -f "bootstrap.php" ]; then
+    echo "❌ Erreur: bootstrap.php non trouvé - fichier nécessaire pour l'application"
+    exit 1
+fi
+
 # Créer le fichier .env si nécessaire
 if [ ! -f ".env" ]; then
     echo "📝 Création du fichier .env..."
@@ -63,6 +69,7 @@ rm -rf storage/logs/*.log
 rm -rf storage/cache/*
 rm -rf test_*.php
 rm -rf *.db
+# NE PAS supprimer bootstrap.php car il est nécessaire
 
 # Test rapide
 echo "🧪 Test rapide..."
