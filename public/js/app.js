@@ -336,9 +336,11 @@ window.TopoclimbCH = {
       if (!parentEl) return;
 
       parentEl.addEventListener(event, (e) => {
-        const target = e.target.closest(selector);
-        if (target) {
-          handler.call(target, e);
+        if (e.target && typeof e.target.closest === 'function') {
+          const target = e.target.closest(selector);
+          if (target) {
+            handler.call(target, e);
+          }
         }
       });
     }

@@ -12,9 +12,8 @@ window.TopoclimbCH.components = {};
 // Protection contre les doubles chargements
 if (window.TopoclimbCommonLoaded) {
     console.warn('⚠️ common.js already loaded, skipping...');
-    return;
-}
-window.TopoclimbCommonLoaded = true;
+} else {
+    window.TopoclimbCommonLoaded = true;
 
 // Protection pour ModalManager
 if (typeof window.ModalManager !== 'undefined') {
@@ -550,9 +549,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 });
 
-// Exporter les classes pour utilisation externe
-window.TopoclimbCH.components.ModalManager = ModalManager;
-window.TopoclimbCH.components.LightboxManager = LightboxManager;
-window.TopoclimbCH.components.ToastManager = ToastManager;
-window.TopoclimbCH.components.FormManager = FormManager;
-window.TopoclimbCH.components.FilterManager = FilterManager;
+    // Exporter les classes pour utilisation externe
+    window.TopoclimbCH.components.ModalManager = ModalManager;
+    window.TopoclimbCH.components.LightboxManager = LightboxManager;
+    window.TopoclimbCH.components.ToastManager = ToastManager;
+    window.TopoclimbCH.components.FormManager = FormManager;
+    window.TopoclimbCH.components.FilterManager = FilterManager;
+}
