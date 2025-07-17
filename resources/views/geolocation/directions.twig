@@ -1,0 +1,487 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+    <div class="directions-page">
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>
+                        <i class="fa fa-directions"></i>
+                        Navigation vers {{ directions.site.name }}
+                    </h1>
+                    <p class="text-muted">
+                        <i class="fa fa-map-marker"></i>
+                        {{ directions.site.region_name }}
+                    </p>
+                </div>
+                <div>
+                    <a href="/geolocation" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-map"></i>
+                            Carte et itinéraire
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="map-container" id="mapContainer">
+                            <div class="map-placeholder">
+                                <div class="text-center">
+                                    <i class="fa fa-map fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Carte interactive</p>
+                                    <button class="btn btn-primary" id="loadMapBtn">
+                                        <i class="fa fa-map"></i> Charger la carte
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if directions.site.access_info %}
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-info-circle"></i>
+                                Informations d'accès
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="access-info">
+                                {{ directions.site.access_info|nl2br }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-route"></i>
+                            Détails de l'itinéraire
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="site-details">
+                            <div class="detail-item">
+                                <strong>Site:</strong>
+                                <span>{{ directions.site.name }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Région:</strong>
+                                <span>{{ directions.site.region_name }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Coordonnées:</strong>
+                                <span>
+                                    {{ directions.site.latitude|number_format(6) }},
+                                    {{ directions.site.longitude|number_format(6) }}
+                                </span>
+                            </div>
+                            {% if directions.site.elevation %}
+                                <div class="detail-item">
+                                    <strong>Altitude:</strong>
+                                    <span>{{ directions.site.elevation }} m</span>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if directions.navigation %}
+                            <div class="navigation-info mt-3">
+                                <h6>Navigation</h6>
+                                <div class="detail-item">
+                                    <strong>Distance:</strong>
+                                    <span class="badge badge-primary">
+                                        {{ directions.navigation.distance_km }} km
+                                    </span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Temps estimé:</strong>
+                                    <span>
+                                        {{ directions.navigation.estimated_time.driving.total_minutes }} min
+                                        <small class="text-muted">(en voiture)</small>
+                                    </span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Approche:</strong>
+                                    <span>
+                                        {{ directions.navigation.estimated_time.approach.minutes }} min
+                                        <small class="text-muted">(à pied)</small>
+                                    </span>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Difficulté d'accès:</strong>
+                                    <span class="badge badge-{{ directions.navigation.difficulty == 'facile' ? 'success' : (directions.navigation.difficulty == 'moyen' ? 'warning' : 'danger') }}">
+                                        {{ directions.navigation.difficulty|capitalize }}
+                                    </span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-external-link-alt"></i>
+                            Applications de navigation
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="navigation-apps">
+                            <a href="{{ directions.links.google_maps }}" 
+                               class="btn btn-outline-primary btn-block mb-2" 
+                               target="_blank">
+                                <i class="fab fa-google"></i>
+                                Google Maps
+                            </a>
+                            <a href="{{ directions.links.apple_maps }}" 
+                               class="btn btn-outline-secondary btn-block mb-2" 
+                               target="_blank">
+                                <i class="fab fa-apple"></i>
+                                Apple Maps
+                            </a>
+                            <a href="{{ directions.links.swiss_maps }}" 
+                               class="btn btn-outline-success btn-block mb-2" 
+                               target="_blank">
+                                <i class="fa fa-map"></i>
+                                Cartes suisses
+                            </a>
+                            <a href="{{ directions.links.waze }}" 
+                               class="btn btn-outline-info btn-block" 
+                               target="_blank">
+                                <i class="fab fa-waze"></i>
+                                Waze
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-cloud"></i>
+                            Météo locale
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="weather-info" id="weatherInfo">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Chargement...</span>
+                                </div>
+                                <p class="mt-2">Chargement de la météo...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        class DirectionsManager {
+            constructor() {
+                this.siteData = {{ directions|json_encode|raw }};
+                this.userPosition = {{ user_position|json_encode|raw }};
+                this.map = null;
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.loadWeather();
+            }
+
+            setupEventListeners() {
+                document.getElementById('loadMapBtn').addEventListener('click', () => {
+                    this.loadMap();
+                });
+            }
+
+            loadMap() {
+                const container = document.getElementById('mapContainer');
+                container.innerHTML = `
+                    <div class="map-frame">
+                        <iframe src="https://www.google.com/maps/embed/v1/directions?key=YOUR_API_KEY&origin=${this.userPosition.latitude},${this.userPosition.longitude}&destination=${this.siteData.site.latitude},${this.siteData.site.longitude}&mode=driving" 
+                                width="100%" 
+                                height="400" 
+                                style="border:0;" 
+                                allowfullscreen="" 
+                                loading="lazy">
+                        </iframe>
+                    </div>
+                `;
+            }
+
+            loadWeather() {
+                if (!this.siteData.site.latitude || !this.siteData.site.longitude) {
+                    this.showWeatherError('Coordonnées manquantes');
+                    return;
+                }
+
+                fetch(`/api/geolocation/weather?lat=${this.siteData.site.latitude}&lng=${this.siteData.site.longitude}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        this.displayWeather(data.weather);
+                    })
+                    .catch(error => {
+                        console.error('Erreur météo:', error);
+                        this.showWeatherError('Erreur de chargement');
+                    });
+            }
+
+            displayWeather(weather) {
+                const weatherInfo = document.getElementById('weatherInfo');
+                
+                if (!weather.current) {
+                    this.showWeatherError('Données météo indisponibles');
+                    return;
+                }
+
+                const current = weather.current;
+                weatherInfo.innerHTML = `
+                    <div class="current-weather">
+                        <div class="weather-main">
+                            <div class="temperature">
+                                <i class="fa fa-thermometer-half"></i>
+                                ${Math.round(current.temperature)}°C
+                            </div>
+                            <div class="weather-desc">
+                                ${current.description || 'Temps non spécifié'}
+                            </div>
+                        </div>
+                        <div class="weather-details">
+                            <div class="weather-item">
+                                <i class="fa fa-eye"></i>
+                                <span>${current.humidity}% humidité</span>
+                            </div>
+                            <div class="weather-item">
+                                <i class="fa fa-wind"></i>
+                                <span>${current.wind_speed} km/h</span>
+                            </div>
+                            <div class="weather-item">
+                                <i class="fa fa-cloud"></i>
+                                <span>${current.clouds}% nuageux</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Afficher la prévision si disponible
+                if (weather.forecast && weather.forecast.length > 0) {
+                    const forecastHtml = weather.forecast.slice(0, 3).map(day => `
+                        <div class="forecast-day">
+                            <div class="day-name">${this.formatDate(day.date)}</div>
+                            <div class="day-temp">${Math.round(day.temperature_max)}°/${Math.round(day.temperature_min)}°</div>
+                            <div class="day-desc">${day.description}</div>
+                        </div>
+                    `).join('');
+
+                    weatherInfo.innerHTML += `
+                        <div class="weather-forecast mt-3">
+                            <h6>Prévision 3 jours</h6>
+                            <div class="forecast-grid">
+                                ${forecastHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            showWeatherError(message) {
+                const weatherInfo = document.getElementById('weatherInfo');
+                weatherInfo.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        ${message}
+                    </div>
+                `;
+            }
+
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+                return days[date.getDay()];
+            }
+        }
+
+        // Initialiser le gestionnaire de navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            new DirectionsManager();
+        });
+    </script>
+{% endblock %}
+
+{% block styles %}
+    <style>
+        .directions-page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .map-container {
+            min-height: 400px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .map-placeholder {
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-frame iframe {
+            border-radius: 8px;
+        }
+
+        .detail-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .detail-item strong {
+            margin-right: 10px;
+        }
+
+        .navigation-info {
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .navigation-apps .btn {
+            text-align: left;
+        }
+
+        .navigation-apps .btn i {
+            width: 20px;
+            margin-right: 10px;
+        }
+
+        .access-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+
+        .weather-info {
+            min-height: 120px;
+        }
+
+        .current-weather {
+            text-align: center;
+        }
+
+        .temperature {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .weather-desc {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .weather-details {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .weather-item {
+            text-align: center;
+            margin: 5px;
+        }
+
+        .weather-item i {
+            display: block;
+            margin-bottom: 5px;
+            color: #007bff;
+        }
+
+        .weather-forecast {
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .forecast-day {
+            text-align: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .day-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .day-temp {
+            font-size: 14px;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .day-desc {
+            font-size: 12px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .weather-details {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .forecast-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .detail-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+{% endblock %}

@@ -1200,6 +1200,82 @@ return [
     ],
     
     // ========================================
+    // ROUTES GÉOLOCALISATION
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/geolocation',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'index',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/geolocation/directions/{id}',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'directions',
+        'middlewares' => []
+    ],
+    
+    // API Géolocalisation
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/nearest-sites',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiNearestSites',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/nearest-sectors',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiNearestSectors',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/directions/{id}',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiDirections',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/geocode',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiGeocode',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/reverse-geocode',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiReverseGeocode',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/convert-swiss',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiConvertToSwiss',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/weather',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiWeatherByLocation',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geolocation/nearby-pois',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiNearbyPOIs',
+        'middlewares' => []
+    ],
+
+    // ========================================
     // ROUTES DE TEST (SANS AUTHENTIFICATION)
     // ========================================
     [

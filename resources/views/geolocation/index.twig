@@ -1,0 +1,561 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+    <div class="geolocation-page">
+        <div class="page-header">
+            <h1>
+                <i class="fa fa-location-arrow"></i>
+                Sites d'escalade proches
+            </h1>
+            <p class="lead">Découvrez les sites d'escalade les plus proches de votre position</p>
+        </div>
+
+        <div class="location-controls">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fa fa-crosshairs"></i>
+                        Votre position
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="location-status" id="locationStatus">
+                        <div class="text-center">
+                            <button type="button" class="btn btn-primary btn-lg" id="getLocationBtn">
+                                <i class="fa fa-location-arrow"></i>
+                                Localiser ma position
+                            </button>
+                            <p class="text-muted mt-2">
+                                Cliquez pour autoriser la géolocalisation
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="location-info d-none" id="locationInfo">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-item">
+                                    <label>Latitude:</label>
+                                    <span id="userLatitude">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-item">
+                                    <label>Longitude:</label>
+                                    <span id="userLongitude">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <div class="info-item">
+                                    <label>Précision:</label>
+                                    <span id="locationAccuracy">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-item">
+                                    <label>Adresse:</label>
+                                    <span id="userAddress">Chargement...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-controls">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fa fa-search"></i>
+                        Paramètres de recherche
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="searchRadius">Rayon de recherche (km)</label>
+                                <select class="form-control" id="searchRadius">
+                                    <option value="10">10 km</option>
+                                    <option value="25">25 km</option>
+                                    <option value="50" selected>50 km</option>
+                                    <option value="100">100 km</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="searchType">Type de recherche</label>
+                                <select class="form-control" id="searchType">
+                                    <option value="sites">Sites d'escalade</option>
+                                    <option value="sectors">Secteurs</option>
+                                    <option value="both">Les deux</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="maxResults">Nombre max de résultats</label>
+                                <select class="form-control" id="maxResults">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-success" id="searchBtn" disabled>
+                            <i class="fa fa-search"></i>
+                            Rechercher les sites proches
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section d-none" id="resultsSection">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fa fa-mountain"></i>
+                        Résultats de la recherche
+                        <span class="badge badge-secondary ml-2" id="resultsCount">0</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="results-grid" id="resultsGrid">
+                        <!-- Les résultats seront chargés ici -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading-section d-none" id="loadingSection">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Chargement...</span>
+                </div>
+                <p class="mt-2">Recherche des sites d'escalade proches...</p>
+            </div>
+        </div>
+
+        <div class="error-section d-none" id="errorSection">
+            <div class="alert alert-danger" role="alert">
+                <i class="fa fa-exclamation-triangle"></i>
+                <strong>Erreur:</strong>
+                <span id="errorMessage"></span>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        class GeolocationManager {
+            constructor() {
+                this.userPosition = null;
+                this.watchId = null;
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.checkGeolocationSupport();
+            }
+
+            setupEventListeners() {
+                document.getElementById('getLocationBtn').addEventListener('click', () => {
+                    this.getCurrentLocation();
+                });
+
+                document.getElementById('searchBtn').addEventListener('click', () => {
+                    this.searchNearbyClimbing();
+                });
+
+                // Auto-search when search parameters change
+                ['searchRadius', 'searchType', 'maxResults'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => {
+                        if (this.userPosition) {
+                            this.searchNearbyClimbing();
+                        }
+                    });
+                });
+            }
+
+            checkGeolocationSupport() {
+                if (!navigator.geolocation) {
+                    this.showError('La géolocalisation n\'est pas supportée par votre navigateur');
+                    return false;
+                }
+                return true;
+            }
+
+            getCurrentLocation() {
+                if (!this.checkGeolocationSupport()) return;
+
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // 5 minutes
+                };
+
+                this.showLocationStatus('Localisation en cours...');
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => this.onLocationSuccess(position),
+                    (error) => this.onLocationError(error),
+                    options
+                );
+            }
+
+            onLocationSuccess(position) {
+                this.userPosition = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+
+                this.displayLocationInfo();
+                this.reverseGeocode();
+                this.enableSearch();
+                this.searchNearbyClimbing();
+            }
+
+            onLocationError(error) {
+                let message = 'Erreur de géolocalisation';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message = 'Géolocalisation refusée par l\'utilisateur';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message = 'Position indisponible';
+                        break;
+                    case error.TIMEOUT:
+                        message = 'Timeout de géolocalisation';
+                        break;
+                }
+                this.showError(message);
+            }
+
+            displayLocationInfo() {
+                document.getElementById('userLatitude').textContent = this.userPosition.latitude.toFixed(6);
+                document.getElementById('userLongitude').textContent = this.userPosition.longitude.toFixed(6);
+                document.getElementById('locationAccuracy').textContent = Math.round(this.userPosition.accuracy) + ' m';
+                
+                document.getElementById('locationStatus').classList.add('d-none');
+                document.getElementById('locationInfo').classList.remove('d-none');
+            }
+
+            reverseGeocode() {
+                fetch(`/api/geolocation/reverse-geocode?lat=${this.userPosition.latitude}&lng=${this.userPosition.longitude}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.results && data.results.length > 0) {
+                            const address = data.results[0].address || data.results[0].locality || 'Adresse inconnue';
+                            document.getElementById('userAddress').textContent = address;
+                        } else {
+                            document.getElementById('userAddress').textContent = 'Adresse non trouvée';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur géocodage inverse:', error);
+                        document.getElementById('userAddress').textContent = 'Erreur de géocodage';
+                    });
+            }
+
+            enableSearch() {
+                document.getElementById('searchBtn').disabled = false;
+            }
+
+            searchNearbyClimbing() {
+                if (!this.userPosition) return;
+
+                const radius = document.getElementById('searchRadius').value;
+                const type = document.getElementById('searchType').value;
+                const limit = document.getElementById('maxResults').value;
+
+                this.showLoading();
+                this.hideError();
+
+                const promises = [];
+                
+                if (type === 'sites' || type === 'both') {
+                    promises.push(this.searchNearestSites(radius, limit));
+                }
+                
+                if (type === 'sectors' || type === 'both') {
+                    promises.push(this.searchNearestSectors(radius, limit));
+                }
+
+                Promise.all(promises)
+                    .then(results => {
+                        this.displayResults(results, type);
+                    })
+                    .catch(error => {
+                        this.showError('Erreur lors de la recherche: ' + error.message);
+                    })
+                    .finally(() => {
+                        this.hideLoading();
+                    });
+            }
+
+            searchNearestSites(radius, limit) {
+                const url = `/api/geolocation/nearest-sites?lat=${this.userPosition.latitude}&lng=${this.userPosition.longitude}&radius=${radius}&limit=${limit}`;
+                
+                return fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        return { type: 'sites', data };
+                    });
+            }
+
+            searchNearestSectors(radius, limit) {
+                const url = `/api/geolocation/nearest-sectors?lat=${this.userPosition.latitude}&lng=${this.userPosition.longitude}&radius=${radius}&limit=${limit}`;
+                
+                return fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        return { type: 'sectors', data };
+                    });
+            }
+
+            displayResults(results, searchType) {
+                const resultsGrid = document.getElementById('resultsGrid');
+                resultsGrid.innerHTML = '';
+
+                let totalResults = 0;
+                let allItems = [];
+
+                results.forEach(result => {
+                    if (result.type === 'sites') {
+                        allItems.push(...result.data.results.map(item => ({
+                            ...item,
+                            type: 'site'
+                        })));
+                    } else if (result.type === 'sectors') {
+                        allItems.push(...result.data.results.map(item => ({
+                            ...item,
+                            type: 'sector'
+                        })));
+                    }
+                });
+
+                // Trier par distance
+                allItems.sort((a, b) => a.distance_km - b.distance_km);
+
+                totalResults = allItems.length;
+
+                if (totalResults === 0) {
+                    resultsGrid.innerHTML = '<div class="alert alert-info">Aucun site d\'escalade trouvé dans le rayon spécifié.</div>';
+                } else {
+                    allItems.forEach(item => {
+                        resultsGrid.appendChild(this.createResultCard(item));
+                    });
+                }
+
+                document.getElementById('resultsCount').textContent = totalResults;
+                document.getElementById('resultsSection').classList.remove('d-none');
+            }
+
+            createResultCard(item) {
+                const card = document.createElement('div');
+                card.className = 'result-card card mb-3';
+                
+                const typeInfo = item.type === 'site' ? 
+                    { icon: 'mountain', name: item.site.name, entity: item.site } :
+                    { icon: 'circle', name: item.sector.name, entity: item.sector };
+
+                card.innerHTML = `
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="result-info">
+                                <h5 class="card-title">
+                                    <i class="fa fa-${typeInfo.icon}"></i>
+                                    ${typeInfo.name}
+                                </h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        ${item.type === 'site' ? 'Site d\'escalade' : 'Secteur'} - 
+                                        ${typeInfo.entity.region_name || 'Région inconnue'}
+                                    </small>
+                                </p>
+                                ${item.type === 'sector' ? 
+                                    `<p class="card-text">
+                                        <small class="text-muted">
+                                            Site: ${item.sector.site_name || 'Non spécifié'}
+                                        </small>
+                                    </p>` : ''
+                                }
+                            </div>
+                            <div class="result-distance">
+                                <span class="badge badge-primary badge-lg">
+                                    ${item.distance_km} km
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="travel-info mt-2">
+                            <small class="text-muted">
+                                <i class="fa fa-car"></i>
+                                ${item.travel_time.driving.total_minutes} min en voiture
+                                + ${item.travel_time.approach.minutes} min à pied
+                            </small>
+                        </div>
+                        
+                        <div class="card-actions mt-3">
+                            <a href="${item.type === 'site' ? '/sites/' + typeInfo.entity.id : '/sectors/' + typeInfo.entity.id}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fa fa-info-circle"></i> Détails
+                            </a>
+                            ${item.type === 'site' ? 
+                                `<a href="/geolocation/directions/${typeInfo.entity.id}?lat=${this.userPosition.latitude}&lng=${this.userPosition.longitude}" 
+                                   class="btn btn-success btn-sm">
+                                    <i class="fa fa-directions"></i> Navigation
+                                </a>` : ''
+                            }
+                        </div>
+                    </div>
+                `;
+
+                return card;
+            }
+
+            showLoading() {
+                document.getElementById('loadingSection').classList.remove('d-none');
+                document.getElementById('resultsSection').classList.add('d-none');
+            }
+
+            hideLoading() {
+                document.getElementById('loadingSection').classList.add('d-none');
+            }
+
+            showError(message) {
+                document.getElementById('errorMessage').textContent = message;
+                document.getElementById('errorSection').classList.remove('d-none');
+            }
+
+            hideError() {
+                document.getElementById('errorSection').classList.add('d-none');
+            }
+
+            showLocationStatus(message) {
+                document.getElementById('locationStatus').innerHTML = `
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Chargement...</span>
+                        </div>
+                        <p class="mt-2">${message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialiser le gestionnaire de géolocalisation
+        document.addEventListener('DOMContentLoaded', function() {
+            new GeolocationManager();
+        });
+    </script>
+{% endblock %}
+
+{% block styles %}
+    <style>
+        .geolocation-page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .location-controls,
+        .search-controls {
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+        }
+
+        .info-item label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .result-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .result-distance .badge-lg {
+            font-size: 1.1em;
+            padding: 0.5em 0.8em;
+        }
+
+        .travel-info {
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .loading-section {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .error-section {
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-actions {
+                flex-direction: column;
+            }
+            
+            .card-actions .btn {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+{% endblock %}
