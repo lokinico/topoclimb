@@ -84,11 +84,21 @@ GET/POST /routes/{id}/log-ascent
 - **Controllers mis à jour**: RouteController, BookController, RegionController
 - **Routes étendues**: 15+ nouvelles routes ajoutées
 
-#### 🔧 **Commit: 1a4cfe0 - Fix Foreign Key Constraint**
+#### 🔧 **Commit: 1a4cfe0 - Fix Foreign Key Constraint (INCORRECT)**
 - **Problème**: `SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (fk_sectors_books)`
 - **Cause**: SectorController validait les `book_id` contre la table `climbing_sites` au lieu de `climbing_books`
 - **Solution**: Corrigé `isValidBookId()` et `getValidBooks()` pour utiliser la bonne table
-- **Impact**: Création de secteurs maintenant fonctionnelle sans erreur de contrainte
+- **Impact**: ❌ **CORRECTION INCORRECTE** - Confusion conceptuelle
+
+#### 🔧 **Commit: 3228f90 - Fix Hierarchical Structure (CORRECT)**
+- **Problème**: Confusion entre Sites (lieux géographiques) et Guides (livres)
+- **Structure Correcte**: `Régions → Sites → Secteurs → Voies` (hiérarchie géographique)
+- **Guides**: Publications séparées qui référencent secteurs via table de liaison
+- **Corrections**: 
+  - SectorController: `book_id` → `site_id` (hiérarchie correcte)
+  - Sector model: Relations et validation corrigées
+  - Imports: Ajout des modèles Site et Region
+- **Impact**: Structure hiérarchique maintenant cohérente
 
 ### 🔴 PRIORITÉ HAUTE (À développer immédiatement)
 
