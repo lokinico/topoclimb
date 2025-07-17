@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hors ligne - TopoclimbCH</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .offline-container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .offline-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #f0f0f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: #666;
+        }
+
+        .offline-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .offline-message {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .offline-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+        }
+
+        .offline-features {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+        }
+
+        .feature-list {
+            list-style: none;
+            text-align: left;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            color: #555;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .connection-status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #dc3545;
+        }
+
+        .status-indicator.online {
+            background: #28a745;
+        }
+
+        @media (max-width: 600px) {
+            .offline-container {
+                padding: 30px 20px;
+            }
+            
+            .offline-title {
+                font-size: 20px;
+            }
+            
+            .offline-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            🏔️
+        </div>
+        
+        <h1 class="offline-title">Mode hors ligne</h1>
+        
+        <p class="offline-message">
+            Vous êtes actuellement hors ligne. TopoclimbCH continue de fonctionner 
+            avec les données mises en cache sur votre appareil.
+        </p>
+        
+        <div class="offline-actions">
+            <button class="btn btn-primary" onclick="tryReconnect()">
+                Réessayer la connexion
+            </button>
+            <button class="btn btn-secondary" onclick="viewCachedData()">
+                Voir les données locales
+            </button>
+        </div>
+        
+        <div class="connection-status">
+            <span class="status-indicator" id="statusIndicator"></span>
+            <span id="statusText">Connexion indisponible</span>
+        </div>
+        
+        <div class="offline-features">
+            <h3>Fonctionnalités disponibles hors ligne:</h3>
+            <ul class="feature-list">
+                <li>Consultation des sites et secteurs déjà visités</li>
+                <li>Géolocalisation et navigation GPS</li>
+                <li>Recherche dans les données locales</li>
+                <li>Sauvegarde des favoris et commentaires</li>
+                <li>Consultation des alertes importantes</li>
+                <li>Météo des dernières prévisions</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let isOnline = navigator.onLine;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function updateConnectionStatus() {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            if (isOnline) {
+                indicator.classList.add('online');
+                statusText.textContent = 'Connexion rétablie';
+                
+                // Rediriger vers la page d'accueil après 2 secondes
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                indicator.classList.remove('online');
+                statusText.textContent = 'Connexion indisponible';
+            }
+        }
+
+        function tryReconnect() {
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                alert('Impossible de se reconnecter. Veuillez vérifier votre connexion internet.');
+                return;
+            }
+            
+            reconnectAttempts++;
+            
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = `Tentative de reconnexion... (${reconnectAttempts}/${maxReconnectAttempts})`;
+            
+            // Tester la connexion
+            fetch('/', { method: 'HEAD', mode: 'no-cors' })
+                .then(() => {
+                    isOnline = true;
+                    updateConnectionStatus();
+                })
+                .catch(() => {
+                    setTimeout(() => {
+                        statusText.textContent = 'Connexion indisponible';
+                    }, 2000);
+                });
+        }
+
+        function viewCachedData() {
+            // Récupérer les données du cache
+            if ('caches' in window) {
+                caches.open('topoclimb-data-v1.0.0').then(cache => {
+                    cache.keys().then(keys => {
+                        if (keys.length > 0) {
+                            localStorage.setItem('offline-redirect', 'cached-data');
+                            window.location.href = '/';
+                        } else {
+                            alert('Aucune donnée en cache disponible.');
+                        }
+                    });
+                });
+            } else {
+                alert('Cache non supporté par votre navigateur.');
+            }
+        }
+
+        // Écouter les changements de connexion
+        window.addEventListener('online', () => {
+            isOnline = true;
+            updateConnectionStatus();
+        });
+
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            updateConnectionStatus();
+        });
+
+        // Vérifier la connexion au chargement
+        updateConnectionStatus();
+
+        // Vérifier périodiquement la connexion
+        setInterval(() => {
+            if (!isOnline) {
+                fetch('/', { method: 'HEAD', mode: 'no-cors' })
+                    .then(() => {
+                        isOnline = true;
+                        updateConnectionStatus();
+                    })
+                    .catch(() => {
+                        // Reste hors ligne
+                    });
+            }
+        }, 30000); // Vérifier toutes les 30 secondes
+    </script>
+</body>
+</html>

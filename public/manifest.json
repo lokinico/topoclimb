@@ -1,0 +1,194 @@
+{
+  "name": "TopoclimbCH - Sites d'escalade en Suisse",
+  "short_name": "TopoclimbCH",
+  "description": "Découvrez les meilleurs sites d'escalade en Suisse avec navigation GPS, météo et communauté",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#007bff",
+  "background_color": "#ffffff",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/images/icons/climbing-marker.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "features": [
+    "cross-origin-isolated"
+  ],
+  "categories": [
+    "sports",
+    "travel",
+    "navigation",
+    "outdoor"
+  ],
+  "shortcuts": [
+    {
+      "name": "Sites proches",
+      "short_name": "Géolocalisation",
+      "description": "Trouver les sites d'escalade proches",
+      "url": "/geolocation",
+      "icons": [
+        {
+          "src": "/images/icons/climbing-marker.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Alertes",
+      "short_name": "Alertes",
+      "description": "Consulter les alertes d'escalade",
+      "url": "/alerts",
+      "icons": [
+        {
+          "src": "/images/icons/climbing-marker.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Carte",
+      "short_name": "Carte",
+      "description": "Carte interactive des sites",
+      "url": "/map",
+      "icons": [
+        {
+          "src": "/images/icons/climbing-marker.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Régions",
+      "short_name": "Régions",
+      "description": "Explorer les régions d'escalade",
+      "url": "/regions",
+      "icons": [
+        {
+          "src": "/images/icons/climbing-marker.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "geo",
+      "url": "/geolocation?coords=%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "capture_links": "new-client",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "permissions": [
+    "geolocation",
+    "notifications",
+    "background-sync"
+  ],
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "application/gpx+xml": [".gpx"],
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "images",
+          "accept": ["image/jpeg", "image/png", "image/gif", "image/webp"]
+        }
+      ]
+    }
+  },
+  "screenshots": [
+    {
+      "src": "/images/screenshots/desktop-home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Page d'accueil TopoclimbCH"
+    },
+    {
+      "src": "/images/screenshots/mobile-geolocation.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Géolocalisation mobile"
+    }
+  ]
+}
