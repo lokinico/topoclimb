@@ -686,6 +686,94 @@ return [
     ],
 
     // ========================================
+    // ROUTES ALERTES
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/alerts',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'index',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/alerts/create',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/alerts',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/alerts/{id}',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'show',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/alerts/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'edit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/alerts/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'update',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'DELETE',
+        'path' => '/alerts/{id}',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'delete',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/alerts/{id}/confirm',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'confirm',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/alerts',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'apiIndex',
+        'middlewares' => []
+    ],
+
+    // ========================================
     // ROUTES FORUM
     // ========================================
     [

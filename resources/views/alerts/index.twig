@@ -1,0 +1,231 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Alertes d'escalade - TopoclimbCH{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h1>Alertes d'escalade</h1>
+        <div class="page-actions">
+            <a href="{{ url('/alerts/create') }}" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Créer une alerte
+            </a>
+        </div>
+    </div>
+
+    <div class="filters-section">
+        <form method="GET" action="{{ url('/alerts') }}" class="filters-form">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="region_id">Région</label>
+                    <select name="region_id" id="region_id" class="form-control">
+                        <option value="">Toutes les régions</option>
+                        {% for region in regions %}
+                            <option value="{{ region.id }}" {% if filters.region_id == region.id %}selected{% endif %}>
+                                {{ region.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="site_id">Site</label>
+                    <select name="site_id" id="site_id" class="form-control">
+                        <option value="">Tous les sites</option>
+                        {% for site in sites %}
+                            <option value="{{ site.id }}" {% if filters.site_id == site.id %}selected{% endif %}>
+                                {{ site.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="alert_type_id">Type</label>
+                    <select name="alert_type_id" id="alert_type_id" class="form-control">
+                        <option value="">Tous les types</option>
+                        {% for type in alertTypes %}
+                            <option value="{{ type.id }}" {% if filters.alert_type_id == type.id %}selected{% endif %}>
+                                {{ type.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="search">Recherche</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           value="{{ filters.search }}" placeholder="Titre ou description">
+                </div>
+                
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-secondary">Filtrer</button>
+                        <a href="{{ url('/alerts') }}" class="btn btn-outline-secondary">Reset</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="alerts-grid">
+        {% if alerts %}
+            {% for alert in alerts %}
+                <div class="alert-card card {% if alert.severity == 'critical' %}border-danger{% elseif alert.severity == 'high' %}border-warning{% else %}border-info{% endif %}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="alert-meta">
+                            <span class="badge badge-{{ alert.severity == 'critical' ? 'danger' : (alert.severity == 'high' ? 'warning' : 'info') }}">
+                                {% if alert.alert_type_icon %}
+                                    <i class="fa fa-{{ alert.alert_type_icon }}"></i>
+                                {% endif %}
+                                {{ alert.alert_type_name }}
+                            </span>
+                            <span class="alert-severity badge badge-{{ alert.severity == 'critical' ? 'danger' : (alert.severity == 'high' ? 'warning' : (alert.severity == 'medium' ? 'warning' : 'success')) }}">
+                                {{ alert.severity == 'critical' ? 'Critique' : (alert.severity == 'high' ? 'Élevée' : (alert.severity == 'medium' ? 'Moyenne' : 'Faible')) }}
+                            </span>
+                        </div>
+                        <div class="alert-confirmations">
+                            <span class="badge badge-secondary">
+                                <i class="fa fa-check"></i> {{ alert.confirmation_count }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ url('/alerts/' ~ alert.id) }}">{{ alert.title }}</a>
+                        </h5>
+                        
+                        <p class="card-text">{{ alert.description|slice(0, 150) }}{% if alert.description|length > 150 %}...{% endif %}</p>
+                        
+                        <div class="alert-location">
+                            {% if alert.region_name %}
+                                <span class="badge badge-light">
+                                    <i class="fa fa-map-marker"></i> {{ alert.region_name }}
+                                </span>
+                            {% endif %}
+                            {% if alert.site_name %}
+                                <span class="badge badge-light">
+                                    <i class="fa fa-mountain"></i> {{ alert.site_name }}
+                                </span>
+                            {% endif %}
+                            {% if alert.sector_name %}
+                                <span class="badge badge-light">
+                                    <i class="fa fa-circle"></i> {{ alert.sector_name }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="alert-dates mt-2">
+                            <small class="text-muted">
+                                <i class="fa fa-calendar"></i> 
+                                Du {{ alert.start_date|date('d/m/Y') }}
+                                {% if alert.end_date %}
+                                    au {{ alert.end_date|date('d/m/Y') }}
+                                {% else %}
+                                    (sans fin)
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Par {{ alert.created_by_username }} le {{ alert.created_at|date('d/m/Y H:i') }}
+                            </small>
+                            <div class="alert-actions">
+                                <a href="{{ url('/alerts/' ~ alert.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fa fa-eye"></i> Voir
+                                </a>
+                                {% if auth.hasRole(['admin', 'moderator', 'editor']) %}
+                                    <a href="{{ url('/alerts/' ~ alert.id ~ '/edit') }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fa fa-edit"></i> Modifier
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i>
+                Aucune alerte trouvée avec les critères sélectionnés.
+            </div>
+        {% endif %}
+    </div>
+
+    {% if pagination.total > 1 %}
+        <div class="pagination-section">
+            {% include 'components/pagination.twig' %}
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block styles %}
+    <style>
+        .alerts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .alert-card {
+            transition: transform 0.2s ease;
+        }
+        
+        .alert-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .alert-meta {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .alert-location {
+            margin-top: 0.5rem;
+        }
+        
+        .alert-location .badge {
+            margin-right: 0.25rem;
+        }
+        
+        .filters-section {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        .filters-form .row {
+            align-items: end;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .alerts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .page-actions {
+                margin-top: 1rem;
+            }
+        }
+    </style>
+{% endblock %}

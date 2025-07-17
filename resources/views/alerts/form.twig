@@ -1,0 +1,383 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}
+    {% if isEdit %}
+        Modifier l'alerte {{ alert.title }}
+    {% else %}
+        Créer une alerte d'escalade
+    {% endif %}
+    - TopoclimbCH
+{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h1>
+            {% if isEdit %}
+                Modifier l'alerte {{ alert.title }}
+            {% else %}
+                Créer une alerte d'escalade
+            {% endif %}
+        </h1>
+        <div class="page-actions">
+            <a href="{{ url('/alerts') }}" class="btn btn-secondary">
+                <i class="fa fa-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <form action="{{ isEdit ? url('/alerts/' ~ alert.id ~ '/edit') : url('/alerts') }}" method="post" 
+              class="form form-horizontal" autocomplete="on">
+            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-info-circle"></i> Informations de l'alerte
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="title">Titre de l'alerte *</label>
+                                <input type="text" name="title" id="title" class="form-control" 
+                                       value="{{ alert.title }}" required maxlength="255" 
+                                       aria-describedby="title-help" autocomplete="off">
+                                <small id="title-help" class="form-text text-muted">
+                                    Titre clair et concis de l'alerte
+                                </small>
+                                {% if errors.title %}
+                                    <div class="invalid-feedback">{{ errors.title }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="description">Description *</label>
+                                <textarea name="description" id="description" class="form-control" 
+                                          rows="6" required aria-describedby="description-help">{{ alert.description }}</textarea>
+                                <small id="description-help" class="form-text text-muted">
+                                    Description détaillée de l'alerte, des risques et des recommandations
+                                </small>
+                                {% if errors.description %}
+                                    <div class="invalid-feedback">{{ errors.description }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="alert_type_id">Type d'alerte *</label>
+                                        <select name="alert_type_id" id="alert_type_id" class="form-control" 
+                                                required aria-describedby="alert-type-help">
+                                            <option value="">Sélectionnez un type</option>
+                                            {% for type in alertTypes %}
+                                                <option value="{{ type.id }}" 
+                                                        {% if alert.alert_type_id == type.id %}selected{% endif %}>
+                                                    {{ type.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        <small id="alert-type-help" class="form-text text-muted">
+                                            Type d'alerte (fermeture, danger, météo, etc.)
+                                        </small>
+                                        {% if errors.alert_type_id %}
+                                            <div class="invalid-feedback">{{ errors.alert_type_id }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="severity">Niveau de gravité *</label>
+                                        <select name="severity" id="severity" class="form-control" 
+                                                required aria-describedby="severity-help">
+                                            <option value="">Sélectionnez un niveau</option>
+                                            <option value="low" {% if alert.severity == 'low' %}selected{% endif %}>
+                                                Faible
+                                            </option>
+                                            <option value="medium" {% if alert.severity == 'medium' %}selected{% endif %}>
+                                                Moyenne
+                                            </option>
+                                            <option value="high" {% if alert.severity == 'high' %}selected{% endif %}>
+                                                Élevée
+                                            </option>
+                                            <option value="critical" {% if alert.severity == 'critical' %}selected{% endif %}>
+                                                Critique
+                                            </option>
+                                        </select>
+                                        <small id="severity-help" class="form-text text-muted">
+                                            Niveau de gravité de l'alerte
+                                        </small>
+                                        {% if errors.severity %}
+                                            <div class="invalid-feedback">{{ errors.severity }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="start_date">Date de début *</label>
+                                        <input type="date" name="start_date" id="start_date" class="form-control" 
+                                               value="{{ alert.start_date }}" required aria-describedby="start-date-help">
+                                        <small id="start-date-help" class="form-text text-muted">
+                                            Date d'activation de l'alerte
+                                        </small>
+                                        {% if errors.start_date %}
+                                            <div class="invalid-feedback">{{ errors.start_date }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="end_date">Date de fin</label>
+                                        <input type="date" name="end_date" id="end_date" class="form-control" 
+                                               value="{{ alert.end_date }}" aria-describedby="end-date-help">
+                                        <small id="end-date-help" class="form-text text-muted">
+                                            Date de fin de l'alerte (optionnel)
+                                        </small>
+                                        {% if errors.end_date %}
+                                            <div class="invalid-feedback">{{ errors.end_date }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-map-marker"></i> Localisation
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="region_id">Région</label>
+                                <select name="region_id" id="region_id" class="form-control" 
+                                        aria-describedby="region-help">
+                                    <option value="">Toutes les régions</option>
+                                    {% for region in regions %}
+                                        <option value="{{ region.id }}" 
+                                                {% if alert.region_id == region.id %}selected{% endif %}>
+                                            {{ region.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <small id="region-help" class="form-text text-muted">
+                                    Région concernée par l'alerte
+                                </small>
+                                {% if errors.region_id %}
+                                    <div class="invalid-feedback">{{ errors.region_id }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="site_id">Site</label>
+                                <select name="site_id" id="site_id" class="form-control" 
+                                        aria-describedby="site-help">
+                                    <option value="">Tous les sites</option>
+                                    {% for site in sites %}
+                                        <option value="{{ site.id }}" 
+                                                {% if alert.site_id == site.id %}selected{% endif %}>
+                                            {{ site.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <small id="site-help" class="form-text text-muted">
+                                    Site spécifique concerné (optionnel)
+                                </small>
+                                {% if errors.site_id %}
+                                    <div class="invalid-feedback">{{ errors.site_id }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="sector_id">Secteur</label>
+                                <select name="sector_id" id="sector_id" class="form-control" 
+                                        aria-describedby="sector-help">
+                                    <option value="">Tous les secteurs</option>
+                                    {# Sectors will be loaded dynamically based on site selection #}
+                                </select>
+                                <small id="sector-help" class="form-text text-muted">
+                                    Secteur spécifique concerné (optionnel)
+                                </small>
+                                {% if errors.sector_id %}
+                                    <div class="invalid-feedback">{{ errors.sector_id }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" name="active" id="active" class="form-check-input" 
+                                           value="1" {% if alert.active != 0 %}checked{% endif %}>
+                                    <label class="form-check-label" for="active">
+                                        Alerte active
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Décochez pour désactiver temporairement l'alerte
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fa fa-info-circle"></i> Aide
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <h6>Niveaux de gravité:</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Faible:</strong> Information générale</li>
+                                    <li><strong>Moyenne:</strong> Attention requise</li>
+                                    <li><strong>Élevée:</strong> Risque significatif</li>
+                                    <li><strong>Critique:</strong> Danger immédiat</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    {% if isEdit %}
+                        <i class="fa fa-save"></i> Mettre à jour
+                    {% else %}
+                        <i class="fa fa-plus"></i> Créer l'alerte
+                    {% endif %}
+                </button>
+                
+                <a href="{{ url('/alerts') }}" class="btn btn-secondary" role="button">
+                    <i class="fa fa-times"></i> Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle site selection to load sectors
+            const siteSelect = document.getElementById('site_id');
+            const sectorSelect = document.getElementById('sector_id');
+            
+            if (siteSelect && sectorSelect) {
+                siteSelect.addEventListener('change', function() {
+                    const siteId = this.value;
+                    
+                    // Clear sector options
+                    sectorSelect.innerHTML = '<option value="">Tous les secteurs</option>';
+                    
+                    if (siteId) {
+                        // Load sectors for selected site
+                        fetch(`/api/sites/${siteId}/sectors`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.sectors) {
+                                    data.sectors.forEach(sector => {
+                                        const option = document.createElement('option');
+                                        option.value = sector.id;
+                                        option.textContent = sector.name;
+                                        sectorSelect.appendChild(option);
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error loading sectors:', error);
+                            });
+                    }
+                });
+            }
+            
+            // Handle severity selection styling
+            const severitySelect = document.getElementById('severity');
+            if (severitySelect) {
+                severitySelect.addEventListener('change', function() {
+                    const severity = this.value;
+                    this.className = 'form-control';
+                    
+                    switch (severity) {
+                        case 'critical':
+                            this.classList.add('border-danger');
+                            break;
+                        case 'high':
+                            this.classList.add('border-warning');
+                            break;
+                        case 'medium':
+                            this.classList.add('border-info');
+                            break;
+                        case 'low':
+                            this.classList.add('border-success');
+                            break;
+                    }
+                });
+                
+                // Trigger on page load if value is set
+                if (severitySelect.value) {
+                    severitySelect.dispatchEvent(new Event('change'));
+                }
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block styles %}
+    <style>
+        .form-container {
+            max-width: none;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-actions {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .form-actions .btn {
+            margin: 0 0.5rem;
+        }
+        
+        .card-header {
+            background-color: #f8f9fa;
+        }
+        
+        .alert-info h6 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .alert-info ul {
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .page-actions {
+                margin-top: 1rem;
+            }
+        }
+    </style>
+{% endblock %}

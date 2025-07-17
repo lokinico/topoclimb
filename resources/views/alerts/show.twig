@@ -1,0 +1,290 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ alert.title }} - Alerte d'escalade - TopoclimbCH{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1>{{ alert.title }}</h1>
+                <div class="alert-meta">
+                    <span class="badge badge-{{ alert.severity == 'critical' ? 'danger' : (alert.severity == 'high' ? 'warning' : (alert.severity == 'medium' ? 'warning' : 'success')) }} mr-2">
+                        {% if alert.alert_type_icon %}
+                            <i class="fa fa-{{ alert.alert_type_icon }}"></i>
+                        {% endif %}
+                        {{ alert.alert_type_name }}
+                    </span>
+                    <span class="badge badge-{{ alert.severity == 'critical' ? 'danger' : (alert.severity == 'high' ? 'warning' : (alert.severity == 'medium' ? 'warning' : 'success')) }}">
+                        Niveau: {{ alert.severity == 'critical' ? 'Critique' : (alert.severity == 'high' ? 'Élevée' : (alert.severity == 'medium' ? 'Moyenne' : 'Faible')) }}
+                    </span>
+                </div>
+            </div>
+            <div class="page-actions">
+                <a href="{{ url('/alerts') }}" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i> Retour
+                </a>
+                {% if auth.hasRole(['admin', 'moderator', 'editor']) %}
+                    <a href="{{ url('/alerts/' ~ alert.id ~ '/edit') }}" class="btn btn-primary">
+                        <i class="fa fa-edit"></i> Modifier
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="alert-details">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-info-circle"></i> Détails de l'alerte
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert-description">
+                            {{ alert.description|nl2br }}
+                        </div>
+                        
+                        <div class="alert-info mt-4">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Localisation</h6>
+                                    <ul class="list-unstyled">
+                                        {% if alert.region_name %}
+                                            <li>
+                                                <i class="fa fa-map-marker text-muted"></i> 
+                                                <strong>Région:</strong> {{ alert.region_name }}
+                                            </li>
+                                        {% endif %}
+                                        {% if alert.site_name %}
+                                            <li>
+                                                <i class="fa fa-mountain text-muted"></i> 
+                                                <strong>Site:</strong> {{ alert.site_name }}
+                                            </li>
+                                        {% endif %}
+                                        {% if alert.sector_name %}
+                                            <li>
+                                                <i class="fa fa-circle text-muted"></i> 
+                                                <strong>Secteur:</strong> {{ alert.sector_name }}
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6>Période</h6>
+                                    <ul class="list-unstyled">
+                                        <li>
+                                            <i class="fa fa-calendar text-muted"></i> 
+                                            <strong>Début:</strong> {{ alert.start_date|date('d/m/Y') }}
+                                        </li>
+                                        {% if alert.end_date %}
+                                            <li>
+                                                <i class="fa fa-calendar text-muted"></i> 
+                                                <strong>Fin:</strong> {{ alert.end_date|date('d/m/Y') }}
+                                            </li>
+                                        {% else %}
+                                            <li>
+                                                <i class="fa fa-calendar text-muted"></i> 
+                                                <strong>Fin:</strong> <em>Non définie</em>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert-meta-info mt-4">
+                            <small class="text-muted">
+                                <i class="fa fa-user"></i> 
+                                Créée par {{ alert.created_by_username }} le {{ alert.created_at|date('d/m/Y à H:i') }}
+                                {% if alert.updated_at and alert.updated_at != alert.created_at %}
+                                    <br>
+                                    <i class="fa fa-edit"></i> 
+                                    Modifiée le {{ alert.updated_at|date('d/m/Y à H:i') }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-check-circle"></i> Confirmations
+                            <span class="badge badge-secondary ml-2">{{ alert.confirmation_count }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if canConfirm %}
+                            <div class="text-center mb-3">
+                                <button type="button" class="btn btn-success btn-confirm-alert" data-alert-id="{{ alert.id }}">
+                                    <i class="fa fa-check"></i> Confirmer cette alerte
+                                </button>
+                                <small class="form-text text-muted">
+                                    Cliquez pour confirmer que vous avez également constaté cette situation.
+                                </small>
+                            </div>
+                            <hr>
+                        {% endif %}
+                        
+                        {% if confirmations %}
+                            <div class="confirmations-list">
+                                <h6>Confirmé par:</h6>
+                                {% for confirmation in confirmations %}
+                                    <div class="confirmation-item d-flex justify-content-between align-items-center mb-2">
+                                        <span>
+                                            <i class="fa fa-user text-muted"></i> 
+                                            {{ confirmation.username }}
+                                        </span>
+                                        <small class="text-muted">
+                                            {{ confirmation.confirmed_at|date('d/m/Y') }}
+                                        </small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted">
+                                <i class="fa fa-info-circle"></i>
+                                <p>Aucune confirmation pour le moment.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if alert.severity == 'critical' %}
+                    <div class="card border-danger mt-3">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="card-title mb-0">
+                                <i class="fa fa-exclamation-triangle"></i> Alerte critique
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                Cette alerte est marquée comme critique. 
+                                Veuillez prendre les précautions nécessaires.
+                            </p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const confirmButton = document.querySelector('.btn-confirm-alert');
+            if (confirmButton) {
+                confirmButton.addEventListener('click', function() {
+                    const alertId = this.dataset.alertId;
+                    const button = this;
+                    
+                    // Disable button
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Confirmation...';
+                    
+                    fetch(`/alerts/${alertId}/confirm`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update confirmation count
+                            const countBadge = document.querySelector('.card-title .badge-secondary');
+                            if (countBadge) {
+                                countBadge.textContent = data.confirmation_count;
+                            }
+                            
+                            // Replace button with success message
+                            button.outerHTML = `
+                                <div class="alert alert-success">
+                                    <i class="fa fa-check"></i> Alerte confirmée avec succès!
+                                </div>
+                            `;
+                            
+                            // Reload page to show updated confirmations
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
+                        } else {
+                            throw new Error(data.error || 'Erreur lors de la confirmation');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fa fa-check"></i> Confirmer cette alerte';
+                        alert('Erreur lors de la confirmation: ' + error.message);
+                    });
+                });
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block styles %}
+    <style>
+        .alert-meta {
+            margin-top: 0.5rem;
+        }
+        
+        .alert-meta .badge {
+            font-size: 0.8rem;
+        }
+        
+        .alert-description {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .alert-info h6 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        
+        .alert-info ul li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .alert-info ul li i {
+            width: 16px;
+            margin-right: 0.5rem;
+        }
+        
+        .confirmation-item {
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+        
+        .page-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header .d-flex {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .page-actions {
+                margin-top: 1rem;
+            }
+        }
+    </style>
+{% endblock %}
