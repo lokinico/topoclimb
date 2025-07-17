@@ -898,7 +898,7 @@ class SectorController extends BaseController
     private function isValidBookId(int $bookId): bool
     {
         $book = $this->db->fetchOne(
-            "SELECT id FROM climbing_sites WHERE id = ? AND active = 1",
+            "SELECT id FROM climbing_books WHERE id = ? AND active = 1",
             [$bookId]
         );
         return (bool) $book;
@@ -920,7 +920,7 @@ class SectorController extends BaseController
     private function getValidBooks(): array
     {
         return $this->db->fetchAll(
-            "SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC"
+            "SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC"
         );
     }
 
