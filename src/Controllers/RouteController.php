@@ -719,6 +719,50 @@ class RouteController extends BaseController
     }
 
     /**
+     * Affiche le formulaire de log d'ascension
+     */
+    public function logAscent(Request $request): Response
+    {
+        try {
+            $id = $request->attributes->get('id');
+            if (!$id) {
+                $this->session->flash('error', 'ID de voie invalide');
+                return Response::redirect('/routes');
+            }
+
+            // Vérification de l'authentification
+            if (!$this->session->get('auth_user_id')) {
+                $this->session->flash('error', 'Vous devez être connecté pour logger une ascension');
+                return Response::redirect('/login');
+            }
+
+            // Récupérer les détails de la voie
+            $route = $this->db->fetchOne(
+                "SELECT r.*, s.name as sector_name, reg.name as region_name 
+                 FROM climbing_routes r 
+                 LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
+                 LEFT JOIN climbing_regions reg ON s.region_id = reg.id 
+                 WHERE r.id = ? AND r.active = 1",
+                [$id]
+            );
+
+            if (!$route) {
+                $this->session->flash('error', 'Voie non trouvée');
+                return Response::redirect('/routes');
+            }
+
+            return $this->render('routes/log-ascent', [
+                'route' => $route,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+        } catch (\Exception $e) {
+            error_log('RouteController::logAscent error: ' . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors du chargement du formulaire');
+            return Response::redirect('/routes/' . $id);
+        }
+    }
+
+    /**
      * Enregistre une ascension (AJAX)
      */
     public function recordAscent(Request $request): Response
@@ -916,5 +960,116 @@ class RouteController extends BaseController
             'onsight_count' => 0,
             'redpoint_count' => 0
         ];
+    }
+
+    /**
+     * Ajoute un commentaire (POST)
+     */
+    public function addComment(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+
+        if (!$id) {
+            $this->session->flash('error', 'ID de voie invalide');
+            return Response::redirect('/routes');
+        }
+
+        try {
+            if (!$this->session->get('auth_user_id')) {
+                $this->session->flash('error', 'Vous devez être connecté pour commenter');
+                return Response::redirect('/login');
+            }
+
+            $comment = trim($request->request->get('comment', ''));
+            if (empty($comment)) {
+                $this->session->flash('error', 'Le commentaire ne peut pas être vide');
+                return Response::redirect("/routes/$id");
+            }
+
+            $commentData = [
+                'route_id' => (int) $id,
+                'user_id' => $this->session->get('auth_user_id'),
+                'comment' => $comment,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+
+            $commentId = $this->db->insert('comments', $commentData);
+
+            if ($commentId) {
+                $this->session->flash('success', 'Commentaire ajouté avec succès');
+            } else {
+                $this->session->flash('error', 'Erreur lors de l\'ajout du commentaire');
+            }
+
+            return Response::redirect("/routes/$id");
+        } catch (\Exception $e) {
+            error_log('RouteController::addComment error: ' . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de l\'ajout du commentaire');
+            return Response::redirect("/routes/$id");
+        }
+    }
+
+    /**
+     * Bascule le statut favori d'une voie
+     */
+    public function toggleFavorite(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        $userId = $this->session->get('auth_user_id');
+
+        if (!$id || !$userId) {
+            return Response::json(['error' => 'Paramètres manquants'], 400);
+        }
+
+        try {
+            // Vérifier si la voie est déjà en favoris
+            $existingFavorite = $this->db->fetchOne(
+                "SELECT id FROM user_favorites WHERE user_id = ? AND route_id = ?",
+                [$userId, $id]
+            );
+
+            if ($existingFavorite) {
+                // Supprimer des favoris
+                $this->db->delete('user_favorites', 'user_id = ? AND route_id = ?', [$userId, $id]);
+                return Response::json(['success' => true, 'action' => 'removed', 'message' => 'Retiré des favoris']);
+            } else {
+                // Ajouter aux favoris
+                $this->db->insert('user_favorites', [
+                    'user_id' => $userId,
+                    'route_id' => $id,
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+                return Response::json(['success' => true, 'action' => 'added', 'message' => 'Ajouté aux favoris']);
+            }
+        } catch (\Exception $e) {
+            error_log('RouteController::toggleFavorite error: ' . $e->getMessage());
+            return Response::json(['error' => 'Erreur lors de la modification'], 500);
+        }
+    }
+
+    /**
+     * Retire une voie des favoris
+     */
+    public function removeFavorite(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        $userId = $this->session->get('auth_user_id');
+
+        if (!$id || !$userId) {
+            return Response::json(['error' => 'Paramètres manquants'], 400);
+        }
+
+        try {
+            $deleted = $this->db->delete('user_favorites', 'user_id = ? AND route_id = ?', [$userId, $id]);
+            
+            if ($deleted) {
+                return Response::json(['success' => true, 'message' => 'Retiré des favoris']);
+            } else {
+                return Response::json(['error' => 'Favori non trouvé'], 404);
+            }
+        } catch (\Exception $e) {
+            error_log('RouteController::removeFavorite error: ' . $e->getMessage());
+            return Response::json(['error' => 'Erreur lors de la suppression'], 500);
+        }
     }
 }

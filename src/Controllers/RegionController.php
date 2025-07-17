@@ -257,7 +257,7 @@ class RegionController extends BaseController
         $sectorsQuery = "SELECT s.id, s.name, s.code, s.altitude, s.access_time, s.coordinates_lat, s.coordinates_lng,
                                 s.description, si.name as site_name, si.id as site_id,
                                 COUNT(r.id) as routes_count,
-                                ROUND(AVG(r.difficulty_value), 1) as avg_difficulty,
+                                ROUND(AVG(CAST(r.difficulty AS DECIMAL(3,1))), 1) as avg_difficulty,
                                 ROUND(AVG(r.beauty_rating), 1) as avg_beauty
                          FROM climbing_sectors s 
                          LEFT JOIN climbing_sites si ON s.site_id = si.id
@@ -438,14 +438,14 @@ class RegionController extends BaseController
     {
         $rules = [
             'country_id' => 'required|numeric',
-            'name' => 'required|string|min:2|max:255',
-            'description' => 'nullable|string|max:5000',
+            'name' => 'required|min:2|max:255',
+            'description' => 'nullable|max:5000',
             'coordinates_lat' => 'nullable|numeric|between:' . self::SWISS_BOUNDS['lat_min'] . ',' . self::SWISS_BOUNDS['lat_max'],
             'coordinates_lng' => 'nullable|numeric|between:' . self::SWISS_BOUNDS['lng_min'] . ',' . self::SWISS_BOUNDS['lng_max'],
             'altitude' => 'nullable|numeric|min:0|max:' . self::MAX_ALTITUDE_SWITZERLAND,
-            'best_season' => 'nullable|string|max:100',
-            'access_info' => 'nullable|string|max:2000',
-            'parking_info' => 'nullable|string|max:1000'
+            'best_season' => 'nullable|max:100',
+            'access_info' => 'nullable|max:2000',
+            'parking_info' => 'nullable|max:1000'
         ];
 
         $validatedData = $this->validateInput($data, $rules);

@@ -682,4 +682,75 @@ class BookController extends BaseController
             ], 500);
         }
     }
+
+    /**
+     * API: Récupère les secteurs d'un guide
+     */
+    public function apiSectors(Request $request): Response
+    {
+        try {
+            $id = $request->attributes->get('id');
+            if (!$id) {
+                return Response::json([
+                    'success' => false,
+                    'error' => 'ID du guide non spécifié'
+                ], 400);
+            }
+
+            // Vérifier que le guide existe
+            $book = $this->db->fetchOne(
+                "SELECT id, name FROM climbing_books WHERE id = ? AND active = 1",
+                [(int)$id]
+            );
+
+            if (!$book) {
+                return Response::json([
+                    'success' => false,
+                    'error' => 'Guide non trouvé'
+                ], 404);
+            }
+
+            // Récupérer les secteurs du guide
+            $sectors = $this->db->fetchAll(
+                "SELECT 
+                    sect.id,
+                    sect.name,
+                    sect.code,
+                    sect.altitude,
+                    sect.coordinates_lat,
+                    sect.coordinates_lng,
+                    si.name as site_name,
+                    r.name as region_name,
+                    bs.page_number,
+                    bs.sort_order,
+                    bs.notes as book_notes,
+                    COUNT(rt.id) as routes_count
+                 FROM climbing_sectors sect
+                 JOIN climbing_book_sectors bs ON sect.id = bs.sector_id
+                 LEFT JOIN climbing_sites si ON sect.site_id = si.id
+                 LEFT JOIN climbing_regions r ON si.region_id = r.id
+                 LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
+                 WHERE bs.book_id = ? AND sect.active = 1
+                 GROUP BY sect.id
+                 ORDER BY bs.sort_order ASC, sect.name ASC",
+                [(int)$id]
+            );
+
+            return Response::json([
+                'success' => true,
+                'data' => $sectors,
+                'book' => [
+                    'id' => (int)$book['id'],
+                    'name' => $book['name']
+                ],
+                'count' => count($sectors)
+            ]);
+        } catch (\Exception $e) {
+            error_log('BookController::apiSectors error: ' . $e->getMessage());
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération des secteurs'
+            ], 500);
+        }
+    }
 }

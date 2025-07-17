@@ -569,7 +569,172 @@ return [
         'method' => 'POST',
         'path' => '/routes/{id}/log-ascent',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'storeAscent',
+        'action' => 'recordAscent',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Routes pour commentaires
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/comments',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'comments',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/comments',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'addComment',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // Routes pour favoris
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/favorite',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'toggleFavorite',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'DELETE',
+        'path' => '/routes/{id}/favorite',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'removeFavorite',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // ROUTES ÉVÉNEMENTS
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/events',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'index',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/events/create',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/events',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'store',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/events/{id}',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'show',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/events/{id}/register',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'register',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/events/{id}/unregister',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'unregister',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+
+    // ========================================
+    // ROUTES FORUM
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/forum',
+        'controller' => \TopoclimbCH\Controllers\ForumController::class,
+        'action' => 'index',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/forum/category/{id}',
+        'controller' => \TopoclimbCH\Controllers\ForumController::class,
+        'action' => 'category',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/forum/topic/{id}',
+        'controller' => \TopoclimbCH\Controllers\ForumController::class,
+        'action' => 'topic',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/forum/category/{id}/create',
+        'controller' => \TopoclimbCH\Controllers\ForumController::class,
+        'action' => 'createTopic',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/forum/category/{id}/create',
+        'controller' => \TopoclimbCH\Controllers\ForumController::class,
+        'action' => 'storeTopic',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/forum/topic/{id}/reply',
+        'controller' => \TopoclimbCH\Controllers\ForumController::class,
+        'action' => 'reply',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\CsrfMiddleware::class,
