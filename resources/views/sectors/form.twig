@@ -28,16 +28,16 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             
             <div class="form-group">
-                <label for="book_id">Site (optionnel)</label>
-                <select name="book_id" id="book_id" class="form-control" aria-describedby="book-help">
+                <label for="site_id">Site (optionnel)</label>
+                <select name="site_id" id="site_id" class="form-control" aria-describedby="site-help">
                     <option value="">Aucun site sélectionné</option>
-                    {% for book in books %}
-                        <option value="{{ book.id }}" {% if sector.book_id == book.id %}selected{% endif %}>
-                            {{ book.name }}
+                    {% for site in sites %}
+                        <option value="{{ site.id }}" {% if sector.site_id == site.id %}selected{% endif %}>
+                            {{ site.name }}
                         </option>
                     {% endfor %}
                 </select>
-                <small id="book-help" class="form-text text-muted">Site d'escalade auquel appartient ce secteur (optionnel)</small>
+                <small id="site-help" class="form-text text-muted">Site d'escalade auquel appartient ce secteur (optionnel)</small>
             </div>
             
             <div class="form-group">
