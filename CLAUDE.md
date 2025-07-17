@@ -46,6 +46,8 @@ Ce guide explique comment utiliser Claude Code AI et Gemini CLI efficacement ave
 - ✅ **Carte interactive** avec tuiles suisses
 - ✅ **Erreurs critiques 500 résolues** (SQL, validation, méthodes manquantes)
 - ✅ **Fonctionnalités manquantes ajoutées** (Events, Forum, Log d'ascensions)
+- ✅ **Structure de production analysée** (16 tables principales identifiées)
+- ✅ **Hiérarchie géographique clarifiée** (Pays → Régions → Sites → Secteurs → Voies)
 
 ### 🆕 **CORRECTIONS RÉCENTES (Juillet 2025)**
 
@@ -99,6 +101,59 @@ GET/POST /routes/{id}/log-ascent
   - Sector model: Relations et validation corrigées
   - Imports: Ajout des modèles Site et Region
 - **Impact**: Structure hiérarchique maintenant cohérente
+
+### 🗄️ **STRUCTURE DE BASE DE DONNÉES DE PRODUCTION**
+
+#### 📊 **Tables Principales (16 tables identifiées)**
+
+**Hiérarchie Géographique:**
+```
+climbing_countries (pays)
+├── climbing_regions (régions)
+    ├── climbing_sites (sites optionnels)
+    │   └── climbing_sectors (secteurs)
+    │       └── climbing_routes (voies)
+    └── climbing_sectors (secteurs directs)
+        └── climbing_routes (voies)
+```
+
+**Tables de Référence:**
+- `climbing_difficulty_systems` - Systèmes de cotation (français, YDS, etc.)
+- `climbing_difficulty_grades` - Grades de difficulté (5a, 5b, 6a, etc.)
+- `climbing_exposures` - Expositions (N, S, E, W, etc.)
+- `climbing_months` - Mois avec qualité saisonnière
+
+**Tables Pivot:**
+- `climbing_sector_exposures` - Secteurs ↔ Expositions
+- `climbing_sector_months` - Secteurs ↔ Qualité mensuelle
+- `climbing_media_relationships` - Médias ↔ Entités (polymorphique)
+
+**Tables Métier:**
+- `users` - Utilisateurs avec rôles (0-5)
+- `user_ascents` - Ascensions des utilisateurs
+- `climbing_media` - Photos/vidéos/documents
+
+#### ⚠️ **Problèmes Identifiés en Production**
+
+1. **Relations Incohérentes**: Secteurs peuvent avoir `site_id` OU `region_id`
+2. **Foreign Keys**: Possibles contraintes manquantes
+3. **Données Orphelines**: Secteurs sans site/région valide
+4. **Coordonnées Doubles**: GPS standard ET coordonnées suisses
+
+#### 🔧 **Script de Migration Sécurisé**
+
+Un script `export_production_remote.php` a été créé pour :
+- ✅ Analyser la structure réelle de production
+- ✅ Identifier les données orphelines
+- ✅ Proposer des corrections SQL
+- ✅ Préserver l'intégrité des données existantes
+
+**Utilisation:**
+```bash
+# Sur le serveur de production
+php export_production_remote.php
+# Génère: structure_production_YYYY-MM-DD_HH-MM-SS.md
+```
 
 ### 🔴 PRIORITÉ HAUTE (À développer immédiatement)
 
