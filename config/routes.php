@@ -1313,4 +1313,193 @@ return [
         'action' => 'testCreate',
         'middlewares' => []
     ],
+    
+    // ========================================
+    // ROUTES MONITORING ET SURVEILLANCE
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/admin/monitoring',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'dashboard',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/monitoring/backups',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'backups',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    
+    // API Monitoring
+    [
+        'method' => 'GET',
+        'path' => '/api/monitoring/health',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiHealthCheck',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/monitoring/api/system-metrics',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiSystemMetrics',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/monitoring/api/usage-metrics',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiUsageMetrics',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/monitoring/api/error-stats',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiErrorStats',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/admin/monitoring/api/record-metric',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiRecordMetric',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/admin/monitoring/api/record-error',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiRecordError',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/admin/monitoring/api/record-user-action',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiRecordUserAction',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/admin/monitoring/api/cleanup-logs',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiCleanupLogs',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    
+    // API Backup
+    [
+        'method' => 'POST',
+        'path' => '/admin/monitoring/api/backup/full',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiCreateFullBackup',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/admin/monitoring/api/backup/incremental',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiCreateIncrementalBackup',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/admin/monitoring/api/backup/restore/{backup_name}',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiRestoreBackup',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/monitoring/api/backup/list',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiListBackups',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/monitoring/api/backup/stats',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'apiBackupStats',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\AdminMiddleware::class
+        ]
+    ],
+    
+    // Webhooks et monitoring externe
+    [
+        'method' => 'POST',
+        'path' => '/api/monitoring/webhook',
+        'controller' => \TopoclimbCH\Controllers\MonitoringController::class,
+        'action' => 'webhook',
+        'middlewares' => []
+    ],
+    
+    // ========================================
+    // ROUTES SYNCHRONISATION HORS-LIGNE
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/api/sync/offline-data',
+        'controller' => \TopoclimbCH\Controllers\SyncController::class,
+        'action' => 'getOfflineData',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/sync/delta',
+        'controller' => \TopoclimbCH\Controllers\SyncController::class,
+        'action' => 'getDeltaSync',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/api/sync/changes',
+        'controller' => \TopoclimbCH\Controllers\SyncController::class,
+        'action' => 'syncLocalChanges',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/sync/stats',
+        'controller' => \TopoclimbCH\Controllers\SyncController::class,
+        'action' => 'getSyncStats',
+        'middlewares' => []
+    ],
 ];

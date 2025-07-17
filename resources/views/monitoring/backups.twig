@@ -1,0 +1,659 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block extra_css %}
+<style>
+.backup-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.backup-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.backup-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.backup-list {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.backup-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.backup-table th,
+.backup-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.backup-table th {
+    background: #f8f9fa;
+    font-weight: bold;
+    color: #495057;
+}
+
+.backup-table tr:hover {
+    background: #f8f9fa;
+}
+
+.backup-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+
+.backup-status.success {
+    background: #28a745;
+}
+
+.backup-status.error {
+    background: #dc3545;
+}
+
+.backup-status.pending {
+    background: #ffc107;
+    color: #212529;
+}
+
+.backup-type {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.backup-type.full {
+    background: #007bff;
+    color: white;
+}
+
+.backup-type.incremental {
+    background: #17a2b8;
+    color: white;
+}
+
+.file-size {
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.backup-actions-cell {
+    width: 150px;
+}
+
+.backup-actions-cell .btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin-right: 5px;
+}
+
+.progress-container {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    display: none;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: #007bff;
+    transition: width 0.3s ease;
+}
+
+.backup-log {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 20px;
+    display: none;
+}
+
+.backup-log pre {
+    background: #343a40;
+    color: #fff;
+    padding: 15px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.backup-filters {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.backup-filters select,
+.backup-filters input {
+    margin-right: 10px;
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.backup-filters label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.alert {
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .backup-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .backup-actions {
+        flex-direction: column;
+    }
+    
+    .backup-table {
+        font-size: 12px;
+    }
+    
+    .backup-table th,
+    .backup-table td {
+        padding: 8px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1>{{ page_title }}</h1>
+            
+            <!-- Backup Actions -->
+            <div class="backup-actions">
+                <button class="btn btn-primary" onclick="createFullBackup()">
+                    <i class="fas fa-save"></i> Backup complet
+                </button>
+                <button class="btn btn-secondary" onclick="createIncrementalBackup()">
+                    <i class="fas fa-clock"></i> Backup incrémental
+                </button>
+                <button class="btn btn-success" onclick="refreshBackupList()">
+                    <i class="fas fa-sync"></i> Actualiser
+                </button>
+                <a href="/admin/monitoring" class="btn btn-warning">
+                    <i class="fas fa-arrow-left"></i> Retour au monitoring
+                </a>
+            </div>
+            
+            <!-- Progress Container -->
+            <div class="progress-container" id="progress-container">
+                <h4>Création du backup en cours...</h4>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                </div>
+                <div id="progress-text">Initialisation...</div>
+            </div>
+            
+            <!-- Backup Statistics -->
+            <div class="backup-card">
+                <h3>Statistiques des backups</h3>
+                <div class="backup-stats">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.total_backups }}</div>
+                        <div class="stat-label">Total des backups</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.successful_backups }}</div>
+                        <div class="stat-label">Backups réussis</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.failed_backups }}</div>
+                        <div class="stat-label">Backups échoués</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ (stats.total_size / 1024 / 1024)|round(2) }}MB</div>
+                        <div class="stat-label">Taille totale</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.avg_duration|round(2) }}s</div>
+                        <div class="stat-label">Durée moyenne</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ stats.backup_files_count }}</div>
+                        <div class="stat-label">Fichiers de backup</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Backup Filters -->
+            <div class="backup-filters">
+                <label for="type-filter">Type:</label>
+                <select id="type-filter" onchange="filterBackups()">
+                    <option value="">Tous</option>
+                    <option value="full">Complet</option>
+                    <option value="incremental">Incrémental</option>
+                </select>
+                
+                <label for="status-filter">Statut:</label>
+                <select id="status-filter" onchange="filterBackups()">
+                    <option value="">Tous</option>
+                    <option value="success">Réussi</option>
+                    <option value="error">Échoué</option>
+                </select>
+                
+                <label for="date-filter">Date:</label>
+                <input type="date" id="date-filter" onchange="filterBackups()">
+                
+                <button class="btn btn-secondary" onclick="clearFilters()">Effacer les filtres</button>
+            </div>
+            
+            <!-- Backup List -->
+            <div class="backup-card">
+                <h3>Liste des backups</h3>
+                <div class="backup-list">
+                    <table class="backup-table" id="backup-table">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Statut</th>
+                                <th>Taille</th>
+                                <th>Durée</th>
+                                <th>Fichier</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                            <tr data-type="{{ backup.type }}" data-status="{{ backup.status }}" data-date="{{ backup.timestamp|date('Y-m-d') }}">
+                                <td>{{ backup.backup_name }}</td>
+                                <td>
+                                    <span class="backup-type {{ backup.type }}">
+                                        {{ backup.type|upper }}
+                                    </span>
+                                </td>
+                                <td>{{ backup.timestamp|date('d/m/Y H:i') }}</td>
+                                <td>
+                                    <span class="backup-status {{ backup.status }}">
+                                        {{ backup.status|upper }}
+                                    </span>
+                                </td>
+                                <td class="file-size">
+                                    {% if backup.size %}
+                                        {{ (backup.size / 1024 / 1024)|round(2) }}MB
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if backup.duration %}
+                                        {{ backup.duration|round(2) }}s
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if backup.file_exists %}
+                                        <span class="backup-status success">Présent</span>
+                                    {% else %}
+                                        <span class="backup-status error">Manquant</span>
+                                    {% endif %}
+                                </td>
+                                <td class="backup-actions-cell">
+                                    {% if backup.status == 'success' and backup.file_exists %}
+                                        <button class="btn btn-warning" onclick="restoreBackup('{{ backup.backup_name }}')">
+                                            <i class="fas fa-undo"></i> Restaurer
+                                        </button>
+                                    {% endif %}
+                                    <button class="btn btn-danger" onclick="deleteBackup('{{ backup.backup_name }}')">
+                                        <i class="fas fa-trash"></i> Supprimer
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Backup Log -->
+            <div class="backup-log" id="backup-log">
+                <h3>Log de backup</h3>
+                <pre id="backup-log-content"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function createFullBackup() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Création...';
+    
+    showProgress();
+    
+    fetch('/admin/monitoring/api/backup/full', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        hideProgress();
+        
+        if (data.status === 'success') {
+            showAlert('Backup complet créé avec succès: ' + data.backup_name, 'success');
+            refreshBackupList();
+        } else {
+            showAlert('Erreur lors de la création du backup: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        hideProgress();
+        showAlert('Erreur: ' + error.message, 'danger');
+    });
+}
+
+function createIncrementalBackup() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Création...';
+    
+    showProgress();
+    
+    fetch('/admin/monitoring/api/backup/incremental', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        hideProgress();
+        
+        if (data.status === 'success') {
+            showAlert('Backup incrémental créé avec succès: ' + data.backup_name, 'success');
+            refreshBackupList();
+        } else {
+            showAlert('Erreur lors de la création du backup incrémental: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        hideProgress();
+        showAlert('Erreur: ' + error.message, 'danger');
+    });
+}
+
+function restoreBackup(backupName) {
+    if (!confirm('Êtes-vous sûr de vouloir restaurer ce backup? Cette action écrasera les données actuelles.')) {
+        return;
+    }
+    
+    showProgress();
+    
+    fetch(`/admin/monitoring/api/backup/restore/${backupName}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProgress();
+        
+        if (data.status === 'success') {
+            showAlert('Backup restauré avec succès', 'success');
+        } else {
+            showAlert('Erreur lors de la restauration: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        hideProgress();
+        showAlert('Erreur: ' + error.message, 'danger');
+    });
+}
+
+function deleteBackup(backupName) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce backup?')) {
+        return;
+    }
+    
+    // TODO: Implémenter la suppression de backup
+    showAlert('Fonctionnalité de suppression non implémentée', 'warning');
+}
+
+function refreshBackupList() {
+    location.reload();
+}
+
+function filterBackups() {
+    const typeFilter = document.getElementById('type-filter').value;
+    const statusFilter = document.getElementById('status-filter').value;
+    const dateFilter = document.getElementById('date-filter').value;
+    
+    const rows = document.querySelectorAll('#backup-table tbody tr');
+    
+    rows.forEach(row => {
+        const type = row.getAttribute('data-type');
+        const status = row.getAttribute('data-status');
+        const date = row.getAttribute('data-date');
+        
+        let show = true;
+        
+        if (typeFilter && type !== typeFilter) {
+            show = false;
+        }
+        
+        if (statusFilter && status !== statusFilter) {
+            show = false;
+        }
+        
+        if (dateFilter && date !== dateFilter) {
+            show = false;
+        }
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+function clearFilters() {
+    document.getElementById('type-filter').value = '';
+    document.getElementById('status-filter').value = '';
+    document.getElementById('date-filter').value = '';
+    filterBackups();
+}
+
+function showProgress() {
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar-fill');
+    const progressText = document.getElementById('progress-text');
+    
+    progressContainer.style.display = 'block';
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress > 90) {
+            progress = 90;
+        }
+        
+        progressBar.style.width = progress + '%';
+        progressText.textContent = `Progression: ${Math.round(progress)}%`;
+        
+        if (progress >= 90) {
+            clearInterval(interval);
+            progressText.textContent = 'Finalisation...';
+        }
+    }, 200);
+}
+
+function hideProgress() {
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar-fill');
+    
+    progressBar.style.width = '100%';
+    setTimeout(() => {
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+    }, 1000);
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    
+    const container = document.querySelector('.container-fluid .row .col-12');
+    container.insertBefore(alertDiv, container.children[1]);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}
