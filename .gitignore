@@ -72,6 +72,12 @@ test_results_*.json
 
 # Scripts avec secrets - ne pas partager
 validate_fixes.sh
+export_production_remote.php
+export_full_production_structure.php
+analyze_production_db.php
+structure_production_*.md
+error_export_*.log
+*_credentials.php
 
 # Fichiers spécifiques à l'application
 config.php
