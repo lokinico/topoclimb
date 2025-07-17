@@ -6,6 +6,8 @@ namespace TopoclimbCH\Models;
 use TopoclimbCH\Core\Model;
 use TopoclimbCH\Core\Filtering\SectorFilter;
 use TopoclimbCH\Exceptions\ModelException;
+use TopoclimbCH\Models\Region;
+use TopoclimbCH\Models\Site;
 
 class Sector extends Model
 {
@@ -18,7 +20,7 @@ class Sector extends Model
      * Liste des attributs remplissables en masse
      */
     protected array $fillable = [
-        'book_id',
+        'site_id',
         'region_id',
         'name',
         'code',
@@ -41,7 +43,7 @@ class Sector extends Model
      * Règles de validation
      */
     protected array $rules = [
-        'book_id' => 'required|numeric',
+        'site_id' => 'required|numeric',
         'name' => 'required|max:255',
         'code' => 'required|max:50',
         'coordinates_lat' => 'nullable|numeric|min:-90|max:90',
@@ -67,11 +69,11 @@ class Sector extends Model
     }
 
     /**
-     * Relation avec le livre/site
+     * Relation avec le site
      */
-    public function book(): ?Book
+    public function site(): ?Site
     {
-        return $this->belongsTo(Book::class);
+        return $this->belongsTo(Site::class);
     }
 
     /**

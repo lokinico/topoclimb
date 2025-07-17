@@ -223,7 +223,7 @@ class SectorController extends BaseController
         try {
             // Get data for form selections avec validation
             $regions = $this->getValidRegions();
-            $books = $this->getValidBooks();
+            $sites = $this->getValidSites();
             $exposures = $this->getValidExposures();
             $months = $this->getValidMonths();
 
@@ -241,10 +241,10 @@ class SectorController extends BaseController
                 }
             }
 
-            if ($request->query->has('book_id')) {
-                $bookId = (int) $request->query->get('book_id');
-                if ($this->isValidBookId($bookId)) {
-                    $sector['book_id'] = $bookId;
+            if ($request->query->has('site_id')) {
+                $siteId = (int) $request->query->get('site_id');
+                if ($this->isValidSiteId($siteId)) {
+                    $sector['site_id'] = $siteId;
                 }
             }
 
@@ -252,7 +252,7 @@ class SectorController extends BaseController
                 'title' => 'Créer un nouveau secteur',
                 'sector' => $sector,
                 'regions' => $regions,
-                'books' => $books,
+                'sites' => $sites,
                 'exposures' => $exposures,
                 'months' => $months,
                 'csrf_token' => $this->createCsrfToken()
@@ -272,7 +272,7 @@ class SectorController extends BaseController
         try {
             // Get data for form selections avec validation
             $regions = $this->getValidRegions();
-            $books = $this->getValidBooks();
+            $sites = $this->getValidSites();
             $exposures = $this->getValidExposures();
             $months = $this->getValidMonths();
 
@@ -286,7 +286,7 @@ class SectorController extends BaseController
                 'title' => 'Créer un nouveau secteur',
                 'sector' => $sector,
                 'regions' => $regions,
-                'books' => $books,
+                'sites' => $sites,
                 'exposures' => $exposures,
                 'months' => $months,
                 'csrf_token' => $this->createCsrfToken()
@@ -298,7 +298,7 @@ class SectorController extends BaseController
                 <input type="text" name="name" placeholder="Nom">
                 <textarea name="description" placeholder="Description"></textarea>
                 <select name="region_id"><option value="1">Region 1</option></select>
-                <select name="book_id"><option value="1">Book 1</option></select>
+                <select name="site_id"><option value="1">Site 1</option></select>
                 <input type="color" name="color" value="#FF0000">
                 <input type="checkbox" name="active" value="1" checked>
                 <button type="submit">Créer</button>
@@ -335,7 +335,7 @@ class SectorController extends BaseController
         }
 
         // Vérification unicité du code
-        if ($this->sectorCodeExists($data['code'], $data['book_id'] ?? null)) {
+        if ($this->sectorCodeExists($data['code'], $data['site_id'] ?? null)) {
             $this->session->flash('error', 'Ce code secteur existe déjà pour ce site');
             return Response::redirect('/sectors/create');
         }
@@ -454,7 +454,7 @@ class SectorController extends BaseController
                 'title' => 'Modifier le secteur ' . htmlspecialchars($sector->name, ENT_QUOTES, 'UTF-8'),
                 'sector' => $sector,
                 'regions' => $regions,
-                'books' => $books,
+                'sites' => $sites,
                 'exposures' => $exposures,
                 'months' => $months,
                 'currentExposures' => $currentExposures,
@@ -506,7 +506,7 @@ class SectorController extends BaseController
         }
 
         // Vérification unicité du code (en excluant le secteur actuel)
-        if ($this->sectorCodeExists($data['code'], $data['book_id'] ?? null, (int) $id)) {
+        if ($this->sectorCodeExists($data['code'], $data['site_id'] ?? null, (int) $id)) {
             $this->session->flash('error', 'Ce code secteur existe déjà pour ce site');
             return Response::redirect('/sectors/' . $id . '/edit');
         }
@@ -738,11 +738,11 @@ class SectorController extends BaseController
             $errors[] = 'Le code doit contenir uniquement des lettres, chiffres, tirets et underscores (max 20 caractères)';
         }
 
-        // Validation book_id
-        if (empty($data['book_id']) || !is_numeric($data['book_id'])) {
-            $errors[] = 'Le site/livre est obligatoire';
-        } elseif (!$this->isValidBookId((int) $data['book_id'])) {
-            $errors[] = 'Site/livre invalide';
+        // Validation site_id
+        if (empty($data['site_id']) || !is_numeric($data['site_id'])) {
+            $errors[] = 'Le site est obligatoire';
+        } elseif (!$this->isValidSiteId((int) $data['site_id'])) {
+            $errors[] = 'Site invalide';
         }
 
         // Validation coordonnées GPS Suisse
@@ -841,12 +841,12 @@ class SectorController extends BaseController
     }
 
     /**
-     * Check if code exists for this book (excluding current sector)
+     * Check if code exists for this site (excluding current sector)
      */
-    private function sectorCodeExists(string $code, ?int $bookId, ?int $excludeId = null): bool
+    private function sectorCodeExists(string $code, ?int $siteId, ?int $excludeId = null): bool
     {
-        $query = "SELECT COUNT(*) as count FROM climbing_sectors WHERE code = ? AND book_id = ?";
-        $params = [$code, $bookId];
+        $query = "SELECT COUNT(*) as count FROM climbing_sectors WHERE code = ? AND site_id = ?";
+        $params = [$code, $siteId];
 
         if ($excludeId) {
             $query .= " AND id != ?";
@@ -893,15 +893,15 @@ class SectorController extends BaseController
     }
 
     /**
-     * Validate book ID
+     * Validate site ID
      */
-    private function isValidBookId(int $bookId): bool
+    private function isValidSiteId(int $siteId): bool
     {
-        $book = $this->db->fetchOne(
-            "SELECT id FROM climbing_books WHERE id = ? AND active = 1",
-            [$bookId]
+        $site = $this->db->fetchOne(
+            "SELECT id FROM climbing_sites WHERE id = ? AND active = 1",
+            [$siteId]
         );
-        return (bool) $book;
+        return (bool) $site;
     }
 
     /**
@@ -915,12 +915,12 @@ class SectorController extends BaseController
     }
 
     /**
-     * Get valid books
+     * Get valid sites
      */
-    private function getValidBooks(): array
+    private function getValidSites(): array
     {
         return $this->db->fetchAll(
-            "SELECT id, name FROM climbing_books WHERE active = 1 ORDER BY name ASC"
+            "SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC"
         );
     }
 
@@ -953,7 +953,7 @@ class SectorController extends BaseController
         $sectorData = [
             'name' => trim($data['name']),
             'code' => strtoupper(trim($data['code'])),
-            'book_id' => (int) $data['book_id'],
+            'site_id' => (int) $data['site_id'],
             'region_id' => !empty($data['region_id']) ? (int) $data['region_id'] : null,
             'description' => !empty($data['description']) ? trim($data['description']) : null,
             'access_info' => !empty($data['access_info']) ? trim($data['access_info']) : null,
