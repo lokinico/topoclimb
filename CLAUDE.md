@@ -37,13 +37,52 @@ Ce guide explique comment utiliser Claude Code AI et Gemini CLI efficacement ave
 
 ## 📋 ROADMAP ET PROCHAINES ÉTAPES - TopoclimbCH
 
-### 🎯 STATUT ACTUEL (Janvier 2025)
+### 🎯 STATUT ACTUEL (Juillet 2025)
 - ✅ **100% de tests réussis** (40/40 tests)
 - ✅ **Système de base fonctionnel** (CRUD, Auth, API, Météo)
 - ✅ **Intégration météo MeteoSwiss** complète
 - ✅ **APIs REST** opérationnelles
 - ✅ **Gestion des médias** fonctionnelle
 - ✅ **Carte interactive** avec tuiles suisses
+- ✅ **Erreurs critiques 500 résolues** (SQL, validation, méthodes manquantes)
+- ✅ **Fonctionnalités manquantes ajoutées** (Events, Forum, Log d'ascensions)
+
+### 🆕 **CORRECTIONS RÉCENTES (Juillet 2025)**
+
+#### ✅ **Erreurs Critiques Résolues**
+- **SQL Error**: Corrigé `Column 'r.difficulty_value' not found` dans RegionController:260
+- **Validation Error**: Supprimé les règles de validation 'string' invalides
+- **Missing Methods**: Ajouté `logAscent()` et `apiSectors()` manquantes
+- **Route Mapping**: Corrigé le mapping des routes `/routes/{id}/log-ascent`
+
+#### ✅ **Nouvelles Fonctionnalités Ajoutées**
+- **EventController**: Contrôleur complet pour la gestion d'événements
+- **ForumController**: Système de forum avec catégories et discussions
+- **Commentaires et Favoris**: Système sécurisé avec protection CSRF
+- **Log d'Ascensions**: Formulaire et traitement des ascensions complètés
+- **API Books**: Endpoint `/api/books/{id}/sectors` fonctionnel
+
+#### ✅ **Routes Ajoutées (15+ nouvelles routes)**
+```php
+// Events
+GET/POST /events, /events/create, /events/{id}, /events/{id}/register
+
+// Forum  
+GET/POST /forum, /forum/category/{id}, /forum/topic/{id}
+
+// Commentaires et Favoris
+GET/POST /routes/{id}/comments
+POST/DELETE /routes/{id}/favorite
+
+// Log d'ascensions
+GET/POST /routes/{id}/log-ascent
+```
+
+#### 🔧 **Commit: 71818e5**
+- **6 fichiers modifiés**: +1216 insertions, -7 suppressions
+- **Nouveaux contrôleurs**: EventController.php, ForumController.php
+- **Controllers mis à jour**: RouteController, BookController, RegionController
+- **Routes étendues**: 15+ nouvelles routes ajoutées
 
 ### 🔴 PRIORITÉ HAUTE (À développer immédiatement)
 

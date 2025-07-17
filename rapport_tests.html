@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport de Tests TopoclimbCH</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        h1 { color: #2c3e50; text-align: center; }
+        h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #ecf0f1; padding: 20px; border-radius: 5px; text-align: center; }
+        .stat-number { font-size: 2em; font-weight: bold; color: #2c3e50; }
+        .stat-label { color: #7f8c8d; margin-top: 5px; }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+        .warning { color: #f39c12; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #3498db; color: white; }
+        tr:hover { background: #f5f5f5; }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        .category { font-weight: bold; padding: 5px 10px; border-radius: 3px; }
+        .category-public { background: #3498db; color: white; }
+        .category-problematic { background: #e74c3c; color: white; }
+        .category-api { background: #9b59b6; color: white; }
+        .category-missing { background: #f39c12; color: white; }
+        .category-security { background: #e67e22; color: white; }
+        .category-performance { background: #1abc9c; color: white; }
+        .fixes-list { background: #f8f9fa; padding: 15px; border-left: 4px solid #3498db; margin: 10px 0; }
+        .fixes-list h3 { margin-top: 0; color: #2c3e50; }
+        .fixes-list ul { margin: 0; padding-left: 20px; }
+        .fixes-list li { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Rapport de Tests TopoclimbCH</h1>
+        <p style="text-align: center; color: #7f8c8d;">Généré le 17/07/2025 à 06:39:31</p>
+        <div class="summary">
+            <div class="stat-card">
+                <div class="stat-number">30</div>
+                <div class="stat-label">Tests exécutés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number success">28</div>
+                <div class="stat-label">Succès</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number error">8</div>
+                <div class="stat-label">Erreurs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number warning">3</div>
+                <div class="stat-label">Avertissements</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">8</div>
+                <div class="stat-label">Corrections à faire</div>
+            </div>
+        </div><h2>📋 Résultats des Tests</h2><h3>Pages publiques</h3><table><tr><th>Test</th><th>URL</th><th>Statut</th><th>Temps (s)</th><th>Résultat</th></tr><tr><td>Page d&#039;accueil</td><td><code>/</code></td><td class="status-success">200</td><td>0.162</td><td>✅</td></tr><tr><td>Connexion</td><td><code>/login</code></td><td class="status-success">200</td><td>0.102</td><td>✅</td></tr><tr><td>Inscription</td><td><code>/register</code></td><td class="status-success">200</td><td>0.119</td><td>✅</td></tr><tr><td>À propos</td><td><code>/about</code></td><td class="status-success">200</td><td>0.101</td><td>✅</td></tr><tr><td>Contact</td><td><code>/contact</code></td><td class="status-success">200</td><td>0.100</td><td>✅</td></tr><tr><td>Politique de confidentialité</td><td><code>/privacy</code></td><td class="status-success">200</td><td>0.098</td><td>✅</td></tr><tr><td>Conditions d&#039;utilisation</td><td><code>/terms</code></td><td class="status-success">200</td><td>0.112</td><td>✅</td></tr></table><h3>Pages problématiques</h3><table><tr><th>Test</th><th>URL</th><th>Statut</th><th>Temps (s)</th><th>Résultat</th></tr><tr><td>Carte interactive</td><td><code>/map</code></td><td class="status-success">200</td><td>0.086</td><td>✅</td></tr><tr><td>Liste des secteurs</td><td><code>/sectors</code></td><td class="status-success">200</td><td>0.118</td><td>✅</td></tr><tr><td>Création de secteur</td><td><code>/sectors/create</code></td><td class="status-success">200</td><td>0.174</td><td>✅</td></tr><tr><td>Liste des voies</td><td><code>/routes</code></td><td class="status-success">200</td><td>0.232</td><td>✅</td></tr><tr><td>Création de voie</td><td><code>/routes/create</code></td><td class="status-success">200</td><td>0.222</td><td>✅</td></tr><tr><td>Liste des livres</td><td><code>/books</code></td><td class="status-success">200</td><td>0.183</td><td>✅</td></tr><tr><td>Création de livre</td><td><code>/books/create</code></td><td class="status-success">200</td><td>0.274</td><td>✅</td></tr></table><h3>APIs</h3><table><tr><th>Test</th><th>URL</th><th>Statut</th><th>Temps (s)</th><th>Résultat</th></tr><tr><td>API Régions</td><td><code>/api/regions</code></td><td class="status-success">200</td><td>0.119</td><td>✅</td></tr><tr><td>API Sites</td><td><code>/api/sites</code></td><td class="status-success">200</td><td>0.101</td><td>✅</td></tr><tr><td>API Carte Sites</td><td><code>/api/map/sites</code></td><td class="status-success">200</td><td>0.101</td><td>✅</td></tr><tr><td>API Recherche livres</td><td><code>/api/books/search</code></td><td class="status-success">200</td><td>0.116</td><td>✅</td></tr></table><h3>Fonctionnalités manquantes</h3><table><tr><th>Test</th><th>URL</th><th>Statut</th><th>Temps (s)</th><th>Résultat</th></tr><tr><td>Événements</td><td><code>/events</code></td><td class="status-error">404</td><td>0.190</td><td>❌</td></tr><tr><td>Forum</td><td><code>/forum</code></td><td class="status-error">404</td><td>0.201</td><td>❌</td></tr><tr><td>Profil utilisateur</td><td><code>/profile</code></td><td class="status-success">200</td><td>0.331</td><td>✅</td></tr><tr><td>Mes ascensions</td><td><code>/ascents</code></td><td class="status-success">200</td><td>0.288</td><td>✅</td></tr><tr><td>Mes favoris</td><td><code>/favorites</code></td><td class="status-success">200</td><td>0.320</td><td>✅</td></tr></table><h3>Sécurité</h3><table><tr><th>Test</th><th>URL</th><th>Statut</th><th>Temps (s)</th><th>Résultat</th></tr><tr><td>Formulaire secteur (test)</td><td><code>/test/sectors/create</code></td><td class="status-success">200</td><td>0.091</td><td>✅</td></tr><tr><td>Formulaire route (test)</td><td><code>/test/routes/create</code></td><td class="status-success">200</td><td>0.070</td><td>✅</td></tr><tr><td>Formulaire livre (test)</td><td><code>/test/books/create</code></td><td class="status-success">200</td><td>0.087</td><td>✅</td></tr></table><h3>Performance</h3><table><tr><th>Test</th><th>URL</th><th>Statut</th><th>Temps (s)</th><th>Résultat</th></tr><tr><td>Page d&#039;accueil</td><td><code>/</code></td><td class="status-success">200</td><td>0.182</td><td>✅</td></tr><tr><td>Carte interactive</td><td><code>/map</code></td><td class="status-success">200</td><td>0.161</td><td>✅</td></tr><tr><td>Liste secteurs</td><td><code>/sectors</code></td><td class="status-success">200</td><td>0.244</td><td>✅</td></tr><tr><td>API Régions</td><td><code>/api/regions</code></td><td class="status-success">200</td><td>0.069</td><td>✅</td></tr></table><h2>🚨 Erreurs Détectées</h2><ul><li class="error">Erreurs JavaScript détectées sur la carte</li><li class="error">Pagination manquante sur /sectors</li><li class="error">Champ name manquant sur /sectors/create</li><li class="error">Champ latitude manquant sur /sectors/create</li><li class="error">Champ longitude manquant sur /sectors/create</li><li class="error">Champ region_id manquant sur /sectors/create</li><li class="error">Page manquante: Événements (/events)</li><li class="error">Page manquante: Forum (/forum)</li></ul><h3>⚠️ Avertissements</h3><ul><li class="warning">Authentification non vérifiée sur /test/sectors/create</li><li class="warning">Authentification non vérifiée sur /test/routes/create</li><li class="warning">Authentification non vérifiée sur /test/books/create</li></ul><h2>🔧 Corrections Recommandées</h2><div class="fixes-list"><h3>Actions Prioritaires</h3><ul><li>Corriger les erreurs JavaScript de la carte</li><li>Implémenter la pagination sur /sectors</li><li>Ajouter le champ name au formulaire de création de secteur</li><li>Ajouter le champ latitude au formulaire de création de secteur</li><li>Ajouter le champ longitude au formulaire de création de secteur</li><li>Ajouter le champ region_id au formulaire de création de secteur</li><li>Implémenter Événements - Créer contrôleur et template</li><li>Implémenter Forum - Créer contrôleur et template</li></ul></div>
+        <hr>
+        <p style="text-align: center; color: #7f8c8d; font-size: 0.9em;">
+            Rapport généré automatiquement par le système de tests TopoclimbCH<br>
+            Pour relancer les tests: <code>php test_report_generator.php</code>
+        </p>
+    </div>
+</body>
+</html>
