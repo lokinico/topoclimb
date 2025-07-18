@@ -9,7 +9,7 @@ use TopoclimbCH\Core\Model;
  */
 class EquipmentKitItem extends Model
 {
-    protected string $table = 'climbing_equipment_kit_items';
+    protected static string $table = 'climbing_equipment_kit_items';
     
     protected array $fillable = [
         'kit_id',

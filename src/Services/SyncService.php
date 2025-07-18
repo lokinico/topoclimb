@@ -27,7 +27,7 @@ class SyncService
     /**
      * Obtient les données essentielles pour le mode hors-ligne
      */
-    public function getOfflineData(int $userId = null): array
+    public function getOfflineData(?int $userId = null): array
     {
         $timestamp = time();
         
@@ -56,7 +56,7 @@ class SyncService
     /**
      * Synchronise les données modifiées depuis un timestamp
      */
-    public function getDeltaSync(int $lastSync, int $userId = null): array
+    public function getDeltaSync(int $lastSync, ?int $userId = null): array
     {
         $lastSyncDate = date('Y-m-d H:i:s', $lastSync);
         

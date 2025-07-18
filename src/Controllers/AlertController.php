@@ -2,7 +2,7 @@
 
 namespace TopoclimbCH\Controllers;
 
-use TopoclimbCH\Core\BaseController;
+use TopoclimbCH\Controllers\BaseController;
 use TopoclimbCH\Models\Alert;
 use TopoclimbCH\Models\AlertType;
 use TopoclimbCH\Models\AlertConfirmation;
