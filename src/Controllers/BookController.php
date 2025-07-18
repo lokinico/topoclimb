@@ -644,6 +644,70 @@ class BookController extends BaseController
     }
 
     /**
+     * API: Liste des guides avec pagination
+     */
+    public function apiIndex(Request $request): Response
+    {
+        try {
+            $limit = min((int)($request->query->get('limit') ?? 50), 200);
+            $offset = (int)($request->query->get('offset') ?? 0);
+            $regionId = $request->query->get('region_id');
+            
+            $sql = "SELECT b.id, b.name, b.code, b.year, b.publisher, b.isbn, 
+                           b.created_at, r.name as region_name, r.id as region_id,
+                           COUNT(DISTINCT bs.sector_id) as sectors_count,
+                           COUNT(DISTINCT rt.id) as routes_count
+                    FROM climbing_books b
+                    LEFT JOIN climbing_regions r ON b.region_id = r.id
+                    LEFT JOIN climbing_book_sectors bs ON b.id = bs.book_id
+                    LEFT JOIN climbing_sectors sect ON bs.sector_id = sect.id AND sect.active = 1
+                    LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
+                    WHERE b.active = 1";
+            
+            $params = [];
+            
+            if ($regionId) {
+                $sql .= " AND b.region_id = ?";
+                $params[] = (int)$regionId;
+            }
+            
+            $sql .= " GROUP BY b.id ORDER BY b.name ASC LIMIT ? OFFSET ?";
+            $params[] = $limit;
+            $params[] = $offset;
+            
+            $books = $this->db->fetchAll($sql, $params);
+            
+            // Compter le total pour la pagination
+            $countSql = "SELECT COUNT(*) as total FROM climbing_books b WHERE b.active = 1";
+            $countParams = [];
+            
+            if ($regionId) {
+                $countSql .= " AND b.region_id = ?";
+                $countParams[] = (int)$regionId;
+            }
+            
+            $total = $this->db->fetchOne($countSql, $countParams)['total'] ?? 0;
+            
+            return Response::json([
+                'success' => true,
+                'data' => $books,
+                'pagination' => [
+                    'total' => (int)$total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => ($offset + $limit) < $total
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log('BookController::apiIndex error: ' . $e->getMessage());
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors du chargement des guides'
+            ], 500);
+        }
+    }
+
+    /**
      * API: Recherche de guides
      */
     public function apiSearch(Request $request): Response

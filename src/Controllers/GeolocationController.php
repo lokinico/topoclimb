@@ -374,4 +374,93 @@ class GeolocationController extends BaseController
             return new JsonResponse(['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * API: Recherche géographique générique
+     */
+    public function apiSearch(Request $request): JsonResponse
+    {
+        try {
+            $query = $request->query->get('q', '');
+            $type = $request->query->get('type', 'all'); // 'sites', 'sectors', 'addresses', 'all'
+            $lat = $request->query->get('lat');
+            $lng = $request->query->get('lng');
+            $radius = (int) $request->query->get('radius', 50);
+            $limit = min((int) $request->query->get('limit', 20), 100);
+
+            if (empty($query) && !$lat && !$lng) {
+                return new JsonResponse([
+                    'error' => 'Requête de recherche ou coordonnées requises'
+                ], 400);
+            }
+
+            $results = [];
+
+            // Recherche textuelle
+            if (!empty($query)) {
+                // Recherche de sites d'escalade
+                if ($type === 'sites' || $type === 'all') {
+                    $sites = $this->geolocationService->searchSites($query, $limit);
+                    $results['sites'] = $sites;
+                }
+
+                // Recherche de secteurs
+                if ($type === 'sectors' || $type === 'all') {
+                    $sectors = $this->geolocationService->searchSectors($query, $limit);
+                    $results['sectors'] = $sectors;
+                }
+
+                // Recherche d'adresses via géocodage
+                if ($type === 'addresses' || $type === 'all') {
+                    try {
+                        $addresses = $this->geocodingService->geocodeAddress($query, true);
+                        $results['addresses'] = array_slice($addresses, 0, $limit);
+                    } catch (\Exception $e) {
+                        $results['addresses'] = [];
+                    }
+                }
+            }
+
+            // Recherche géographique par proximité
+            if ($lat && $lng) {
+                $lat = floatval($lat);
+                $lng = floatval($lng);
+
+                if ($this->geolocationService->validateSwissCoordinates($lat, $lng)) {
+                    if ($type === 'sites' || $type === 'all') {
+                        $nearSites = $this->geolocationService->findNearestSites($lat, $lng, $radius, $limit);
+                        $results['nearby_sites'] = $nearSites;
+                    }
+
+                    if ($type === 'sectors' || $type === 'all') {
+                        $nearSectors = $this->geolocationService->findNearestSectors($lat, $lng, $radius, $limit);
+                        $results['nearby_sectors'] = $nearSectors;
+                    }
+                }
+            }
+
+            // Compter les résultats totaux
+            $totalResults = 0;
+            foreach ($results as $category) {
+                if (is_array($category)) {
+                    $totalResults += count($category);
+                }
+            }
+
+            return new JsonResponse([
+                'success' => true,
+                'query' => $query,
+                'search_type' => $type,
+                'coordinates' => $lat && $lng ? ['lat' => $lat, 'lng' => $lng, 'radius_km' => $radius] : null,
+                'results' => $results,
+                'total_results' => $totalResults,
+                'limit' => $limit
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'Erreur lors de la recherche géographique'
+            ], 500);
+        }
+    }
 }

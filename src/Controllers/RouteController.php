@@ -1072,4 +1072,147 @@ class RouteController extends BaseController
             return Response::json(['error' => 'Erreur lors de la suppression'], 500);
         }
     }
+
+    // ========== API METHODS ==========
+
+    /**
+     * API: Liste des voies avec pagination
+     */
+    public function apiIndex(Request $request): Response
+    {
+        try {
+            $limit = min((int)($request->query->get('limit') ?? 100), 500);
+            $offset = (int)($request->query->get('offset') ?? 0);
+            $sectorId = $request->query->get('sector_id');
+            
+            $sql = "SELECT r.id, r.name, r.difficulty, r.style, r.beauty, r.length, 
+                           r.equipment, r.created_at,
+                           s.name as sector_name, s.id as sector_id,
+                           reg.name as region_name, reg.id as region_id,
+                           ds.name as difficulty_system
+                    FROM climbing_routes r
+                    LEFT JOIN climbing_sectors s ON r.sector_id = s.id
+                    LEFT JOIN climbing_regions reg ON s.region_id = reg.id  
+                    LEFT JOIN climbing_difficulty_systems ds ON r.difficulty_system_id = ds.id
+                    WHERE r.active = 1";
+            
+            $params = [];
+            
+            if ($sectorId) {
+                $sql .= " AND r.sector_id = ?";
+                $params[] = (int)$sectorId;
+            }
+            
+            $sql .= " ORDER BY r.name ASC LIMIT ? OFFSET ?";
+            $params[] = $limit;
+            $params[] = $offset;
+            
+            $routes = $this->db->fetchAll($sql, $params);
+            
+            // Compter le total pour la pagination
+            $countSql = "SELECT COUNT(*) as total FROM climbing_routes r WHERE r.active = 1";
+            $countParams = [];
+            
+            if ($sectorId) {
+                $countSql .= " AND r.sector_id = ?";
+                $countParams[] = (int)$sectorId;
+            }
+            
+            $total = $this->db->fetchOne($countSql, $countParams)['total'] ?? 0;
+            
+            return Response::json([
+                'success' => true,
+                'data' => $routes,
+                'pagination' => [
+                    'total' => (int)$total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'has_more' => ($offset + $limit) < $total
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log('RouteController::apiIndex error: ' . $e->getMessage());
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors du chargement des voies'
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Recherche de voies
+     */
+    public function apiSearch(Request $request): Response
+    {
+        try {
+            $query = $request->query->get('q', '');
+            $sectorId = $request->query->get('sector_id');
+            $difficulty = $request->query->get('difficulty');
+            $minBeauty = $request->query->get('min_beauty');
+            $limit = min((int)($request->query->get('limit') ?? 50), 200);
+            
+            if (empty($query) && !$sectorId && !$difficulty && !$minBeauty) {
+                return Response::json([
+                    'success' => false,
+                    'error' => 'Au moins un critère de recherche est requis'
+                ], 400);
+            }
+            
+            $sql = "SELECT r.id, r.name, r.difficulty, r.style, r.beauty, r.length,
+                           s.name as sector_name, s.id as sector_id,
+                           reg.name as region_name
+                    FROM climbing_routes r
+                    LEFT JOIN climbing_sectors s ON r.sector_id = s.id
+                    LEFT JOIN climbing_regions reg ON s.region_id = reg.id
+                    WHERE r.active = 1";
+            
+            $params = [];
+            $conditions = [];
+            
+            if (!empty($query)) {
+                $conditions[] = "(r.name LIKE ? OR r.comment LIKE ? OR s.name LIKE ?)";
+                $searchTerm = '%' . $query . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            if ($sectorId) {
+                $conditions[] = "r.sector_id = ?";
+                $params[] = (int)$sectorId;
+            }
+            
+            if ($difficulty) {
+                $conditions[] = "r.difficulty = ?";
+                $params[] = $difficulty;
+            }
+            
+            if ($minBeauty !== null) {
+                $conditions[] = "r.beauty >= ?";
+                $params[] = (int)$minBeauty;
+            }
+            
+            if (!empty($conditions)) {
+                $sql .= " AND " . implode(" AND ", $conditions);
+            }
+            
+            $sql .= " ORDER BY r.beauty DESC, r.name ASC LIMIT ?";
+            $params[] = $limit;
+            
+            $routes = $this->db->fetchAll($sql, $params);
+            
+            return Response::json([
+                'success' => true,
+                'data' => $routes,
+                'query' => $query,
+                'results_count' => count($routes)
+            ]);
+        } catch (\Exception $e) {
+            error_log('RouteController::apiSearch error: ' . $e->getMessage());
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors de la recherche'
+            ], 500);
+        }
+    }
 }
