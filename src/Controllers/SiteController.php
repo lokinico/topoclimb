@@ -568,7 +568,17 @@ class SiteController extends BaseController
         }
 
         try {
-            $sites = Site::search($query, $limit);
+            // Instead of using Site model method, use direct database query
+            $searchTerm = '%' . $query . '%';
+            $sites = $this->db->fetchAll(
+                "SELECT s.*, r.name as region_name
+                 FROM climbing_sites s
+                 INNER JOIN climbing_regions r ON s.region_id = r.id
+                 WHERE s.active = 1 AND s.name LIKE ?
+                 ORDER BY s.name
+                 LIMIT ?",
+                [$searchTerm, $limit]
+            );
 
             return Response::json([
                 'success' => true,

@@ -653,8 +653,7 @@ class BookController extends BaseController
             $offset = (int)($request->query->get('offset') ?? 0);
             $regionId = $request->query->get('region_id');
             
-            $sql = "SELECT b.id, b.name, b.code, b.year, b.publisher, b.isbn, 
-                           b.created_at, r.name as region_name, r.id as region_id,
+            $sql = "SELECT b.id, b.created_at, r.name as region_name, r.id as region_id,
                            COUNT(DISTINCT bs.sector_id) as sectors_count,
                            COUNT(DISTINCT rt.id) as routes_count
                     FROM climbing_books b
@@ -671,7 +670,7 @@ class BookController extends BaseController
                 $params[] = (int)$regionId;
             }
             
-            $sql .= " GROUP BY b.id ORDER BY b.name ASC LIMIT ? OFFSET ?";
+            $sql .= " GROUP BY b.id ORDER BY b.id ASC LIMIT ? OFFSET ?";
             $params[] = $limit;
             $params[] = $offset;
             
