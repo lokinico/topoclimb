@@ -102,6 +102,19 @@ GET/POST /routes/{id}/log-ascent
   - Imports: Ajout des modèles Site et Region
 - **Impact**: Structure hiérarchique maintenant cohérente
 
+#### 🔧 **Commit: d1a797c - Fix Missing API Methods (CRITICAL)**
+- **Problème**: Tests de production révélaient 44% d'erreurs 404 sur les APIs
+- **Cause**: Routes API ajoutées dans config/routes.php mais méthodes contrôleurs manquantes
+- **Solutions**: 
+  - **RouteController**: Ajouté `apiIndex()` et `apiSearch()` avec pagination et filtres
+  - **BookController**: Ajouté `apiIndex()` avec statistiques agrégées  
+  - **WeatherController**: Créé entièrement avec `apiCurrent()` (MeteoSwiss + OpenWeatherMap)
+  - **SectorController**: Ajouté `apiIndex()` et `apiSearch()` existaient déjà ✅
+  - **GeolocationController**: Ajouté `apiSearch()` pour recherche géographique
+- **Résultat**: ✅ **100% des méthodes API requises maintenant présentes**
+- **Impact**: Correction majeure des erreurs 404 en production
+- **Fichiers**: +725 lignes, création WeatherController.php complet
+
 ### 🗄️ **STRUCTURE DE BASE DE DONNÉES DE PRODUCTION**
 
 #### 📊 **Tables Principales (16 tables identifiées)**
