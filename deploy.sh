@@ -60,7 +60,7 @@ if [ -n "$(git status --porcelain)" ]; then
     git status --short
     read -p "Continuer? (y/N) " -n 1 -r
     echo
-    if [[ \! $REPLY =~ ^[Yy]$ ]]; then
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         log_error "Déploiement annulé."
         exit 1
     fi
