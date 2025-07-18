@@ -7,12 +7,40 @@
 
 {% block content %}
     <div class="page-header">
-        <h1>Secteurs d'escalade</h1>
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Secteurs d'escalade</h1>
+            
+            <div class="actions">
+                {% if user and user.autorisation in ['0', '1', '2'] %}
+                    <a href="{{ url('/sectors/create') }}" class="btn btn-primary">
+                        <i class="fa fa-plus"></i> Ajouter un secteur
+                    </a>
+                {% endif %}
+            </div>
+        </div>
         
-        <div class="actions">
-            <a href="{{ url('/sectors/create') }}" class="btn btn-primary">
-                <i class="icon-plus"></i> Ajouter un secteur
-            </a>
+        <!-- Barre de tri et de résultats -->
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+            <div class="results-info">
+                {% if sectors.total is defined %}
+                    <span class="text-muted">{{ sectors.total }} secteur(s) trouvé(s)</span>
+                {% endif %}
+            </div>
+            
+            <div class="sort-controls">
+                <div class="btn-group" role="group" aria-label="Options de tri">
+                    <select name="sort_by" id="sort_by" class="form-select form-select-sm" onchange="updateSort()">
+                        <option value="name" {{ sort_by == 'name' ? 'selected' : '' }}>Nom</option>
+                        <option value="altitude" {{ sort_by == 'altitude' ? 'selected' : '' }}>Altitude</option>
+                        <option value="access_time" {{ sort_by == 'access_time' ? 'selected' : '' }}>Temps d'accès</option>
+                        <option value="created_at" {{ sort_by == 'created_at' ? 'selected' : '' }}>Date de création</option>
+                    </select>
+                    
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleSortDirection()" title="Inverser l'ordre">
+                        <i class="fa fa-sort-{{ sort_dir == 'DESC' ? 'down' : 'up' }}"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -102,9 +130,31 @@
                             </div>
                             
                             <div class="sector-footer">
-                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-outline-primary">
-                                    Voir détails
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-sm btn-outline-primary">
+                                        Voir détails
+                                    </a>
+                                    
+                                    {% if user and user.autorisation in ['0', '1', '2'] %}
+                                        <div class="admin-actions">
+                                            <div class="btn-group" role="group" aria-label="Actions administrateur">
+                                                <a href="{{ url('/sectors/' ~ sector.id ~ '/edit') }}" 
+                                                   class="btn btn-sm btn-outline-secondary" 
+                                                   title="Modifier le secteur">
+                                                    <i class="fa fa-edit"></i>
+                                                </a>
+                                                
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-danger sector-delete-btn"
+                                                        data-sector-id="{{ sector.id }}"
+                                                        data-sector-name="{{ sector.name|e('html_attr') }}"
+                                                        title="Supprimer le secteur">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -112,8 +162,13 @@
             </div>
             
             {% if sectors.items is defined or sectors.total is defined %}
-                <div class="mt-4">
-                    {{ pagination.render(sectors) }}
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 gap-3">
+                    <div>
+                        {{ pagination.perPageSelector(sectors.perPage|default(20), currentUrl) }}
+                    </div>
+                    <div>
+                        {{ pagination.render(sectors) }}
+                    </div>
                 </div>
             {% endif %}
         {% else %}
@@ -122,4 +177,129 @@
             </div>
         {% endif %}
     </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fonction pour mettre à jour le tri
+    window.updateSort = function() {
+        const sortBy = document.getElementById('sort_by').value;
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('sort_by', sortBy);
+        window.location.href = currentUrl.toString();
+    };
+    
+    // Fonction pour inverser la direction du tri
+    window.toggleSortDirection = function() {
+        const currentUrl = new URL(window.location);
+        const currentDir = currentUrl.searchParams.get('sort_dir') || 'ASC';
+        const newDir = currentDir === 'ASC' ? 'DESC' : 'ASC';
+        currentUrl.searchParams.set('sort_dir', newDir);
+        window.location.href = currentUrl.toString();
+    };
+    
+    // Auto-soumission du formulaire de filtre
+    const filterForm = document.querySelector('form[aria-label="Formulaire de filtrage de secteurs"]');
+    if (filterForm) {
+        const inputs = filterForm.querySelectorAll('select, input');
+        inputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Délai court pour permettre la saisie complète
+                setTimeout(() => filterForm.submit(), 300);
+            });
+        });
+    }
+    
+    // Gestion des boutons de suppression de secteurs
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('sector-delete-btn') || e.target.closest('.sector-delete-btn')) {
+            const button = e.target.classList.contains('sector-delete-btn') ? e.target : e.target.closest('.sector-delete-btn');
+            const sectorId = button.dataset.sectorId;
+            const sectorName = button.dataset.sectorName;
+            
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le secteur "${sectorName}" ?\n\nCette action est irréversible et supprimera également toutes les voies associées.`)) {
+                // Créer un formulaire de suppression
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/sectors/${sectorId}`;
+                
+                // Token CSRF - obtenu depuis le meta tag ou variable globale
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken;
+                
+                // Méthode DELETE
+                const methodInput = document.createElement('input');
+                methodInput.type = 'hidden';
+                methodInput.name = '_method';
+                methodInput.value = 'DELETE';
+                
+                form.appendChild(csrfInput);
+                form.appendChild(methodInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.sector-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid #dee2e6;
+    border-left: 4px solid var(--bs-primary);
+}
+
+.sector-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.admin-actions .btn-group {
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.admin-actions .btn-sm {
+    padding: 0.25rem 0.5rem;
+}
+
+.sector-footer {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.sort-controls .form-select {
+    min-width: 120px;
+}
+
+.results-info {
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .sector-footer .d-flex {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .admin-actions {
+        align-self: stretch;
+    }
+    
+    .admin-actions .btn-group {
+        width: 100%;
+        display: flex;
+    }
+    
+    .admin-actions .btn {
+        flex: 1;
+    }
+}
+</style>
 {% endblock %}

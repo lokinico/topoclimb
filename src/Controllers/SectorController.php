@@ -127,6 +127,7 @@ class SectorController extends BaseController
             $regions = $this->db->fetchAll(
                 "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
             );
+            $sites = $this->getValidSites();
             $exposures = Exposure::getAllSorted();
             $months = Month::getAllSorted();
 
@@ -134,6 +135,7 @@ class SectorController extends BaseController
                 'sectors' => $paginatedSectors,
                 'filter' => $filter,
                 'regions' => $regions,
+                'sites' => $sites,
                 'exposures' => $exposures,
                 'months' => $months,
                 'currentUrl' => $request->getPathInfo(),
@@ -650,6 +652,14 @@ class SectorController extends BaseController
     }
 
     /**
+     * Destroy a sector (alias for delete method)
+     */
+    public function destroy(Request $request): Response
+    {
+        return $this->delete($request);
+    }
+
+    /**
      * API endpoint pour récupérer les voies d'un secteur (SÉCURISÉ)
      */
     public function getRoutes(Request $request): Response
@@ -1004,7 +1014,11 @@ class SectorController extends BaseController
     private function getValidSites(): array
     {
         return $this->db->fetchAll(
-            "SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC"
+            "SELECT s.id, s.name, s.region_id, r.name as region_name 
+             FROM climbing_sites s 
+             LEFT JOIN climbing_regions r ON s.region_id = r.id 
+             WHERE s.active = 1 
+             ORDER BY r.name ASC, s.name ASC"
         );
     }
 

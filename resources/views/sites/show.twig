@@ -34,6 +34,11 @@
                 <a href="{{ url('/sites/' ~ site.id ~ '/edit') }}" class="btn btn-outline-primary">
                     <i class="fa fa-edit"></i> Modifier
                 </a>
+                {% if user and user.autorisation in ['0', '1', '2'] %}
+                    <button type="button" class="btn btn-outline-danger" onclick="confirmDelete({{ site.id }}, '{{ site.name|e('js') }}')">
+                        <i class="fa fa-trash"></i> Supprimer
+                    </button>
+                {% endif %}
                 <a href="{{ url('/sectors/create?site_id=' ~ site.id) }}" class="btn btn-primary">
                     <i class="fa fa-plus"></i> Nouveau secteur
                 </a>
@@ -292,21 +297,6 @@
                 <h5 class="mb-0">Informations</h5>
             </div>
             <div class="card-body">
-                {% if site.year %}
-                    <div class="info-item mb-2">
-                        <strong>Année:</strong> {{ site.year }}
-                    </div>
-                {% endif %}
-                {% if site.publisher %}
-                    <div class="info-item mb-2">
-                        <strong>Éditeur:</strong> {{ site.publisher }}
-                    </div>
-                {% endif %}
-                {% if site.isbn %}
-                    <div class="info-item mb-2">
-                        <strong>ISBN:</strong> {{ site.isbn }}
-                    </div>
-                {% endif %}
                 {% if site.created_at %}
                     <div class="info-item">
                         <strong>Créé le:</strong> {{ site.created_at|format_date('d/m/Y') }}
@@ -369,6 +359,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     {% endif %}
 });
+
+// Fonction de confirmation de suppression
+function confirmDelete(siteId, siteName) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le site "${siteName}" ?\n\nCette action est irréversible et supprimera également tous les secteurs associés.`)) {
+        // Créer un formulaire de suppression
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/sites/${siteId}`;
+        
+        // Token CSRF
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = '{{ csrf_token }}';
+        
+        // Méthode DELETE
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        
+        form.appendChild(csrfInput);
+        form.appendChild(methodInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 </script>
 
 <style>

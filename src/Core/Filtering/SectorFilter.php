@@ -10,7 +10,7 @@ class SectorFilter extends Filter
      */
     protected array $filters = [
         'region_id' => 'region_id',
-        'book_id' => 'book_id',
+        'site_id' => 'site_id',
         'exposure_id' => 'exposure_id',
         'altitude_min' => 'altitude_min',
         'altitude_max' => 'altitude_max',
@@ -37,9 +37,9 @@ class SectorFilter extends Filter
             $parameters['region_id'] = $this->getFilter('region_id');
         }
         
-        if ($this->hasFilter('book_id')) {
-            $conditions[] = "s.book_id = :book_id";
-            $parameters['book_id'] = $this->getFilter('book_id');
+        if ($this->hasFilter('site_id')) {
+            $conditions[] = "s.site_id = :site_id";
+            $parameters['site_id'] = $this->getFilter('site_id');
         }
         
         // Exposition (nécessite une jointure)

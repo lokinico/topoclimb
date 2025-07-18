@@ -121,8 +121,10 @@ class MapManager {
         if (latInput) latInput.value = parseFloat(lat).toFixed(8);
         if (lngInput) lngInput.value = parseFloat(lng).toFixed(8);
 
-        // TODO: Convertir en coordonnées suisses si nécessaire
-        // Cette conversion nécessiterait une bibliothèque spécifique
+        // Convertir en coordonnées suisses si la fonction globale est disponible
+        if (typeof window.updateCoordinatesFromMap === 'function') {
+            window.updateCoordinatesFromMap(lat, lng);
+        }
     }
 
     getLatFromInput() {

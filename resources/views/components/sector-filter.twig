@@ -8,7 +8,7 @@
             <form method="get" action="{{ currentUrl }}" aria-label="Formulaire de filtrage de secteurs">
                 <div class="row g-3">
                     {# Région #}
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="region_id" class="form-label">Région</label>
                         <select class="form-select" id="region_id" name="region_id" aria-label="Filtrer par région">
                             <option value="">Toutes les régions</option>
@@ -17,6 +17,21 @@
                                     {{ region.name }}
                                 </option>
                             {% endfor %}
+                        </select>
+                    </div>
+                    
+                    {# Site #}
+                    <div class="col-md-3">
+                        <label for="site_id" class="form-label">Site</label>
+                        <select class="form-select" id="site_id" name="site_id" aria-label="Filtrer par site">
+                            <option value="">Tous les sites</option>
+                            {% if sites is defined %}
+                                {% for site in sites %}
+                                    <option value="{{ site.id }}" {{ filter.getFilter('site_id') == site.id ? 'selected' : '' }}>
+                                        {{ site.name }}{% if site.region_name %} ({{ site.region_name }}){% endif %}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
                         </select>
                     </div>
                     
