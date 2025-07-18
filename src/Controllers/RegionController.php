@@ -919,6 +919,305 @@ class RegionController extends BaseController
     }
 
     /**
+     * Affiche le formulaire d'édition d'une région
+     */
+    public function edit(Request $request): Response
+    {
+        try {
+            $id = $this->validateId($request->attributes->get('id'), 'ID de région');
+
+            // Vérification des permissions
+            $this->requirePermission('edit_regions', 'Vous n\'avez pas l\'autorisation de modifier les régions');
+
+            // Récupérer la région
+            $region = $this->db->fetchOne(
+                "SELECT r.*, c.name as country_name 
+                 FROM climbing_regions r 
+                 LEFT JOIN climbing_countries c ON r.country_id = c.id 
+                 WHERE r.id = ? AND r.active = 1",
+                [$id]
+            );
+
+            $this->requireEntity($region, 'Région non trouvée');
+
+            // Récupérer tous les pays pour le sélecteur
+            $countries = $this->db->fetchAll(
+                "SELECT id, name FROM climbing_countries WHERE active = 1 ORDER BY name ASC"
+            );
+
+            // Récupérer les médias associés
+            $media = $this->mediaService->getMediaForEntity('region', $id);
+
+            // Récupérer les statistiques de la région
+            $stats = $this->getRegionStats($id);
+
+            // Log de l'action
+            $this->logAction('view_region_edit', ['region_id' => $id, 'region_name' => $region['name']]);
+
+            return $this->render('regions/form', [
+                'title' => 'Modifier la région ' . $region['name'],
+                'region' => $region,
+                'countries' => $countries,
+                'media' => $media,
+                'stats' => $stats,
+                'csrf_token' => $this->createCsrfToken(),
+                'is_edit' => true
+            ]);
+        } catch (ValidationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/regions');
+        } catch (AuthorizationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/regions');
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire d\'édition');
+            return $this->redirect('/regions');
+        }
+    }
+
+    /**
+     * Met à jour une région existante
+     */
+    public function update(Request $request): Response
+    {
+        try {
+            $id = $this->validateId($request->attributes->get('id'), 'ID de région');
+
+            // Vérification des permissions
+            $this->requirePermission('edit_regions', 'Vous n\'avez pas l\'autorisation de modifier les régions');
+
+            // Vérifier que la région existe
+            $existingRegion = $this->db->fetchOne(
+                "SELECT id, name FROM climbing_regions WHERE id = ? AND active = 1",
+                [$id]
+            );
+
+            $this->requireEntity($existingRegion, 'Région non trouvée');
+
+            // Validation CSRF
+            $this->validateCsrfToken($request);
+
+            // Validation des données
+            $data = $this->validateRegionUpdateData($request->request->all(), $id);
+
+            // Exécution en transaction
+            $this->executeInTransaction(function () use ($id, $data, $request) {
+                $this->updateRegion($id, $data);
+                $this->handleImageUploads($request, $id);
+            });
+
+            // Log de l'action
+            $this->logAction('update_region', [
+                'region_id' => $id,
+                'region_name' => $data['name']
+            ]);
+
+            $this->flash('success', 'Région mise à jour avec succès !');
+            return $this->redirect('/regions/' . $id);
+        } catch (ValidationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/regions/' . $id . '/edit');
+        } catch (AuthorizationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/regions');
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de la mise à jour de la région');
+            return $this->redirect('/regions/' . $id . '/edit');
+        }
+    }
+
+    /**
+     * Validation des données pour la mise à jour (modifiée pour exclure l'ID actuel)
+     */
+    private function validateRegionUpdateData(array $data, int $regionId): array
+    {
+        $rules = [
+            'country_id' => 'required|numeric',
+            'name' => 'required|min:2|max:255',
+            'description' => 'nullable|max:5000',
+            'coordinates_lat' => 'nullable|numeric|between:' . self::SWISS_BOUNDS['lat_min'] . ',' . self::SWISS_BOUNDS['lat_max'],
+            'coordinates_lng' => 'nullable|numeric|between:' . self::SWISS_BOUNDS['lng_min'] . ',' . self::SWISS_BOUNDS['lng_max'],
+            'altitude' => 'nullable|numeric|min:0|max:' . self::MAX_ALTITUDE_SWITZERLAND,
+            'best_season' => 'nullable|max:100',
+            'access_info' => 'nullable|max:2000',
+            'parking_info' => 'nullable|max:1000'
+        ];
+
+        $validatedData = $this->validateInput($data, $rules);
+
+        // Validation supplémentaire pour coordonnées cohérentes
+        if (isset($validatedData['coordinates_lat']) && isset($validatedData['coordinates_lng'])) {
+            if (!$this->areCoordinatesInSwitzerland($validatedData['coordinates_lat'], $validatedData['coordinates_lng'])) {
+                throw new ValidationException('Les coordonnées doivent être situées en Suisse');
+            }
+        }
+
+        // Vérifier l'unicité du nom dans le pays (en excluant la région actuelle)
+        if ($this->regionNameExists($validatedData['name'], $validatedData['country_id'], $regionId)) {
+            throw new ValidationException('Une région avec ce nom existe déjà dans ce pays');
+        }
+
+        return $validatedData;
+    }
+
+    /**
+     * Mise à jour sécurisée de la région
+     */
+    private function updateRegion(int $id, array $data): void
+    {
+        $updateData = [
+            'country_id' => (int)$data['country_id'],
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'coordinates_lat' => isset($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
+            'coordinates_lng' => isset($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
+            'altitude' => isset($data['altitude']) ? (int)$data['altitude'] : null,
+            'best_season' => $data['best_season'] ?? null,
+            'access_info' => $data['access_info'] ?? null,
+            'parking_info' => $data['parking_info'] ?? null,
+            'updated_by' => $this->auth->id(),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        $success = $this->db->update('climbing_regions', $updateData, 'id = ?', [$id]);
+
+        if (!$success) {
+            throw new \RuntimeException('Échec de la mise à jour de la région');
+        }
+    }
+
+    /**
+     * Supprime une région (soft delete)
+     */
+    public function destroy(Request $request): Response
+    {
+        try {
+            $id = $this->validateId($request->attributes->get('id'), 'ID de région');
+
+            // Vérification des permissions
+            $this->requirePermission('delete_regions', 'Vous n\'avez pas l\'autorisation de supprimer les régions');
+
+            // Vérifier que la région existe
+            $region = $this->db->fetchOne(
+                "SELECT id, name FROM climbing_regions WHERE id = ? AND active = 1",
+                [$id]
+            );
+
+            $this->requireEntity($region, 'Région non trouvée');
+
+            // Vérification des dépendances
+            $dependencies = $this->checkRegionDependencies($id);
+            if ($dependencies['has_dependencies']) {
+                $this->flash('error', 
+                    'Impossible de supprimer cette région. Elle contient ' . 
+                    $dependencies['sectors_count'] . ' secteurs et ' . 
+                    $dependencies['routes_count'] . ' voies.'
+                );
+                return $this->redirect('/regions/' . $id);
+            }
+
+            // Validation CSRF
+            $this->validateCsrfToken($request);
+
+            // Soft delete de la région
+            $this->executeInTransaction(function () use ($id) {
+                $this->softDeleteRegion($id);
+            });
+
+            // Log de l'action
+            $this->logAction('delete_region', [
+                'region_id' => $id,
+                'region_name' => $region['name']
+            ]);
+
+            $this->flash('success', 'Région supprimée avec succès');
+            return $this->redirect('/regions');
+        } catch (ValidationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/regions/' . $id);
+        } catch (AuthorizationException $e) {
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/regions');
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de la suppression de la région');
+            return $this->redirect('/regions/' . $id);
+        }
+    }
+
+    /**
+     * Vérifie les dépendances d'une région avant suppression
+     */
+    private function checkRegionDependencies(int $regionId): array
+    {
+        try {
+            $stats = $this->db->fetchOne(
+                "SELECT 
+                    (SELECT COUNT(*) FROM climbing_sectors WHERE region_id = ? AND active = 1) as sectors_count,
+                    (SELECT COUNT(*) FROM climbing_routes r 
+                     JOIN climbing_sectors s ON r.sector_id = s.id 
+                     WHERE s.region_id = ? AND r.active = 1 AND s.active = 1) as routes_count",
+                [$regionId, $regionId]
+            );
+
+            $sectorsCount = (int)($stats['sectors_count'] ?? 0);
+            $routesCount = (int)($stats['routes_count'] ?? 0);
+
+            return [
+                'has_dependencies' => $sectorsCount > 0 || $routesCount > 0,
+                'sectors_count' => $sectorsCount,
+                'routes_count' => $routesCount
+            ];
+        } catch (\Exception $e) {
+            error_log('Erreur vérification dépendances région: ' . $e->getMessage());
+            return ['has_dependencies' => true, 'sectors_count' => 0, 'routes_count' => 0];
+        }
+    }
+
+    /**
+     * Soft delete d'une région
+     */
+    private function softDeleteRegion(int $id): void
+    {
+        $updateData = [
+            'active' => 0,
+            'deleted_at' => date('Y-m-d H:i:s'),
+            'deleted_by' => $this->auth->id(),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        $success = $this->db->update('climbing_regions', $updateData, 'id = ?', [$id]);
+
+        if (!$success) {
+            throw new \RuntimeException('Échec de la suppression de la région');
+        }
+    }
+
+    /**
+     * Récupère les statistiques d'une région
+     */
+    private function getRegionStats(int $regionId): array
+    {
+        try {
+            $stats = $this->db->fetchOne(
+                "SELECT 
+                    (SELECT COUNT(*) FROM climbing_sectors WHERE region_id = ? AND active = 1) as sectors_count,
+                    (SELECT COUNT(*) FROM climbing_routes r 
+                     JOIN climbing_sectors s ON r.sector_id = s.id 
+                     WHERE s.region_id = ? AND r.active = 1 AND s.active = 1) as routes_count",
+                [$regionId, $regionId]
+            );
+
+            return [
+                'sectors_count' => (int)($stats['sectors_count'] ?? 0),
+                'routes_count' => (int)($stats['routes_count'] ?? 0)
+            ];
+        } catch (\Exception $e) {
+            error_log('Erreur calcul stats région: ' . $e->getMessage());
+            return ['sectors_count' => 0, 'routes_count' => 0];
+        }
+    }
+
+    /**
      * Calcul sécurisé des statistiques
      */
     private function calculateStats(): array
