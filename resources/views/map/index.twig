@@ -83,8 +83,7 @@
                     <select id="type-filter" class="filter-select">
                         <option value="">Tous types</option>
                         <option value="sport">Sport</option>
-                        <option value="trad">Trad</option>
-                        <option value="mixed">Mixte</option>
+                        <option value="trad">Traditionnel</option>
                         <option value="boulder">Bloc</option>
                     </select>
                 </div>
@@ -124,10 +123,6 @@
                     <div class="legend-item">
                         <div class="legend-color trad"></div>
                         <span>Escalade traditionnelle</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color mixed"></div>
-                        <span>Escalade mixte</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color boulder"></div>
@@ -218,7 +213,7 @@ const regionData = {{ regions|json_encode|raw }};
 // Variables globales
 let map = null;
 let markersLayer = null;
-let currentLayer = 'swisstopo';
+let currentLayer = 'osm'; // Commencer avec OSM qui est plus stable
 let userLocationMarker = null;
 let filteredSites = siteData;
 
@@ -243,42 +238,69 @@ function initializeMap() {
         zoomControl: false
     });
 
-    // Ajouter les tuiles suisses
-    addMapLayers();
+    // Ajouter les tuiles avec gestion d'erreur
+    try {
+        addMapLayers();
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout des couches:', error);
+        showToast('Erreur lors du chargement des cartes', 'error');
+    }
     
     // Ajouter les marqueurs
-    addSiteMarkers();
+    try {
+        addSiteMarkers();
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout des marqueurs:', error);
+        showToast('Erreur lors du chargement des sites', 'error');
+    }
     
     console.log('Carte initialisée avec', siteData.length, 'sites');
 }
 
 function addMapLayers() {
-    // Couche principale : swisstopo
+    // Couche principale simplifiée : OpenStreetMap (plus stable)
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18
+    });
+
+    // Couche Swiss topo (simplifiée et plus stable)
     const swissLayer = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
         attribution: '&copy; <a href="https://www.swisstopo.admin.ch/">swisstopo</a>',
-        maxZoom: 18
+        maxZoom: 16, // Limiter le zoom pour éviter les tuiles manquantes
+        errorTileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', // Fallback vers OSM
+        crossOrigin: true,
+        timeout: 10000 // Timeout pour éviter les tuiles qui restent en chargement
     });
 
-    // Couche satellite
-    const satelliteLayer = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', {
-        attribution: '&copy; <a href="https://www.swisstopo.admin.ch/">swisstopo</a>',
+    // Couche satellite simplifiée
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
         maxZoom: 18
-    });
-
-    // Couche de secours : OSM
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     });
 
     // Stocker les couches
     window.mapLayers = {
+        osm: osmLayer,
         swisstopo: swissLayer,
-        satellite: satelliteLayer,
-        osm: osmLayer
+        satellite: satelliteLayer
     };
 
-    // Ajouter la couche par défaut
-    swissLayer.addTo(map);
+    // Ajouter la couche par défaut (OSM plus stable)
+    osmLayer.addTo(map);
+    
+    // Ajouter les événements de chargement de tuiles
+    osmLayer.on('loading', function() {
+        console.log('Chargement des tuiles OSM...');
+    });
+    
+    osmLayer.on('load', function() {
+        console.log('Tuiles OSM chargées avec succès');
+    });
+    
+    swissLayer.on('tileerror', function(error) {
+        console.warn('Erreur de tuile Swiss:', error);
+    });
 }
 
 function addSiteMarkers() {
@@ -515,23 +537,33 @@ function locateUser() {
 function switchLayer() {
     const layers = window.mapLayers;
     
-    // Supprimer la couche actuelle
-    map.removeLayer(layers[currentLayer]);
-    
-    // Passer à la suivante
-    if (currentLayer === 'swisstopo') {
-        currentLayer = 'satellite';
-        showToast('Vue satellite activée', 'info');
-    } else if (currentLayer === 'satellite') {
-        currentLayer = 'osm';
-        showToast('Vue OpenStreetMap activée', 'info');
-    } else {
-        currentLayer = 'swisstopo';
-        showToast('Vue swisstopo activée', 'info');
+    // Supprimer la couche actuelle proprement
+    if (layers[currentLayer]) {
+        map.removeLayer(layers[currentLayer]);
     }
     
-    // Ajouter la nouvelle couche
-    layers[currentLayer].addTo(map);
+    // Passer à la suivante avec gestion d'erreur
+    if (currentLayer === 'osm') {
+        currentLayer = 'swisstopo';
+        showToast('Vue Swiss Topo activée', 'info');
+    } else if (currentLayer === 'swisstopo') {
+        currentLayer = 'satellite';
+        showToast('Vue satellite activée', 'info');
+    } else {
+        currentLayer = 'osm';
+        showToast('Vue OpenStreetMap activée', 'info');
+    }
+    
+    // Ajouter la nouvelle couche avec gestion d'erreur
+    try {
+        layers[currentLayer].addTo(map);
+    } catch (error) {
+        console.error('Erreur lors du changement de couche:', error);
+        // Revenir à OSM en cas d'erreur
+        currentLayer = 'osm';
+        layers[currentLayer].addTo(map);
+        showToast('Retour à la vue standard', 'warning');
+    }
 }
 
 function toggleFullscreen() {

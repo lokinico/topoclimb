@@ -322,7 +322,6 @@
 
 .legend-color.sport { background: var(--accent-color); }
 .legend-color.trad { background: var(--danger-color); }
-.legend-color.mixed { background: var(--warning-color); }
 .legend-color.boulder { background: #8b5cf6; }
 
 /* ===== CARTE PRINCIPALE ===== */
@@ -433,7 +432,6 @@
 
 .marker-icon.sport { background: var(--accent-color); }
 .marker-icon.trad { background: var(--danger-color); }
-.marker-icon.mixed { background: var(--warning-color); }
 .marker-icon.boulder { background: #8b5cf6; }
 
 .marker-icon:hover {

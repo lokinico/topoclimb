@@ -2,24 +2,30 @@
 
 namespace TopoclimbCH\Controllers;
 
-use TopoclimbCH\Controllers\BaseController;
 use TopoclimbCH\Models\EquipmentCategory;
 use TopoclimbCH\Models\EquipmentType;
 use TopoclimbCH\Models\EquipmentKit;
 use TopoclimbCH\Models\EquipmentKitItem;
 use TopoclimbCH\Models\EquipmentRecommendation;
-use TopoclimbCH\Services\AuthService;
+use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
+use TopoclimbCH\Core\Security\CsrfManager;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 class EquipmentController extends BaseController
 {
-    private AuthService $authService;
-
-    public function __construct(AuthService $authService)
-    {
-        $this->authService = $authService;
+    public function __construct(
+        View $view,
+        Session $session,
+        CsrfManager $csrfManager,
+        ?Database $db = null,
+        ?Auth $auth = null
+    ) {
+        parent::__construct($view, $session, $csrfManager, $db, $auth);
     }
 
     /**
@@ -27,21 +33,26 @@ class EquipmentController extends BaseController
      */
     public function index(Request $request): Response
     {
-        $categories = EquipmentCategory::getCategoriesWithTypes();
-        $publicKits = EquipmentKit::getPublicKits();
-        
-        $userKits = [];
-        if ($this->authService->isAuthenticated()) {
-            $userId = $this->authService->getCurrentUserId();
-            $userKits = EquipmentKit::getByUser($userId);
+        try {
+            // Données de test pour commencer
+            $categories = [];
+            $publicKits = [];
+            $userKits = [];
+            
+            // Test simple avec template
+            return $this->render('equipment/index', [
+                'page_title' => 'Gestion d\'équipement',
+                'categories' => $categories,
+                'public_kits' => $publicKits,
+                'user_kits' => $userKits
+            ]);
+        } catch (\Exception $e) {
+            // Fallback en cas d'erreur
+            $response = new \TopoclimbCH\Core\Response();
+            $response->setContent('<html><body><h1>Gestion d\'équipement</h1><p>Erreur: ' . htmlspecialchars($e->getMessage()) . '</p></body></html>');
+            $response->headers->set('Content-Type', 'text/html');
+            return $response;
         }
-        
-        return $this->render('equipment/index.twig', [
-            'page_title' => 'Gestion d\'équipement',
-            'categories' => $categories,
-            'public_kits' => $publicKits,
-            'user_kits' => $userKits
-        ]);
     }
 
     /**
@@ -49,13 +60,14 @@ class EquipmentController extends BaseController
      */
     public function categories(Request $request): Response
     {
-        if (!$this->authService->hasRole(['admin', 'moderator'])) {
-            return $this->unauthorized('Accès non autorisé');
+        if (!$this->auth || !$this->auth->check() || !in_array($this->auth->role(), [0, 1])) {
+            $this->flash('error', 'Accès non autorisé');
+            return $this->redirect('/equipment');
         }
         
         $categories = EquipmentCategory::getAllSorted();
         
-        return $this->render('equipment/categories.twig', [
+        return $this->render('equipment/categories', [
             'page_title' => 'Catégories d\'équipement',
             'categories' => $categories
         ]);
@@ -66,8 +78,9 @@ class EquipmentController extends BaseController
      */
     public function createCategory(Request $request): Response
     {
-        if (!$this->authService->hasRole(['admin', 'moderator'])) {
-            return $this->unauthorized('Accès non autorisé');
+        if (!$this->auth || !$this->auth->check() || !in_array($this->auth->role(), [0, 1])) {
+            $this->flash('error', 'Accès non autorisé');
+            return $this->redirect('/equipment');
         }
         
         if ($request->isMethod('POST')) {
@@ -87,7 +100,7 @@ class EquipmentController extends BaseController
             }
         }
         
-        return $this->render('equipment/category_form.twig', [
+        return $this->render('equipment/category_form', [
             'page_title' => 'Nouvelle catégorie',
             'error' => $error ?? null
         ]);
@@ -159,12 +172,12 @@ class EquipmentController extends BaseController
         $publicKits = EquipmentKit::getPublicKits();
         
         $userKits = [];
-        if ($this->authService->isAuthenticated()) {
-            $userId = $this->authService->getCurrentUserId();
+        if ($this->auth && $this->auth->check()) {
+            $userId = $this->auth->id();
             $userKits = EquipmentKit::getByUser($userId);
         }
         
-        return $this->render('equipment/kits.twig', [
+        return $this->render('equipment/kits', [
             'page_title' => 'Kits d\'équipement',
             'public_kits' => $publicKits,
             'user_kits' => $userKits
@@ -186,12 +199,12 @@ class EquipmentController extends BaseController
         $items = $kit->getItemsByCategory();
         $canEdit = false;
         
-        if ($this->authService->isAuthenticated()) {
-            $userId = $this->authService->getCurrentUserId();
-            $canEdit = $kit->canEdit($userId) || $this->authService->hasRole(['admin', 'moderator']);
+        if ($this->auth && $this->auth->check()) {
+            $userId = $this->auth->id();
+            $canEdit = $kit->canEdit($userId) || in_array($this->auth->role(), [0, 1]);
         }
         
-        return $this->render('equipment/kit_show.twig', [
+        return $this->render('equipment/kit_show', [
             'page_title' => $kit->name,
             'kit' => $kit,
             'items' => $items,
@@ -204,18 +217,17 @@ class EquipmentController extends BaseController
      */
     public function editKit(Request $request): Response
     {
-        if (!$this->authService->isAuthenticated()) {
-            return $this->unauthorized('Connexion requise');
-        }
+        $this->requireAuth();
         
         $kitId = $request->attributes->get('id');
         $kit = null;
-        $userId = $this->authService->getCurrentUserId();
+        $userId = $this->auth->id();
         
         if ($kitId) {
             $kit = EquipmentKit::find($kitId);
-            if (!$kit || (!$kit->canEdit($userId) && !$this->authService->hasRole(['admin', 'moderator']))) {
-                return $this->unauthorized('Accès non autorisé');
+            if (!$kit || (!$kit->canEdit($userId) && !in_array($this->auth->role(), [0, 1]))) {
+                $this->flash('error', 'Accès non autorisé');
+                return $this->redirect('/equipment');
             }
         }
         
@@ -247,7 +259,7 @@ class EquipmentController extends BaseController
         
         $categories = EquipmentCategory::getCategoriesWithTypes();
         
-        return $this->render('equipment/kit_form.twig', [
+        return $this->render('equipment/kit_form', [
             'page_title' => $kit ? 'Modifier le kit' : 'Nouveau kit',
             'kit' => $kit,
             'categories' => $categories,
@@ -260,7 +272,7 @@ class EquipmentController extends BaseController
      */
     public function addKitItem(Request $request): JsonResponse
     {
-        if (!$this->authService->isAuthenticated()) {
+        if (!$this->auth || !$this->auth->check()) {
             return new JsonResponse(['error' => 'Connexion requise'], 401);
         }
         
@@ -271,8 +283,8 @@ class EquipmentController extends BaseController
             return new JsonResponse(['error' => 'Kit non trouvé'], 404);
         }
         
-        $userId = $this->authService->getCurrentUserId();
-        if (!$kit->canEdit($userId) && !$this->authService->hasRole(['admin', 'moderator'])) {
+        $userId = $this->auth->id();
+        if (!$kit->canEdit($userId) && !in_array($this->auth->role(), [0, 1])) {
             return new JsonResponse(['error' => 'Accès non autorisé'], 403);
         }
         
@@ -300,7 +312,7 @@ class EquipmentController extends BaseController
      */
     public function removeKitItem(Request $request): JsonResponse
     {
-        if (!$this->authService->isAuthenticated()) {
+        if (!$this->auth || !$this->auth->check()) {
             return new JsonResponse(['error' => 'Connexion requise'], 401);
         }
         
@@ -311,8 +323,8 @@ class EquipmentController extends BaseController
             return new JsonResponse(['error' => 'Kit non trouvé'], 404);
         }
         
-        $userId = $this->authService->getCurrentUserId();
-        if (!$kit->canEdit($userId) && !$this->authService->hasRole(['admin', 'moderator'])) {
+        $userId = $this->auth->id();
+        if (!$kit->canEdit($userId) && !in_array($this->auth->role(), [0, 1])) {
             return new JsonResponse(['error' => 'Accès non autorisé'], 403);
         }
         
@@ -332,9 +344,7 @@ class EquipmentController extends BaseController
      */
     public function duplicateKit(Request $request): Response
     {
-        if (!$this->authService->isAuthenticated()) {
-            return $this->unauthorized('Connexion requise');
-        }
+        $this->requireAuth();
         
         $kitId = $request->attributes->get('id');
         $kit = EquipmentKit::find($kitId);
@@ -343,7 +353,7 @@ class EquipmentController extends BaseController
             return $this->notFound('Kit non trouvé');
         }
         
-        $userId = $this->authService->getCurrentUserId();
+        $userId = $this->auth->id();
         $newName = $request->request->get('name') ?: $kit->name . ' (copie)';
         
         try {
@@ -421,7 +431,7 @@ class EquipmentController extends BaseController
      */
     public function apiStats(Request $request): JsonResponse
     {
-        if (!$this->authService->hasRole(['admin', 'moderator'])) {
+        if (!$this->auth || !$this->auth->check() || !in_array($this->auth->role(), [0, 1])) {
             return new JsonResponse(['error' => 'Accès non autorisé'], 403);
         }
         
@@ -444,7 +454,7 @@ class EquipmentController extends BaseController
         $results = [];
         
         if (strlen($query) >= 2) {
-            $userId = $this->authService->isAuthenticated() ? $this->authService->getCurrentUserId() : null;
+            $userId = $this->auth && $this->auth->check() ? $this->auth->id() : null;
             
             $results = [
                 'types' => EquipmentType::search($query),
@@ -452,7 +462,7 @@ class EquipmentController extends BaseController
             ];
         }
         
-        return $this->render('equipment/search.twig', [
+        return $this->render('equipment/search', [
             'page_title' => 'Recherche d\'équipement',
             'query' => $query,
             'results' => $results
