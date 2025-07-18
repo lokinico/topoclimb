@@ -1,0 +1,389 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block extra_css %}
+<style>
+.equipment-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-section {
+    margin-bottom: 30px;
+}
+
+.category-header {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid #007bff;
+}
+
+.equipment-types {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.equipment-type {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.equipment-type:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.equipment-type i {
+    font-size: 24px;
+    color: #007bff;
+    margin-bottom: 5px;
+}
+
+.kit-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.kit-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+
+.kit-meta {
+    color: #666;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.kit-actions {
+    margin-top: 10px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-outline-primary {
+    border: 1px solid #007bff;
+    background: transparent;
+    color: #007bff;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.section-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.badge-primary {
+    background: #007bff;
+    color: white;
+}
+
+.badge-success {
+    background: #28a745;
+    color: white;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 6px;
+    text-align: center;
+    border-left: 4px solid #007bff;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.stat-label {
+    color: #666;
+    margin-top: 5px;
+}
+
+@media (max-width: 768px) {
+    .equipment-types {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="section-header">
+                <h1>{{ page_title }}</h1>
+                <div>
+                    <a href="/equipment/search" class="btn btn-outline-primary">
+                        <i class="fas fa-search"></i> Rechercher
+                    </a>
+                    {% if user and user.autorisation in ['1', '2'] %}
+                    <a href="/equipment/types" class="btn btn-secondary">
+                        <i class="fas fa-cog"></i> Gérer les types
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Statistiques rapides -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ categories|length }}</div>
+                    <div class="stat-label">Catégories</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">
+                        {% set total_types = 0 %}
+                        {% for category in categories %}
+                            {% set total_types = total_types + category.equipment_types|length %}
+                        {% endfor %}
+                        {{ total_types }}
+                    </div>
+                    <div class="stat-label">Types d'équipement</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ public_kits|length }}</div>
+                    <div class="stat-label">Kits publics</div>
+                </div>
+                {% if user_kits is defined %}
+                <div class="stat-card">
+                    <div class="stat-value">{{ user_kits|length }}</div>
+                    <div class="stat-label">Mes kits</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Catégories et types d'équipement -->
+            <div class="equipment-card">
+                <h2>Types d'équipement par catégorie</h2>
+                
+                {% for category in categories %}
+                <div class="category-section">
+                    <div class="category-header">
+                        <h3>{{ category.name }}</h3>
+                        {% if category.description %}
+                        <p class="mb-0">{{ category.description }}</p>
+                        {% endif %}
+                        <span class="badge badge-primary">{{ category.equipment_types|length }} types</span>
+                    </div>
+                    
+                    {% if category.equipment_types %}
+                    <div class="equipment-types">
+                        {% for type in category.equipment_types %}
+                        <div class="equipment-type">
+                            {% if type.icon %}
+                            <i class="{{ type.icon }}"></i>
+                            {% else %}
+                            <i class="fas fa-tools"></i>
+                            {% endif %}
+                            <div><strong>{{ type.name }}</strong></div>
+                            {% if type.description %}
+                            <small>{{ type.description|slice(0, 50) }}{% if type.description|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Aucun type d'équipement dans cette catégorie.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Kits d'équipement publics -->
+            <div class="equipment-card">
+                <div class="section-header">
+                    <h2>Kits d'équipement publics</h2>
+                    <a href="/equipment/kits" class="btn btn-outline-primary">Voir tous les kits</a>
+                </div>
+                
+                {% if public_kits %}
+                <div class="row">
+                    {% for kit in public_kits|slice(0, 6) %}
+                    <div class="col-md-6">
+                        <div class="kit-card">
+                            <h5>{{ kit.name }}</h5>
+                            {% if kit.description %}
+                            <p>{{ kit.description|slice(0, 100) }}{% if kit.description|length > 100 %}...{% endif %}</p>
+                            {% endif %}
+                            <div class="kit-meta">
+                                <small>
+                                    <i class="fas fa-user"></i> {{ kit.created_by_name ?: 'Anonyme' }}
+                                    <span class="badge badge-success">Public</span>
+                                </small>
+                            </div>
+                            <div class="kit-actions">
+                                <a href="/equipment/kits/{{ kit.id }}" class="btn btn-primary">
+                                    <i class="fas fa-eye"></i> Voir le kit
+                                </a>
+                                {% if user %}
+                                <a href="/equipment/kits/{{ kit.id }}/duplicate" class="btn btn-outline-primary">
+                                    <i class="fas fa-copy"></i> Dupliquer
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Aucun kit public disponible.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Mes kits (si connecté) -->
+            {% if user and user_kits %}
+            <div class="equipment-card">
+                <div class="section-header">
+                    <h2>Mes kits d'équipement</h2>
+                    <a href="/equipment/kits/create" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Nouveau kit
+                    </a>
+                </div>
+                
+                <div class="row">
+                    {% for kit in user_kits|slice(0, 4) %}
+                    {% if kit.created_by == user.id %}
+                    <div class="col-md-6">
+                        <div class="kit-card">
+                            <h5>{{ kit.name }}</h5>
+                            {% if kit.description %}
+                            <p>{{ kit.description|slice(0, 100) }}{% if kit.description|length > 100 %}...{% endif %}</p>
+                            {% endif %}
+                            <div class="kit-meta">
+                                <small>
+                                    {% if kit.is_public %}
+                                    <span class="badge badge-success">Public</span>
+                                    {% else %}
+                                    <span class="badge badge-secondary">Privé</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="kit-actions">
+                                <a href="/equipment/kits/{{ kit.id }}" class="btn btn-primary">
+                                    <i class="fas fa-eye"></i> Voir
+                                </a>
+                                <a href="/equipment/kits/{{ kit.id }}/edit" class="btn btn-outline-primary">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                
+                {% if user_kits|length > 4 %}
+                <div class="text-center">
+                    <a href="/equipment/kits" class="btn btn-outline-primary">
+                        Voir tous mes kits ({{ user_kits|length }})
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Actions rapides -->
+            {% if user %}
+            <div class="equipment-card">
+                <h2>Actions rapides</h2>
+                <div class="row">
+                    <div class="col-md-4">
+                        <a href="/equipment/kits/create" class="btn btn-success btn-block">
+                            <i class="fas fa-plus"></i><br>
+                            Créer un nouveau kit
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/equipment/search" class="btn btn-primary btn-block">
+                            <i class="fas fa-search"></i><br>
+                            Rechercher équipement
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/equipment/kits" class="btn btn-outline-primary btn-block">
+                            <i class="fas fa-list"></i><br>
+                            Parcourir tous les kits
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="equipment-card">
+                <div class="text-center">
+                    <h3>Connectez-vous pour créer vos kits personnalisés</h3>
+                    <p>Créez et gérez vos propres kits d'équipement d'escalade adaptés à vos besoins.</p>
+                    <a href="/login" class="btn btn-primary">Se connecter</a>
+                    <a href="/register" class="btn btn-outline-primary">S'inscrire</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

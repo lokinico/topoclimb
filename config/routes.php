@@ -1470,6 +1470,206 @@ return [
     ],
     
     // ========================================
+    // ROUTES ÉQUIPEMENT D'ESCALADE
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/equipment',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'index',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/categories',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'categories',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/categories/create',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'createCategory',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/equipment/categories/create',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'createCategory',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/types',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'types',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/types/create',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'createType',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/equipment/types/create',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'createType',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/kits',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'kits',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/kits/create',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'editKit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/equipment/kits/create',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'editKit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/kits/{id}',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'showKit',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/kits/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'editKit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/equipment/kits/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'editKit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/equipment/kits/{id}/duplicate',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'duplicateKit',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/equipment/kits/{id}/items',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'addKitItem',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'DELETE',
+        'path' => '/equipment/kits/{id}/items',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'removeKitItem',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/recommendations',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'recommendations',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/search',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'search',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/equipment/kits/{id}/export',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'exportKit',
+        'middlewares' => []
+    ],
+    
+    // API Équipement
+    [
+        'method' => 'GET',
+        'path' => '/api/equipment/types/search',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'apiSearchTypes',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/equipment/types/select',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'apiTypesForSelect',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/equipment/stats',
+        'controller' => \TopoclimbCH\Controllers\EquipmentController::class,
+        'action' => 'apiStats',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    
+    // ========================================
     // ROUTES SYNCHRONISATION HORS-LIGNE
     // ========================================
     [
