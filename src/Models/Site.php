@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TopoclimbCH\Models;
 
 use TopoclimbCH\Core\Model;
+use TopoclimbCH\Core\Database;
 
 /**
  * Site Model - Sous-zones optionnelles des régions
@@ -135,10 +136,10 @@ class Site extends Model
             FROM climbing_sites s
             INNER JOIN climbing_regions r ON s.region_id = r.id
             WHERE s.active = 1 
-            AND (s.name LIKE ? OR s.description LIKE ?)
+            AND s.name LIKE ?
         ";
 
-        $params = ["%{$query}%", "%{$query}%"];
+        $params = ["%{$query}%"];
 
         if ($regionId) {
             $sql .= " AND s.region_id = ?";
@@ -147,7 +148,11 @@ class Site extends Model
 
         $sql .= " ORDER BY s.name";
 
-        $db = new \App\Core\Database();
+        $config = [
+            'type' => 'sqlite',
+            'database' => __DIR__ . '/../../data/topoclimb.db'
+        ];
+        $db = new Database($config);
         return $db->fetchAll($sql, $params);
     }
 

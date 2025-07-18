@@ -642,9 +642,8 @@ class SiteController extends BaseController
             }
 
             if ($search) {
-                $whereConditions[] = '(s.name LIKE ? OR s.code LIKE ?)';
+                $whereConditions[] = 's.name LIKE ?';
                 $searchTerm = '%' . $search . '%';
-                $params[] = $searchTerm;
                 $params[] = $searchTerm;
             }
 

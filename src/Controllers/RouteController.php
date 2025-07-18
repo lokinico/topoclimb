@@ -1167,9 +1167,8 @@ class RouteController extends BaseController
             $conditions = [];
             
             if (!empty($query)) {
-                $conditions[] = "(r.name LIKE ? OR r.comment LIKE ? OR s.name LIKE ?)";
+                $conditions[] = "(r.name LIKE ? OR s.name LIKE ?)";
                 $searchTerm = '%' . $query . '%';
-                $params[] = $searchTerm;
                 $params[] = $searchTerm;
                 $params[] = $searchTerm;
             }
@@ -1184,16 +1183,17 @@ class RouteController extends BaseController
                 $params[] = $difficulty;
             }
             
-            if ($minBeauty !== null) {
-                $conditions[] = "r.beauty >= ?";
-                $params[] = (int)$minBeauty;
-            }
+            // Beauty filter removed - column doesn't exist
+            // if ($minBeauty !== null) {
+            //     $conditions[] = "r.beauty >= ?";
+            //     $params[] = (int)$minBeauty;
+            // }
             
             if (!empty($conditions)) {
                 $sql .= " AND " . implode(" AND ", $conditions);
             }
             
-            $sql .= " ORDER BY r.beauty DESC, r.name ASC LIMIT ?";
+            $sql .= " ORDER BY r.name ASC LIMIT ?";
             $params[] = $limit;
             
             $routes = $this->db->fetchAll($sql, $params);
