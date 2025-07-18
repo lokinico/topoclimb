@@ -1670,6 +1670,207 @@ return [
     ],
     
     // ========================================
+    // ROUTES CHECKLISTS DE SÉCURITÉ
+    // ========================================
+    [
+        'method' => 'GET',
+        'path' => '/checklists',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'index',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/templates',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'templates',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/templates/create',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'editTemplate',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/templates/create',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'editTemplate',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/templates/{id}',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'showTemplate',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/templates/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'editTemplate',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/templates/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'editTemplate',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/templates/{id}/create',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'createFromTemplate',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/templates/{id}/create',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'createFromTemplate',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/my',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'myChecklists',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/my/{id}',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'showChecklist',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/my/{id}/complete',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'completeChecklist',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/my/{id}/reset',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'resetChecklist',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/my/{id}/duplicate',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'duplicateChecklist',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\CsrfMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/my/{id}/items',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'addChecklistItem',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/checklists/items/{id}/toggle',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'toggleChecklistItem',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'PUT',
+        'path' => '/checklists/items/{id}/notes',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'updateItemNotes',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'DELETE',
+        'path' => '/checklists/items/{id}',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'removeChecklistItem',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/search',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'search',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/checklists/my/{id}/export',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'exportChecklist',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class
+        ]
+    ],
+    
+    // API Checklists
+    [
+        'method' => 'GET',
+        'path' => '/api/checklists/equipment-types',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'apiEquipmentTypes',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/checklists/stats',
+        'controller' => \TopoclimbCH\Controllers\ChecklistController::class,
+        'action' => 'apiStats',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    
+    // ========================================
     // ROUTES SYNCHRONISATION HORS-LIGNE
     // ========================================
     [
