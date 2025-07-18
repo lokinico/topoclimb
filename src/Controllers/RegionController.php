@@ -191,27 +191,110 @@ class RegionController extends BaseController
     public function show(Request $request): Response
     {
         try {
-            $id = $this->validateId($request->attributes->get('id'), 'ID de région');
+            $id = $request->attributes->get('id');
+            
+            // Validation simple de l'ID
+            if (!$id || !is_numeric($id)) {
+                $this->flash('error', 'ID de région invalide');
+                return $this->redirect('/regions');
+            }
+            
+            $id = (int) $id;
 
-            // Validation et nettoyage des filtres
-            $filters = $this->validateRegionFilters($request);
-
-            // Récupération sécurisée
-            $data = $this->executeInTransaction(function () use ($id, $filters) {
-                return $this->getRegionDetails($id, $filters);
-            });
-
-            // Log de l'action
-            $this->logAction('view_region', ['region_id' => $id, 'filters' => $filters]);
+            // Récupération simplifiée des données
+            $data = $this->getRegionDetailsSimplified($id);
 
             return $this->render('regions/show', $data);
-        } catch (ValidationException $e) {
-            $this->flash('error', $e->getMessage());
-            return $this->redirect('/regions');
         } catch (\Exception $e) {
-            $this->handleError($e, 'Erreur lors du chargement de la région');
+            error_log("RegionController::show - Erreur: " . $e->getMessage());
+            $this->flash('error', 'Erreur lors du chargement de la région');
             return $this->redirect('/regions');
         }
+    }
+
+    /**
+     * Récupération simplifiée des détails d'une région
+     */
+    private function getRegionDetailsSimplified(int $id): array
+    {
+        // Récupération de base de la région
+        $region = $this->db->fetchOne(
+            "SELECT r.*, c.name as country_name, c.code as country_code 
+             FROM climbing_regions r 
+             LEFT JOIN climbing_countries c ON r.country_id = c.id 
+             WHERE r.id = ? AND r.active = 1",
+            [$id]
+        );
+
+        $this->requireEntity($region, 'Région non trouvée');
+
+        // Récupération simplifiée des secteurs sans agrégation complexe
+        $sectors = $this->db->fetchAll(
+            "SELECT s.id, s.name, s.code, s.altitude, s.access_time, 
+                    s.coordinates_lat, s.coordinates_lng, s.description,
+                    si.name as site_name, si.id as site_id
+             FROM climbing_sectors s 
+             LEFT JOIN climbing_sites si ON s.site_id = si.id
+             WHERE s.region_id = ? AND s.active = 1
+             ORDER BY s.name ASC 
+             LIMIT 100",
+            [$id]
+        );
+
+        // Ajout du nombre de voies par secteur avec requête séparée
+        foreach ($sectors as &$sector) {
+            $routesCount = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM climbing_routes WHERE sector_id = ? AND active = 1",
+                [$sector['id']]
+            );
+            $sector['routes_count'] = $routesCount['count'] ?? 0;
+        }
+
+        // Récupération des sites pour les filtres
+        $sites = $this->db->fetchAll(
+            "SELECT DISTINCT si.id, si.name 
+             FROM climbing_sites si
+             JOIN climbing_sectors s ON si.id = s.site_id
+             WHERE s.region_id = ? AND si.active = 1 AND s.active = 1
+             ORDER BY si.name ASC",
+            [$id]
+        );
+
+        // Récupération des difficultés disponibles
+        $difficulties = $this->db->fetchAll(
+            "SELECT DISTINCT r.difficulty
+             FROM climbing_routes r
+             JOIN climbing_sectors s ON r.sector_id = s.id
+             WHERE s.region_id = ? AND r.active = 1 AND s.active = 1 AND r.difficulty IS NOT NULL
+             ORDER BY r.difficulty ASC",
+            [$id]
+        );
+
+        // Récupération des médias (images)
+        $media = $this->db->fetchAll(
+            "SELECT m.id, m.filename, m.title, m.description, mr.relationship_type
+             FROM climbing_media m
+             JOIN climbing_media_relationships mr ON m.id = mr.media_id
+             WHERE mr.entity_type = 'region' AND mr.entity_id = ? AND m.is_public = 1
+             ORDER BY mr.relationship_type, mr.sort_order",
+            [$id]
+        );
+
+        $stats = [
+            'sectors_count' => count($sectors),
+            'routes_count' => array_sum(array_column($sectors, 'routes_count'))
+        ];
+
+        return [
+            'title' => $region['name'],
+            'region' => $region,
+            'sectors' => $sectors,
+            'sites' => $sites,
+            'difficulties' => array_column($difficulties, 'difficulty'),
+            'currentFilters' => [],
+            'media' => $media,
+            'stats' => $stats
+        ];
     }
 
     /**

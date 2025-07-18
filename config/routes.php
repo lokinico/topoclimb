@@ -856,6 +856,47 @@ return [
         'action' => 'apiSectors',
         'middlewares' => []
     ],
+
+    // API Secteurs
+    [
+        'method' => 'GET',
+        'path' => '/api/sectors',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'apiIndex',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/sectors/search',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'apiSearch',
+        'middlewares' => []
+    ],
+
+    // API Routes (Voies)
+    [
+        'method' => 'GET',
+        'path' => '/api/routes',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'apiIndex',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/routes/search',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'apiSearch',
+        'middlewares' => []
+    ],
+
+    // API Books (Guides)
+    [
+        'method' => 'GET',
+        'path' => '/api/books',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'apiIndex',
+        'middlewares' => []
+    ],
     [
         'method' => 'GET',
         'path' => '/regions/{id}/weather',
@@ -926,6 +967,20 @@ return [
         'path' => '/profile',
         'controller' => \TopoclimbCH\Controllers\UserController::class,
         'action' => 'profile',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/profile/ascents',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'ascents',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/profile/favorites',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'favorites',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
     [
@@ -1060,6 +1115,16 @@ return [
         'path' => '/admin/users',
         'controller' => \TopoclimbCH\Controllers\AdminController::class,
         'action' => 'users',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class
+        ]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/reports',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'reports',
         'middlewares' => [
             \TopoclimbCH\Middleware\AuthMiddleware::class,
             \TopoclimbCH\Middleware\PermissionMiddleware::class
@@ -1272,6 +1337,22 @@ return [
         'path' => '/api/geolocation/nearby-pois',
         'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
         'action' => 'apiNearbyPOIs',
+        'middlewares' => []
+    ],
+
+    // API Météo et Géocodage manquantes
+    [
+        'method' => 'GET',
+        'path' => '/api/weather/current',
+        'controller' => \TopoclimbCH\Controllers\WeatherController::class,
+        'action' => 'apiCurrent',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/geocoding/search',
+        'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
+        'action' => 'apiSearch',
         'middlewares' => []
     ],
 
