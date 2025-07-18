@@ -734,14 +734,14 @@ class SectorController extends BaseController
     /**
      * API: Liste de tous les secteurs
      */
-    public function apiIndex(Request $request): JsonResponse
+    public function apiIndex(Request $request): Response
     {
         try {
             $limit = min((int)($request->query->get('limit') ?? 100), 500);
             $offset = max((int)($request->query->get('offset') ?? 0), 0);
             
             $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, s.code, s.altitude, s.coordinates_lat, s.coordinates_lng,
+                "SELECT s.id, s.name, s.altitude, s.coordinates_lat, s.coordinates_lng,
                         si.name as site_name, r.name as region_name
                  FROM climbing_sectors s
                  LEFT JOIN climbing_sites si ON s.site_id = si.id
@@ -771,7 +771,7 @@ class SectorController extends BaseController
     /**
      * API: Recherche de secteurs
      */
-    public function apiSearch(Request $request): JsonResponse
+    public function apiSearch(Request $request): Response
     {
         try {
             $query = trim($request->query->get('q', ''));
@@ -786,16 +786,16 @@ class SectorController extends BaseController
             }
 
             $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, s.code, s.altitude, s.coordinates_lat, s.coordinates_lng,
+                "SELECT s.id, s.name, s.altitude, s.coordinates_lat, s.coordinates_lng,
                         si.name as site_name, r.name as region_name
                  FROM climbing_sectors s
                  LEFT JOIN climbing_sites si ON s.site_id = si.id
                  LEFT JOIN climbing_regions r ON s.region_id = r.id
                  WHERE s.active = 1 
-                   AND (s.name LIKE ? OR s.code LIKE ? OR si.name LIKE ? OR r.name LIKE ?)
+                   AND (s.name LIKE ? OR si.name LIKE ? OR r.name LIKE ?)
                  ORDER BY s.name ASC
                  LIMIT ?",
-                ["%$query%", "%$query%", "%$query%", "%$query%", $limit]
+                ["%$query%", "%$query%", "%$query%", $limit]
             );
 
             return Response::json([

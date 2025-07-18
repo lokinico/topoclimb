@@ -1085,15 +1085,12 @@ class RouteController extends BaseController
             $offset = (int)($request->query->get('offset') ?? 0);
             $sectorId = $request->query->get('sector_id');
             
-            $sql = "SELECT r.id, r.name, r.difficulty, r.style, r.beauty, r.length, 
-                           r.equipment, r.created_at,
+            $sql = "SELECT r.id, r.name, r.difficulty, r.created_at,
                            s.name as sector_name, s.id as sector_id,
-                           reg.name as region_name, reg.id as region_id,
-                           ds.name as difficulty_system
+                           reg.name as region_name, reg.id as region_id
                     FROM climbing_routes r
                     LEFT JOIN climbing_sectors s ON r.sector_id = s.id
                     LEFT JOIN climbing_regions reg ON s.region_id = reg.id  
-                    LEFT JOIN climbing_difficulty_systems ds ON r.difficulty_system_id = ds.id
                     WHERE r.active = 1";
             
             $params = [];
@@ -1158,7 +1155,7 @@ class RouteController extends BaseController
                 ], 400);
             }
             
-            $sql = "SELECT r.id, r.name, r.difficulty, r.style, r.beauty, r.length,
+            $sql = "SELECT r.id, r.name, r.difficulty,
                            s.name as sector_name, s.id as sector_id,
                            reg.name as region_name
                     FROM climbing_routes r
