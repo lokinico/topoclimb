@@ -76,6 +76,7 @@ clear-production.php
 cleanup.log
 last-cleanup.txt
 deploy-reports/
+FORCE_REFRESH_*.txt
 
 # Scripts avec secrets - ne pas partager
 validate_fixes.sh
