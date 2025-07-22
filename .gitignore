@@ -70,6 +70,12 @@ run_simple_tests.php
 test_*.php
 test_results_*.json
 
+# Scripts de déploiement générés
+DEPLOY_REPORT.txt
+clear-production.php
+cleanup.log
+last-cleanup.txt
+
 # Scripts avec secrets - ne pas partager
 validate_fixes.sh
 export_production_remote.php
