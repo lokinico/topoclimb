@@ -1,65 +1,95 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte Test - Escalade Suisse</title>
-    
+{% extends "layouts/app.twig" %}
+
+{% block title %}Carte Test - Escalade Suisse{% endblock %}
+
+{% block meta %}
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-    /* CSS MINIMAL - ZERO CONFLITS */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; }
-    #map { height: 100vh; width: 100%; }
+    /* CSS MINIMAL - ZERO CONFLITS - OVERRIDE BOOTSTRAP */
+    .container-fluid { padding: 0 !important; }
+    .main-content { padding: 0 !important; margin: 0 !important; }
+    
+    #map { 
+        height: 100vh; 
+        width: 100%; 
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+    }
+    
+    .debug { 
+        position: fixed; 
+        top: 10px; 
+        left: 10px; 
+        background: red; 
+        color: white; 
+        padding: 10px; 
+        z-index: 9999;
+        font-weight: bold;
+    }
+    
+    /* Cacher le header/footer pour avoir la carte pleine page */
+    .utility-bar, .main-nav, .site-footer { display: none !important; }
     </style>
-</head>
-<body>
+{% endblock %}
 
-<!-- CARTE SIMPLE - ZÉRO FRAMEWORK -->
+{% block content %}
+<!-- CARTE SIMPLE - DANS LE SYSTÈME TWIG -->
 <div id="map"></div>
 
-<!-- Debug absolu -->
-<div style="position: absolute; top: 10px; left: 10px; background: white; padding: 10px; z-index: 9999;">
-    <strong>🗺️ CARTE TEST</strong><br>
+<!-- Debug -->
+<div class="debug">
+    🗺️ CARTE TWIG TEST<br>
     Status: <span id="status">Initialisation...</span>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-// VERSION ABSOLUMENT BASIQUE - EXEMPLE OFFICIEL LEAFLET
-console.log('🎯 VERSION BASIQUE ABSOLUE');
+// VERSION BASIQUE DANS LE SYSTÈME TWIG
+console.log('🗺️ VERSION TWIG BASIQUE');
 
 document.addEventListener('DOMContentLoaded', function() {
     const status = document.getElementById('status');
-    status.textContent = 'Création carte...';
     
-    // Carte standard Leaflet - exemple de base
-    const map = L.map('map').setView([46.8182, 8.2275], 8);
-    
-    status.textContent = 'Ajout tuiles...';
-    
-    // Tuiles OpenStreetMap standard
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
-    
-    status.textContent = 'Ajout marqueur test...';
-    
-    // Un marqueur test sur Saillon
-    L.marker([46.1817, 7.1947])
-        .addTo(map)
-        .bindPopup('🏔️ Saillon - Site d\'escalade test')
-        .openPopup();
-    
-    status.textContent = '✅ Carte OK !';
-    console.log('✅ Carte basique créée avec succès');
+    try {
+        status.textContent = 'Création carte...';
+        console.log('Création carte...');
+        
+        // Carte standard Leaflet
+        const map = L.map('map').setView([46.8182, 8.2275], 8);
+        
+        status.textContent = 'Ajout tuiles...';
+        console.log('Ajout tuiles...');
+        
+        // Tuiles OpenStreetMap standard
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        status.textContent = 'Ajout marqueur test...';
+        console.log('Ajout marqueur...');
+        
+        // Un marqueur test sur Saillon
+        L.marker([46.1817, 7.1947])
+            .addTo(map)
+            .bindPopup('🏔️ Saillon - Site d\'escalade TWIG')
+            .openPopup();
+        
+        status.textContent = '✅ Carte TWIG OK !';
+        console.log('✅ Carte TWIG créée avec succès');
+        
+    } catch (error) {
+        console.error('ERREUR TWIG:', error);
+        status.textContent = 'ERREUR: ' + error.message;
+    }
 });
 </script>
-
-</body>
-</html>
+{% endblock %}
