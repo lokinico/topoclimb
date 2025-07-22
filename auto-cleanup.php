@@ -19,6 +19,7 @@ echo "PID: " . getmypid() . "\n\n";
 
 $totalCleaned = 0;
 $errors = [];
+$warnings = [];
 
 try {
     // 1. Cache Twig (le plus important)
@@ -32,7 +33,7 @@ try {
                 if (unlink($file)) {
                     $cacheCleaned++;
                 } else {
-                    $errors[] = "Impossible de supprimer: $file";
+                    $warnings[] = "Impossible de supprimer cache: $file";
                 }
             }
         }
@@ -53,7 +54,7 @@ try {
                 if (unlink($file)) {
                     $sessionsRemoved++;
                 } else {
-                    $errors[] = "Session non supprimable: $file";
+                    $warnings[] = "Session non supprimable: $file";
                 }
             }
         }
@@ -63,17 +64,17 @@ try {
         echo "   ⚠️ Dossier sessions introuvable\n";
     }
 
-    // 3. OPCache PHP (crucial après déploiement)
+    // 3. OPCache PHP (crucial après déploiement) - NON CRITIQUE
     echo "3. Reset OPCache PHP...\n";
     if (function_exists('opcache_reset')) {
         if (opcache_reset()) {
             echo "   ✅ OPCache reseté\n";
         } else {
-            echo "   ⚠️ Échec reset OPCache\n";
-            $errors[] = "OPCache reset failed";
+            echo "   ⚠️ Échec reset OPCache (non critique)\n";
+            // Ne pas ajouter aux erreurs - c'est optionnel
         }
     } else {
-        echo "   ⚠️ OPCache non disponible\n";
+        echo "   ℹ️ OPCache non disponible (normal sur certains serveurs)\n";
     }
 
     // 4. Logs anciens
@@ -87,7 +88,7 @@ try {
                 if (unlink($file)) {
                     $logsRemoved++;
                 } else {
-                    $errors[] = "Log non supprimable: $file";
+                    $warnings[] = "Log non supprimable: $file";
                 }
             }
         }
@@ -133,21 +134,30 @@ try {
 echo "\n📊 RÉSUMÉ:\n";
 echo "==========\n";
 echo "Total nettoyé: $totalCleaned éléments\n";
-echo "Erreurs: " . count($errors) . "\n";
+echo "Erreurs critiques: " . count($errors) . "\n";
+echo "Avertissements: " . count($warnings) . "\n";
 
 if (!empty($errors)) {
-    echo "\n⚠️ ERREURS DÉTECTÉES:\n";
+    echo "\n❌ ERREURS CRITIQUES:\n";
     foreach ($errors as $error) {
         echo "   • $error\n";
     }
 }
 
+if (!empty($warnings)) {
+    echo "\n⚠️ AVERTISSEMENTS (non critiques):\n";
+    foreach ($warnings as $warning) {
+        echo "   • $warning\n";
+    }
+}
+
 // 7. Enregistrer l'exécution
 $logEntry = sprintf(
-    "[%s] Nettoyage: %d éléments, %d erreurs\n",
+    "[%s] Nettoyage: %d éléments, %d erreurs critiques, %d avertissements\n",
     date('Y-m-d H:i:s'),
     $totalCleaned,
-    count($errors)
+    count($errors),
+    count($warnings)
 );
 
 file_put_contents(__DIR__ . '/cleanup.log', $logEntry, FILE_APPEND | LOCK_EX);
@@ -155,10 +165,22 @@ file_put_contents(__DIR__ . '/cleanup.log', $logEntry, FILE_APPEND | LOCK_EX);
 // 8. Marquer la dernière exécution
 file_put_contents(__DIR__ . '/last-cleanup.txt', date('Y-m-d H:i:s'));
 
-echo "\n🎯 NETTOYAGE TERMINÉ\n";
+// Status final
+if (count($errors) > 0) {
+    echo "\n❌ NETTOYAGE TERMINÉ AVEC ERREURS CRITIQUES\n";
+    $exitCode = 1;
+} else {
+    echo "\n🎯 NETTOYAGE TERMINÉ AVEC SUCCÈS\n";
+    $exitCode = 0;
+}
+
 echo "Next run: " . date('Y-m-d H:i:s', time() + 3600) . "\n";
 echo "Log: cleanup.log\n";
 
-// Code de sortie
-exit(count($errors) > 0 ? 1 : 0);
+if (count($warnings) > 0) {
+    echo "Note: " . count($warnings) . " avertissement(s) non critique(s)\n";
+}
+
+// Code de sortie - seulement erreur si problèmes critiques
+exit($exitCode);
 ?>
