@@ -3,107 +3,94 @@
 {% block title %}Carte Interactive - Sites d'Escalade Suisse{% endblock %}
 
 {% block meta %}
-    <meta name="description" content="Découvrez tous les sites d'escalade de Suisse sur notre carte interactive moderne avec les tuiles officielles suisses.">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
           crossorigin="" />
     
-    <!-- CSS moderne épuré pour la carte -->
-    <link rel="stylesheet" href="/css/pages/map-clean.css">
+    <style>
+    /* CSS ULTRA-SIMPLE POUR DÉBUGGER */
+    body { margin: 0; padding: 0; }
+    .simple-map-container { 
+        width: 100%; 
+        height: 100vh; 
+        position: relative; 
+    }
+    #climbing-map { 
+        width: 100%; 
+        height: 100%; 
+    }
+    .simple-header {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1000;
+    }
+    .debug-info {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 1000;
+    }
+    </style>
 {% endblock %}
 
 {% block content %}
+<!-- VERSION ULTRA-SIMPLE POUR DÉBUGGER -->
+<div class="simple-map-container">
+    <!-- Header minimaliste -->
+    <div class="simple-header">
+        <h3><i class="fas fa-mountain"></i> Carte Escalade Suisse</h3>
+        <small>Sites: {{ stats.total_sites ?? 'N/A' }} | Debug Mode</small>
+    </div>
+    
+    <!-- Carte -->
+    <div id="climbing-map"></div>
+    
+    <!-- Debug info -->
+    <div class="debug-info">
+        <div>Sites chargés: <span id="sites-count">0</span></div>
+        <div>Status: <span id="status">Chargement...</span></div>
+    </div>
+</div>
+
+<!-- 
+ANCIENNE VERSION COMPLEXE EN COMMENTAIRE - À RÉACTIVER PROGRESSIVEMENT
 <div class="map-app">
-    <!-- Header épuré -->
     <header class="map-header">
         <div class="header-brand">
             <i class="fas fa-mountain"></i>
             <h1>Escalade Suisse</h1>
         </div>
-        
         <div class="header-stats">
             <span class="stat">{{ stats.total_sites ?? 8 }} sites</span>
             <span class="stat">{{ stats.total_routes ?? 935 }} voies</span>
         </div>
     </header>
-
-    <!-- Carte plein écran -->
     <main class="map-container">
         <div id="climbing-map"></div>
-        
-        <!-- Contrôles flottants minimalistes -->
         <div class="map-controls">
             <div class="control-group">
-                <button id="search-btn" class="control-btn" title="Rechercher">
-                    <i class="fas fa-search"></i>
-                </button>
-                <button id="locate-btn" class="control-btn" title="Ma position">
-                    <i class="fas fa-location-arrow"></i>
-                </button>
-                <button id="layers-btn" class="control-btn" title="Changer de fond">
-                    <i class="fas fa-layer-group"></i>
-                </button>
+                <button id="search-btn" class="control-btn"><i class="fas fa-search"></i></button>
+                <button id="locate-btn" class="control-btn"><i class="fas fa-location-arrow"></i></button>
+                <button id="layers-btn" class="control-btn"><i class="fas fa-layer-group"></i></button>
             </div>
-            
             <div class="control-group">
-                <button id="zoom-in" class="control-btn" title="Zoom +">
-                    <i class="fas fa-plus"></i>
-                </button>
-                <button id="zoom-out" class="control-btn" title="Zoom -">
-                    <i class="fas fa-minus"></i>
-                </button>
+                <button id="zoom-in" class="control-btn"><i class="fas fa-plus"></i></button>
+                <button id="zoom-out" class="control-btn"><i class="fas fa-minus"></i></button>
             </div>
-        </div>
-        
-        <!-- Panneau de recherche -->
-        <div id="search-panel" class="search-panel">
-            <div class="search-box">
-                <input type="text" id="site-search" placeholder="Rechercher un site d'escalade...">
-                <button id="search-close" class="close-btn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="filter-row">
-                <select id="region-filter" class="filter-select">
-                    <option value="">Toutes les régions</option>
-                    {% for region in regions %}
-                        <option value="{{ region.id ?? region['id'] }}">{{ region.name ?? region['name'] }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        
-        <!-- Indicateur de couche active -->
-        <div id="layer-indicator" class="layer-indicator">
-            Swisstopo
-        </div>
-        
-        <!-- Chargement -->
-        <div id="loading" class="loading-overlay">
-            <div class="loading-spinner"></div>
         </div>
     </main>
-
-    <!-- Popup détails site -->
-    <div id="site-popup" class="site-popup">
-        <div class="popup-header">
-            <h3 id="popup-title"></h3>
-            <button id="popup-close" class="popup-close">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div id="popup-content" class="popup-content">
-            <!-- Contenu dynamique -->
-        </div>
-    </div>
 </div>
-
-<!-- Notifications toast -->
-<div id="toast-container" class="toast-container"></div>
+-->
 {% endblock %}
 
 {% block scripts %}
@@ -113,7 +100,70 @@
         crossorigin=""></script>
 
 <script>
-// Configuration Suisse
+console.log('🚀 DÉMARRAGE DEBUG MAP');
+
+// === ÉTAPE 1: VARIABLES ULTRA-SIMPLES ===
+let map = null;
+const sites = {{ sites|json_encode|raw }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📍 DOM Chargé, sites reçus:', sites);
+    document.getElementById('sites-count').textContent = sites ? sites.length : 0;
+    
+    // === ÉTAPE 2: CRÉER CARTE BASIQUE ===
+    try {
+        console.log('🗺️ Initialisation carte...');
+        document.getElementById('status').textContent = 'Création carte...';
+        
+        map = L.map('climbing-map', {
+            center: [46.8182, 8.2275], // Centre Suisse
+            zoom: 8
+        });
+        
+        console.log('✅ Carte créée');
+        document.getElementById('status').textContent = 'Ajout des tuiles...';
+        
+        // === ÉTAPE 3: TUILES SWISS TOPO SIMPLES ===
+        const swissTopo = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
+            attribution: '© swisstopo'
+        });
+        swissTopo.addTo(map);
+        
+        console.log('✅ Tuiles Swiss ajoutées');
+        document.getElementById('status').textContent = 'Ajout des marqueurs...';
+        
+        // === ÉTAPE 4: MARQUEURS ULTRA-SIMPLES ===
+        if (sites && sites.length > 0) {
+            sites.forEach((site, index) => {
+                console.log(`📌 Site ${index + 1}:`, site);
+                
+                // Vérifier les coordonnées (peut-être coordinates_lat/lng au lieu de lat/lng)
+                const lat = site.latitude || site.coordinates_lat;
+                const lng = site.longitude || site.coordinates_lng;
+                
+                if (lat && lng) {
+                    const marker = L.marker([lat, lng]).addTo(map);
+                    marker.bindPopup(`<b>${site.name}</b><br/>${site.description || ''}`);
+                    console.log(`✅ Marqueur ajouté pour ${site.name} à [${lat}, ${lng}]`);
+                } else {
+                    console.log(`❌ Pas de coordonnées pour ${site.name}`);
+                }
+            });
+            document.getElementById('status').textContent = `✅ ${sites.length} sites chargés`;
+        } else {
+            console.log('❌ Aucun site trouvé');
+            document.getElementById('status').textContent = 'Aucun site trouvé';
+        }
+        
+    } catch (error) {
+        console.error('💥 ERREUR:', error);
+        document.getElementById('status').textContent = `ERREUR: ${error.message}`;
+    }
+});
+
+/*
+ANCIENNE VERSION COMPLEXE EN COMMENTAIRE - À RÉACTIVER FONCTION PAR FONCTION
+
 const SwissConfig = {
     center: [46.8182, 8.2275],
     zoom: 8,
@@ -122,75 +172,28 @@ const SwissConfig = {
     bounds: [[45.8, 5.9], [47.9, 10.5]]
 };
 
-// Données des sites
-const sites = {{ sites|json_encode|raw }};
-
-// Variables globales
-let map = null;
 let sitesLayer = null;
 let currentLayer = 'swisstopo';
 let userMarker = null;
 
-// Initialisation
-document.addEventListener('DOMContentLoaded', function() {
-    initMap();
-    initControls();
-    loadSites();
-    hideLoading();
-});
-
-// === CARTE ===
-function initMap() {
-    map = L.map('climbing-map', {
-        center: SwissConfig.center,
-        zoom: SwissConfig.zoom,
-        minZoom: SwissConfig.minZoom,
-        maxZoom: SwissConfig.maxZoom,
-        maxBounds: SwissConfig.bounds,
-        zoomControl: false,
-        attributionControl: false
-    });
-
-    // Ajouter les couches de carte
-    addMapLayers();
-    
-    console.log('Carte initialisée avec', sites.length, 'sites');
-}
-
 function addMapLayers() {
-    // Tuiles Swiss Topo (priorité)
-    const swissTopo = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
-        attribution: '© swisstopo',
-        maxZoom: 16
-    });
-
-    // Tuiles OpenStreetMap (fallback)
     const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
         maxZoom: 18
     });
-
-    // Tuiles satellite
     const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: '© Esri',
         maxZoom: 18
     });
-
-    // Stocker les couches
     window.mapLayers = {
         swisstopo: swissTopo,
         osm: openStreetMap,
         satellite: satellite
     };
-
-    // Démarrer avec Swiss Topo
-    swissTopo.addTo(map);
-    updateLayerIndicator('Swisstopo');
 }
 
 function loadSites() {
     sitesLayer = L.layerGroup().addTo(map);
-    
     sites.forEach(site => {
         if (site.latitude && site.longitude) {
             addSiteMarker(site);
@@ -199,7 +202,6 @@ function loadSites() {
 }
 
 function addSiteMarker(site) {
-    // Marqueur épuré avec couleur basée sur le type
     const marker = L.circleMarker([site.latitude, site.longitude], {
         radius: 8,
         fillColor: getSiteColor(site),
@@ -208,22 +210,13 @@ function addSiteMarker(site) {
         opacity: 1,
         fillOpacity: 0.8
     });
-
-    // Popup moderne
     const popupContent = createSitePopup(site);
-    marker.bindPopup(popupContent, {
-        maxWidth: 280,
-        className: 'modern-popup'
-    });
-
-    // Événements
+    marker.bindPopup(popupContent, { maxWidth: 280, className: 'modern-popup' });
     marker.on('click', () => showSiteDetails(site));
-    
     sitesLayer.addLayer(marker);
 }
 
 function getSiteColor(site) {
-    // Couleurs basées sur la région
     const colors = {
         1: '#ef4444', // Valais - Rouge
         2: '#10b981', // Jura - Vert
@@ -235,257 +228,7 @@ function getSiteColor(site) {
     return colors[site.region_id] || '#6b7280';
 }
 
-function createSitePopup(site) {
-    return `
-        <div class="popup-modern">
-            <h4>${site.name}</h4>
-            <div class="popup-meta">
-                <span><i class="fas fa-map-marker-alt"></i> ${site.region_name || 'Région inconnue'}</span>
-                <span><i class="fas fa-route"></i> ${site.route_count || 0} voies</span>
-            </div>
-            <div class="popup-actions">
-                <button onclick="showSiteDetails(${site.id})" class="btn-primary">
-                    Détails
-                </button>
-                <button onclick="getDirections(${site.latitude}, ${site.longitude})" class="btn-secondary">
-                    Itinéraire
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-// === CONTRÔLES ===
-function initControls() {
-    // Recherche
-    document.getElementById('search-btn').addEventListener('click', toggleSearchPanel);
-    document.getElementById('search-close').addEventListener('click', hideSearchPanel);
-    document.getElementById('site-search').addEventListener('input', handleSearch);
-    document.getElementById('region-filter').addEventListener('change', handleFilter);
-
-    // Actions
-    document.getElementById('locate-btn').addEventListener('click', locateUser);
-    document.getElementById('layers-btn').addEventListener('click', switchLayer);
-    document.getElementById('zoom-in').addEventListener('click', () => map.zoomIn());
-    document.getElementById('zoom-out').addEventListener('click', () => map.zoomOut());
-
-    // Popup
-    document.getElementById('popup-close').addEventListener('click', hideSitePopup);
-}
-
-function toggleSearchPanel() {
-    const panel = document.getElementById('search-panel');
-    panel.classList.toggle('active');
-    
-    if (panel.classList.contains('active')) {
-        document.getElementById('site-search').focus();
-    }
-}
-
-function hideSearchPanel() {
-    document.getElementById('search-panel').classList.remove('active');
-    document.getElementById('site-search').value = '';
-    resetSearch();
-}
-
-function handleSearch(e) {
-    const query = e.target.value.toLowerCase().trim();
-    
-    if (!query) {
-        resetSearch();
-        return;
-    }
-
-    const results = sites.filter(site => 
-        site.name.toLowerCase().includes(query) ||
-        (site.region_name && site.region_name.toLowerCase().includes(query))
-    );
-
-    if (results.length > 0) {
-        highlightSites(results);
-        
-        // Centrer sur le premier résultat
-        const first = results[0];
-        map.setView([first.latitude, first.longitude], 12);
-    } else {
-        showToast('Aucun site trouvé', 'info');
-    }
-}
-
-function handleFilter(e) {
-    const regionId = e.target.value;
-    
-    if (!regionId) {
-        resetSearch();
-        return;
-    }
-
-    const filtered = sites.filter(site => site.region_id == regionId);
-    highlightSites(filtered);
-    
-    if (filtered.length > 0) {
-        fitToSites(filtered);
-    }
-}
-
-function highlightSites(targetSites) {
-    sitesLayer.eachLayer(layer => {
-        const latLng = layer.getLatLng();
-        const site = sites.find(s => 
-            Math.abs(s.latitude - latLng.lat) < 0.001 && 
-            Math.abs(s.longitude - latLng.lng) < 0.001
-        );
-        
-        if (site && targetSites.some(t => t.id === site.id)) {
-            layer.setStyle({ radius: 12, weight: 3 });
-        } else {
-            layer.setStyle({ radius: 6, weight: 1, fillOpacity: 0.3 });
-        }
-    });
-}
-
-function resetSearch() {
-    sitesLayer.eachLayer(layer => {
-        layer.setStyle({ radius: 8, weight: 2, fillOpacity: 0.8 });
-    });
-}
-
-function fitToSites(targetSites) {
-    const group = new L.featureGroup();
-    targetSites.forEach(site => {
-        if (site.latitude && site.longitude) {
-            group.addLayer(L.marker([site.latitude, site.longitude]));
-        }
-    });
-    map.fitBounds(group.getBounds(), { padding: [20, 20] });
-}
-
-// === ACTIONS ===
-function locateUser() {
-    if (!navigator.geolocation) {
-        showToast('Géolocalisation non disponible', 'error');
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-        position => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            
-            if (userMarker) map.removeLayer(userMarker);
-            
-            userMarker = L.circleMarker([lat, lng], {
-                radius: 10,
-                fillColor: '#3b82f6',
-                color: '#ffffff',
-                weight: 3,
-                fillOpacity: 1
-            }).bindPopup('Votre position').addTo(map);
-            
-            map.setView([lat, lng], 12);
-            showToast('Position trouvée', 'success');
-        },
-        () => showToast('Impossible de vous localiser', 'error')
-    );
-}
-
-function switchLayer() {
-    const layers = window.mapLayers;
-    map.removeLayer(layers[currentLayer]);
-    
-    if (currentLayer === 'swisstopo') {
-        currentLayer = 'osm';
-        updateLayerIndicator('OpenStreetMap');
-    } else if (currentLayer === 'osm') {
-        currentLayer = 'satellite';
-        updateLayerIndicator('Satellite');
-    } else {
-        currentLayer = 'swisstopo';
-        updateLayerIndicator('Swisstopo');
-    }
-    
-    layers[currentLayer].addTo(map);
-}
-
-function updateLayerIndicator(name) {
-    document.getElementById('layer-indicator').textContent = name;
-}
-
-// === POPUP DÉTAILS ===
-function showSiteDetails(site) {
-    const popup = document.getElementById('site-popup');
-    const title = document.getElementById('popup-title');
-    const content = document.getElementById('popup-content');
-    
-    title.textContent = site.name;
-    content.innerHTML = `
-        <div class="site-details">
-            <div class="detail-group">
-                <span class="label">Région:</span>
-                <span>${site.region_name || 'Non spécifiée'}</span>
-            </div>
-            <div class="detail-group">
-                <span class="label">Voies:</span>
-                <span>${site.route_count || 0}</span>
-            </div>
-            <div class="detail-group">
-                <span class="label">Secteurs:</span>
-                <span>${site.sector_count || 0}</span>
-            </div>
-            ${site.approach_time ? `
-            <div class="detail-group">
-                <span class="label">Approche:</span>
-                <span>${site.approach_time} min</span>
-            </div>` : ''}
-            ${site.description ? `
-            <div class="description">
-                <p>${site.description}</p>
-            </div>` : ''}
-            <div class="actions">
-                <a href="${site.url}" class="btn-primary">Voir la page</a>
-                <button onclick="getDirections(${site.latitude}, ${site.longitude})" class="btn-secondary">
-                    <i class="fas fa-directions"></i> GPS
-                </button>
-            </div>
-        </div>
-    `;
-    
-    popup.classList.add('active');
-}
-
-function hideSitePopup() {
-    document.getElementById('site-popup').classList.remove('active');
-}
-
-function getDirections(lat, lng) {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    window.open(url, '_blank');
-}
-
-// === NOTIFICATIONS ===
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<span>${message}</span>`;
-    
-    container.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 100);
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => container.removeChild(toast), 300);
-    }, 3000);
-}
-
-// === UTILITAIRES ===
-function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
-}
-
-// Responsivité
-window.addEventListener('resize', () => {
-    if (map) setTimeout(() => map.invalidateSize(), 100);
-});
+PLUS DE FONCTIONS À RÉACTIVER AU FUR ET À MESURE...
+*/
 </script>
 {% endblock %}
