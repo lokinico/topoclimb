@@ -21,7 +21,15 @@
     RewriteCond %{REQUEST_URI} ^/uploads/.*\.php$ [NC]
     RewriteRule ^(.*)$ - [F,L]
     
-    # Headers média cache désactivés pour permettre vidage application
+    # Headers pour les fichiers média (cache et sécurité)
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4|webm)$">
+        <IfModule mod_headers.c>
+            Header set Cache-Control "public, max-age=31536000"
+            Header set Expires "Thu, 31 Dec 2037 23:55:55 GMT"
+            Header unset ETag
+        </IfModule>
+        FileETag None
+    </FilesMatch>
     
     # Rediriger vers index.php si le fichier n'existe pas
     RewriteCond %{REQUEST_FILENAME} !-f
