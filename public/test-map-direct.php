@@ -5,10 +5,14 @@
  */
 
 // Headers anti-cache agressifs
-header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0");
-header("Pragma: no-cache"); 
-header("Expires: Thu, 01 Jan 1970 00:00:00 GMT");
-header("Last-Modified: " . gmdate('D, d M Y H:i:s') . " GMT");
+@header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0");
+@header("Pragma: no-cache"); 
+@header("Expires: Thu, 01 Jan 1970 00:00:00 GMT");
+@header("Last-Modified: " . gmdate('D, d M Y H:i:s') . " GMT");
+
+// Gestion d'erreur basique
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 ?><!DOCTYPE html>
 <html lang="fr">
