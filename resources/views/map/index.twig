@@ -11,161 +11,93 @@
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
           crossorigin="" />
     
-    <!-- CSS moderne pour la carte -->
-    <link rel="stylesheet" href="/css/pages/map.css">
+    <!-- CSS moderne épuré pour la carte -->
+    <link rel="stylesheet" href="/css/pages/map-clean.css">
 {% endblock %}
 
 {% block content %}
-<div class="map-page-modern">
-    <!-- Header moderne avec statistiques -->
+<div class="map-app">
+    <!-- Header épuré -->
     <header class="map-header">
-        <div class="container">
-            <div class="header-content">
-                <div class="header-text">
-                    <h1 class="map-title">
-                        <i class="fas fa-mountain"></i>
-                        Carte Interactive des Sites d'Escalade
-                    </h1>
-                    <p class="map-subtitle">
-                        Explorez {{ stats.total_sites ?? 0 }} sites d'escalade en Suisse avec les cartes officielles swisstopo
-                    </p>
-                </div>
-            </div>
+        <div class="header-brand">
+            <i class="fas fa-mountain"></i>
+            <h1>Escalade Suisse</h1>
+        </div>
+        
+        <div class="header-stats">
+            <span class="stat">{{ stats.total_sites ?? 8 }} sites</span>
+            <span class="stat">{{ stats.total_routes ?? 935 }} voies</span>
         </div>
     </header>
 
-    <!-- Interface principale -->
-    <div class="map-interface">
-        <!-- Panneau de contrôles -->
-        <aside class="control-panel">
-            <!-- Recherche -->
-            <div class="search-section">
-                <div class="search-box">
-                    <input type="text" id="site-search" placeholder="Rechercher un site..." 
-                           autocomplete="off" class="search-input">
-                    <button id="search-btn" class="search-btn">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Filtres -->
-            <div class="filters-section">
-                <h3>Filtres</h3>
-                <div class="filter-group">
-                    <label for="region-filter">Région</label>
-                    <select id="region-filter" class="filter-select">
-                        <option value="">Toutes les régions</option>
-                        {% for region in regions %}
-                            <option value="{{ region.id ?? region['id'] }}">{{ region.name ?? region['name'] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="filter-group">
-                    <label for="type-filter">Type</label>
-                    <select id="type-filter" class="filter-select">
-                        <option value="">Tous types</option>
-                        <option value="sport">Sport</option>
-                        <option value="trad">Traditionnel</option>
-                        <option value="boulder">Bloc</option>
-                    </select>
-                </div>
-
-                <button id="reset-filters" class="reset-btn">
-                    <i class="fas fa-refresh"></i>
-                    Réinitialiser
+    <!-- Carte plein écran -->
+    <main class="map-container">
+        <div id="climbing-map"></div>
+        
+        <!-- Contrôles flottants minimalistes -->
+        <div class="map-controls">
+            <div class="control-group">
+                <button id="search-btn" class="control-btn" title="Rechercher">
+                    <i class="fas fa-search"></i>
                 </button>
-            </div>
-
-            <!-- Actions rapides -->
-            <div class="actions-section">
-                <button id="locate-btn" class="action-btn primary">
+                <button id="locate-btn" class="control-btn" title="Ma position">
                     <i class="fas fa-location-arrow"></i>
-                    Ma position
                 </button>
-                
-                <button id="fullscreen-btn" class="action-btn secondary">
-                    <i class="fas fa-expand"></i>
-                    Plein écran
-                </button>
-                
-                <button id="layers-btn" class="action-btn secondary">
+                <button id="layers-btn" class="control-btn" title="Changer de fond">
                     <i class="fas fa-layer-group"></i>
-                    Changer fond
                 </button>
             </div>
-
-            <!-- Légende -->
-            <div class="legend-section">
-                <h3>Légende</h3>
-                <div class="legend-items">
-                    <div class="legend-item">
-                        <div class="legend-color sport"></div>
-                        <span>Escalade sportive</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color trad"></div>
-                        <span>Escalade traditionnelle</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color boulder"></div>
-                        <span>Bloc</span>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Carte principale -->
-        <main class="map-main">
-            <div id="climbing-map" class="map-container">
-                <!-- Indicateur de chargement -->
-                <div id="loading-indicator" class="loading-overlay">
-                    <div class="loading-spinner"></div>
-                    <p>Chargement de la carte...</p>
-                </div>
-            </div>
-
-            <!-- Contrôles flottants -->
-            <div class="floating-controls">
-                <button id="zoom-in" class="control-btn" title="Zoom avant">
+            
+            <div class="control-group">
+                <button id="zoom-in" class="control-btn" title="Zoom +">
                     <i class="fas fa-plus"></i>
                 </button>
-                <button id="zoom-out" class="control-btn" title="Zoom arrière">
+                <button id="zoom-out" class="control-btn" title="Zoom -">
                     <i class="fas fa-minus"></i>
                 </button>
-                <button id="center-switzerland" class="control-btn" title="Centrer sur la Suisse">
-                    <i class="fas fa-home"></i>
+            </div>
+        </div>
+        
+        <!-- Panneau de recherche -->
+        <div id="search-panel" class="search-panel">
+            <div class="search-box">
+                <input type="text" id="site-search" placeholder="Rechercher un site d'escalade...">
+                <button id="search-close" class="close-btn">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-
-            <!-- Panneau d'informations -->
-            <div id="info-panel" class="info-panel">
-                <div class="info-header">
-                    <h3 id="info-title">Informations</h3>
-                    <button id="info-close" class="close-btn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div id="info-content" class="info-content">
-                    <!-- Contenu dynamique -->
-                </div>
+            
+            <div class="filter-row">
+                <select id="region-filter" class="filter-select">
+                    <option value="">Toutes les régions</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id ?? region['id'] }}">{{ region.name ?? region['name'] }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        </main>
-    </div>
-</div>
+        </div>
+        
+        <!-- Indicateur de couche active -->
+        <div id="layer-indicator" class="layer-indicator">
+            Swisstopo
+        </div>
+        
+        <!-- Chargement -->
+        <div id="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+    </main>
 
-<!-- Modal pour détails complets -->
-<div id="site-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modal-title">Détails du site</h3>
-            <button id="modal-close" class="modal-close">
+    <!-- Popup détails site -->
+    <div id="site-popup" class="site-popup">
+        <div class="popup-header">
+            <h3 id="popup-title"></h3>
+            <button id="popup-close" class="popup-close">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div id="modal-body" class="modal-body">
-            <!-- Contenu chargé dynamiquement -->
+        <div id="popup-content" class="popup-content">
+            <!-- Contenu dynamique -->
         </div>
     </div>
 </div>
@@ -181,302 +113,251 @@
         crossorigin=""></script>
 
 <script>
-// Configuration pour la Suisse
-const MapConfig = {
-    center: [46.8182, 8.2275], // Centre de la Suisse
+// Configuration Suisse
+const SwissConfig = {
+    center: [46.8182, 8.2275],
     zoom: 8,
     minZoom: 6,
     maxZoom: 18,
-    bounds: [[45.8, 5.9], [47.9, 10.5]] // Limites approximatives de la Suisse
+    bounds: [[45.8, 5.9], [47.9, 10.5]]
 };
 
-// Données des sites depuis le serveur
-const siteData = {{ sites|json_encode|raw }};
-const regionData = {{ regions|json_encode|raw }};
+// Données des sites
+const sites = {{ sites|json_encode|raw }};
 
 // Variables globales
 let map = null;
-let markersLayer = null;
-let currentLayer = 'osm'; // Commencer avec OSM qui est plus stable
-let userLocationMarker = null;
-let filteredSites = siteData;
+let sitesLayer = null;
+let currentLayer = 'swisstopo';
+let userMarker = null;
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
-    initializeMap();
-    initializeControls();
-    initializeEventListeners();
+    initMap();
+    initControls();
+    loadSites();
     hideLoading();
 });
 
-// === INITIALISATION CARTE ===
-function initializeMap() {
-    // Créer la carte
+// === CARTE ===
+function initMap() {
     map = L.map('climbing-map', {
-        center: MapConfig.center,
-        zoom: MapConfig.zoom,
-        minZoom: MapConfig.minZoom,
-        maxZoom: MapConfig.maxZoom,
-        maxBounds: MapConfig.bounds,
-        maxBoundsViscosity: 1.0,
-        zoomControl: false
+        center: SwissConfig.center,
+        zoom: SwissConfig.zoom,
+        minZoom: SwissConfig.minZoom,
+        maxZoom: SwissConfig.maxZoom,
+        maxBounds: SwissConfig.bounds,
+        zoomControl: false,
+        attributionControl: false
     });
 
-    // Ajouter les tuiles avec gestion d'erreur
-    try {
-        addMapLayers();
-    } catch (error) {
-        console.error('Erreur lors de l\'ajout des couches:', error);
-        showToast('Erreur lors du chargement des cartes', 'error');
-    }
+    // Ajouter les couches de carte
+    addMapLayers();
     
-    // Ajouter les marqueurs
-    try {
-        addSiteMarkers();
-    } catch (error) {
-        console.error('Erreur lors de l\'ajout des marqueurs:', error);
-        showToast('Erreur lors du chargement des sites', 'error');
-    }
-    
-    console.log('Carte initialisée avec', siteData.length, 'sites');
+    console.log('Carte initialisée avec', sites.length, 'sites');
 }
 
 function addMapLayers() {
-    // Couche principale simplifiée : OpenStreetMap (plus stable)
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    // Tuiles Swiss Topo (priorité)
+    const swissTopo = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
+        attribution: '© swisstopo',
+        maxZoom: 16
+    });
+
+    // Tuiles OpenStreetMap (fallback)
+    const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
         maxZoom: 18
     });
 
-    // Couche Swiss topo (simplifiée et plus stable)
-    const swissLayer = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
-        attribution: '&copy; <a href="https://www.swisstopo.admin.ch/">swisstopo</a>',
-        maxZoom: 16, // Limiter le zoom pour éviter les tuiles manquantes
-        errorTileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', // Fallback vers OSM
-        crossOrigin: true,
-        timeout: 10000 // Timeout pour éviter les tuiles qui restent en chargement
-    });
-
-    // Couche satellite simplifiée
-    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+    // Tuiles satellite
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri',
         maxZoom: 18
     });
 
     // Stocker les couches
     window.mapLayers = {
-        osm: osmLayer,
-        swisstopo: swissLayer,
-        satellite: satelliteLayer
+        swisstopo: swissTopo,
+        osm: openStreetMap,
+        satellite: satellite
     };
 
-    // Ajouter la couche par défaut (OSM plus stable)
-    osmLayer.addTo(map);
-    
-    // Ajouter les événements de chargement de tuiles
-    osmLayer.on('loading', function() {
-        console.log('Chargement des tuiles OSM...');
-    });
-    
-    osmLayer.on('load', function() {
-        console.log('Tuiles OSM chargées avec succès');
-    });
-    
-    swissLayer.on('tileerror', function(error) {
-        console.warn('Erreur de tuile Swiss:', error);
-    });
+    // Démarrer avec Swiss Topo
+    swissTopo.addTo(map);
+    updateLayerIndicator('Swisstopo');
 }
 
-function addSiteMarkers() {
-    markersLayer = L.layerGroup().addTo(map);
-    updateMarkers();
-}
-
-function updateMarkers() {
-    markersLayer.clearLayers();
+function loadSites() {
+    sitesLayer = L.layerGroup().addTo(map);
     
-    filteredSites.forEach(site => {
+    sites.forEach(site => {
         if (site.latitude && site.longitude) {
-            const marker = createSiteMarker(site);
-            markersLayer.addLayer(marker);
+            addSiteMarker(site);
         }
     });
 }
 
-function createSiteMarker(site) {
-    // Déterminer le type de site (par défaut: sport)
-    const siteType = determineSiteType(site);
-    
-    // Créer l'icône moderne
-    const icon = L.divIcon({
-        className: 'site-marker',
-        html: `<div class="marker-icon ${siteType}">
-                 <i class="fas fa-mountain"></i>
-                 <div class="marker-pulse"></div>
-               </div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -16]
+function addSiteMarker(site) {
+    // Marqueur épuré avec couleur basée sur le type
+    const marker = L.circleMarker([site.latitude, site.longitude], {
+        radius: 8,
+        fillColor: getSiteColor(site),
+        color: '#ffffff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
     });
 
-    // Créer le marqueur
-    const marker = L.marker([site.latitude, site.longitude], { icon: icon });
-
     // Popup moderne
-    const popupContent = createPopupContent(site);
+    const popupContent = createSitePopup(site);
     marker.bindPopup(popupContent, {
-        maxWidth: 300,
+        maxWidth: 280,
         className: 'modern-popup'
     });
 
     // Événements
-    marker.on('click', function() {
-        showSiteInfo(site);
-    });
-
-    return marker;
+    marker.on('click', () => showSiteDetails(site));
+    
+    sitesLayer.addLayer(marker);
 }
 
-function createPopupContent(site) {
+function getSiteColor(site) {
+    // Couleurs basées sur la région
+    const colors = {
+        1: '#ef4444', // Valais - Rouge
+        2: '#10b981', // Jura - Vert
+        3: '#3b82f6', // Grisons - Bleu
+        4: '#f59e0b', // Tessin - Orange
+        5: '#8b5cf6', // Vaud - Violet
+        6: '#06b6d4'  // Berne - Cyan
+    };
+    return colors[site.region_id] || '#6b7280';
+}
+
+function createSitePopup(site) {
     return `
-        <div class="popup-content">
+        <div class="popup-modern">
             <h4>${site.name}</h4>
-            <div class="popup-info">
-                <div class="info-row">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>${site.region_name || 'Région inconnue'}</span>
-                </div>
-                <div class="info-row">
-                    <i class="fas fa-route"></i>
-                    <span>${site.route_count || 0} voies</span>
-                </div>
-                <div class="info-row">
-                    <i class="fas fa-layer-group"></i>
-                    <span>${site.sector_count || 0} secteurs</span>
-                </div>
-                ${site.approach_time ? `
-                <div class="info-row">
-                    <i class="fas fa-clock"></i>
-                    <span>Approche: ${site.approach_time} min</span>
-                </div>` : ''}
+            <div class="popup-meta">
+                <span><i class="fas fa-map-marker-alt"></i> ${site.region_name || 'Région inconnue'}</span>
+                <span><i class="fas fa-route"></i> ${site.route_count || 0} voies</span>
             </div>
             <div class="popup-actions">
                 <button onclick="showSiteDetails(${site.id})" class="btn-primary">
-                    <i class="fas fa-eye"></i> Voir détails
+                    Détails
                 </button>
                 <button onclick="getDirections(${site.latitude}, ${site.longitude})" class="btn-secondary">
-                    <i class="fas fa-directions"></i> Itinéraire
+                    Itinéraire
                 </button>
             </div>
         </div>
     `;
 }
 
-function determineSiteType(site) {
-    // Logique simple pour déterminer le type
-    // TODO: Améliorer avec les vraies données
-    return 'sport';
-}
-
 // === CONTRÔLES ===
-function initializeControls() {
+function initControls() {
     // Recherche
-    const searchInput = document.getElementById('site-search');
-    const searchBtn = document.getElementById('search-btn');
-    
-    searchBtn.addEventListener('click', () => performSearch(searchInput.value));
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') performSearch(searchInput.value);
-    });
-
-    // Filtres
-    document.getElementById('region-filter').addEventListener('change', applyFilters);
-    document.getElementById('type-filter').addEventListener('change', applyFilters);
-    document.getElementById('reset-filters').addEventListener('click', resetFilters);
+    document.getElementById('search-btn').addEventListener('click', toggleSearchPanel);
+    document.getElementById('search-close').addEventListener('click', hideSearchPanel);
+    document.getElementById('site-search').addEventListener('input', handleSearch);
+    document.getElementById('region-filter').addEventListener('change', handleFilter);
 
     // Actions
     document.getElementById('locate-btn').addEventListener('click', locateUser);
-    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
     document.getElementById('layers-btn').addEventListener('click', switchLayer);
-    document.getElementById('center-switzerland').addEventListener('click', centerOnSwitzerland);
-}
-
-function initializeEventListeners() {
-    // Contrôles de zoom
     document.getElementById('zoom-in').addEventListener('click', () => map.zoomIn());
     document.getElementById('zoom-out').addEventListener('click', () => map.zoomOut());
 
-    // Fermeture des modals
-    document.getElementById('modal-close').addEventListener('click', closeModal);
-    document.getElementById('info-close').addEventListener('click', closeInfoPanel);
-
-    // Fermeture en cliquant à l'extérieur
-    document.getElementById('site-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'site-modal') closeModal();
-    });
-
-    // Responsivité
-    window.addEventListener('resize', () => {
-        if (map) setTimeout(() => map.invalidateSize(), 100);
-    });
+    // Popup
+    document.getElementById('popup-close').addEventListener('click', hideSitePopup);
 }
 
-// === FONCTIONS DE RECHERCHE ET FILTRAGE ===
-function performSearch(query) {
-    if (!query.trim()) {
-        showToast('Veuillez entrer un terme de recherche', 'warning');
+function toggleSearchPanel() {
+    const panel = document.getElementById('search-panel');
+    panel.classList.toggle('active');
+    
+    if (panel.classList.contains('active')) {
+        document.getElementById('site-search').focus();
+    }
+}
+
+function hideSearchPanel() {
+    document.getElementById('search-panel').classList.remove('active');
+    document.getElementById('site-search').value = '';
+    resetSearch();
+}
+
+function handleSearch(e) {
+    const query = e.target.value.toLowerCase().trim();
+    
+    if (!query) {
+        resetSearch();
         return;
     }
 
-    const results = siteData.filter(site => 
-        site.name.toLowerCase().includes(query.toLowerCase()) ||
-        (site.region_name && site.region_name.toLowerCase().includes(query.toLowerCase()))
+    const results = sites.filter(site => 
+        site.name.toLowerCase().includes(query) ||
+        (site.region_name && site.region_name.toLowerCase().includes(query))
     );
 
-    if (results.length === 0) {
-        showToast(`Aucun site trouvé pour "${query}"`, 'info');
+    if (results.length > 0) {
+        highlightSites(results);
+        
+        // Centrer sur le premier résultat
+        const first = results[0];
+        map.setView([first.latitude, first.longitude], 12);
+    } else {
+        showToast('Aucun site trouvé', 'info');
+    }
+}
+
+function handleFilter(e) {
+    const regionId = e.target.value;
+    
+    if (!regionId) {
+        resetSearch();
         return;
     }
 
-    // Centrer sur le premier résultat
-    const firstResult = results[0];
-    map.setView([firstResult.latitude, firstResult.longitude], 12);
+    const filtered = sites.filter(site => site.region_id == regionId);
+    highlightSites(filtered);
+    
+    if (filtered.length > 0) {
+        fitToSites(filtered);
+    }
+}
 
-    // Ouvrir sa popup
-    markersLayer.eachLayer(layer => {
+function highlightSites(targetSites) {
+    sitesLayer.eachLayer(layer => {
         const latLng = layer.getLatLng();
-        if (Math.abs(latLng.lat - firstResult.latitude) < 0.001 && 
-            Math.abs(latLng.lng - firstResult.longitude) < 0.001) {
-            layer.openPopup();
+        const site = sites.find(s => 
+            Math.abs(s.latitude - latLng.lat) < 0.001 && 
+            Math.abs(s.longitude - latLng.lng) < 0.001
+        );
+        
+        if (site && targetSites.some(t => t.id === site.id)) {
+            layer.setStyle({ radius: 12, weight: 3 });
+        } else {
+            layer.setStyle({ radius: 6, weight: 1, fillOpacity: 0.3 });
         }
     });
-
-    showToast(`${results.length} site(s) trouvé(s)`, 'success');
 }
 
-function applyFilters() {
-    const regionFilter = document.getElementById('region-filter').value;
-    const typeFilter = document.getElementById('type-filter').value;
-
-    filteredSites = siteData.filter(site => {
-        let passRegion = !regionFilter || site.region_id == regionFilter;
-        let passType = !typeFilter || determineSiteType(site) === typeFilter;
-        return passRegion && passType;
+function resetSearch() {
+    sitesLayer.eachLayer(layer => {
+        layer.setStyle({ radius: 8, weight: 2, fillOpacity: 0.8 });
     });
-
-    updateMarkers();
-    showToast(`${filteredSites.length} site(s) affiché(s)`, 'info');
 }
 
-function resetFilters() {
-    document.getElementById('region-filter').value = '';
-    document.getElementById('type-filter').value = '';
-    document.getElementById('site-search').value = '';
-    
-    filteredSites = siteData;
-    updateMarkers();
-    
-    showToast('Filtres réinitialisés', 'success');
+function fitToSites(targetSites) {
+    const group = new L.featureGroup();
+    targetSites.forEach(site => {
+        if (site.latitude && site.longitude) {
+            group.addLayer(L.marker([site.latitude, site.longitude]));
+        }
+    });
+    map.fitBounds(group.getBounds(), { padding: [20, 20] });
 }
 
 // === ACTIONS ===
@@ -491,174 +372,89 @@ function locateUser() {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             
+            if (userMarker) map.removeLayer(userMarker);
+            
+            userMarker = L.circleMarker([lat, lng], {
+                radius: 10,
+                fillColor: '#3b82f6',
+                color: '#ffffff',
+                weight: 3,
+                fillOpacity: 1
+            }).bindPopup('Votre position').addTo(map);
+            
             map.setView([lat, lng], 12);
-            
-            // Supprimer le marqueur précédent
-            if (userLocationMarker) {
-                map.removeLayer(userLocationMarker);
-            }
-            
-            // Créer le marqueur utilisateur
-            const userIcon = L.divIcon({
-                className: 'user-marker',
-                html: '<div class="user-icon"><i class="fas fa-user"></i></div>',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-            
-            userLocationMarker = L.marker([lat, lng], { icon: userIcon })
-                .bindPopup('Votre position')
-                .addTo(map);
-            
             showToast('Position trouvée', 'success');
         },
-        error => {
-            showToast('Impossible de localiser votre position', 'error');
-        }
+        () => showToast('Impossible de vous localiser', 'error')
     );
 }
 
 function switchLayer() {
     const layers = window.mapLayers;
+    map.removeLayer(layers[currentLayer]);
     
-    // Supprimer la couche actuelle proprement
-    if (layers[currentLayer]) {
-        map.removeLayer(layers[currentLayer]);
-    }
-    
-    // Passer à la suivante avec gestion d'erreur
-    if (currentLayer === 'osm') {
-        currentLayer = 'swisstopo';
-        showToast('Vue Swiss Topo activée', 'info');
-    } else if (currentLayer === 'swisstopo') {
+    if (currentLayer === 'swisstopo') {
+        currentLayer = 'osm';
+        updateLayerIndicator('OpenStreetMap');
+    } else if (currentLayer === 'osm') {
         currentLayer = 'satellite';
-        showToast('Vue satellite activée', 'info');
+        updateLayerIndicator('Satellite');
     } else {
-        currentLayer = 'osm';
-        showToast('Vue OpenStreetMap activée', 'info');
+        currentLayer = 'swisstopo';
+        updateLayerIndicator('Swisstopo');
     }
     
-    // Ajouter la nouvelle couche avec gestion d'erreur
-    try {
-        layers[currentLayer].addTo(map);
-    } catch (error) {
-        console.error('Erreur lors du changement de couche:', error);
-        // Revenir à OSM en cas d'erreur
-        currentLayer = 'osm';
-        layers[currentLayer].addTo(map);
-        showToast('Retour à la vue standard', 'warning');
-    }
+    layers[currentLayer].addTo(map);
 }
 
-function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-        document.querySelector('.map-interface').requestFullscreen();
-    } else {
-        document.exitFullscreen();
-    }
+function updateLayerIndicator(name) {
+    document.getElementById('layer-indicator').textContent = name;
 }
 
-function centerOnSwitzerland() {
-    map.setView(MapConfig.center, MapConfig.zoom);
-}
-
-// === MODALS ET PANELS ===
-function showSiteInfo(site) {
-    const panel = document.getElementById('info-panel');
-    const title = document.getElementById('info-title');
-    const content = document.getElementById('info-content');
+// === POPUP DÉTAILS ===
+function showSiteDetails(site) {
+    const popup = document.getElementById('site-popup');
+    const title = document.getElementById('popup-title');
+    const content = document.getElementById('popup-content');
     
     title.textContent = site.name;
     content.innerHTML = `
-        <div class="site-info">
-            <div class="info-section">
-                <h4>Informations générales</h4>
-                <p><strong>Région:</strong> ${site.region_name || 'Non spécifiée'}</p>
-                <p><strong>Secteurs:</strong> ${site.sector_count || 0}</p>
-                <p><strong>Voies:</strong> ${site.route_count || 0}</p>
-                ${site.approach_time ? `<p><strong>Approche:</strong> ${site.approach_time} min</p>` : ''}
-            </div>
-            ${site.description ? `
-            <div class="info-section">
-                <h4>Description</h4>
-                <p>${site.description}</p>
-            </div>` : ''}
-            <div class="info-actions">
-                <button onclick="showSiteDetails(${site.id})" class="btn-primary">
-                    <i class="fas fa-external-link-alt"></i> Page complète
-                </button>
-                <button onclick="getDirections(${site.latitude}, ${site.longitude})" class="btn-secondary">
-                    <i class="fas fa-directions"></i> Itinéraire
-                </button>
-            </div>
-        </div>
-    `;
-    
-    panel.classList.add('active');
-}
-
-function closeInfoPanel() {
-    document.getElementById('info-panel').classList.remove('active');
-}
-
-function showSiteDetails(siteId) {
-    const site = siteData.find(s => s.id == siteId);
-    if (!site) return;
-    
-    document.getElementById('modal-title').textContent = site.name;
-    document.getElementById('modal-body').innerHTML = `
         <div class="site-details">
-            <div class="detail-section">
-                <h4><i class="fas fa-info-circle"></i> Informations</h4>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <label>Région:</label>
-                        <span>${site.region_name || 'Non spécifiée'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Secteurs:</label>
-                        <span>${site.sector_count || 0}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Voies:</label>
-                        <span>${site.route_count || 0}</span>
-                    </div>
-                    ${site.approach_time ? `
-                    <div class="detail-item">
-                        <label>Approche:</label>
-                        <span>${site.approach_time} min</span>
-                    </div>` : ''}
-                </div>
+            <div class="detail-group">
+                <span class="label">Région:</span>
+                <span>${site.region_name || 'Non spécifiée'}</span>
             </div>
-            
+            <div class="detail-group">
+                <span class="label">Voies:</span>
+                <span>${site.route_count || 0}</span>
+            </div>
+            <div class="detail-group">
+                <span class="label">Secteurs:</span>
+                <span>${site.sector_count || 0}</span>
+            </div>
+            ${site.approach_time ? `
+            <div class="detail-group">
+                <span class="label">Approche:</span>
+                <span>${site.approach_time} min</span>
+            </div>` : ''}
             ${site.description ? `
-            <div class="detail-section">
-                <h4><i class="fas fa-align-left"></i> Description</h4>
+            <div class="description">
                 <p>${site.description}</p>
             </div>` : ''}
-            
-            <div class="detail-section">
-                <h4><i class="fas fa-map-marker-alt"></i> Localisation</h4>
-                <p>Latitude: ${site.latitude}</p>
-                <p>Longitude: ${site.longitude}</p>
-            </div>
-            
-            <div class="detail-actions">
-                <a href="${site.url}" class="btn-primary">
-                    <i class="fas fa-external-link-alt"></i> Page complète
-                </a>
+            <div class="actions">
+                <a href="${site.url}" class="btn-primary">Voir la page</a>
                 <button onclick="getDirections(${site.latitude}, ${site.longitude})" class="btn-secondary">
-                    <i class="fas fa-directions"></i> Itinéraire GPS
+                    <i class="fas fa-directions"></i> GPS
                 </button>
             </div>
         </div>
     `;
     
-    document.getElementById('site-modal').classList.add('active');
+    popup.classList.add('active');
 }
 
-function closeModal() {
-    document.getElementById('site-modal').classList.remove('active');
+function hideSitePopup() {
+    document.getElementById('site-popup').classList.remove('active');
 }
 
 function getDirections(lat, lng) {
@@ -671,25 +467,11 @@ function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
-    const icons = {
-        info: 'fas fa-info-circle',
-        success: 'fas fa-check-circle',
-        warning: 'fas fa-exclamation-triangle',
-        error: 'fas fa-times-circle'
-    };
-    
-    toast.innerHTML = `
-        <i class="${icons[type] || icons.info}"></i>
-        <span>${message}</span>
-    `;
+    toast.innerHTML = `<span>${message}</span>`;
     
     container.appendChild(toast);
-    
-    // Animation d'entrée
     setTimeout(() => toast.classList.add('show'), 100);
     
-    // Suppression automatique
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => container.removeChild(toast), 300);
@@ -698,23 +480,12 @@ function showToast(message, type = 'info') {
 
 // === UTILITAIRES ===
 function hideLoading() {
-    const loading = document.getElementById('loading-indicator');
-    if (loading) {
-        loading.style.display = 'none';
-    }
+    document.getElementById('loading').style.display = 'none';
 }
 
-// Optimisation responsive
+// Responsivité
 window.addEventListener('resize', () => {
-    if (map) {
-        setTimeout(() => map.invalidateSize(), 100);
-    }
-});
-
-// Gestion des erreurs
-window.addEventListener('error', (e) => {
-    console.error('Erreur carte:', e.error);
-    showToast('Une erreur est survenue', 'error');
+    if (map) setTimeout(() => map.invalidateSize(), 100);
 });
 </script>
 {% endblock %}
