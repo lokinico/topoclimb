@@ -42,14 +42,66 @@ class MapController extends BaseController
      */
     public function index(?Request $request = null): Response
     {
-        // CONTOURNER COMPLÈTEMENT LE SYSTÈME TWIG - RETOURNER HTML DIRECT
-        $html = file_get_contents(dirname(__DIR__, 2) . '/public/test-carte.html');
-        
-        // Personnaliser le HTML pour la route /map
-        $html = str_replace('TEST CARTE STATIQUE', 'CARTE VIA CONTROLEUR', $html);
-        $html = str_replace('🚨 TEST CARTE STATIQUE', '🎯 CARTE VIA PHP', $html);
-        
-        return new Response($html, 200, ['Content-Type' => 'text/html']);
+        try {
+            // Récupérer les paramètres de filtrage depuis $_GET
+            $filters = [
+                'region_id' => $_GET['region'] ?? null,
+                'difficulty_min' => $_GET['difficulty_min'] ?? null,
+                'difficulty_max' => $_GET['difficulty_max'] ?? null,
+                'type' => $_GET['type'] ?? null,
+                'season' => $_GET['season'] ?? null
+            ];
+
+            // Initialiser les variables par défaut
+            $regions = [];
+            $sites = [];
+            $stats = ['total_sites' => 0, 'total_routes' => 0, 'total_regions' => 0];
+
+            try {
+                // Récupérer toutes les régions pour les filtres
+                $regions = Region::all();
+
+                // Récupérer les sites avec coordonnées pour la carte
+                $sites = $this->getSitesForMap($filters);
+
+                // Statistiques pour l'interface
+                $stats = $this->getMapStatistics();
+                
+            } catch (\Exception $dbException) {
+                error_log("MapController::index - Erreur DB: " . $dbException->getMessage());
+                
+                // Données de test suisses pour la démo
+                $regions = $this->getTestRegions();
+                $sites = $this->getTestSites();
+                $stats = ['total_sites' => count($sites), 'total_routes' => 150, 'total_regions' => count($regions)];
+            }
+
+            $data = [
+                'title' => 'Carte Interactive - Sites d\'escalade en Suisse',
+                'sites' => $sites,
+                'regions' => $regions,
+                'filters' => $filters,
+                'stats' => $stats,
+                'showHeader' => true, // Pour le layout fullscreen
+                'meta_description' => 'Découvrez tous les sites d\'escalade de Suisse sur notre carte interactive. Trouvez votre prochaine voie d\'escalade avec localisation précise.',
+                'meta_keywords' => 'carte escalade suisse, sites escalade, voies escalade, carte interactive, climbing switzerland'
+            ];
+            
+            return $this->render('map/index', $data);
+
+        } catch (\Exception $e) {
+            error_log("Erreur MapController::index: " . $e->getMessage());
+            
+            return $this->render('map/index', [
+                'title' => 'Carte Interactive - Sites d\'escalade en Suisse',
+                'sites' => [],
+                'regions' => [],
+                'filters' => [],
+                'stats' => ['total_sites' => 0, 'total_routes' => 0, 'total_regions' => 0],
+                'showHeader' => true,
+                'error' => 'Erreur lors du chargement de la carte'
+            ]);
+        }
     }
 
     /**
