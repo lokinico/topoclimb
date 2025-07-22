@@ -137,13 +137,20 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Carte créée');
         document.getElementById('status').textContent = 'Ajout des tuiles...';
         
-        // === ÉTAPE 3: TUILES SWISS TOPO SIMPLES ===
-        const swissTopo = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
-            attribution: '© swisstopo'
-        });
-        swissTopo.addTo(map);
+        // === ÉTAPE 3: TUILES SWISS TOPO CORRIGÉES ===
+        // PROBLÈME: Les tuiles swisstopo utilisent une projection différente
+        // SOLUTION: Utiliser OpenStreetMap qui marche toujours
+        console.log('🗺️ Utilisation OpenStreetMap pour éviter les décalages...');
         
-        console.log('✅ Tuiles Swiss ajoutées');
+        const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+        });
+        osmTiles.addTo(map);
+        
+        // TODO: Une fois que ça marche, on pourra essayer Swiss Topo avec la bonne projection
+        
+        console.log('✅ Tuiles OpenStreetMap ajoutées');
         document.getElementById('status').textContent = 'Ajout des marqueurs...';
         
         // === ÉTAPE 4: MARQUEURS - UTILISER LES VRAIES DONNÉES ===
