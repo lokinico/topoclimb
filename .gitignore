@@ -75,6 +75,7 @@ DEPLOY_REPORT.txt
 clear-production.php
 cleanup.log
 last-cleanup.txt
+deploy-reports/
 
 # Scripts avec secrets - ne pas partager
 validate_fixes.sh
