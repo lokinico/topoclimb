@@ -102,12 +102,19 @@ echo "\n🎯 Nettoyage terminé !\n";
 echo "Prochaine exécution recommandée dans 1 heure\n";
 EOF
 
+# Créer le dossier des rapports
+REPORTS_DIR="deploy-reports"
+mkdir -p "$REPORTS_DIR"
+
 # Compter les fichiers
 FILES=$(find . -name "*.php" -o -name "*.twig" -o -name "*.js" -o -name "*.css" | wc -l)
 echo "📊 $FILES fichiers source détectés"
 
+# Générer nom de rapport avec timestamp
+REPORT_FILE="$REPORTS_DIR/deploy-$(date +%Y%m%d_%H%M%S).txt"
+
 # Générer rapport simple
-cat > DEPLOY_REPORT.txt << EOF
+cat > "$REPORT_FILE" << EOF
 RAPPORT DÉPLOIEMENT TopoclimbCH
 ===============================
 Date: $(date '+%Y-%m-%d %H:%M:%S')
@@ -130,10 +137,19 @@ INSTRUCTIONS POST-DÉPLOIEMENT:
 STATUS: ✅ PRÊT POUR DÉPLOIEMENT
 EOF
 
+# Nettoyer les anciens rapports (garder seulement les 5 derniers)
+echo "🗑️ Nettoyage anciens rapports..."
+cd "$REPORTS_DIR"
+ls -t deploy-*.txt 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+REPORTS_COUNT=$(ls deploy-*.txt 2>/dev/null | wc -l)
+cd ..
+echo "   ✅ $REPORTS_COUNT rapport(s) conservé(s)"
+
 echo ""
 echo "✅ Déploiement préparé avec succès !"
 echo "=================================="
-echo "📄 Rapport: DEPLOY_REPORT.txt"
+echo "📄 Rapport: $REPORT_FILE"
+echo "📁 Dossier rapports: $REPORTS_DIR/ ($REPORTS_COUNT fichiers)"
 echo "🧹 Script nettoyage: clear-production.php"
 echo ""
 echo "🚀 Actions suivantes :"
@@ -143,3 +159,5 @@ echo "3. Tester: /test-carte.html → /map"
 echo "4. Configurer tâche Plesk: php clear-production.php (1h)"
 echo ""
 echo "📊 $FILES fichiers source prêts"
+echo "📋 Pour voir tous les rapports: ls $REPORTS_DIR/"
+echo "🗑️ Pour nettoyer: rm -rf $REPORTS_DIR/"
