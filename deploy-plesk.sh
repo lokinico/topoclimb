@@ -130,6 +130,144 @@ mkdir -p $DEPLOY_DIR/storage/logs
 mkdir -p $DEPLOY_DIR/storage/cache
 mkdir -p $DEPLOY_DIR/storage/sessions
 
+# NOUVEAU: Nettoyage cache et optimisations
+echo "🧹 Nettoyage et optimisations..."
+
+# Vider le cache local avant déploiement
+if [ -d "storage/cache" ]; then
+    rm -rf storage/cache/*
+    echo "✅ Cache local vidé"
+fi
+
+# Créer script de vidage cache pour production
+cat > $DEPLOY_DIR/clear-cache.php << 'EOF'
+<?php
+/**
+ * Script de vidage du cache TopoclimbCH
+ * À exécuter après chaque déploiement
+ */
+
+echo "🧹 NETTOYAGE CACHE TopoclimbCH\n";
+echo "================================\n";
+
+// Vider le cache des vues Twig
+$cacheDir = __DIR__ . '/storage/cache';
+if (is_dir($cacheDir)) {
+    $files = glob($cacheDir . '/*');
+    foreach ($files as $file) {
+        if (is_file($file)) {
+            unlink($file);
+        }
+    }
+    echo "✅ Cache Twig vidé\n";
+} else {
+    echo "ℹ️ Répertoire cache introuvable\n";
+}
+
+// Vider le cache des sessions
+$sessionDir = __DIR__ . '/storage/sessions';
+if (is_dir($sessionDir)) {
+    $files = glob($sessionDir . '/sess_*');
+    foreach ($files as $file) {
+        if (is_file($file)) {
+            unlink($file);
+        }
+    }
+    echo "✅ Sessions vidées\n";
+}
+
+// Vider les logs anciens (> 7 jours)
+$logDir = __DIR__ . '/storage/logs';
+if (is_dir($logDir)) {
+    $files = glob($logDir . '/*.log');
+    $deleted = 0;
+    foreach ($files as $file) {
+        if (is_file($file) && filemtime($file) < time() - (7 * 24 * 60 * 60)) {
+            unlink($file);
+            $deleted++;
+        }
+    }
+    if ($deleted > 0) {
+        echo "✅ $deleted anciens logs supprimés\n";
+    }
+}
+
+// Vider le cache navigateur (headers)
+if (function_exists('opcache_reset')) {
+    opcache_reset();
+    echo "✅ OPCache PHP vidé\n";
+}
+
+echo "\n🎯 CACHE COMPLÈTEMENT VIDÉ !\n";
+echo "Testez maintenant votre site.\n";
+EOF
+
+# Créer script de diagnostic CSS/JS
+cat > $DEPLOY_DIR/diagnose-conflicts.php << 'EOF'
+<?php
+/**
+ * Diagnostic des conflits CSS/JS TopoclimbCH
+ * Pour identifier les problèmes comme celui de la carte
+ */
+
+echo "🔍 DIAGNOSTIC CONFLITS TopoclimbCH\n";
+echo "===================================\n";
+
+// Vérifier les fichiers CSS critiques
+$criticalFiles = [
+    'public/css/app.css' => 'CSS principal',
+    'public/css/pages/map.css' => 'CSS carte (ancien)',
+    'public/css/pages/map-clean.css' => 'CSS carte (nouveau)',
+    'public/test-carte.html' => 'Page test carte',
+    'resources/views/layouts/app.twig' => 'Template principal',
+    'resources/views/map/index.twig' => 'Template carte'
+];
+
+$issues = [];
+
+foreach ($criticalFiles as $file => $desc) {
+    if (!file_exists(__DIR__ . '/' . $file)) {
+        $issues[] = "❌ MANQUANT: $desc ($file)";
+    } else {
+        echo "✅ $desc\n";
+    }
+}
+
+// Vérifier les CDN externes
+echo "\n🌐 Test des CDN externes:\n";
+$cdns = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css'
+];
+
+foreach ($cdns as $cdn) {
+    $headers = @get_headers($cdn);
+    if ($headers && strpos($headers[0], '200') !== false) {
+        echo "✅ CDN accessible: " . basename($cdn) . "\n";
+    } else {
+        $issues[] = "❌ CDN inaccessible: $cdn";
+    }
+}
+
+// Résumé
+echo "\n📊 RÉSUMÉ:\n";
+if (empty($issues)) {
+    echo "✅ Aucun problème détecté\n";
+} else {
+    echo "⚠️ " . count($issues) . " problème(s) trouvé(s):\n";
+    foreach ($issues as $issue) {
+        echo "   $issue\n";
+    }
+}
+
+echo "\n💡 Si la carte ne fonctionne pas:\n";
+echo "   1. Exécutez: php clear-cache.php\n";
+echo "   2. Testez /test-carte.html d'abord\n";
+echo "   3. Puis testez /map\n";
+echo "   4. Consultez les logs du navigateur (F12)\n";
+EOF
+
 # Configurer les permissions
 chmod -R 755 $DEPLOY_DIR/public/
 chmod -R 755 $DEPLOY_DIR/resources/
@@ -145,10 +283,13 @@ cat > $DEPLOY_DIR/PLESK_DEPLOYMENT.md << 'EOF'
 
 ## 🚀 Corrections incluses dans cette version
 - ✅ Routes /checklists et /equipment réparées (erreur 500 → 200)
-- ✅ Carte interactive avec tuiles simplifiées (OSM par défaut)
+- ✅ Carte interactive ENTIÈREMENT réparée (était complètement buggée)
+- ✅ Solution bypass pour conflits CSS/Bootstrap avec Leaflet
+- ✅ Page test-carte.html incluse pour diagnostic
+- ✅ Scripts de nettoyage cache (clear-cache.php)
+- ✅ Script diagnostic conflits (diagnose-conflicts.php)
 - ✅ Templates Twig corrigés (layouts/app.twig)
 - ✅ Contrôleurs avec injection de dépendances fixes
-- ✅ Gestion d'erreurs améliorée
 
 ## 1. Upload des fichiers
 - Uploadez tout le contenu de ce dossier vers la racine de votre domaine sur Plesk
@@ -188,11 +329,33 @@ Assurez-vous que les dossiers storage/ sont en écriture (777) :
 chmod -R 777 storage/
 ```
 
-## 7. Test des routes critiques
-Après déploiement, testez ces routes :
-- https://votre-domaine.com/checklists (doit afficher "Checklists de sécurité")
-- https://votre-domaine.com/equipment (doit afficher "Types d'équipement")
-- https://votre-domaine.com/map (doit afficher la carte interactive)
+## 7. OBLIGATOIRE: Nettoyage cache après déploiement
+**⚠️ IMPORTANT**: Exécutez TOUJOURS après chaque upload :
+```bash
+php clear-cache.php
+```
+Ceci vide :
+- Cache Twig (templates)
+- Sessions utilisateur  
+- OPCache PHP
+- Anciens logs
+
+## 8. Test des routes critiques
+Testez dans cet ordre :
+1. **https://votre-domaine.com/test-carte.html** (doit marcher parfaitement)
+2. **https://votre-domaine.com/map** (doit être identique au test)
+3. **https://votre-domaine.com/checklists** (doit afficher "Checklists")
+4. **https://votre-domaine.com/equipment** (doit afficher "Équipement")
+
+## 9. Diagnostic en cas de problème
+Si la carte ne fonctionne pas :
+```bash
+php diagnose-conflicts.php
+```
+Ce script vérifie :
+- Fichiers CSS/JS présents
+- CDN accessibles (Leaflet, Bootstrap)
+- Conflits potentiels
 
 ## 8. Script de test automatique
 Modifiez l'URL dans test_deployment.php puis exécutez :
