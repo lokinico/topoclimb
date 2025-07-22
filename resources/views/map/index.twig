@@ -133,14 +133,32 @@ const sites = {{ sites|json_encode|raw }};
 let actualSites = sites;
 if (!sites || sites.length === 0) {
     console.log('🔄 Pas de sites depuis le contrôleur, chargement depuis API...');
+    console.log('🌐 Tentative fetch /api/sites...');
+    
     fetch('/api/sites')
-        .then(response => response.json())
-        .then(data => {
-            actualSites = data.data || data.sites || [];
-            console.log('📡 Sites chargés depuis API:', actualSites);
-            loadMarkersOnMap(actualSites);
+        .then(response => {
+            console.log('📡 Réponse API reçue, status:', response.status);
+            return response.json();
         })
-        .catch(error => console.error('❌ Erreur API:', error));
+        .then(data => {
+            console.log('📦 Données API brutes:', data);
+            actualSites = data.data || data.sites || [];
+            console.log('📍 Sites extraits:', actualSites);
+            console.log('📊 Nombre de sites:', actualSites.length);
+            
+            if (actualSites.length > 0) {
+                loadMarkersOnMap(actualSites);
+            } else {
+                console.log('❌ Aucun site trouvé dans les données API');
+                document.getElementById('status').textContent = 'Aucun site trouvé';
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur API:', error);
+            document.getElementById('status').textContent = 'Erreur chargement sites';
+        });
+} else {
+    console.log('✅ Sites reçus du contrôleur:', sites.length);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -197,12 +215,37 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Tuiles configurées avec diagnostics');
         document.getElementById('status').textContent = 'Attente chargement tuiles...';
         
-        // === ÉTAPE 4: MARQUEURS - UTILISER LES VRAIES DONNÉES ===
+        // === ÉTAPE 4: MARQUEURS - FORCER CHARGEMENT API ===
+        console.log('🎯 Tentative chargement marqueurs, actualSites:', actualSites ? actualSites.length : 'undefined');
+        
         if (actualSites && actualSites.length > 0) {
             loadMarkersOnMap(actualSites);
         } else {
-            console.log('❌ Aucun site trouvé, attendre chargement API...');
-            document.getElementById('status').textContent = 'Chargement des sites...';
+            console.log('❌ Aucun site, FORCER chargement depuis API...');
+            document.getElementById('status').textContent = 'Forçage chargement sites...';
+            
+            // FORCER le chargement API même si on a déjà essayé
+            fetch('/api/sites')
+                .then(response => {
+                    console.log('🔄 FORCÉ - Status API:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🔄 FORCÉ - Données API:', data);
+                    const sitesFromApi = data.data || data.sites || [];
+                    console.log('🔄 FORCÉ - Sites extraits:', sitesFromApi.length);
+                    
+                    if (sitesFromApi.length > 0) {
+                        loadMarkersOnMap(sitesFromApi);
+                    } else {
+                        console.log('💥 FORCÉ - Toujours aucun site !');
+                        document.getElementById('status').textContent = 'API ne retourne aucun site';
+                    }
+                })
+                .catch(error => {
+                    console.error('💥 FORCÉ - Erreur:', error);
+                    document.getElementById('status').textContent = 'Erreur API forcée';
+                });
         }
         
     } catch (error) {
