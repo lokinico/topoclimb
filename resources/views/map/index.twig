@@ -1,352 +1,65 @@
-{% extends "layouts/app.twig" %}
-
-{% block title %}Carte Interactive - Sites d'Escalade Suisse{% endblock %}
-
-{% block meta %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte Test - Escalade Suisse</title>
+    
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
-          crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-    /* CSS ULTRA-SIMPLE POUR DÉBUGGER - CORRIGER LES CONFLITS CSS */
-    body { 
-        margin: 0; 
-        padding: 0; 
-    }
-    
-    .simple-map-container { 
-        width: 100%; 
-        height: 100vh; 
-        position: relative; 
-        z-index: 1;
-    }
-    
-    #climbing-map { 
-        width: 100%; 
-        height: 100%; 
-        position: relative;
-        z-index: 1;
-    }
-    
-    /* CORRIGER LES CONFLITS AVEC BOOTSTRAP/CSS EXISTANT */
-    #climbing-map * {
-        box-sizing: content-box !important;
-    }
-    
-    .leaflet-container {
-        background: #ddd !important;
-    }
-    
-    .leaflet-tile {
-        /* Forcer le chargement correct des tuiles */
-        pointer-events: auto !important;
-        opacity: 1 !important;
-    }
-    .simple-header {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: white;
-        padding: 10px;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 1000;
-    }
-    .debug-info {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        background: white;
-        padding: 10px;
-        border-radius: 5px;
-        font-size: 12px;
-        z-index: 1000;
-    }
+    /* CSS MINIMAL - ZERO CONFLITS */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    #map { height: 100vh; width: 100%; }
     </style>
-{% endblock %}
+</head>
+<body>
 
-{% block content %}
-<!-- VERSION ULTRA-SIMPLE POUR DÉBUGGER -->
-<div class="simple-map-container">
-    <!-- Header minimaliste -->
-    <div class="simple-header">
-        <h3><i class="fas fa-mountain"></i> Carte Escalade Suisse</h3>
-        <small>Sites: {{ stats.total_sites ?? 'N/A' }} | Debug Mode</small>
-    </div>
-    
-    <!-- Carte -->
-    <div id="climbing-map"></div>
-    
-    <!-- Debug info -->
-    <div class="debug-info">
-        <div>Sites chargés: <span id="sites-count">0</span></div>
-        <div>Status: <span id="status">Chargement...</span></div>
-    </div>
+<!-- CARTE SIMPLE - ZÉRO FRAMEWORK -->
+<div id="map"></div>
+
+<!-- Debug absolu -->
+<div style="position: absolute; top: 10px; left: 10px; background: white; padding: 10px; z-index: 9999;">
+    <strong>🗺️ CARTE TEST</strong><br>
+    Status: <span id="status">Initialisation...</span>
 </div>
 
-<!-- 
-ANCIENNE VERSION COMPLEXE EN COMMENTAIRE - À RÉACTIVER PROGRESSIVEMENT
-<div class="map-app">
-    <header class="map-header">
-        <div class="header-brand">
-            <i class="fas fa-mountain"></i>
-            <h1>Escalade Suisse</h1>
-        </div>
-        <div class="header-stats">
-            <span class="stat">{{ stats.total_sites ?? 8 }} sites</span>
-            <span class="stat">{{ stats.total_routes ?? 935 }} voies</span>
-        </div>
-    </header>
-    <main class="map-container">
-        <div id="climbing-map"></div>
-        <div class="map-controls">
-            <div class="control-group">
-                <button id="search-btn" class="control-btn"><i class="fas fa-search"></i></button>
-                <button id="locate-btn" class="control-btn"><i class="fas fa-location-arrow"></i></button>
-                <button id="layers-btn" class="control-btn"><i class="fas fa-layer-group"></i></button>
-            </div>
-            <div class="control-group">
-                <button id="zoom-in" class="control-btn"><i class="fas fa-plus"></i></button>
-                <button id="zoom-out" class="control-btn"><i class="fas fa-minus"></i></button>
-            </div>
-        </div>
-    </main>
-</div>
--->
-{% endblock %}
-
-{% block scripts %}
 <!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
-        crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-console.log('🚀 DÉMARRAGE DEBUG MAP');
-
-// === ÉTAPE 1: VARIABLES ULTRA-SIMPLES ===
-let map = null;
-const sites = {{ sites|json_encode|raw }};
-
-// Si pas de sites depuis le contrôleur, charger depuis l'API
-let actualSites = sites;
-if (!sites || sites.length === 0) {
-    console.log('🔄 Pas de sites depuis le contrôleur, chargement depuis API...');
-    console.log('🌐 Tentative fetch /api/sites...');
-    
-    fetch('/api/sites')
-        .then(response => {
-            console.log('📡 Réponse API reçue, status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('📦 Données API brutes:', data);
-            actualSites = data.data || data.sites || [];
-            console.log('📍 Sites extraits:', actualSites);
-            console.log('📊 Nombre de sites:', actualSites.length);
-            
-            if (actualSites.length > 0) {
-                loadMarkersOnMap(actualSites);
-            } else {
-                console.log('❌ Aucun site trouvé dans les données API');
-                document.getElementById('status').textContent = 'Aucun site trouvé';
-            }
-        })
-        .catch(error => {
-            console.error('❌ Erreur API:', error);
-            document.getElementById('status').textContent = 'Erreur chargement sites';
-        });
-} else {
-    console.log('✅ Sites reçus du contrôleur:', sites.length);
-}
+// VERSION ABSOLUMENT BASIQUE - EXEMPLE OFFICIEL LEAFLET
+console.log('🎯 VERSION BASIQUE ABSOLUE');
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📍 DOM Chargé, sites reçus:', sites);
-    document.getElementById('sites-count').textContent = sites ? sites.length : 0;
+    const status = document.getElementById('status');
+    status.textContent = 'Création carte...';
     
-    // === ÉTAPE 2: CRÉER CARTE BASIQUE ===
-    try {
-        console.log('🗺️ Initialisation carte...');
-        document.getElementById('status').textContent = 'Création carte...';
-        
-        map = L.map('climbing-map', {
-            center: [46.8182, 8.2275], // Centre Suisse
-            zoom: 8
-        });
-        
-        console.log('✅ Carte créée');
-        document.getElementById('status').textContent = 'Ajout des tuiles...';
-        
-        // === ÉTAPE 3: TUILES AVEC DIAGNOSTICS ===
-        console.log('🗺️ Création tuiles OpenStreetMap avec diagnostics...');
-        
-        const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 18,
-            // Forcer le rechargement si problème
-            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
-        });
-        
-        // Événements de diagnostic
-        osmTiles.on('loading', function() {
-            console.log('📡 Début chargement tuiles...');
-            document.getElementById('status').textContent = 'Chargement tuiles...';
-        });
-        
-        osmTiles.on('load', function() {
-            console.log('✅ Toutes les tuiles chargées !');
-            document.getElementById('status').textContent = 'Tuiles chargées, ajout marqueurs...';
-        });
-        
-        osmTiles.on('tileerror', function(e) {
-            console.error('❌ Erreur tuile:', e);
-            document.getElementById('status').textContent = 'Erreur tuiles détectée !';
-        });
-        
-        osmTiles.addTo(map);
-        
-        // Forcer le redimensionnement après ajout
-        setTimeout(() => {
-            console.log('🔄 Redimensionnement forcé...');
-            map.invalidateSize();
-        }, 500);
-        
-        console.log('✅ Tuiles configurées avec diagnostics');
-        document.getElementById('status').textContent = 'Attente chargement tuiles...';
-        
-        // === ÉTAPE 4: MARQUEURS - FORCER CHARGEMENT API ===
-        console.log('🎯 Tentative chargement marqueurs, actualSites:', actualSites ? actualSites.length : 'undefined');
-        
-        if (actualSites && actualSites.length > 0) {
-            loadMarkersOnMap(actualSites);
-        } else {
-            console.log('❌ Aucun site, FORCER chargement depuis API...');
-            document.getElementById('status').textContent = 'Forçage chargement sites...';
-            
-            // FORCER le chargement API même si on a déjà essayé
-            fetch('/api/sites')
-                .then(response => {
-                    console.log('🔄 FORCÉ - Status API:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('🔄 FORCÉ - Données API:', data);
-                    const sitesFromApi = data.data || data.sites || [];
-                    console.log('🔄 FORCÉ - Sites extraits:', sitesFromApi.length);
-                    
-                    if (sitesFromApi.length > 0) {
-                        loadMarkersOnMap(sitesFromApi);
-                    } else {
-                        console.log('💥 FORCÉ - Toujours aucun site !');
-                        document.getElementById('status').textContent = 'API ne retourne aucun site';
-                    }
-                })
-                .catch(error => {
-                    console.error('💥 FORCÉ - Erreur:', error);
-                    document.getElementById('status').textContent = 'Erreur API forcée';
-                });
-        }
-        
-    } catch (error) {
-        console.error('💥 ERREUR:', error);
-        document.getElementById('status').textContent = `ERREUR: ${error.message}`;
-    }
+    // Carte standard Leaflet - exemple de base
+    const map = L.map('map').setView([46.8182, 8.2275], 8);
+    
+    status.textContent = 'Ajout tuiles...';
+    
+    // Tuiles OpenStreetMap standard
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    
+    status.textContent = 'Ajout marqueur test...';
+    
+    // Un marqueur test sur Saillon
+    L.marker([46.1817, 7.1947])
+        .addTo(map)
+        .bindPopup('🏔️ Saillon - Site d\'escalade test')
+        .openPopup();
+    
+    status.textContent = '✅ Carte OK !';
+    console.log('✅ Carte basique créée avec succès');
 });
-
-// === FONCTION POUR CHARGER LES MARQUEURS ===
-function loadMarkersOnMap(sitesData) {
-    console.log('📍 Chargement des marqueurs pour', sitesData.length, 'sites');
-    
-    sitesData.forEach((site, index) => {
-        console.log(`📌 Site ${index + 1}:`, site);
-        
-        // Vérifier les coordonnées (peut-être coordinates_lat/lng au lieu de lat/lng)
-        const lat = site.latitude || site.coordinates_lat;
-        const lng = site.longitude || site.coordinates_lng;
-        
-        if (lat && lng) {
-            const marker = L.marker([lat, lng]).addTo(map);
-            marker.bindPopup(`<b>${site.name}</b><br/>${site.description || site.region_name || ''}`);
-            console.log(`✅ Marqueur ajouté pour ${site.name} à [${lat}, ${lng}]`);
-        } else {
-            console.log(`❌ Pas de coordonnées pour ${site.name}`, site);
-        }
-    });
-    
-    // Mettre à jour l'interface
-    document.getElementById('sites-count').textContent = sitesData.length;
-    document.getElementById('status').textContent = `✅ ${sitesData.length} sites chargés`;
-}
-
-/*
-ANCIENNE VERSION COMPLEXE EN COMMENTAIRE - À RÉACTIVER FONCTION PAR FONCTION
-
-const SwissConfig = {
-    center: [46.8182, 8.2275],
-    zoom: 8,
-    minZoom: 6,
-    maxZoom: 18,
-    bounds: [[45.8, 5.9], [47.9, 10.5]]
-};
-
-let sitesLayer = null;
-let currentLayer = 'swisstopo';
-let userMarker = null;
-
-function addMapLayers() {
-    const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 18
-    });
-    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© Esri',
-        maxZoom: 18
-    });
-    window.mapLayers = {
-        swisstopo: swissTopo,
-        osm: openStreetMap,
-        satellite: satellite
-    };
-}
-
-function loadSites() {
-    sitesLayer = L.layerGroup().addTo(map);
-    sites.forEach(site => {
-        if (site.latitude && site.longitude) {
-            addSiteMarker(site);
-        }
-    });
-}
-
-function addSiteMarker(site) {
-    const marker = L.circleMarker([site.latitude, site.longitude], {
-        radius: 8,
-        fillColor: getSiteColor(site),
-        color: '#ffffff',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
-    });
-    const popupContent = createSitePopup(site);
-    marker.bindPopup(popupContent, { maxWidth: 280, className: 'modern-popup' });
-    marker.on('click', () => showSiteDetails(site));
-    sitesLayer.addLayer(marker);
-}
-
-function getSiteColor(site) {
-    const colors = {
-        1: '#ef4444', // Valais - Rouge
-        2: '#10b981', // Jura - Vert
-        3: '#3b82f6', // Grisons - Bleu
-        4: '#f59e0b', // Tessin - Orange
-        5: '#8b5cf6', // Vaud - Violet
-        6: '#06b6d4'  // Berne - Cyan
-    };
-    return colors[site.region_id] || '#6b7280';
-}
-
-PLUS DE FONCTIONS À RÉACTIVER AU FUR ET À MESURE...
-*/
 </script>
-{% endblock %}
+
+</body>
+</html>
