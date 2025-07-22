@@ -9,16 +9,39 @@
           crossorigin="" />
     
     <style>
-    /* CSS ULTRA-SIMPLE POUR DÉBUGGER */
-    body { margin: 0; padding: 0; }
+    /* CSS ULTRA-SIMPLE POUR DÉBUGGER - CORRIGER LES CONFLITS CSS */
+    body { 
+        margin: 0; 
+        padding: 0; 
+    }
+    
     .simple-map-container { 
         width: 100%; 
         height: 100vh; 
         position: relative; 
+        z-index: 1;
     }
+    
     #climbing-map { 
         width: 100%; 
         height: 100%; 
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* CORRIGER LES CONFLITS AVEC BOOTSTRAP/CSS EXISTANT */
+    #climbing-map * {
+        box-sizing: content-box !important;
+    }
+    
+    .leaflet-container {
+        background: #ddd !important;
+    }
+    
+    .leaflet-tile {
+        /* Forcer le chargement correct des tuiles */
+        pointer-events: auto !important;
+        opacity: 1 !important;
     }
     .simple-header {
         position: absolute;
@@ -137,21 +160,42 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Carte créée');
         document.getElementById('status').textContent = 'Ajout des tuiles...';
         
-        // === ÉTAPE 3: TUILES SWISS TOPO CORRIGÉES ===
-        // PROBLÈME: Les tuiles swisstopo utilisent une projection différente
-        // SOLUTION: Utiliser OpenStreetMap qui marche toujours
-        console.log('🗺️ Utilisation OpenStreetMap pour éviter les décalages...');
+        // === ÉTAPE 3: TUILES AVEC DIAGNOSTICS ===
+        console.log('🗺️ Création tuiles OpenStreetMap avec diagnostics...');
         
         const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
-            maxZoom: 18
+            maxZoom: 18,
+            // Forcer le rechargement si problème
+            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
         });
+        
+        // Événements de diagnostic
+        osmTiles.on('loading', function() {
+            console.log('📡 Début chargement tuiles...');
+            document.getElementById('status').textContent = 'Chargement tuiles...';
+        });
+        
+        osmTiles.on('load', function() {
+            console.log('✅ Toutes les tuiles chargées !');
+            document.getElementById('status').textContent = 'Tuiles chargées, ajout marqueurs...';
+        });
+        
+        osmTiles.on('tileerror', function(e) {
+            console.error('❌ Erreur tuile:', e);
+            document.getElementById('status').textContent = 'Erreur tuiles détectée !';
+        });
+        
         osmTiles.addTo(map);
         
-        // TODO: Une fois que ça marche, on pourra essayer Swiss Topo avec la bonne projection
+        // Forcer le redimensionnement après ajout
+        setTimeout(() => {
+            console.log('🔄 Redimensionnement forcé...');
+            map.invalidateSize();
+        }, 500);
         
-        console.log('✅ Tuiles OpenStreetMap ajoutées');
-        document.getElementById('status').textContent = 'Ajout des marqueurs...';
+        console.log('✅ Tuiles configurées avec diagnostics');
+        document.getElementById('status').textContent = 'Attente chargement tuiles...';
         
         // === ÉTAPE 4: MARQUEURS - UTILISER LES VRAIES DONNÉES ===
         if (actualSites && actualSites.length > 0) {
