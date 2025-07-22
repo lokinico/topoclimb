@@ -84,6 +84,8 @@ config.php
 
 # Dossiers et fichiers spécifiques au déploiement
 /deploy/
+topoclimb-deploy-*/
+topoclimb-deploy-*.tar.gz
 .ftpconfig
 .ftpignore
 .htpasswd

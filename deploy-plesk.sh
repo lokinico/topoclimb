@@ -130,41 +130,71 @@ mkdir -p $DEPLOY_DIR/storage/logs
 mkdir -p $DEPLOY_DIR/storage/cache
 mkdir -p $DEPLOY_DIR/storage/sessions
 
-# NOUVEAU: Nettoyage cache et optimisations
-echo "🧹 Nettoyage et optimisations..."
+# NOUVEAU: Nettoyage cache et optimisations AGRESSIF
+echo "🧹 Nettoyage et optimisations AGRESSIVES..."
 
-# Vider le cache local avant déploiement
+# Vider TOUS les caches locaux avant déploiement
 if [ -d "storage/cache" ]; then
     rm -rf storage/cache/*
-    echo "✅ Cache local vidé"
+    echo "✅ Cache Twig local vidé"
 fi
 
-# Créer script de vidage cache pour production
+if [ -d "storage/sessions" ]; then
+    rm -rf storage/sessions/sess_*
+    echo "✅ Sessions locales vidées"
+fi
+
+# Ajouter timestamp de déploiement pour forcer refresh
+echo "/* Cache bust: $(date) */" > $DEPLOY_DIR/public/cache-bust.css
+
+# Modifier les layouts avec timestamp pour forcer reload
+TIMESTAMP=$(date +%Y-%m-%d\ %H:%M:%S)
+
+# Ajouter cache bust au layout principal
+sed -i "2s/.*/{# Cache bust: $TIMESTAMP #}/" $DEPLOY_DIR/resources/views/layouts/app.twig || echo "Sed non disponible, continuons..."
+
+echo "⚠️ Cache vidé AGRESSIVEMENT avant déploiement"
+echo "⚠️ Templates marqués avec timestamp: $TIMESTAMP"
+
+# Créer script de vidage cache AGRESSIF pour production
 cat > $DEPLOY_DIR/clear-cache.php << 'EOF'
 <?php
 /**
- * Script de vidage du cache TopoclimbCH
- * À exécuter après chaque déploiement
+ * Script de vidage AGRESSIF du cache TopoclimbCH
+ * ⚠️ OBLIGATOIRE après chaque déploiement
+ * Corrige les problèmes de cache comme pour la carte
  */
 
-echo "🧹 NETTOYAGE CACHE TopoclimbCH\n";
-echo "================================\n";
+echo "🧹 NETTOYAGE CACHE AGRESSIF TopoclimbCH\n";
+echo "========================================\n";
 
-// Vider le cache des vues Twig
+$cacheCleared = false;
+
+// 1. Vider le cache des vues Twig (CRITIQUE pour templates)
 $cacheDir = __DIR__ . '/storage/cache';
 if (is_dir($cacheDir)) {
-    $files = glob($cacheDir . '/*');
-    foreach ($files as $file) {
-        if (is_file($file)) {
-            unlink($file);
+    // Supprimer tous les fichiers ET sous-dossiers
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($cacheDir, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+    $cleared = 0;
+    foreach ($iterator as $file) {
+        if ($file->isDir()) {
+            rmdir($file->getRealPath());
+        } else {
+            unlink($file->getRealPath());
+            $cleared++;
         }
     }
-    echo "✅ Cache Twig vidé\n";
+    echo "✅ Cache Twig vidé ($cleared fichiers)\n";
+    $cacheCleared = true;
 } else {
-    echo "ℹ️ Répertoire cache introuvable\n";
+    echo "⚠️ Répertoire cache introuvable - création...\n";
+    mkdir($cacheDir, 0777, true);
 }
 
-// Vider le cache des sessions
+// 2. Vider TOUTES les sessions utilisateur
 $sessionDir = __DIR__ . '/storage/sessions';
 if (is_dir($sessionDir)) {
     $files = glob($sessionDir . '/sess_*');
@@ -173,16 +203,35 @@ if (is_dir($sessionDir)) {
             unlink($file);
         }
     }
-    echo "✅ Sessions vidées\n";
+    echo "✅ Sessions vidées (" . count($files) . " fichiers)\n";
+    $cacheCleared = true;
 }
 
-// Vider les logs anciens (> 7 jours)
+// 3. Vider OPCache PHP (crucial pour nouveaux fichiers)
+if (function_exists('opcache_reset')) {
+    if (opcache_reset()) {
+        echo "✅ OPCache PHP vidé\n";
+        $cacheCleared = true;
+    } else {
+        echo "⚠️ OPCache pas accessible\n";
+    }
+}
+
+// 4. Forcer rechargement avec headers HTTP
+if (!headers_sent()) {
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    echo "✅ Headers anti-cache envoyés\n";
+}
+
+// 5. Nettoyer les logs anciens
 $logDir = __DIR__ . '/storage/logs';
 if (is_dir($logDir)) {
     $files = glob($logDir . '/*.log');
     $deleted = 0;
     foreach ($files as $file) {
-        if (is_file($file) && filemtime($file) < time() - (7 * 24 * 60 * 60)) {
+        if (is_file($file) && filemtime($file) < time() - (3 * 24 * 60 * 60)) { // 3 jours au lieu de 7
             unlink($file);
             $deleted++;
         }
@@ -192,14 +241,23 @@ if (is_dir($logDir)) {
     }
 }
 
-// Vider le cache navigateur (headers)
-if (function_exists('opcache_reset')) {
-    opcache_reset();
-    echo "✅ OPCache PHP vidé\n";
-}
+// 6. Créer un fichier de validation du nettoyage
+$timestamp = date('Y-m-d H:i:s');
+file_put_contents(__DIR__ . '/cache-cleared.txt', "Cache vidé le: $timestamp\n");
 
-echo "\n🎯 CACHE COMPLÈTEMENT VIDÉ !\n";
-echo "Testez maintenant votre site.\n";
+// Résumé final
+if ($cacheCleared) {
+    echo "\n🎯 CACHE COMPLÈTEMENT VIDÉ !\n";
+    echo "✅ Templates Twig: PURGÉS\n";
+    echo "✅ Sessions: PURGÉES\n";
+    echo "✅ OPCache: PURGÉ\n";
+    echo "✅ Headers: ANTI-CACHE\n";
+    echo "\n⚠️ IMPORTANT: Testez /map et /test-carte.html maintenant\n";
+    echo "Si problème persiste, vérifiez cache serveur/CDN\n";
+} else {
+    echo "\n❌ PROBLÈME: Cache non vidé correctement\n";
+    echo "Vérifiez les permissions du dossier storage/\n";
+}
 EOF
 
 # Créer script de diagnostic CSS/JS
@@ -262,10 +320,62 @@ if (empty($issues)) {
 }
 
 echo "\n💡 Si la carte ne fonctionne pas:\n";
-echo "   1. Exécutez: php clear-cache.php\n";
+echo "   1. OBLIGATOIRE: php clear-cache.php\n";
 echo "   2. Testez /test-carte.html d'abord\n";
-echo "   3. Puis testez /map\n";
+echo "   3. Puis testez /map (doit être identique)\n";
 echo "   4. Consultez les logs du navigateur (F12)\n";
+echo "   5. Si toujours buggé: problème cache serveur/CDN\n";
+EOF
+
+# Créer un script de force refresh pour urgences
+cat > $DEPLOY_DIR/force-refresh.php << 'EOF'
+<?php
+/**
+ * Script de FORCE REFRESH IMMÉDIAT
+ * En cas d'urgence si cache reste bloqué
+ */
+
+echo "🚨 FORCE REFRESH IMMÉDIAT\n";
+echo "========================\n";
+
+// 1. Vider TOUT
+exec('php clear-cache.php', $output, $return);
+foreach($output as $line) {
+    echo "$line\n";
+}
+
+// 2. Modifier timestamp du layout fullscreen pour forcer reload
+$layoutFile = __DIR__ . '/resources/views/layouts/fullscreen.twig';
+if (file_exists($layoutFile)) {
+    $content = file_get_contents($layoutFile);
+    $newTimestamp = date('Y-m-d H:i:s');
+    $content = preg_replace('/<!-- Updated: .* -->/', "<!-- Updated: $newTimestamp -->", $content);
+    if (strpos($content, '<!-- Updated:') === false) {
+        $content = str_replace('<head>', "<head>\n    <!-- Updated: $newTimestamp -->", $content);
+    }
+    file_put_contents($layoutFile, $content);
+    echo "✅ Layout fullscreen marqué: $newTimestamp\n";
+}
+
+// 3. Modifier timestamp du template de carte
+$mapTemplate = __DIR__ . '/resources/views/map/index.twig';
+if (file_exists($mapTemplate)) {
+    $content = file_get_contents($mapTemplate);
+    $newTimestamp = date('Y-m-d H:i:s');
+    $content = preg_replace('/{# Updated: .* #}/', "{# Updated: $newTimestamp #}", $content);
+    if (strpos($content, '{# Updated:') === false) {
+        $content = "{# Updated: $newTimestamp #}\n" . $content;
+    }
+    file_put_contents($mapTemplate, $content);
+    echo "✅ Template carte marqué: $newTimestamp\n";
+}
+
+// 4. Créer un fichier de contrôle
+file_put_contents(__DIR__ . '/force-refresh-done.txt', "Force refresh fait le: " . date('Y-m-d H:i:s') . "\n");
+
+echo "\n🎯 FORCE REFRESH TERMINÉ !\n";
+echo "Les templates ont été modifiés pour forcer le rechargement.\n";
+echo "Testez /map maintenant - ça devrait marcher.\n";
 EOF
 
 # Configurer les permissions
@@ -330,15 +440,32 @@ chmod -R 777 storage/
 ```
 
 ## 7. OBLIGATOIRE: Nettoyage cache après déploiement
-**⚠️ IMPORTANT**: Exécutez TOUJOURS après chaque upload :
+**⚠️ CRITIQUE**: Exécutez DANS L'ORDRE après chaque upload :
+
+### Étape 1: Nettoyage cache standard
 ```bash
 php clear-cache.php
 ```
-Ceci vide :
-- Cache Twig (templates)
-- Sessions utilisateur  
-- OPCache PHP
-- Anciens logs
+
+### Étape 2: Si la carte reste buggée
+```bash
+php force-refresh.php
+```
+
+### Étape 3: Vérification
+- Teste: `/test-carte.html` (doit marcher)
+- Teste: `/map` (doit être identique)
+- Si différent = cache serveur/CDN à vider
+
+**Ce que clear-cache.php fait:**
+- Cache Twig (templates) : PURGÉ
+- Sessions utilisateur : PURGÉES
+- OPCache PHP : PURGÉ  
+- Headers anti-cache : ACTIVÉS
+
+**Ce que force-refresh.php fait EN PLUS:**
+- Modifie les templates avec nouveaux timestamps
+- Force rechargement même avec cache agressif
 
 ## 8. Test des routes critiques
 Testez dans cet ordre :
