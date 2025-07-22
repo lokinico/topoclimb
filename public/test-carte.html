@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST CARTE STATIQUE</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+    * { margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    #map { height: 100vh; width: 100%; }
+    .debug { 
+        position: absolute; 
+        top: 10px; 
+        left: 10px; 
+        background: red; 
+        color: white; 
+        padding: 10px; 
+        z-index: 9999;
+        font-weight: bold;
+    }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="debug">
+    🚨 TEST CARTE STATIQUE<br>
+    Status: <span id="status">Chargement...</span>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+console.log('🚨 TEST CARTE STATIQUE DÉMARRÉ');
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Ready');
+    document.getElementById('status').textContent = 'DOM OK';
+    
+    try {
+        console.log('Création carte...');
+        const map = L.map('map').setView([46.8182, 8.2275], 8);
+        console.log('Carte créée');
+        document.getElementById('status').textContent = 'Carte créée';
+        
+        console.log('Ajout tuiles...');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        console.log('Tuiles ajoutées');
+        document.getElementById('status').textContent = 'Tuiles ajoutées';
+        
+        console.log('Ajout marqueur...');
+        L.marker([46.1817, 7.1947])
+            .addTo(map)
+            .bindPopup('TEST MARQUEUR')
+            .openPopup();
+        console.log('Marqueur ajouté');
+        document.getElementById('status').textContent = '✅ TOUT OK';
+        
+    } catch (error) {
+        console.error('ERREUR:', error);
+        document.getElementById('status').textContent = 'ERREUR: ' + error.message;
+    }
+});
+</script>
+
+</body>
+</html>
