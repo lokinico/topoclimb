@@ -106,6 +106,20 @@ console.log('🚀 DÉMARRAGE DEBUG MAP');
 let map = null;
 const sites = {{ sites|json_encode|raw }};
 
+// Si pas de sites depuis le contrôleur, charger depuis l'API
+let actualSites = sites;
+if (!sites || sites.length === 0) {
+    console.log('🔄 Pas de sites depuis le contrôleur, chargement depuis API...');
+    fetch('/api/sites')
+        .then(response => response.json())
+        .then(data => {
+            actualSites = data.data || data.sites || [];
+            console.log('📡 Sites chargés depuis API:', actualSites);
+            loadMarkersOnMap(actualSites);
+        })
+        .catch(error => console.error('❌ Erreur API:', error));
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📍 DOM Chargé, sites reçus:', sites);
     document.getElementById('sites-count').textContent = sites ? sites.length : 0;
@@ -132,27 +146,12 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Tuiles Swiss ajoutées');
         document.getElementById('status').textContent = 'Ajout des marqueurs...';
         
-        // === ÉTAPE 4: MARQUEURS ULTRA-SIMPLES ===
-        if (sites && sites.length > 0) {
-            sites.forEach((site, index) => {
-                console.log(`📌 Site ${index + 1}:`, site);
-                
-                // Vérifier les coordonnées (peut-être coordinates_lat/lng au lieu de lat/lng)
-                const lat = site.latitude || site.coordinates_lat;
-                const lng = site.longitude || site.coordinates_lng;
-                
-                if (lat && lng) {
-                    const marker = L.marker([lat, lng]).addTo(map);
-                    marker.bindPopup(`<b>${site.name}</b><br/>${site.description || ''}`);
-                    console.log(`✅ Marqueur ajouté pour ${site.name} à [${lat}, ${lng}]`);
-                } else {
-                    console.log(`❌ Pas de coordonnées pour ${site.name}`);
-                }
-            });
-            document.getElementById('status').textContent = `✅ ${sites.length} sites chargés`;
+        // === ÉTAPE 4: MARQUEURS - UTILISER LES VRAIES DONNÉES ===
+        if (actualSites && actualSites.length > 0) {
+            loadMarkersOnMap(actualSites);
         } else {
-            console.log('❌ Aucun site trouvé');
-            document.getElementById('status').textContent = 'Aucun site trouvé';
+            console.log('❌ Aucun site trouvé, attendre chargement API...');
+            document.getElementById('status').textContent = 'Chargement des sites...';
         }
         
     } catch (error) {
@@ -160,6 +159,31 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('status').textContent = `ERREUR: ${error.message}`;
     }
 });
+
+// === FONCTION POUR CHARGER LES MARQUEURS ===
+function loadMarkersOnMap(sitesData) {
+    console.log('📍 Chargement des marqueurs pour', sitesData.length, 'sites');
+    
+    sitesData.forEach((site, index) => {
+        console.log(`📌 Site ${index + 1}:`, site);
+        
+        // Vérifier les coordonnées (peut-être coordinates_lat/lng au lieu de lat/lng)
+        const lat = site.latitude || site.coordinates_lat;
+        const lng = site.longitude || site.coordinates_lng;
+        
+        if (lat && lng) {
+            const marker = L.marker([lat, lng]).addTo(map);
+            marker.bindPopup(`<b>${site.name}</b><br/>${site.description || site.region_name || ''}`);
+            console.log(`✅ Marqueur ajouté pour ${site.name} à [${lat}, ${lng}]`);
+        } else {
+            console.log(`❌ Pas de coordonnées pour ${site.name}`, site);
+        }
+    });
+    
+    // Mettre à jour l'interface
+    document.getElementById('sites-count').textContent = sitesData.length;
+    document.getElementById('status').textContent = `✅ ${sitesData.length} sites chargés`;
+}
 
 /*
 ANCIENNE VERSION COMPLEXE EN COMMENTAIRE - À RÉACTIVER FONCTION PAR FONCTION

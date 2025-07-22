@@ -258,12 +258,12 @@ class MapController extends BaseController
             $sitesForMap = [];
 
             foreach ($sites as $site) {
-                // Accéder aux propriétés directement
+                // Accéder aux propriétés directement - CORRIGER LES NOMS DE COLONNES
                 $siteData = [
                     'id' => $site->id,
                     'name' => $site->name,
-                    'latitude' => $site->latitude,
-                    'longitude' => $site->longitude,
+                    'latitude' => $site->coordinates_lat, // CORRIGÉ
+                    'longitude' => $site->coordinates_lng, // CORRIGÉ
                     'region_id' => $site->region_id,
                     'description' => $site->description,
                     'approach_time' => $site->approach_time
