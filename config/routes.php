@@ -844,6 +844,13 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/api/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'apiShow',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
         'path' => '/api/regions/search',
         'controller' => \TopoclimbCH\Controllers\RegionController::class,
         'action' => 'search',
@@ -895,6 +902,13 @@ return [
         'path' => '/api/books',
         'controller' => \TopoclimbCH\Controllers\BookController::class,
         'action' => 'apiIndex',
+        'middlewares' => []
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/books/{id}',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'apiShow',
         'middlewares' => []
     ],
     [
@@ -1350,9 +1364,18 @@ return [
     ],
     [
         'method' => 'GET',
-        'path' => '/api/geocoding/search',
+        'path' => '/api/geolocation/search',
         'controller' => \TopoclimbCH\Controllers\GeolocationController::class,
         'action' => 'apiSearch',
+        'middlewares' => []
+    ],
+
+    // API Médias
+    [
+        'method' => 'GET',
+        'path' => '/api/media',
+        'controller' => \TopoclimbCH\Controllers\MediaController::class,
+        'action' => 'apiIndex',
         'middlewares' => []
     ],
 

@@ -151,4 +151,82 @@ class MediaController extends BaseController
         $this->session->flash('info', 'Fonctionnalité en cours de développement');
         return $this->redirect('/sectors');
     }
+
+    /**
+     * API: Liste des médias
+     */
+    public function apiIndex(Request $request): \Symfony\Component\HttpFoundation\JsonResponse
+    {
+        try {
+            $entityType = $request->query->get('entity_type', '');
+            $entityId = $request->query->get('entity_id', '');
+            $limit = min((int)$request->query->get('limit', 50), 200);
+
+            // Construction de la requête de base
+            $sql = "SELECT m.id, m.filename, m.title, m.description, m.file_size, 
+                           m.mime_type, m.is_public, m.created_at,
+                           mr.entity_type, mr.entity_id, mr.relationship_type
+                    FROM climbing_media m 
+                    LEFT JOIN climbing_media_relationships mr ON m.id = mr.media_id 
+                    WHERE m.active = 1";
+            $params = [];
+
+            // Filtres optionnels
+            if ($entityType && in_array($entityType, ['region', 'site', 'sector', 'route', 'book'])) {
+                $sql .= " AND mr.entity_type = ?";
+                $params[] = $entityType;
+                
+                if ($entityId && is_numeric($entityId)) {
+                    $sql .= " AND mr.entity_id = ?";
+                    $params[] = (int)$entityId;
+                }
+            }
+
+            $sql .= " ORDER BY m.created_at DESC LIMIT ?";
+            $params[] = $limit;
+
+            $media = $this->db->fetchAll($sql, $params);
+
+            // Formatage sécurisé des données
+            $data = array_map(function ($item) {
+                return [
+                    'id' => (int)$item['id'],
+                    'filename' => $item['filename'],
+                    'title' => $item['title'],
+                    'description' => $item['description'],
+                    'file_size' => $item['file_size'] ? (int)$item['file_size'] : null,
+                    'mime_type' => $item['mime_type'],
+                    'is_public' => (bool)$item['is_public'],
+                    'entity_type' => $item['entity_type'],
+                    'entity_id' => $item['entity_id'] ? (int)$item['entity_id'] : null,
+                    'relationship_type' => $item['relationship_type'],
+                    'created_at' => $item['created_at'],
+                    'url' => $this->generateMediaUrl($item['filename'])
+                ];
+            }, $media);
+
+            return new \Symfony\Component\HttpFoundation\JsonResponse([
+                'success' => true,
+                'data' => $data,
+                'count' => count($data),
+                'limit' => $limit
+            ]);
+        } catch (\Exception $e) {
+            error_log('MediaController::apiIndex error: ' . $e->getMessage());
+            return new \Symfony\Component\HttpFoundation\JsonResponse([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération des médias'
+            ], 500);
+        }
+    }
+
+    /**
+     * Génère l'URL d'un média
+     */
+    private function generateMediaUrl(string $filename): string
+    {
+        // Construction de l'URL basée sur la configuration
+        $baseUrl = $_ENV['MEDIA_BASE_URL'] ?? '/uploads';
+        return rtrim($baseUrl, '/') . '/' . $filename;
+    }
 }

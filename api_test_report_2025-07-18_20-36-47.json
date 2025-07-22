@@ -1,0 +1,414 @@
+{
+    "timestamp": "2025-07-18 20:36:47",
+    "summary": {
+        "total_tests": 26,
+        "successful_tests": 12,
+        "failed_tests": 14,
+        "success_rate": 46.2,
+        "avg_response_time": 121.05
+    },
+    "results": [
+        {
+            "endpoint": "\/api\/regions",
+            "description": "Liste des r\u00e9gions",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 110.22,
+            "response_size": 326,
+            "data_count": 3
+        },
+        {
+            "endpoint": "\/api\/regions?search=val",
+            "description": "Recherche r\u00e9gions (val)",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 93.83,
+            "response_size": 141,
+            "data_count": 1
+        },
+        {
+            "endpoint": "\/api\/regions\/1",
+            "description": "D\u00e9tails r\u00e9gion #1",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 142.02,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/sites",
+            "description": "Liste des sites",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 89.32,
+            "response_size": 825,
+            "data_count": 3
+        },
+        {
+            "endpoint": "\/api\/sites?region_id=1",
+            "description": "Sites par r\u00e9gion #1",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 82.8,
+            "response_size": 561,
+            "data_count": 2
+        },
+        {
+            "endpoint": "\/api\/sites?search=test",
+            "description": "Recherche sites (test)",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 84.89,
+            "response_size": 78,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/sites\/search?q=site",
+            "description": "Auto-compl\u00e9tion sites",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 120.19,
+            "response_size": 32411,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/sectors",
+            "description": "Liste des secteurs",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 81.47,
+            "response_size": 475,
+            "data_count": 3
+        },
+        {
+            "endpoint": "\/api\/sectors?region_id=1",
+            "description": "Secteurs par r\u00e9gion #1",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 80.94,
+            "response_size": 475,
+            "data_count": 3
+        },
+        {
+            "endpoint": "\/api\/sectors?site_id=1",
+            "description": "Secteurs par site #1",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 92.09,
+            "response_size": 475,
+            "data_count": 3
+        },
+        {
+            "endpoint": "\/api\/sectors?search=test",
+            "description": "Recherche secteurs",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 87.34,
+            "response_size": 475,
+            "data_count": 3
+        },
+        {
+            "endpoint": "\/api\/sectors\/search?q=sect",
+            "description": "Auto-compl\u00e9tion secteurs",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 89.55,
+            "response_size": 467,
+            "data_count": 3
+        },
+        {
+            "endpoint": "\/api\/routes",
+            "description": "Liste des voies",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 74.51,
+            "response_size": 736,
+            "data_count": 4
+        },
+        {
+            "endpoint": "\/api\/routes?sector_id=1",
+            "description": "Voies par secteur #1",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 74.86,
+            "response_size": 418,
+            "data_count": 2
+        },
+        {
+            "endpoint": "\/api\/routes?search=test",
+            "description": "Recherche voies",
+            "status": "\u2705 OK",
+            "success": true,
+            "http_code": 200,
+            "response_time": 78.87,
+            "response_size": 736,
+            "data_count": 4
+        },
+        {
+            "endpoint": "\/api\/routes\/search?q=route",
+            "description": "Auto-compl\u00e9tion voies",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 73.41,
+            "response_size": 55,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/books",
+            "description": "Liste des guides",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 76.88,
+            "response_size": 64,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/books\/1",
+            "description": "D\u00e9tails guide #1",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 110.95,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/books\/1\/sectors",
+            "description": "Secteurs du guide #1",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 79.78,
+            "response_size": 81,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/weather\/current?lat=46.2&lng=6.1",
+            "description": "M\u00e9t\u00e9o par coordonn\u00e9es",
+            "status": "\u274c HTTP 503 (attendu: 200)",
+            "success": false,
+            "http_code": 503,
+            "response_time": 283.32,
+            "response_size": 94,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/weather\/current?sector_id=1",
+            "description": "M\u00e9t\u00e9o par secteur #1",
+            "status": "\u274c HTTP 503 (attendu: 200)",
+            "success": false,
+            "http_code": 503,
+            "response_time": 311.5,
+            "response_size": 94,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/weather\/current?region_id=1",
+            "description": "M\u00e9t\u00e9o par r\u00e9gion #1",
+            "status": "\u274c HTTP 503 (attendu: 200)",
+            "success": false,
+            "http_code": 503,
+            "response_time": 378.28,
+            "response_size": 94,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/geolocation\/search?q=geneva",
+            "description": "G\u00e9ocodage (geneva)",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 127,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/geolocation\/search?q=chamonix",
+            "description": "G\u00e9ocodage (chamonix)",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 113.38,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/media",
+            "description": "Liste des m\u00e9dias",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 98.79,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/media?entity_type=sector",
+            "description": "M\u00e9dias des secteurs",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 111.1,
+            "response_size": 30828,
+            "data_count": null
+        }
+    ],
+    "failed_apis": [
+        {
+            "endpoint": "\/api\/regions\/1",
+            "description": "D\u00e9tails r\u00e9gion #1",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 142.02,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/sites?search=test",
+            "description": "Recherche sites (test)",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 84.89,
+            "response_size": 78,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/sites\/search?q=site",
+            "description": "Auto-compl\u00e9tion sites",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 120.19,
+            "response_size": 32411,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/routes\/search?q=route",
+            "description": "Auto-compl\u00e9tion voies",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 73.41,
+            "response_size": 55,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/books",
+            "description": "Liste des guides",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 76.88,
+            "response_size": 64,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/books\/1",
+            "description": "D\u00e9tails guide #1",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 110.95,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/books\/1\/sectors",
+            "description": "Secteurs du guide #1",
+            "status": "\u274c HTTP 500 (attendu: 200)",
+            "success": false,
+            "http_code": 500,
+            "response_time": 79.78,
+            "response_size": 81,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/weather\/current?lat=46.2&lng=6.1",
+            "description": "M\u00e9t\u00e9o par coordonn\u00e9es",
+            "status": "\u274c HTTP 503 (attendu: 200)",
+            "success": false,
+            "http_code": 503,
+            "response_time": 283.32,
+            "response_size": 94,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/weather\/current?sector_id=1",
+            "description": "M\u00e9t\u00e9o par secteur #1",
+            "status": "\u274c HTTP 503 (attendu: 200)",
+            "success": false,
+            "http_code": 503,
+            "response_time": 311.5,
+            "response_size": 94,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/weather\/current?region_id=1",
+            "description": "M\u00e9t\u00e9o par r\u00e9gion #1",
+            "status": "\u274c HTTP 503 (attendu: 200)",
+            "success": false,
+            "http_code": 503,
+            "response_time": 378.28,
+            "response_size": 94,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/geolocation\/search?q=geneva",
+            "description": "G\u00e9ocodage (geneva)",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 127,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/geolocation\/search?q=chamonix",
+            "description": "G\u00e9ocodage (chamonix)",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 113.38,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/media",
+            "description": "Liste des m\u00e9dias",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 98.79,
+            "response_size": 30828,
+            "data_count": null
+        },
+        {
+            "endpoint": "\/api\/media?entity_type=sector",
+            "description": "M\u00e9dias des secteurs",
+            "status": "\u274c HTTP 404 (attendu: 200)",
+            "success": false,
+            "http_code": 404,
+            "response_time": 111.1,
+            "response_size": 30828,
+            "data_count": null
+        }
+    ]
+}

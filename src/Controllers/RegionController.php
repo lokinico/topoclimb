@@ -897,6 +897,67 @@ class RegionController extends BaseController
     }
 
     /**
+     * API Show - détails d'une région spécifique
+     */
+    public function apiShow(Request $request): \Symfony\Component\HttpFoundation\JsonResponse
+    {
+        try {
+            $id = $this->validateId($request->attributes->get('id'), 'ID de région');
+
+            $region = $this->db->fetchOne(
+                "SELECT r.id, r.name, r.description, r.coordinates_lat, r.coordinates_lng, 
+                        r.altitude, r.best_season, r.access_info, r.parking_info, r.created_at,
+                        c.name as country_name, c.code as country_code
+                 FROM climbing_regions r 
+                 LEFT JOIN climbing_countries c ON r.country_id = c.id 
+                 WHERE r.id = ? AND r.active = 1",
+                [$id]
+            );
+
+            if (!$region) {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => 'Région non trouvée'
+                ], 404);
+            }
+
+            // Récupérer les statistiques
+            $stats = $this->getRegionStats($id);
+
+            // Formatage sécurisé des données
+            $data = [
+                'id' => (int)$region['id'],
+                'name' => $region['name'],
+                'description' => $region['description'],
+                'coordinates' => [
+                    'lat' => $region['coordinates_lat'] ? (float)$region['coordinates_lat'] : null,
+                    'lng' => $region['coordinates_lng'] ? (float)$region['coordinates_lng'] : null
+                ],
+                'altitude' => $region['altitude'] ? (int)$region['altitude'] : null,
+                'best_season' => $region['best_season'],
+                'access_info' => $region['access_info'],
+                'parking_info' => $region['parking_info'],
+                'country' => [
+                    'name' => $region['country_name'],
+                    'code' => $region['country_code']
+                ],
+                'stats' => $stats,
+                'created_at' => $region['created_at']
+            ];
+
+            return new JsonResponse([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (ValidationException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur récupération région');
+            return new JsonResponse(['error' => 'Erreur de service'], 500);
+        }
+    }
+
+    /**
      * Rate limiting simple basé sur la session
      */
     private function checkRateLimit(string $action, int $maxRequests): void
