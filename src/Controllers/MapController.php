@@ -400,9 +400,8 @@ class MapController extends BaseController
             
             // Si pas de coordonnées valides, utiliser les données de test
             if (!hasValidCoordinates) {
-                console.log("APIs ne retournent pas de coordonnées valides, utilisation des données de test");
-                console.log("⚠️ FORCE: Chargement des données réelles pour test");
-                // loadTestHierarchicalData(); // TEMPORAIREMENT DÉSACTIVÉ
+                console.log("⚠️ APIs ne retournent pas de coordonnées valides, utilisation des données de test");
+                loadTestHierarchicalData();
             } else {
                 console.log("🎉 Coordonnées valides détectées, utilisation des données APIs");
             }
@@ -684,7 +683,22 @@ class MapController extends BaseController
     function updateStatus() {
         const totalItems = climbingData.regions.length + climbingData.sites.length + climbingData.sectors.length;
         document.getElementById("site-count").textContent = totalItems;
-        document.getElementById("status").textContent = climbingData.regions.length + "R + " + climbingData.sites.length + "S + " + climbingData.sectors.length + "C";
+        
+        // Compter les items avec coordonnées valides  
+        const validRegions = climbingData.regions.filter(r => {
+            const lat = r.latitude || r.coordinates_lat;
+            const lng = r.longitude || r.coordinates_lng;
+            return lat && lng && parseFloat(lat) !== 0 && parseFloat(lng) !== 0;
+        }).length;
+        
+        const validSites = climbingData.sites.filter(s => s.coordinates_lat && s.coordinates_lng && 
+            parseFloat(s.coordinates_lat) !== 0 && parseFloat(s.coordinates_lng) !== 0).length;
+            
+        const validSectors = climbingData.sectors.filter(s => s.coordinates_lat && s.coordinates_lng && 
+            parseFloat(s.coordinates_lat) !== 0 && parseFloat(s.coordinates_lng) !== 0).length;
+        
+        document.getElementById("status").textContent = validRegions + "R + " + validSites + "S + " + validSectors + "C (valides)";
+        console.log("📊 Status:", validRegions, "régions,", validSites, "sites,", validSectors, "secteurs avec coordonnées valides");
     }
     
     function setupControls() {
