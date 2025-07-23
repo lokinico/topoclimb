@@ -1,12 +1,5 @@
 
-# ANTI-CACHE ULTRA AGRESSIF POUR MAP-NEW
-<LocationMatch "/map-new">
-    Header always set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
-    Header always set Pragma "no-cache"
-    Header always set Expires "Thu, 01 Jan 1970 00:00:00 GMT"
-    Header always set X-No-Cache "1753250252"
-    FileETag None
-</LocationMatch>
+# Anti-cache simplifié via PHP headers dans contrôleur
 
 # Redirection simplifiée vers public/
 <IfModule mod_rewrite.c>
