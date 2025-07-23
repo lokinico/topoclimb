@@ -66,6 +66,9 @@ class MapController extends BaseController
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     
@@ -140,6 +143,56 @@ class MapController extends BaseController
         font-style: italic; border-top: 1px solid #eee; padding-top: 6px;
     }
     
+    /* Styles personnalisés pour les clusters */
+    .marker-cluster-small {
+        background-color: rgba(181, 226, 140, 0.8);
+        border: 2px solid rgba(110, 204, 57, 0.8);
+    }
+    .marker-cluster-small div {
+        background-color: rgba(110, 204, 57, 0.8);
+        color: white;
+        font-weight: bold;
+    }
+    
+    .marker-cluster-medium {
+        background-color: rgba(241, 211, 87, 0.8);
+        border: 2px solid rgba(240, 194, 12, 0.8);
+    }
+    .marker-cluster-medium div {
+        background-color: rgba(240, 194, 12, 0.8);
+        color: white;
+        font-weight: bold;
+    }
+    
+    .marker-cluster-large {
+        background-color: rgba(253, 156, 115, 0.8);
+        border: 2px solid rgba(241, 128, 23, 0.8);
+    }
+    .marker-cluster-large div {
+        background-color: rgba(241, 128, 23, 0.8);
+        color: white;
+        font-weight: bold;
+    }
+    
+    /* Styles pour les marqueurs par niveau hiérarchique */
+    .region-marker {
+        background: linear-gradient(45deg, #e74c3c, #c0392b);
+        border: 3px solid white;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+    
+    .site-marker {
+        background: linear-gradient(45deg, #3498db, #2980b9);
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .sector-marker {
+        background: linear-gradient(45deg, #2ecc71, #27ae60);
+        border: 2px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    
     @media (max-width: 768px) {
         .header { padding: 8px 15px; }
         .nav-controls { gap: 5px; }
@@ -194,25 +247,45 @@ class MapController extends BaseController
     </div>
     
     <div class="legend">
-        <div class="legend-title">🎨 Régions</div>
+        <div class="legend-title">🗺️ Hiérarchie</div>
         <div class="legend-items">
-            <div class="legend-item"><span class="legend-color" style="background: #c0392b;"></span> Valais</div>
-            <div class="legend-item"><span class="legend-color" style="background: #2980b9;"></span> Vaud</div>
-            <div class="legend-item"><span class="legend-color" style="background: #e67e22;"></span> Tessin</div>
-            <div class="legend-item"><span class="legend-color" style="background: #27ae60;"></span> Berne</div>
-            <div class="legend-item"><span class="legend-color" style="background: #8e44ad;"></span> Jura</div>
-            <div class="legend-item"><span class="legend-color" style="background: #34495e;"></span> Grisons</div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #e74c3c;"></span> 
+                <span>Régions</span>
+                <input type="checkbox" id="toggle-regions" checked style="margin-left: auto;">
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #3498db;"></span> 
+                <span>Sites</span>
+                <input type="checkbox" id="toggle-sites" checked style="margin-left: auto;">
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #2ecc71;"></span> 
+                <span>Secteurs</span>
+                <input type="checkbox" id="toggle-sectors" checked style="margin-left: auto;">
+            </div>
         </div>
-        <div class="legend-note">💡 Taille = nombre de voies</div>
+        <div class="legend-note">💡 Clusters automatiques</div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
     console.log("🇨🇭 TopoclimbCH - Carte suisse interactive");
     
     // Configuration pour la Suisse
     const SWISS_CENTER = [46.8182, 8.2275];
-    let map, currentLayer, sitesData = [];
+    let map, currentLayer;
+    let climbingData = {
+        regions: [],
+        sites: [],
+        sectors: []
+    };
+    let clusterGroups = {
+        regions: null,
+        sites: null,
+        sectors: null
+    };
     
     // Couches de cartes suisses officielles
     const swissLayers = {
@@ -241,7 +314,7 @@ class MapController extends BaseController
     // Initialisation
     document.addEventListener("DOMContentLoaded", function() {
         initializeMap();
-        loadSitesData();
+        loadClimbingData();
         setupControls();
     });
     
@@ -272,118 +345,314 @@ class MapController extends BaseController
         console.log("✅ Carte suisse initialisée");
     }
     
-    function loadSitesData() {
-        // Essayer de charger les données réelles
-        fetch("/api/map/sites")
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.sites) {
-                    sitesData = data.sites;
-                    addSiteMarkers();
-                } else {
-                    loadTestSites();
-                }
-                updateStatus();
-            })
-            .catch(error => {
-                console.log("Chargement données de test (erreur API)");
-                loadTestSites();
-                updateStatus();
-            });
-    }
-    
-    function loadTestSites() {
-        // Sites d\'escalade célèbres en Suisse - Version étendue
-        sitesData = [
-            // Valais - Sites majeurs
-            {name: "Saillon", latitude: 46.1817, longitude: 7.1947, region_name: "Valais", description: "Site sportif réputé", route_count: 120},
-            {name: "Vouvry", latitude: 46.3306, longitude: 6.8542, region_name: "Valais", description: "Escalade sur calcaire", route_count: 85},
-            {name: "Branson", latitude: 46.1917, longitude: 7.1833, region_name: "Valais", description: "Escalade sur schiste", route_count: 95},
-            {name: "Saint-Maurice", latitude: 46.2167, longitude: 7.0167, region_name: "Valais", description: "Falaises calcaires", route_count: 60},
-            
-            // Vaud 
-            {name: "Freyr", latitude: 46.7089, longitude: 6.2333, region_name: "Vaud", description: "Falaise au bord du lac", route_count: 200},
-            {name: "Dent de Vaulion", latitude: 46.6833, longitude: 6.3667, region_name: "Vaud", description: "Calcaire jurassien", route_count: 45},
-            
-            // Tessin - Granit et gneiss
-            {name: "Cresciano", latitude: 46.3833, longitude: 8.8667, region_name: "Tessin", description: "Bloc mondial", route_count: 300},
-            {name: "Verzasca", latitude: 46.4775, longitude: 9.5726, region_name: "Tessin", description: "Valle Verzasca", route_count: 150},
-            {name: "Ponte Brolla", latitude: 46.3972, longitude: 8.8583, region_name: "Tessin", description: "Gneiss de qualité", route_count: 80},
-            
-            // Berne - Alpes
-            {name: "Kandersteg", latitude: 46.6037, longitude: 7.2625, region_name: "Berne", description: "Oberland bernois", route_count: 90},
-            {name: "Gimmelwald", latitude: 46.5506, longitude: 7.8958, region_name: "Berne", description: "Vue alpine", route_count: 25},
-            {name: "Gastlosen", latitude: 46.6165, longitude: 7.2833, region_name: "Berne", description: "Calcaire alpin", route_count: 110},
-            
-            // Jura
-            {name: "Roc de la Vache", latitude: 47.2167, longitude: 7.0833, region_name: "Jura", description: "Calcaire jurassien", route_count: 60},
-            {name: "Creux du Van", latitude: 46.9333, longitude: 6.7, region_name: "Jura", description: "Cirque naturel", route_count: 40},
-            
-            // Grisons - Haute montagne
-            {name: "Bürs", latitude: 47.1492, longitude: 9.8287, region_name: "Grisons", description: "Calcaire alpin", route_count: 70},
-            {name: "Rätikon", latitude: 46.9833, longitude: 9.8333, region_name: "Grisons", description: "Massif frontalier", route_count: 55},
-            
-            // Sites urbains
-            {name: "Fluhberg", latitude: 47.3697, longitude: 8.5492, region_name: "Zurich", description: "Proche de Zurich", route_count: 35},
-            {name: "Solothurn", latitude: 47.2083, longitude: 7.5333, region_name: "Soleure", description: "Jura soleurois", route_count: 28}
-        ];
+    function loadClimbingData() {
+        document.getElementById("status").textContent = "Chargement données...";
         
-        console.log(`✅ ${sitesData.length} sites d\'escalade suisses chargés`);
-        addSiteMarkers();
-    }
-    
-    function addSiteMarkers() {
-        sitesData.forEach(site => {
-            if (site.latitude && site.longitude) {
-                // Couleur selon la région
-                const regionColors = {
-                    "Valais": "#c0392b",
-                    "Vaud": "#2980b9", 
-                    "Tessin": "#e67e22",
-                    "Berne": "#27ae60",
-                    "Jura": "#8e44ad",
-                    "Grisons": "#34495e",
-                    "Zurich": "#16a085",
-                    "Soleure": "#f39c12"
-                };
-                
-                const markerColor = regionColors[site.region_name] || "#e74c3c";
-                
-                // Taille selon le nombre de voies
-                const routeCount = site.route_count || 0;
-                const markerSize = Math.max(6, Math.min(12, 6 + (routeCount / 50)));
-                
-                L.circleMarker([site.latitude, site.longitude], {
-                    radius: markerSize,
-                    fillColor: markerColor,
-                    color: "#ffffff",
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                }).addTo(map).bindPopup(`
-                    <div style="min-width: 200px;">
-                        <h6 style="margin: 0 0 8px 0; color: ${markerColor};">
-                            🏔️ ${site.name}
-                        </h6>
-                        <div style="margin-bottom: 8px;">
-                            <strong>📍 ${site.region_name || "Suisse"}</strong>
-                        </div>
-                        ${site.description ? `<p style="margin: 4px 0; font-size: 13px; color: #666;">${site.description}</p>` : ""}
-                        ${routeCount > 0 ? `<div style="margin: 8px 0; padding: 4px 8px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
-                            🧗 <strong>${routeCount} voies</strong>
-                        </div>` : ""}
-                        <div style="margin-top: 8px; font-size: 11px; color: #999;">
-                            Coordonnées: ${site.latitude.toFixed(4)}, ${site.longitude.toFixed(4)}
-                        </div>
-                    </div>
-                `);
+        // Essayer de charger les données réelles depuis les APIs
+        Promise.all([
+            fetch("/api/regions").catch(() => ({ success: false })),
+            fetch("/api/sites").catch(() => ({ success: false })),
+            fetch("/api/sectors").catch(() => ({ success: false }))
+        ]).then(async ([regionsRes, sitesRes, sectorsRes]) => {
+            
+            // Charger les régions
+            if (regionsRes.ok) {
+                const regionsData = await regionsRes.json();
+                climbingData.regions = regionsData.data || [];
             }
+            
+            // Charger les sites  
+            if (sitesRes.ok) {
+                const sitesData = await sitesRes.json();
+                climbingData.sites = sitesData.data || [];
+            }
+            
+            // Charger les secteurs
+            if (sectorsRes.ok) {
+                const sectorsData = await sectorsRes.json();
+                climbingData.sectors = sectorsData.data || [];
+            }
+            
+            // Si pas de données réelles, utiliser les données de test
+            if (!climbingData.regions.length && !climbingData.sites.length && !climbingData.sectors.length) {
+                loadTestHierarchicalData();
+            }
+            
+            initializeClusterGroups();
+            addHierarchicalMarkers();
+            updateStatus();
+            
+        }).catch(error => {
+            console.log("Erreur chargement APIs, utilisation données de test");
+            loadTestHierarchicalData();
+            initializeClusterGroups();
+            addHierarchicalMarkers();
+            updateStatus();
         });
     }
     
+    function loadTestHierarchicalData() {
+        // Structure hiérarchique : Régions → Sites → Secteurs
+        
+        // RÉGIONS principales de Suisse
+        climbingData.regions = [
+            {id: 1, name: "Valais", latitude: 46.1947, longitude: 7.144, description: "Région alpine majeure", site_count: 12, total_routes: 850},
+            {id: 2, name: "Vaud", latitude: 46.5197, longitude: 6.6323, description: "Région lémanique", site_count: 8, total_routes: 420},
+            {id: 3, name: "Tessin", latitude: 46.3353, longitude: 8.8019, description: "Granit et gneiss", site_count: 10, total_routes: 680},
+            {id: 4, name: "Berne", latitude: 46.6037, longitude: 7.7461, description: "Oberland bernois", site_count: 6, total_routes: 380},
+            {id: 5, name: "Jura", latitude: 47.0502, longitude: 6.9288, description: "Calcaire jurassien", site_count: 5, total_routes: 240},
+            {id: 6, name: "Grisons", latitude: 46.8182, longitude: 9.8356, description: "Haute montagne", site_count: 4, total_routes: 190}
+        ];
+        
+        // SITES d\'escalade par région
+        climbingData.sites = [
+            // Valais
+            {id: 1, name: "Saillon", latitude: 46.1817, longitude: 7.1947, region_id: 1, description: "Site sportif réputé", sector_count: 8, route_count: 120},
+            {id: 2, name: "Vouvry", latitude: 46.3306, longitude: 6.8542, region_id: 1, description: "Calcaire", sector_count: 6, route_count: 85},
+            {id: 3, name: "Branson", latitude: 46.1917, longitude: 7.1833, region_id: 1, description: "Schiste", sector_count: 5, route_count: 95},
+            {id: 4, name: "Saint-Maurice", latitude: 46.2167, longitude: 7.0167, region_id: 1, description: "Falaises", sector_count: 4, route_count: 60},
+            
+            // Vaud
+            {id: 5, name: "Freyr", latitude: 46.7089, longitude: 6.2333, region_id: 2, description: "Bord du lac", sector_count: 12, route_count: 200},
+            {id: 6, name: "Dent de Vaulion", latitude: 46.6833, longitude: 6.3667, region_id: 2, description: "Jurassien", sector_count: 3, route_count: 45},
+            
+            // Tessin
+            {id: 7, name: "Cresciano", latitude: 46.3833, longitude: 8.8667, region_id: 3, description: "Bloc mondial", sector_count: 15, route_count: 300},
+            {id: 8, name: "Verzasca", latitude: 46.4775, longitude: 9.5726, region_id: 3, description: "Valle Verzasca", sector_count: 10, route_count: 150},
+            {id: 9, name: "Ponte Brolla", latitude: 46.3972, longitude: 8.8583, region_id: 3, description: "Gneiss", sector_count: 6, route_count: 80},
+            
+            // Berne
+            {id: 10, name: "Kandersteg", latitude: 46.6037, longitude: 7.2625, region_id: 4, description: "Oberland", sector_count: 7, route_count: 90},
+            {id: 11, name: "Gimmelwald", latitude: 46.5506, longitude: 7.8958, region_id: 4, description: "Vue alpine", sector_count: 2, route_count: 25},
+            {id: 12, name: "Gastlosen", latitude: 46.6165, longitude: 7.2833, region_id: 4, description: "Calcaire alpin", sector_count: 8, route_count: 110}
+        ];
+        
+        // SECTEURS - Certains directement en région, d\'autres dans des sites
+        climbingData.sectors = [
+            // Secteurs directs en région (Valais)
+            {id: 1, name: "Secteur Sion Sud", latitude: 46.2319, longitude: 7.3575, region_id: 1, site_id: null, description: "Directement en région", route_count: 45},
+            {id: 2, name: "Secteur Martigny Est", latitude: 46.1024, longitude: 7.0737, region_id: 1, site_id: null, description: "Accès direct", route_count: 38},
+            
+            // Secteurs dans sites (Saillon)
+            {id: 3, name: "Secteur Principal", latitude: 46.1827, longitude: 7.1957, region_id: 1, site_id: 1, description: "Secteur principal de Saillon", route_count: 65},
+            {id: 4, name: "Secteur Débutants", latitude: 46.1807, longitude: 7.1937, region_id: 1, site_id: 1, description: "Voies faciles", route_count: 35},
+            {id: 5, name: "Secteur Expert", latitude: 46.1837, longitude: 7.1967, region_id: 1, site_id: 1, description: "Hautes difficultés", route_count: 20},
+            
+            // Secteurs Freyr (Vaud)
+            {id: 6, name: "Freyr Rive Droite", latitude: 46.7099, longitude: 6.2343, region_id: 2, site_id: 5, description: "Rive droite", route_count: 120},
+            {id: 7, name: "Freyr Rive Gauche", latitude: 46.7079, longitude: 6.2323, region_id: 2, site_id: 5, description: "Rive gauche", route_count: 80},
+            
+            // Secteurs Cresciano (Tessin)
+            {id: 8, name: "Cresciano Central", latitude: 46.3843, longitude: 8.8677, region_id: 3, site_id: 7, description: "Zone centrale", route_count: 180},
+            {id: 9, name: "Cresciano Nord", latitude: 46.3853, longitude: 8.8687, region_id: 3, site_id: 7, description: "Zone nord", route_count: 120},
+            
+            // Secteurs directs Jura
+            {id: 10, name: "Creux du Van", latitude: 46.9333, longitude: 6.7, region_id: 5, site_id: null, description: "Cirque naturel", route_count: 40},
+            {id: 11, name: "Chasseral", latitude: 47.1319, longitude: 7.0581, region_id: 5, site_id: null, description: "Sommet jurassien", route_count: 25}
+        ];
+        
+        console.log(`✅ Données hiérarchiques chargées: ${climbingData.regions.length} régions, ${climbingData.sites.length} sites, ${climbingData.sectors.length} secteurs`);
+    }
+    
+    function initializeClusterGroups() {
+        // Créer les groupes de clusters pour chaque niveau hiérarchique
+        clusterGroups.regions = L.markerClusterGroup({
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                let c = \' marker-cluster-\';
+                if (count < 3) {
+                    c += \'small\';
+                } else if (count < 6) {
+                    c += \'medium\';
+                } else {
+                    c += \'large\';
+                }
+                return new L.DivIcon({ 
+                    html: \'<div><span>\' + count + \'</span></div>\', 
+                    className: \'marker-cluster\' + c, 
+                    iconSize: new L.Point(40, 40) 
+                });
+            },
+            maxClusterRadius: 80,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
+        });
+        
+        clusterGroups.sites = L.markerClusterGroup({
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                return new L.DivIcon({ 
+                    html: \'<div><span>\' + count + \'</span></div>\', 
+                    className: \'marker-cluster marker-cluster-medium\', 
+                    iconSize: new L.Point(35, 35) 
+                });
+            },
+            maxClusterRadius: 60,
+            spiderfyOnMaxZoom: true
+        });
+        
+        clusterGroups.sectors = L.markerClusterGroup({
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                return new L.DivIcon({ 
+                    html: \'<div><span>\' + count + \'</span></div>\', 
+                    className: \'marker-cluster marker-cluster-small\', 
+                    iconSize: new L.Point(30, 30) 
+                });
+            },
+            maxClusterRadius: 40,
+            spiderfyOnMaxZoom: true
+        });
+    }
+    
+    function addHierarchicalMarkers() {
+        // Ajouter les marqueurs des RÉGIONS
+        climbingData.regions.forEach(region => {
+            if (region.latitude && region.longitude) {
+                const marker = L.circleMarker([region.latitude, region.longitude], {
+                    radius: 12,
+                    fillColor: "#e74c3c",
+                    color: "#ffffff",
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9,
+                    className: \"region-marker\"
+                });
+                
+                marker.bindPopup(createRegionPopup(region));
+                clusterGroups.regions.addLayer(marker);
+            }
+        });
+        
+        // Ajouter les marqueurs des SITES
+        climbingData.sites.forEach(site => {
+            if (site.latitude && site.longitude) {
+                const marker = L.circleMarker([site.latitude, site.longitude], {
+                    radius: 8,
+                    fillColor: "#3498db",
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8,
+                    className: \"site-marker\"
+                });
+                
+                marker.bindPopup(createSitePopup(site));
+                clusterGroups.sites.addLayer(marker);
+            }
+        });
+        
+        // Ajouter les marqueurs des SECTEURS
+        climbingData.sectors.forEach(sector => {
+            if (sector.latitude && sector.longitude) {
+                const marker = L.circleMarker([sector.latitude, sector.longitude], {
+                    radius: 6,
+                    fillColor: "#2ecc71",
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8,
+                    className: \"sector-marker\"
+                });
+                
+                marker.bindPopup(createSectorPopup(sector));
+                clusterGroups.sectors.addLayer(marker);
+            }
+        });
+        
+        // Ajouter tous les clusters à la carte
+        map.addLayer(clusterGroups.regions);
+        map.addLayer(clusterGroups.sites);
+        map.addLayer(clusterGroups.sectors);
+        
+        console.log("✅ Marqueurs hiérarchiques ajoutés avec clustering");
+    }
+    
+    function createRegionPopup(region) {
+        return \'<div style="min-width: 220px;">\' +
+            \'<h5 style="margin: 0 0 10px 0; color: #e74c3c; display: flex; align-items: center;">\' +
+                \'🏔️ <span style="margin-left: 8px;">\' + region.name + \'</span>\' +
+            \'</h5>\' +
+            \'<div style="background: #f8f9fa; padding: 8px; border-radius: 6px; margin-bottom: 10px;">\' +
+                \'<div style="font-size: 13px; color: #666; margin-bottom: 4px;"><strong>RÉGION</strong></div>\' +
+                \'<div style="font-size: 14px; margin-bottom: 6px;">\' + region.description + \'</div>\' +
+            \'</div>\' +
+            \'<div style="display: flex; gap: 10px; margin-bottom: 8px;">\' +
+                \'<div style="flex: 1; text-align: center; background: #e3f2fd; padding: 6px; border-radius: 4px;">\' +
+                    \'<div style="font-size: 16px; font-weight: bold; color: #1976d2;">\' + (region.site_count || 0) + \'</div>\' +
+                    \'<div style="font-size: 11px; color: #666;">Sites</div>\' +
+                \'</div>\' +
+                \'<div style="flex: 1; text-align: center; background: #e8f5e8; padding: 6px; border-radius: 4px;">\' +
+                    \'<div style="font-size: 16px; font-weight: bold; color: #388e3c;">\' + (region.total_routes || 0) + \'</div>\' +
+                    \'<div style="font-size: 11px; color: #666;">Voies</div>\' +
+                \'</div>\' +
+            \'</div>\' +
+            \'<div style="font-size: 11px; color: #999; text-align: center;">\' +
+                region.latitude.toFixed(4) + \', \' + region.longitude.toFixed(4) +
+            \'</div>\' +
+        \'</div>\';
+    }
+    
+    function createSitePopup(site) {
+        const region = climbingData.regions.find(r => r.id === site.region_id);
+        return \'<div style="min-width: 200px;">\' +
+            \'<h6 style="margin: 0 0 8px 0; color: #3498db; display: flex; align-items: center;">\' +
+                \'🧗 <span style="margin-left: 6px;">\' + site.name + \'</span>\' +
+            \'</h6>\' +
+            \'<div style="background: #f0f8ff; padding: 6px; border-radius: 4px; margin-bottom: 8px;">\' +
+                \'<div style="font-size: 12px; color: #666; margin-bottom: 2px;"><strong>SITE</strong> \' + (region ? \'en \' + region.name : \'\') + \'</div>\' +
+                \'<div style="font-size: 13px;">\' + site.description + \'</div>\' +
+            \'</div>\' +
+            \'<div style="display: flex; gap: 8px; margin-bottom: 6px;">\' +
+                \'<div style="flex: 1; text-align: center; background: #e8f5e8; padding: 4px; border-radius: 3px;">\' +
+                    \'<div style="font-size: 14px; font-weight: bold; color: #388e3c;">\' + (site.sector_count || 0) + \'</div>\' +
+                    \'<div style="font-size: 10px; color: #666;">Secteurs</div>\' +
+                \'</div>\' +
+                \'<div style="flex: 1; text-align: center; background: #fff3e0; padding: 4px; border-radius: 3px;">\' +
+                    \'<div style="font-size: 14px; font-weight: bold; color: #f57c00;">\' + (site.route_count || 0) + \'</div>\' +
+                    \'<div style="font-size: 10px; color: #666;">Voies</div>\' +
+                \'</div>\' +
+            \'</div>\' +
+            \'<div style="font-size: 10px; color: #999; text-align: center;">\' +
+                site.latitude.toFixed(4) + \', \' + site.longitude.toFixed(4) +
+            \'</div>\' +
+        \'</div>\';
+    }
+    
+    function createSectorPopup(sector) {
+        const region = climbingData.regions.find(r => r.id === sector.region_id);
+        const site = climbingData.sites.find(s => s.id === sector.site_id);
+        
+        let locationText = \'\';
+        if (site) {
+            locationText = \'dans \' + site.name;
+        } else if (region) {
+            locationText = \'directement en \' + region.name;
+        }
+        
+        return \'<div style="min-width: 180px;">\' +
+            \'<h6 style="margin: 0 0 6px 0; color: #2ecc71; display: flex; align-items: center;">\' +
+                \'🎯 <span style="margin-left: 6px;">\' + sector.name + \'</span>\' +
+            \'</h6>\' +
+            \'<div style="background: #f0fff0; padding: 6px; border-radius: 4px; margin-bottom: 6px;">\' +
+                \'<div style="font-size: 11px; color: #666; margin-bottom: 2px;"><strong>SECTEUR</strong> \' + locationText + \'</div>\' +
+                \'<div style="font-size: 12px;">\' + sector.description + \'</div>\' +
+            \'</div>\' +
+            \'<div style="text-align: center; background: #fff3e0; padding: 6px; border-radius: 4px; margin-bottom: 6px;">\' +
+                \'<div style="font-size: 16px; font-weight: bold; color: #f57c00;">\' + (sector.route_count || 0) + \'</div>\' +
+                \'<div style="font-size: 11px; color: #666;">Voies d\\\'escalade</div>\' +
+            \'</div>\' +
+            \'<div style="font-size: 10px; color: #999; text-align: center;">\' +
+                sector.latitude.toFixed(4) + \', \' + sector.longitude.toFixed(4) +
+            \'</div>\' +
+        \'</div>\';
+    }
+    
     function updateStatus() {
-        document.getElementById("site-count").textContent = sitesData.length;
-        document.getElementById("status").textContent = `${sitesData.length} sites chargés`;
+        const totalItems = climbingData.regions.length + climbingData.sites.length + climbingData.sectors.length;
+        document.getElementById("site-count").textContent = totalItems;
+        document.getElementById("status").textContent = climbingData.regions.length + \'R + \' + climbingData.sites.length + \'S + \' + climbingData.sectors.length + \'C\';
     }
     
     function setupControls() {
@@ -426,11 +695,53 @@ class MapController extends BaseController
             }
         });
         
-        // Toggle sites
-        let sitesVisible = true;
+        // Toggle hierarchical layers
+        document.getElementById("toggle-regions").addEventListener("change", (e) => {
+            if (e.target.checked) {
+                map.addLayer(clusterGroups.regions);
+            } else {
+                map.removeLayer(clusterGroups.regions);
+            }
+        });
+        
+        document.getElementById("toggle-sites").addEventListener("change", (e) => {
+            if (e.target.checked) {
+                map.addLayer(clusterGroups.sites);
+            } else {
+                map.removeLayer(clusterGroups.sites);
+            }
+        });
+        
+        document.getElementById("toggle-sectors").addEventListener("change", (e) => {
+            if (e.target.checked) {
+                map.addLayer(clusterGroups.sectors);
+            } else {
+                map.removeLayer(clusterGroups.sectors);
+            }
+        });
+        
+        // Toggle all sites (bouton principal)
         document.getElementById("sites-btn").addEventListener("click", () => {
-            // Cette fonctionnalité sera implémentée quand on aura plus de données
-            console.log("Toggle sites - à implémenter");
+            const regionsVisible = map.hasLayer(clusterGroups.regions);
+            const sitesVisible = map.hasLayer(clusterGroups.sites);
+            const sectorsVisible = map.hasLayer(clusterGroups.sectors);
+            
+            // Si tous sont visibles, tout masquer, sinon tout afficher
+            if (regionsVisible && sitesVisible && sectorsVisible) {
+                map.removeLayer(clusterGroups.regions);
+                map.removeLayer(clusterGroups.sites);
+                map.removeLayer(clusterGroups.sectors);
+                document.getElementById("toggle-regions").checked = false;
+                document.getElementById("toggle-sites").checked = false;
+                document.getElementById("toggle-sectors").checked = false;
+            } else {
+                map.addLayer(clusterGroups.regions);
+                map.addLayer(clusterGroups.sites);
+                map.addLayer(clusterGroups.sectors);
+                document.getElementById("toggle-regions").checked = true;
+                document.getElementById("toggle-sites").checked = true;
+                document.getElementById("toggle-sectors").checked = true;
+            }
         });
     }
     </script>
