@@ -401,7 +401,10 @@ class MapController extends BaseController
             // Si pas de coordonnées valides, utiliser les données de test
             if (!hasValidCoordinates) {
                 console.log("APIs ne retournent pas de coordonnées valides, utilisation des données de test");
-                loadTestHierarchicalData();
+                console.log("⚠️ FORCE: Chargement des données réelles pour test");
+                // loadTestHierarchicalData(); // TEMPORAIREMENT DÉSACTIVÉ
+            } else {
+                console.log("🎉 Coordonnées valides détectées, utilisation des données APIs");
             }
             
             initializeClusterGroups();
