@@ -2354,13 +2354,9 @@ return array (
   ),
   213 => 
   array (
-    'name' => 'map_new',
+    'method' => 'GET',
     'path' => '/map-new',
     'controller' => 'TopoclimbCH\\Controllers\\MapNewController',
     'action' => 'index',
-    'methods' => 
-    array (
-      0 => 'GET',
-    ),
   ),
 );
