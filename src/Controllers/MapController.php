@@ -362,6 +362,7 @@ class MapController extends BaseController
                 const regionsData = await regionsRes.json();
                 climbingData.regions = regionsData.data || [];
                 console.log("🏔️ Régions chargées:", climbingData.regions.length, climbingData.regions);
+                console.log("🔍 Première région:", climbingData.regions[0]);
             }
             
             // Charger les sites  
