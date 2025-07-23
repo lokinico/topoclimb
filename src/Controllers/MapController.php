@@ -265,9 +265,14 @@ class MapController extends BaseController
                     'approach_time' => $site->approach_time
                 ];
                 
-                // Vérifier que le site a des coordonnées
-                if (empty($siteData['latitude']) || empty($siteData['longitude'])) {
-                    continue;
+                // Vérifier que le site a des coordonnées valides (pas null, pas 0)
+                if (is_null($siteData['latitude']) || is_null($siteData['longitude']) || 
+                    $siteData['latitude'] == 0 || $siteData['longitude'] == 0) {
+                    // Si pas de coordonnées, utiliser des coordonnées par défaut pour la région
+                    $defaultCoords = $this->getDefaultRegionCoordinates($site->region_id);
+                    $siteData['latitude'] = $defaultCoords['lat'];
+                    $siteData['longitude'] = $defaultCoords['lng'];
+                    $siteData['coordinates_estimated'] = true; // Marquer comme estimé
                 }
 
                 // Appliquer les filtres
@@ -637,5 +642,28 @@ class MapController extends BaseController
         }
 
         return $filteredSites;
+    }
+
+    /**
+     * Retourne des coordonnées par défaut pour une région donnée
+     */
+    private function getDefaultRegionCoordinates(int $regionId): array
+    {
+        // Coordonnées par défaut pour les principales régions suisses
+        $defaultCoordinates = [
+            1 => ['lat' => 46.8182, 'lng' => 8.2275], // Centre Suisse (défaut)
+            2 => ['lat' => 46.1947, 'lng' => 7.1440], // Valais (Sion)
+            3 => ['lat' => 46.6037, 'lng' => 7.2625], // Oberland bernois (Kandersteg)
+            4 => ['lat' => 46.5197, 'lng' => 9.7970], // Grisons (Davos)
+            5 => ['lat' => 46.0037, 'lng' => 8.9511], // Tessin (Bellinzona)
+            6 => ['lat' => 46.7985, 'lng' => 6.6327], // Vaud (Lausanne)
+            7 => ['lat' => 46.2044, 'lng' => 6.1432], // Genève
+            8 => ['lat' => 47.0502, 'lng' => 6.9288], // Fribourg
+            9 => ['lat' => 47.3769, 'lng' => 8.5417], // Zurich
+            10 => ['lat' => 47.2692, 'lng' => 7.3398], // Jura (Soleure)
+        ];
+
+        // Retourner les coordonnées pour la région ou le centre de la Suisse par défaut
+        return $defaultCoordinates[$regionId] ?? $defaultCoordinates[1];
     }
 }
