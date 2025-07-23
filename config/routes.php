@@ -2359,4 +2359,11 @@ return array (
     'controller' => 'TopoclimbCH\\Controllers\\MapNewController',
     'action' => 'index',
   ),
+  214 => 
+  array (
+    'method' => 'GET',
+    'path' => '/map-clean',
+    'controller' => 'TopoclimbCH\\Controllers\\MapCleanController',
+    'action' => 'index',
+  ),
 );
