@@ -38,76 +38,406 @@ class MapController extends BaseController
     }
 
     /**
-     * Affiche la carte principale avec tous les sites d'escalade
+     * Affiche la carte principale avec cartes suisses officielles
      */
     public function index(?Request $request = null): Response
     {
-        // Headers anti-cache pour éviter les problèmes CSS/JS
-        header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0, private");
-        header("Pragma: no-cache");
-        header("Expires: Thu, 01 Jan 1970 00:00:00 GMT");
-        header("X-Timestamp: " . time());
+        // Headers anti-cache robustes
+        $headers = [
+            "Cache-Control: no-cache, no-store, must-revalidate, max-age=0, private",
+            "Pragma: no-cache",
+            "Expires: Thu, 01 Jan 1970 00:00:00 GMT",
+            "Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT",
+            "ETag: " . uniqid(),
+            "X-Timestamp: " . time(),
+        ];
         
-        try {
-            // Récupérer les paramètres de filtrage depuis $_GET
-            $filters = [
-                'region_id' => $_GET['region'] ?? null,
-                'difficulty_min' => $_GET['difficulty_min'] ?? null,
-                'difficulty_max' => $_GET['difficulty_max'] ?? null,
-                'type' => $_GET['type'] ?? null,
-                'season' => $_GET['season'] ?? null
-            ];
-
-            // Initialiser les variables par défaut
-            $regions = [];
-            $sites = [];
-            $stats = ['total_sites' => 0, 'total_routes' => 0, 'total_regions' => 0];
-
-            try {
-                // Récupérer toutes les régions pour les filtres
-                $regions = Region::all();
-
-                // Récupérer les sites avec coordonnées pour la carte
-                $sites = $this->getSitesForMap($filters);
-
-                // Statistiques pour l'interface
-                $stats = $this->getMapStatistics();
-                
-            } catch (\Exception $dbException) {
-                error_log("MapController::index - Erreur DB: " . $dbException->getMessage());
-                
-                // Données de test suisses pour la démo
-                $regions = $this->getTestRegions();
-                $sites = $this->getTestSites();
-                $stats = ['total_sites' => count($sites), 'total_routes' => 150, 'total_regions' => count($regions)];
-            }
-
-            $data = [
-                'title' => 'Carte Interactive - Sites d\'escalade en Suisse',
-                'sites' => $sites,
-                'regions' => $regions,
-                'filters' => $filters,
-                'stats' => $stats,
-                'showHeader' => true, // Pour le layout fullscreen
-                'meta_description' => 'Découvrez tous les sites d\'escalade de Suisse sur notre carte interactive. Trouvez votre prochaine voie d\'escalade avec localisation précise.',
-                'meta_keywords' => 'carte escalade suisse, sites escalade, voies escalade, carte interactive, climbing switzerland'
-            ];
-            
-            return $this->render('map/index', $data);
-
-        } catch (\Exception $e) {
-            error_log("Erreur MapController::index: " . $e->getMessage());
-            
-            return $this->render('map/index', [
-                'title' => 'Carte Interactive - Sites d\'escalade en Suisse',
-                'sites' => [],
-                'regions' => [],
-                'filters' => [],
-                'stats' => ['total_sites' => 0, 'total_routes' => 0, 'total_regions' => 0],
-                'showHeader' => true,
-                'error' => 'Erreur lors du chargement de la carte'
-            ]);
+        foreach ($headers as $header) {
+            header($header);
         }
+        
+        // HTML avec cartes suisses officielles intégrées
+        $html = '<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TopoclimbCH - Carte Interactive Sites d\'Escalade</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    
+    <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    
+    .header {
+        position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+        padding: 10px 20px; border-bottom: 1px solid rgba(0,0,0,0.1);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #333; font-weight: 600; }
+    .nav-controls { display: flex; gap: 10px; }
+    .nav-btn { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; 
+               cursor: pointer; color: #666; text-decoration: none; transition: all 0.2s; font-size: 14px; }
+    .nav-btn:hover { background: #f5f5f5; color: #333; text-decoration: none; }
+    
+    #map { 
+        height: 100vh; width: 100%; 
+        padding-top: 60px; box-sizing: border-box;
+    }
+    
+    .controls {
+        position: fixed; top: 70px; right: 20px; z-index: 1000;
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+        padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex; flex-direction: column; gap: 5px;
+    }
+    
+    .control-btn {
+        width: 40px; height: 40px; border: none; border-radius: 6px;
+        background: transparent; cursor: pointer; display: flex;
+        align-items: center; justify-content: center; color: #666;
+        transition: all 0.2s; font-size: 16px;
+    }
+    
+    .control-btn:hover { background: rgba(0, 0, 0, 0.05); color: #333; }
+    
+    .status {
+        position: fixed; bottom: 20px; left: 20px; z-index: 1000;
+        background: rgba(44, 90, 160, 0.9); color: white;
+        padding: 10px 15px; border-radius: 8px; font-size: 14px;
+    }
+    
+    .legend {
+        position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+        padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        font-size: 13px; min-width: 140px;
+    }
+    
+    .legend-title { font-weight: bold; margin-bottom: 8px; text-align: center; }
+    
+    .legend-items { margin-bottom: 8px; }
+    
+    .legend-item {
+        display: flex; align-items: center; margin: 3px 0;
+        font-size: 12px;
+    }
+    
+    .legend-color {
+        width: 12px; height: 12px; border-radius: 50%;
+        margin-right: 6px; border: 1px solid #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    .legend-note {
+        font-size: 11px; color: #666; text-align: center;
+        font-style: italic; border-top: 1px solid #eee; padding-top: 6px;
+    }
+    
+    @media (max-width: 768px) {
+        .header { padding: 8px 15px; }
+        .nav-controls { gap: 5px; }
+        .nav-btn { padding: 6px 10px; font-size: 13px; }
+        .controls { top: 60px; right: 15px; }
+        .control-btn { width: 36px; height: 36px; font-size: 14px; }
+        .status { bottom: 15px; left: 15px; font-size: 13px; }
+        .legend { 
+            bottom: 100px; right: 15px; font-size: 12px; 
+            min-width: 120px; padding: 8px 12px;
+        }
+        .legend-item { font-size: 11px; }
+        .legend-note { font-size: 10px; }
+    }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="brand">
+            <i class="fas fa-mountain"></i>
+            TopoclimbCH
+        </a>
+        <div class="nav-controls">
+            <a href="/regions" class="nav-btn">
+                <i class="fas fa-list"></i> Liste
+            </a>
+            <a href="/sites" class="nav-btn">
+                <i class="fas fa-mountain"></i> Sites
+            </a>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button id="layers-btn" class="control-btn" title="Changer fond">
+            <i class="fas fa-layer-group"></i>
+        </button>
+        <button id="locate-btn" class="control-btn" title="Ma position">
+            <i class="fas fa-crosshairs"></i>
+        </button>
+        <button id="sites-btn" class="control-btn" title="Sites escalade">
+            <i class="fas fa-map-marker-alt"></i>
+        </button>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="status">
+        <div><strong>🗺️ Carte Escalade CH</strong></div>
+        <div>Service: <span id="layer-name">Swisstopo</span></div>
+        <div>Sites: <span id="site-count">0</span></div>
+        <div>Status: <span id="status">Chargement...</span></div>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-title">🎨 Régions</div>
+        <div class="legend-items">
+            <div class="legend-item"><span class="legend-color" style="background: #c0392b;"></span> Valais</div>
+            <div class="legend-item"><span class="legend-color" style="background: #2980b9;"></span> Vaud</div>
+            <div class="legend-item"><span class="legend-color" style="background: #e67e22;"></span> Tessin</div>
+            <div class="legend-item"><span class="legend-color" style="background: #27ae60;"></span> Berne</div>
+            <div class="legend-item"><span class="legend-color" style="background: #8e44ad;"></span> Jura</div>
+            <div class="legend-item"><span class="legend-color" style="background: #34495e;"></span> Grisons</div>
+        </div>
+        <div class="legend-note">💡 Taille = nombre de voies</div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    console.log("🇨🇭 TopoclimbCH - Carte suisse interactive");
+    
+    // Configuration pour la Suisse
+    const SWISS_CENTER = [46.8182, 8.2275];
+    let map, currentLayer, sitesData = [];
+    
+    // Couches de cartes suisses officielles
+    const swissLayers = {
+        pixelkarte: {
+            layer: null,
+            name: "Carte couleur",
+            url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg"
+        },
+        orthophoto: {
+            layer: null,
+            name: "Photos aériennes", 
+            url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg"
+        },
+        topo: {
+            layer: null,
+            name: "Topographique",
+            url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.landeskarte-farbe-10/default/current/3857/{z}/{x}/{y}.jpeg"
+        },
+        hiking: {
+            layer: null,
+            name: "Randonnée",
+            url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.wanderkarten500/default/current/3857/{z}/{x}/{y}.jpeg"
+        }
+    };
+    
+    // Initialisation
+    document.addEventListener("DOMContentLoaded", function() {
+        initializeMap();
+        loadSitesData();
+        setupControls();
+    });
+    
+    function initializeMap() {
+        document.getElementById("status").textContent = "Initialisation...";
+        
+        map = L.map("map", {
+            center: SWISS_CENTER,
+            zoom: 8,
+            zoomControl: false,
+            attributionControl: false
+        });
+        
+        // Créer les couches
+        Object.keys(swissLayers).forEach(key => {
+            swissLayers[key].layer = L.tileLayer(swissLayers[key].url, {
+                attribution: "© swisstopo",
+                maxZoom: 18
+            });
+        });
+        
+        // Couche par défaut
+        currentLayer = "pixelkarte";
+        swissLayers[currentLayer].layer.addTo(map);
+        document.getElementById("layer-name").textContent = swissLayers[currentLayer].name;
+        
+        document.getElementById("status").textContent = "Carte chargée";
+        console.log("✅ Carte suisse initialisée");
+    }
+    
+    function loadSitesData() {
+        // Essayer de charger les données réelles
+        fetch("/api/map/sites")
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.sites) {
+                    sitesData = data.sites;
+                    addSiteMarkers();
+                } else {
+                    loadTestSites();
+                }
+                updateStatus();
+            })
+            .catch(error => {
+                console.log("Chargement données de test (erreur API)");
+                loadTestSites();
+                updateStatus();
+            });
+    }
+    
+    function loadTestSites() {
+        // Sites d\'escalade célèbres en Suisse - Version étendue
+        sitesData = [
+            // Valais - Sites majeurs
+            {name: "Saillon", latitude: 46.1817, longitude: 7.1947, region_name: "Valais", description: "Site sportif réputé", route_count: 120},
+            {name: "Vouvry", latitude: 46.3306, longitude: 6.8542, region_name: "Valais", description: "Escalade sur calcaire", route_count: 85},
+            {name: "Branson", latitude: 46.1917, longitude: 7.1833, region_name: "Valais", description: "Escalade sur schiste", route_count: 95},
+            {name: "Saint-Maurice", latitude: 46.2167, longitude: 7.0167, region_name: "Valais", description: "Falaises calcaires", route_count: 60},
+            
+            // Vaud 
+            {name: "Freyr", latitude: 46.7089, longitude: 6.2333, region_name: "Vaud", description: "Falaise au bord du lac", route_count: 200},
+            {name: "Dent de Vaulion", latitude: 46.6833, longitude: 6.3667, region_name: "Vaud", description: "Calcaire jurassien", route_count: 45},
+            
+            // Tessin - Granit et gneiss
+            {name: "Cresciano", latitude: 46.3833, longitude: 8.8667, region_name: "Tessin", description: "Bloc mondial", route_count: 300},
+            {name: "Verzasca", latitude: 46.4775, longitude: 9.5726, region_name: "Tessin", description: "Valle Verzasca", route_count: 150},
+            {name: "Ponte Brolla", latitude: 46.3972, longitude: 8.8583, region_name: "Tessin", description: "Gneiss de qualité", route_count: 80},
+            
+            // Berne - Alpes
+            {name: "Kandersteg", latitude: 46.6037, longitude: 7.2625, region_name: "Berne", description: "Oberland bernois", route_count: 90},
+            {name: "Gimmelwald", latitude: 46.5506, longitude: 7.8958, region_name: "Berne", description: "Vue alpine", route_count: 25},
+            {name: "Gastlosen", latitude: 46.6165, longitude: 7.2833, region_name: "Berne", description: "Calcaire alpin", route_count: 110},
+            
+            // Jura
+            {name: "Roc de la Vache", latitude: 47.2167, longitude: 7.0833, region_name: "Jura", description: "Calcaire jurassien", route_count: 60},
+            {name: "Creux du Van", latitude: 46.9333, longitude: 6.7, region_name: "Jura", description: "Cirque naturel", route_count: 40},
+            
+            // Grisons - Haute montagne
+            {name: "Bürs", latitude: 47.1492, longitude: 9.8287, region_name: "Grisons", description: "Calcaire alpin", route_count: 70},
+            {name: "Rätikon", latitude: 46.9833, longitude: 9.8333, region_name: "Grisons", description: "Massif frontalier", route_count: 55},
+            
+            // Sites urbains
+            {name: "Fluhberg", latitude: 47.3697, longitude: 8.5492, region_name: "Zurich", description: "Proche de Zurich", route_count: 35},
+            {name: "Solothurn", latitude: 47.2083, longitude: 7.5333, region_name: "Soleure", description: "Jura soleurois", route_count: 28}
+        ];
+        
+        console.log(`✅ ${sitesData.length} sites d\'escalade suisses chargés`);
+        addSiteMarkers();
+    }
+    
+    function addSiteMarkers() {
+        sitesData.forEach(site => {
+            if (site.latitude && site.longitude) {
+                // Couleur selon la région
+                const regionColors = {
+                    "Valais": "#c0392b",
+                    "Vaud": "#2980b9", 
+                    "Tessin": "#e67e22",
+                    "Berne": "#27ae60",
+                    "Jura": "#8e44ad",
+                    "Grisons": "#34495e",
+                    "Zurich": "#16a085",
+                    "Soleure": "#f39c12"
+                };
+                
+                const markerColor = regionColors[site.region_name] || "#e74c3c";
+                
+                // Taille selon le nombre de voies
+                const routeCount = site.route_count || 0;
+                const markerSize = Math.max(6, Math.min(12, 6 + (routeCount / 50)));
+                
+                L.circleMarker([site.latitude, site.longitude], {
+                    radius: markerSize,
+                    fillColor: markerColor,
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map).bindPopup(`
+                    <div style="min-width: 200px;">
+                        <h6 style="margin: 0 0 8px 0; color: ${markerColor};">
+                            🏔️ ${site.name}
+                        </h6>
+                        <div style="margin-bottom: 8px;">
+                            <strong>📍 ${site.region_name || "Suisse"}</strong>
+                        </div>
+                        ${site.description ? `<p style="margin: 4px 0; font-size: 13px; color: #666;">${site.description}</p>` : ""}
+                        ${routeCount > 0 ? `<div style="margin: 8px 0; padding: 4px 8px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                            🧗 <strong>${routeCount} voies</strong>
+                        </div>` : ""}
+                        <div style="margin-top: 8px; font-size: 11px; color: #999;">
+                            Coordonnées: ${site.latitude.toFixed(4)}, ${site.longitude.toFixed(4)}
+                        </div>
+                    </div>
+                `);
+            }
+        });
+    }
+    
+    function updateStatus() {
+        document.getElementById("site-count").textContent = sitesData.length;
+        document.getElementById("status").textContent = `${sitesData.length} sites chargés`;
+    }
+    
+    function setupControls() {
+        // Changement de couches
+        document.getElementById("layers-btn").addEventListener("click", () => {
+            const layerKeys = Object.keys(swissLayers);
+            const currentIndex = layerKeys.indexOf(currentLayer);
+            const nextIndex = (currentIndex + 1) % layerKeys.length;
+            const nextLayer = layerKeys[nextIndex];
+            
+            map.removeLayer(swissLayers[currentLayer].layer);
+            swissLayers[nextLayer].layer.addTo(map);
+            
+            currentLayer = nextLayer;
+            document.getElementById("layer-name").textContent = swissLayers[currentLayer].name;
+            
+            console.log(`Couche changée: ${swissLayers[currentLayer].name}`);
+        });
+        
+        // Géolocalisation
+        document.getElementById("locate-btn").addEventListener("click", () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        map.setView([lat, lng], 12);
+                        
+                        L.circleMarker([lat, lng], {
+                            radius: 10,
+                            fillColor: "#3b82f6",
+                            color: "#ffffff",
+                            weight: 3,
+                            fillOpacity: 1
+                        }).addTo(map).bindPopup("📍 Votre position");
+                    },
+                    () => alert("Géolocalisation non disponible")
+                );
+            }
+        });
+        
+        // Toggle sites
+        let sitesVisible = true;
+        document.getElementById("sites-btn").addEventListener("click", () => {
+            // Cette fonctionnalité sera implémentée quand on aura plus de données
+            console.log("Toggle sites - à implémenter");
+        });
+    }
+    </script>
+</body>
+</html>';
+        
+        return new CoreResponse($html);
     }
 
     /**
