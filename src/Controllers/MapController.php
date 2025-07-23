@@ -349,16 +349,19 @@ class MapController extends BaseController
         document.getElementById("status").textContent = "Chargement données...";
         
         // Essayer de charger les données réelles depuis les APIs
+        console.log("🔄 Tentative de chargement des données depuis les APIs...");
         Promise.all([
             fetch("/api/regions").catch(() => ({ success: false })),
             fetch("/api/sites").catch(() => ({ success: false })),
             fetch("/api/sectors").catch(() => ({ success: false }))
         ]).then(async ([regionsRes, sitesRes, sectorsRes]) => {
+            console.log("📊 Réponses APIs:", regionsRes.ok, sitesRes.ok, sectorsRes.ok);
             
             // Charger les régions
             if (regionsRes.ok) {
                 const regionsData = await regionsRes.json();
                 climbingData.regions = regionsData.data || [];
+                console.log("🏔️ Régions chargées:", climbingData.regions.length, climbingData.regions);
             }
             
             // Charger les sites  
@@ -375,14 +378,17 @@ class MapController extends BaseController
             
             // Vérifier si les données ont des coordonnées valides
             let hasValidCoordinates = false;
+            console.log("🔍 Validation des coordonnées...");
             
             // Vérifier les régions (API régions utilise latitude/longitude)
             if (climbingData.regions.length > 0) {
                 hasValidCoordinates = climbingData.regions.some(r => {
                     const lat = r.latitude || r.coordinates_lat;
                     const lng = r.longitude || r.coordinates_lng;
+                    console.log("📍 Région:", r.name, "lat:", lat, "lng:", lng);
                     return lat && lng && parseFloat(lat) !== 0 && parseFloat(lng) !== 0 && lat !== null && lng !== null;
                 });
+                console.log("✅ Régions valides:", hasValidCoordinates);
             }
             
             // Vérifier les sites si pas de régions valides
