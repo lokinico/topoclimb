@@ -173,11 +173,11 @@ class MapController extends BaseController
             }
 
             // Récupérer les secteurs et voies du site
-            $sectors = Sector::where('site_id', $siteId)->get();
+            $sectors = Sector::where('site_id', $siteId);
             $routes = [];
             
             foreach ($sectors as $sector) {
-                $sectorRoutes = Route::where('sector_id', $sector['id'])->get();
+                $sectorRoutes = Route::where('sector_id', $sector->id);
                 $routes = array_merge($routes, $sectorRoutes);
             }
 
@@ -284,11 +284,11 @@ class MapController extends BaseController
                 try {
                     // Récupérer les informations supplémentaires
                     $region = Region::find($siteData['region_id']);
-                    $sectors = Sector::where('site_id', $siteData['id'])->get();
+                    $sectors = Sector::where('site_id', $siteData['id']);
                     $routeCount = 0;
                     
                     foreach ($sectors as $sector) {
-                        $routes = Route::where('sector_id', $sector->id)->get();
+                        $routes = Route::where('sector_id', $sector->id);
                         $routeCount += count($routes);
                     }
 
