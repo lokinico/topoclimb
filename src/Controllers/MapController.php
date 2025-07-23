@@ -348,77 +348,12 @@ class MapController extends BaseController
     function loadClimbingData() {
         document.getElementById("status").textContent = "Chargement données...";
         
-        // Essayer de charger les données réelles depuis les APIs
-        console.log("🔄 Tentative de chargement des données depuis les APIs...");
-        Promise.all([
-            fetch("/api/regions").catch(() => ({ success: false })),
-            fetch("/api/sites").catch(() => ({ success: false })),
-            fetch("/api/sectors").catch(() => ({ success: false }))
-        ]).then(async ([regionsRes, sitesRes, sectorsRes]) => {
-            console.log("📊 Réponses APIs:", regionsRes.ok, sitesRes.ok, sectorsRes.ok);
-            
-            // Charger les régions
-            if (regionsRes.ok) {
-                const regionsData = await regionsRes.json();
-                climbingData.regions = regionsData.data || [];
-                console.log("🏔️ Régions chargées:", climbingData.regions.length, climbingData.regions);
-                console.log("🔍 Première région:", climbingData.regions[0]);
-            }
-            
-            // Charger les sites  
-            if (sitesRes.ok) {
-                const sitesData = await sitesRes.json();
-                climbingData.sites = sitesData.data || [];
-            }
-            
-            // Charger les secteurs
-            if (sectorsRes.ok) {
-                const sectorsData = await sectorsRes.json();
-                climbingData.sectors = sectorsData.data || [];
-            }
-            
-            // Vérifier si les données ont des coordonnées valides
-            let hasValidCoordinates = false;
-            console.log("🔍 Validation des coordonnées...");
-            
-            // Vérifier les régions (API régions utilise latitude/longitude)
-            if (climbingData.regions.length > 0) {
-                hasValidCoordinates = climbingData.regions.some(r => {
-                    const lat = r.latitude || r.coordinates_lat;
-                    const lng = r.longitude || r.coordinates_lng;
-                    console.log("📍 Région:", r.name, "lat:", lat, "lng:", lng);
-                    return lat && lng && parseFloat(lat) !== 0 && parseFloat(lng) !== 0 && lat !== null && lng !== null;
-                });
-                console.log("✅ Régions valides:", hasValidCoordinates);
-            }
-            
-            // Vérifier les sites si pas de régions valides
-            if (!hasValidCoordinates && climbingData.sites.length > 0) {
-                hasValidCoordinates = climbingData.sites.some(s => s.coordinates_lat && s.coordinates_lng && 
-                    parseFloat(s.coordinates_lat) !== 0 && parseFloat(s.coordinates_lng) !== 0 && 
-                    s.coordinates_lat !== null && s.coordinates_lng !== null);
-            }
-            
-            // Si pas de coordonnées valides, utiliser les données de test
-            if (!hasValidCoordinates) {
-                console.log("⚠️ APIs ne retournent pas de coordonnées valides, utilisation des données de test");
-                loadTestHierarchicalData();
-            } else {
-                console.log("🎉 Coordonnées valides détectées, utilisation des données APIs");
-            }
-            
-            initializeClusterGroups();
-            addHierarchicalMarkers();
-            updateStatus();
-            
-        }).catch(error => {
-            console.log("Erreur chargement APIs:", error);
-            console.log("Utilisation des données de test");
-            loadTestHierarchicalData();
-            initializeClusterGroups();
-            addHierarchicalMarkers();
-            updateStatus();
-        });
+        // Version simplifiée - charger directement les données de test
+        console.log("🔄 Chargement des données de test pour diagnostic");
+        loadTestHierarchicalData();
+        initializeClusterGroups();
+        addHierarchicalMarkers();
+        updateStatus();
     }
     
     function loadTestHierarchicalData() {
@@ -684,22 +619,8 @@ class MapController extends BaseController
     function updateStatus() {
         const totalItems = climbingData.regions.length + climbingData.sites.length + climbingData.sectors.length;
         document.getElementById("site-count").textContent = totalItems;
-        
-        // Compter les items avec coordonnées valides  
-        const validRegions = climbingData.regions.filter(r => {
-            const lat = r.latitude || r.coordinates_lat;
-            const lng = r.longitude || r.coordinates_lng;
-            return lat && lng && parseFloat(lat) !== 0 && parseFloat(lng) !== 0;
-        }).length;
-        
-        const validSites = climbingData.sites.filter(s => s.coordinates_lat && s.coordinates_lng && 
-            parseFloat(s.coordinates_lat) !== 0 && parseFloat(s.coordinates_lng) !== 0).length;
-            
-        const validSectors = climbingData.sectors.filter(s => s.coordinates_lat && s.coordinates_lng && 
-            parseFloat(s.coordinates_lat) !== 0 && parseFloat(s.coordinates_lng) !== 0).length;
-        
-        document.getElementById("status").textContent = validRegions + "R + " + validSites + "S + " + validSectors + "C (valides)";
-        console.log("📊 Status:", validRegions, "régions,", validSites, "sites,", validSectors, "secteurs avec coordonnées valides");
+        document.getElementById("status").textContent = climbingData.regions.length + "R + " + climbingData.sites.length + "S + " + climbingData.sectors.length + "C";
+        console.log("📊 Status:", climbingData.regions.length, "régions,", climbingData.sites.length, "sites,", climbingData.sectors.length, "secteurs");
     }
     
     function setupControls() {
