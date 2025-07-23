@@ -2,20 +2,53 @@
 
 Ce guide explique comment utiliser Claude Code AI et Gemini CLI efficacement avec le projet TopoclimbCH, une application web moderne de gestion de sites d'escalade en Suisse.
 
+## ⚠️ RÈGLES CRITIQUES POUR CLAUDE CODE AI
+
+### 🔴 TOUJOURS COMMITER APRÈS MODIFICATIONS
+**RÈGLE ABSOLUE : Après chaque modification de code, TOUJOURS faire un commit Git**
+
+```bash
+# Séquence obligatoire après chaque modification :
+git status        # Vérifier les changements
+git add [fichiers] # Stager les modifications
+git commit -m "description claire du changement avec emoji"
+```
+
+**Ne JAMAIS oublier cette étape - c'est critique pour le versioning !**
+
+### 🔵 PRIVILÉGIER GEMINI CLI POUR L'ANALYSE
+
+**Utilisez PRIORITAIREMENT Gemini CLI pour :**
+- ✅ **Toute analyse de code** (même petite)
+- ✅ **Compréhension de l'architecture**  
+- ✅ **Recherche de fonctionnalités existantes**
+- ✅ **Vue d'ensemble avant modification**
+- ✅ **Vérification d'implémentation**
+- ✅ **Audit de sécurité**
+- ✅ **Analyse des dépendances**
+
+**Exemple obligatoire avant toute modification :**
+```bash
+gemini -p "@src/ @config/ Analyze current implementation before I modify XYZ"
+```
+
 ## Choix entre Claude Code AI et Gemini CLI
 
 ### Utilisez **Gemini CLI** quand :
+- **PRIORITÉ 1** : Toute tâche d'analyse, même mineure
 - Vous analysez l'ensemble du projet (> 100KB de code)
 - Vous avez besoin d'une vue d'ensemble architecturale
 - Vous voulez comparer plusieurs gros fichiers
 - Vous vérifiez si une fonctionnalité est implémentée dans tout le projet
 - Le contexte Claude est insuffisant pour la tâche
+- **NOUVEAU** : Avant toute modification importante
 
 ### Utilisez **Claude Code AI** quand :
-- Vous modifiez des fichiers spécifiques
-- Vous créez de nouvelles fonctionnalités
-- Vous déboguez des problèmes précis
+- Vous modifiez des fichiers spécifiques (APRÈS analyse Gemini)
+- Vous créez de nouvelles fonctionnalités (APRÈS analyse Gemini)
+- Vous déboguez des problèmes précis (APRÈS analyse Gemini)
 - Vous voulez des modifications directes dans le code
+- **IMPORTANT** : TOUJOURS commiter après chaque modification
 
 ## Structure du projet TopoclimbCH
 
@@ -636,9 +669,69 @@ claude test "Create additional tests for the new weather integration methods"
 - **Frontend** - Twig + CSS/JS moderne
 - **Mobile-ready** - APIs REST en développement
 
+## 🚀 WORKFLOW OBLIGATOIRE CLAUDE CODE AI
+
+### 📋 Séquence de travail OBLIGATOIRE :
+
+1. **ANALYSE PRÉALABLE avec Gemini CLI**
+```bash
+gemini -p "@src/ @config/ Analyze current [FEATURE] implementation before modification"
+```
+
+2. **MODIFICATION avec Claude Code AI**
+```bash
+# Faire les modifications nécessaires
+```
+
+3. **COMMIT IMMÉDIAT** (⚠️ NE JAMAIS OUBLIER)
+```bash
+git status
+git add [fichiers modifiés]
+git commit -m "feat/fix: description claire avec emoji"
+```
+
+4. **VÉRIFICATION avec Gemini CLI**
+```bash
+gemini -p "@src/ Verify that [FEATURE] changes are properly integrated"
+```
+
+### 🔄 Exemples de workflow complet :
+
+#### Exemple 1 - Ajout de fonctionnalité
+```bash
+# 1. Analyse préalable
+gemini -p "@src/Controllers/ @src/Services/ Is weather service already implemented?"
+
+# 2. Modification avec Claude
+claude create "Add WeatherService.php based on Gemini analysis"
+
+# 3. COMMIT OBLIGATOIRE
+git add src/Services/WeatherService.php
+git commit -m "feat: add WeatherService with MeteoSwiss integration"
+
+# 4. Vérification
+gemini -p "@src/Services/ Verify WeatherService integration with existing controllers"
+```
+
+#### Exemple 2 - Correction de bug
+```bash
+# 1. Analyse du problème
+gemini -p "@src/Controllers/AuthController.php @src/Services/ Analyze authentication bug in login process"
+
+# 2. Correction avec Claude
+claude fix "Fix authentication session bug identified by Gemini"
+
+# 3. COMMIT OBLIGATOIRE
+git add src/Controllers/AuthController.php
+git commit -m "fix: resolve session persistence issue in AuthController"
+
+# 4. Vérification
+gemini -p "@src/ Verify that authentication fix doesn't break other components"
+```
+
 ## Commandes utiles rapides
 
-### Avec Gemini CLI (analyse)
+### Avec Gemini CLI (analyse - PRIORITÉ)
 ```bash
 # Statut général du projet
 gemini -p "@./ What is the current implementation status of TopoclimbCH?"
@@ -656,12 +749,12 @@ gemini -p "@src/ @resources/ Is the subscription and payment system implemented 
 gemini -p "@src/ @config/ Are all security measures properly implemented (CSRF, SQL injection, XSS protection)?"
 ```
 
-### Avec Claude Code AI (action)
+### Avec Claude Code AI (action - APRÈS Gemini)
 ```bash
-# Création rapide
+# Création rapide (APRÈS analyse Gemini)
 claude create "Create the missing WeatherService.php with OpenWeatherMap integration"
 
-# Correction rapide
+# Correction rapide (APRÈS analyse Gemini)
 claude fix "Fix the authentication bug in AuthController.php"
 
 # Optimisation
