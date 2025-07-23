@@ -656,7 +656,7 @@ class MapController extends BaseController
             "</div>" +
             "<div style=\"text-align: center; background: #fff3e0; padding: 6px; border-radius: 4px; margin-bottom: 6px;\">" +
                 "<div style=\"font-size: 16px; font-weight: bold; color: #f57c00;\">" + (sector.route_count || 0) + "</div>" +
-                "<div style=\"font-size: 11px; color: #666;\">Voies d'escalade</div>" +
+                "<div style=\"font-size: 11px; color: #666;\">Voies d\\'escalade</div>" +
             "</div>" +
             "<div style=\"font-size: 10px; color: #999; text-align: center;\">" +
                 sector.latitude.toFixed(4) + ", " + sector.longitude.toFixed(4) +
