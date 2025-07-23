@@ -373,8 +373,22 @@ class MapController extends BaseController
                 climbingData.sectors = sectorsData.data || [];
             }
             
-            // Si pas de données réelles, utiliser les données de test
-            if (!climbingData.regions.length && !climbingData.sites.length && !climbingData.sectors.length) {
+            // Vérifier si les données ont des coordonnées valides
+            let hasValidCoordinates = false;
+            
+            // Vérifier les régions
+            if (climbingData.regions.length > 0) {
+                hasValidCoordinates = climbingData.regions.some(r => r.latitude && r.longitude && r.latitude !== 0 && r.longitude !== 0);
+            }
+            
+            // Vérifier les sites si pas de régions valides
+            if (!hasValidCoordinates && climbingData.sites.length > 0) {
+                hasValidCoordinates = climbingData.sites.some(s => s.latitude && s.longitude && s.latitude !== 0 && s.longitude !== 0);
+            }
+            
+            // Si pas de coordonnées valides, utiliser les données de test
+            if (!hasValidCoordinates) {
+                console.log("APIs ne retournent pas de coordonnées valides, utilisation des données de test");
                 loadTestHierarchicalData();
             }
             
@@ -383,7 +397,8 @@ class MapController extends BaseController
             updateStatus();
             
         }).catch(error => {
-            console.log("Erreur chargement APIs, utilisation données de test");
+            console.log("Erreur chargement APIs:", error);
+            console.log("Utilisation des données de test");
             loadTestHierarchicalData();
             initializeClusterGroups();
             addHierarchicalMarkers();
@@ -459,17 +474,17 @@ class MapController extends BaseController
         clusterGroups.regions = L.markerClusterGroup({
             iconCreateFunction: function(cluster) {
                 const count = cluster.getChildCount();
-                let c = \' marker-cluster-\';
+                let c = " marker-cluster-";
                 if (count < 3) {
-                    c += \'small\';
+                    c += "small";
                 } else if (count < 6) {
-                    c += \'medium\';
+                    c += "medium";
                 } else {
-                    c += \'large\';
+                    c += "large";
                 }
                 return new L.DivIcon({ 
-                    html: \'<div><span>\' + count + \'</span></div>\', 
-                    className: \'marker-cluster\' + c, 
+                    html: "<div><span>" + count + "</span></div>", 
+                    className: "marker-cluster" + c, 
                     iconSize: new L.Point(40, 40) 
                 });
             },
@@ -483,8 +498,8 @@ class MapController extends BaseController
             iconCreateFunction: function(cluster) {
                 const count = cluster.getChildCount();
                 return new L.DivIcon({ 
-                    html: \'<div><span>\' + count + \'</span></div>\', 
-                    className: \'marker-cluster marker-cluster-medium\', 
+                    html: "<div><span>" + count + "</span></div>", 
+                    className: "marker-cluster marker-cluster-medium", 
                     iconSize: new L.Point(35, 35) 
                 });
             },
@@ -496,8 +511,8 @@ class MapController extends BaseController
             iconCreateFunction: function(cluster) {
                 const count = cluster.getChildCount();
                 return new L.DivIcon({ 
-                    html: \'<div><span>\' + count + \'</span></div>\', 
-                    className: \'marker-cluster marker-cluster-small\', 
+                    html: "<div><span>" + count + "</span></div>", 
+                    className: "marker-cluster marker-cluster-small", 
                     iconSize: new L.Point(30, 30) 
                 });
             },
@@ -570,89 +585,89 @@ class MapController extends BaseController
     }
     
     function createRegionPopup(region) {
-        return \'<div style="min-width: 220px;">\' +
-            \'<h5 style="margin: 0 0 10px 0; color: #e74c3c; display: flex; align-items: center;">\' +
-                \'🏔️ <span style="margin-left: 8px;">\' + region.name + \'</span>\' +
-            \'</h5>\' +
-            \'<div style="background: #f8f9fa; padding: 8px; border-radius: 6px; margin-bottom: 10px;">\' +
-                \'<div style="font-size: 13px; color: #666; margin-bottom: 4px;"><strong>RÉGION</strong></div>\' +
-                \'<div style="font-size: 14px; margin-bottom: 6px;">\' + region.description + \'</div>\' +
-            \'</div>\' +
-            \'<div style="display: flex; gap: 10px; margin-bottom: 8px;">\' +
-                \'<div style="flex: 1; text-align: center; background: #e3f2fd; padding: 6px; border-radius: 4px;">\' +
-                    \'<div style="font-size: 16px; font-weight: bold; color: #1976d2;">\' + (region.site_count || 0) + \'</div>\' +
-                    \'<div style="font-size: 11px; color: #666;">Sites</div>\' +
-                \'</div>\' +
-                \'<div style="flex: 1; text-align: center; background: #e8f5e8; padding: 6px; border-radius: 4px;">\' +
-                    \'<div style="font-size: 16px; font-weight: bold; color: #388e3c;">\' + (region.total_routes || 0) + \'</div>\' +
-                    \'<div style="font-size: 11px; color: #666;">Voies</div>\' +
-                \'</div>\' +
-            \'</div>\' +
-            \'<div style="font-size: 11px; color: #999; text-align: center;">\' +
-                region.latitude.toFixed(4) + \', \' + region.longitude.toFixed(4) +
-            \'</div>\' +
-        \'</div>\';
+        return "<div style=\"min-width: 220px;\">" +
+            "<h5 style=\"margin: 0 0 10px 0; color: #e74c3c; display: flex; align-items: center;\">" +
+                "🏔️ <span style=\"margin-left: 8px;\">" + region.name + "</span>" +
+            "</h5>" +
+            "<div style=\"background: #f8f9fa; padding: 8px; border-radius: 6px; margin-bottom: 10px;\">" +
+                "<div style=\"font-size: 13px; color: #666; margin-bottom: 4px;\"><strong>RÉGION</strong></div>" +
+                "<div style=\"font-size: 14px; margin-bottom: 6px;\">" + region.description + "</div>" +
+            "</div>" +
+            "<div style=\"display: flex; gap: 10px; margin-bottom: 8px;\">" +
+                "<div style=\"flex: 1; text-align: center; background: #e3f2fd; padding: 6px; border-radius: 4px;\">" +
+                    "<div style=\"font-size: 16px; font-weight: bold; color: #1976d2;\">" + (region.site_count || 0) + "</div>" +
+                    "<div style=\"font-size: 11px; color: #666;\">Sites</div>" +
+                "</div>" +
+                "<div style=\"flex: 1; text-align: center; background: #e8f5e8; padding: 6px; border-radius: 4px;\">" +
+                    "<div style=\"font-size: 16px; font-weight: bold; color: #388e3c;\">" + (region.total_routes || 0) + "</div>" +
+                    "<div style=\"font-size: 11px; color: #666;\">Voies</div>" +
+                "</div>" +
+            "</div>" +
+            "<div style=\"font-size: 11px; color: #999; text-align: center;\">" +
+                region.latitude.toFixed(4) + ", " + region.longitude.toFixed(4) +
+            "</div>" +
+        "</div>";
     }
     
     function createSitePopup(site) {
         const region = climbingData.regions.find(r => r.id === site.region_id);
-        return \'<div style="min-width: 200px;">\' +
-            \'<h6 style="margin: 0 0 8px 0; color: #3498db; display: flex; align-items: center;">\' +
-                \'🧗 <span style="margin-left: 6px;">\' + site.name + \'</span>\' +
-            \'</h6>\' +
-            \'<div style="background: #f0f8ff; padding: 6px; border-radius: 4px; margin-bottom: 8px;">\' +
-                \'<div style="font-size: 12px; color: #666; margin-bottom: 2px;"><strong>SITE</strong> \' + (region ? \'en \' + region.name : \'\') + \'</div>\' +
-                \'<div style="font-size: 13px;">\' + site.description + \'</div>\' +
-            \'</div>\' +
-            \'<div style="display: flex; gap: 8px; margin-bottom: 6px;">\' +
-                \'<div style="flex: 1; text-align: center; background: #e8f5e8; padding: 4px; border-radius: 3px;">\' +
-                    \'<div style="font-size: 14px; font-weight: bold; color: #388e3c;">\' + (site.sector_count || 0) + \'</div>\' +
-                    \'<div style="font-size: 10px; color: #666;">Secteurs</div>\' +
-                \'</div>\' +
-                \'<div style="flex: 1; text-align: center; background: #fff3e0; padding: 4px; border-radius: 3px;">\' +
-                    \'<div style="font-size: 14px; font-weight: bold; color: #f57c00;">\' + (site.route_count || 0) + \'</div>\' +
-                    \'<div style="font-size: 10px; color: #666;">Voies</div>\' +
-                \'</div>\' +
-            \'</div>\' +
-            \'<div style="font-size: 10px; color: #999; text-align: center;">\' +
-                site.latitude.toFixed(4) + \', \' + site.longitude.toFixed(4) +
-            \'</div>\' +
-        \'</div>\';
+        return "<div style=\"min-width: 200px;\">" +
+            "<h6 style=\"margin: 0 0 8px 0; color: #3498db; display: flex; align-items: center;\">" +
+                "🧗 <span style=\"margin-left: 6px;\">" + site.name + "</span>" +
+            "</h6>" +
+            "<div style=\"background: #f0f8ff; padding: 6px; border-radius: 4px; margin-bottom: 8px;\">" +
+                "<div style=\"font-size: 12px; color: #666; margin-bottom: 2px;\"><strong>SITE</strong> " + (region ? "en " + region.name : "") + "</div>" +
+                "<div style=\"font-size: 13px;\">" + site.description + "</div>" +
+            "</div>" +
+            "<div style=\"display: flex; gap: 8px; margin-bottom: 6px;\">" +
+                "<div style=\"flex: 1; text-align: center; background: #e8f5e8; padding: 4px; border-radius: 3px;\">" +
+                    "<div style=\"font-size: 14px; font-weight: bold; color: #388e3c;\">" + (site.sector_count || 0) + "</div>" +
+                    "<div style=\"font-size: 10px; color: #666;\">Secteurs</div>" +
+                "</div>" +
+                "<div style=\"flex: 1; text-align: center; background: #fff3e0; padding: 4px; border-radius: 3px;\">" +
+                    "<div style=\"font-size: 14px; font-weight: bold; color: #f57c00;\">" + (site.route_count || 0) + "</div>" +
+                    "<div style=\"font-size: 10px; color: #666;\">Voies</div>" +
+                "</div>" +
+            "</div>" +
+            "<div style=\"font-size: 10px; color: #999; text-align: center;\">" +
+                site.latitude.toFixed(4) + ", " + site.longitude.toFixed(4) +
+            "</div>" +
+        "</div>";
     }
     
     function createSectorPopup(sector) {
         const region = climbingData.regions.find(r => r.id === sector.region_id);
         const site = climbingData.sites.find(s => s.id === sector.site_id);
         
-        let locationText = \'\';
+        let locationText = "";
         if (site) {
-            locationText = \'dans \' + site.name;
+            locationText = "dans " + site.name;
         } else if (region) {
-            locationText = \'directement en \' + region.name;
+            locationText = "directement en " + region.name;
         }
         
-        return \'<div style="min-width: 180px;">\' +
-            \'<h6 style="margin: 0 0 6px 0; color: #2ecc71; display: flex; align-items: center;">\' +
-                \'🎯 <span style="margin-left: 6px;">\' + sector.name + \'</span>\' +
-            \'</h6>\' +
-            \'<div style="background: #f0fff0; padding: 6px; border-radius: 4px; margin-bottom: 6px;">\' +
-                \'<div style="font-size: 11px; color: #666; margin-bottom: 2px;"><strong>SECTEUR</strong> \' + locationText + \'</div>\' +
-                \'<div style="font-size: 12px;">\' + sector.description + \'</div>\' +
-            \'</div>\' +
-            \'<div style="text-align: center; background: #fff3e0; padding: 6px; border-radius: 4px; margin-bottom: 6px;">\' +
-                \'<div style="font-size: 16px; font-weight: bold; color: #f57c00;">\' + (sector.route_count || 0) + \'</div>\' +
-                \'<div style="font-size: 11px; color: #666;">Voies d\\\'escalade</div>\' +
-            \'</div>\' +
-            \'<div style="font-size: 10px; color: #999; text-align: center;">\' +
-                sector.latitude.toFixed(4) + \', \' + sector.longitude.toFixed(4) +
-            \'</div>\' +
-        \'</div>\';
+        return "<div style=\"min-width: 180px;\">" +
+            "<h6 style=\"margin: 0 0 6px 0; color: #2ecc71; display: flex; align-items: center;\">" +
+                "🎯 <span style=\"margin-left: 6px;\">" + sector.name + "</span>" +
+            "</h6>" +
+            "<div style=\"background: #f0fff0; padding: 6px; border-radius: 4px; margin-bottom: 6px;\">" +
+                "<div style=\"font-size: 11px; color: #666; margin-bottom: 2px;\"><strong>SECTEUR</strong> " + locationText + "</div>" +
+                "<div style=\"font-size: 12px;\">" + sector.description + "</div>" +
+            "</div>" +
+            "<div style=\"text-align: center; background: #fff3e0; padding: 6px; border-radius: 4px; margin-bottom: 6px;\">" +
+                "<div style=\"font-size: 16px; font-weight: bold; color: #f57c00;\">" + (sector.route_count || 0) + "</div>" +
+                "<div style=\"font-size: 11px; color: #666;\">Voies d'escalade</div>" +
+            "</div>" +
+            "<div style=\"font-size: 10px; color: #999; text-align: center;\">" +
+                sector.latitude.toFixed(4) + ", " + sector.longitude.toFixed(4) +
+            "</div>" +
+        "</div>";
     }
     
     function updateStatus() {
         const totalItems = climbingData.regions.length + climbingData.sites.length + climbingData.sectors.length;
         document.getElementById("site-count").textContent = totalItems;
-        document.getElementById("status").textContent = climbingData.regions.length + \'R + \' + climbingData.sites.length + \'S + \' + climbingData.sectors.length + \'C\';
+        document.getElementById("status").textContent = climbingData.regions.length + "R + " + climbingData.sites.length + "S + " + climbingData.sectors.length + "C";
     }
     
     function setupControls() {
