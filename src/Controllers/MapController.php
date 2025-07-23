@@ -378,12 +378,16 @@ class MapController extends BaseController
             
             // Vérifier les régions
             if (climbingData.regions.length > 0) {
-                hasValidCoordinates = climbingData.regions.some(r => r.coordinates_lat && r.coordinates_lng && r.coordinates_lat !== 0 && r.coordinates_lng !== 0);
+                hasValidCoordinates = climbingData.regions.some(r => r.coordinates_lat && r.coordinates_lng && 
+                    parseFloat(r.coordinates_lat) !== 0 && parseFloat(r.coordinates_lng) !== 0 && 
+                    r.coordinates_lat !== null && r.coordinates_lng !== null);
             }
             
             // Vérifier les sites si pas de régions valides
             if (!hasValidCoordinates && climbingData.sites.length > 0) {
-                hasValidCoordinates = climbingData.sites.some(s => s.coordinates_lat && s.coordinates_lng && s.coordinates_lat !== 0 && s.coordinates_lng !== 0);
+                hasValidCoordinates = climbingData.sites.some(s => s.coordinates_lat && s.coordinates_lng && 
+                    parseFloat(s.coordinates_lat) !== 0 && parseFloat(s.coordinates_lng) !== 0 && 
+                    s.coordinates_lat !== null && s.coordinates_lng !== null);
             }
             
             // Si pas de coordonnées valides, utiliser les données de test
@@ -525,7 +529,7 @@ class MapController extends BaseController
         // Ajouter les marqueurs des RÉGIONS
         climbingData.regions.forEach(region => {
             if (region.coordinates_lat && region.coordinates_lng) {
-                const marker = L.circleMarker([region.coordinates_lat, region.coordinates_lng], {
+                const marker = L.circleMarker([parseFloat(region.coordinates_lat), parseFloat(region.coordinates_lng)], {
                     radius: 12,
                     fillColor: "#e74c3c",
                     color: "#ffffff",
@@ -543,7 +547,7 @@ class MapController extends BaseController
         // Ajouter les marqueurs des SITES
         climbingData.sites.forEach(site => {
             if (site.coordinates_lat && site.coordinates_lng) {
-                const marker = L.circleMarker([site.coordinates_lat, site.coordinates_lng], {
+                const marker = L.circleMarker([parseFloat(site.coordinates_lat), parseFloat(site.coordinates_lng)], {
                     radius: 8,
                     fillColor: "#3498db",
                     color: "#ffffff",
@@ -561,7 +565,7 @@ class MapController extends BaseController
         // Ajouter les marqueurs des SECTEURS
         climbingData.sectors.forEach(sector => {
             if (sector.coordinates_lat && sector.coordinates_lng) {
-                const marker = L.circleMarker([sector.coordinates_lat, sector.coordinates_lng], {
+                const marker = L.circleMarker([parseFloat(sector.coordinates_lat), parseFloat(sector.coordinates_lng)], {
                     radius: 6,
                     fillColor: "#2ecc71",
                     color: "#ffffff",
