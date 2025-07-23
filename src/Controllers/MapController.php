@@ -519,7 +519,7 @@ class MapController extends BaseController
                     weight: 2,
                     opacity: 1,
                     fillOpacity: 0.8,
-                    className: \"site-marker\"
+                    className: "site-marker"
                 });
                 
                 marker.bindPopup(createSitePopup(site));
@@ -537,7 +537,7 @@ class MapController extends BaseController
                     weight: 2,
                     opacity: 1,
                     fillOpacity: 0.8,
-                    className: \"sector-marker\"
+                    className: "sector-marker"
                 });
                 
                 marker.bindPopup(createSectorPopup(sector));
