@@ -269,7 +269,8 @@ class MapController extends BaseController
                 if (is_null($siteData['latitude']) || is_null($siteData['longitude']) || 
                     $siteData['latitude'] == 0 || $siteData['longitude'] == 0) {
                     // Si pas de coordonnées, utiliser des coordonnées par défaut pour la région
-                    $defaultCoords = $this->getDefaultRegionCoordinates($site->region_id);
+                    $regionId = $site->region_id ? (int)$site->region_id : 1; // Défaut région 1 si null
+                    $defaultCoords = $this->getDefaultRegionCoordinates($regionId);
                     $siteData['latitude'] = $defaultCoords['lat'];
                     $siteData['longitude'] = $defaultCoords['lng'];
                     $siteData['coordinates_estimated'] = true; // Marquer comme estimé
@@ -647,7 +648,7 @@ class MapController extends BaseController
     /**
      * Retourne des coordonnées par défaut pour une région donnée
      */
-    private function getDefaultRegionCoordinates(int $regionId): array
+    private function getDefaultRegionCoordinates(?int $regionId): array
     {
         // Coordonnées par défaut pour les principales régions suisses
         $defaultCoordinates = [
@@ -664,6 +665,6 @@ class MapController extends BaseController
         ];
 
         // Retourner les coordonnées pour la région ou le centre de la Suisse par défaut
-        return $defaultCoordinates[$regionId] ?? $defaultCoordinates[1];
+        return $defaultCoordinates[$regionId ?? 1] ?? $defaultCoordinates[1];
     }
 }
