@@ -376,11 +376,13 @@ class MapController extends BaseController
             // Vérifier si les données ont des coordonnées valides
             let hasValidCoordinates = false;
             
-            // Vérifier les régions
+            // Vérifier les régions (API régions utilise latitude/longitude)
             if (climbingData.regions.length > 0) {
-                hasValidCoordinates = climbingData.regions.some(r => r.coordinates_lat && r.coordinates_lng && 
-                    parseFloat(r.coordinates_lat) !== 0 && parseFloat(r.coordinates_lng) !== 0 && 
-                    r.coordinates_lat !== null && r.coordinates_lng !== null);
+                hasValidCoordinates = climbingData.regions.some(r => {
+                    const lat = r.latitude || r.coordinates_lat;
+                    const lng = r.longitude || r.coordinates_lng;
+                    return lat && lng && parseFloat(lat) !== 0 && parseFloat(lng) !== 0 && lat !== null && lng !== null;
+                });
             }
             
             // Vérifier les sites si pas de régions valides
@@ -526,10 +528,12 @@ class MapController extends BaseController
     }
     
     function addHierarchicalMarkers() {
-        // Ajouter les marqueurs des RÉGIONS
+        // Ajouter les marqueurs des RÉGIONS (API régions utilise latitude/longitude)
         climbingData.regions.forEach(region => {
-            if (region.coordinates_lat && region.coordinates_lng) {
-                const marker = L.circleMarker([parseFloat(region.coordinates_lat), parseFloat(region.coordinates_lng)], {
+            const lat = region.latitude || region.coordinates_lat;
+            const lng = region.longitude || region.coordinates_lng;
+            if (lat && lng) {
+                const marker = L.circleMarker([parseFloat(lat), parseFloat(lng)], {
                     radius: 12,
                     fillColor: "#e74c3c",
                     color: "#ffffff",
