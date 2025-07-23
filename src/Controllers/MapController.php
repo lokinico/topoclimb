@@ -501,7 +501,7 @@ class MapController extends BaseController
                     weight: 3,
                     opacity: 1,
                     fillOpacity: 0.9,
-                    className: \"region-marker\"
+                    className: \"region-marker"
                 });
                 
                 marker.bindPopup(createRegionPopup(region));
