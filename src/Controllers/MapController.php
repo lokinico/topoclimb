@@ -313,16 +313,16 @@ class MapController extends BaseController
     
     // Test de diagnostic
     document.addEventListener("DOMContentLoaded", function() {
-        console.log("🔥 DOM chargé - Test diagnostic");
-        console.log('🔍 Leaflet disponible:', typeof L !== 'undefined');
-        console.log("🔍 Element map:", document.getElementById("map"));
+            console.log("🔥 DOM chargé - Test diagnostic");
+            console.log("🔍 Leaflet disponible:", typeof L !== "undefined");
+            console.log("🔍 Element map:", document.getElementById("map"));
         
         // Test basique Leaflet
-        if (typeof L !== 'undefined') {
-            console.log("✅ Leaflet OK, tentative d'initialisation basique");
+        if (typeof L !== "undefined") {
+            console.log("✅ Leaflet OK, tentative d initialisation basique");
             try {
                 const testMap = L.map("map").setView([46.8182, 8.2275], 8);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(testMap);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(testMap);
                 console.log("✅ Carte basique créée");
                 document.getElementById("status").textContent = "Carte de test OK";
             } catch(e) {
