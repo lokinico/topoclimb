@@ -378,12 +378,12 @@ class MapController extends BaseController
             
             // Vérifier les régions
             if (climbingData.regions.length > 0) {
-                hasValidCoordinates = climbingData.regions.some(r => r.latitude && r.longitude && r.latitude !== 0 && r.longitude !== 0);
+                hasValidCoordinates = climbingData.regions.some(r => r.coordinates_lat && r.coordinates_lng && r.coordinates_lat !== 0 && r.coordinates_lng !== 0);
             }
             
             // Vérifier les sites si pas de régions valides
             if (!hasValidCoordinates && climbingData.sites.length > 0) {
-                hasValidCoordinates = climbingData.sites.some(s => s.latitude && s.longitude && s.latitude !== 0 && s.longitude !== 0);
+                hasValidCoordinates = climbingData.sites.some(s => s.coordinates_lat && s.coordinates_lng && s.coordinates_lat !== 0 && s.coordinates_lng !== 0);
             }
             
             // Si pas de coordonnées valides, utiliser les données de test
@@ -524,8 +524,8 @@ class MapController extends BaseController
     function addHierarchicalMarkers() {
         // Ajouter les marqueurs des RÉGIONS
         climbingData.regions.forEach(region => {
-            if (region.latitude && region.longitude) {
-                const marker = L.circleMarker([region.latitude, region.longitude], {
+            if (region.coordinates_lat && region.coordinates_lng) {
+                const marker = L.circleMarker([region.coordinates_lat, region.coordinates_lng], {
                     radius: 12,
                     fillColor: "#e74c3c",
                     color: "#ffffff",
@@ -542,8 +542,8 @@ class MapController extends BaseController
         
         // Ajouter les marqueurs des SITES
         climbingData.sites.forEach(site => {
-            if (site.latitude && site.longitude) {
-                const marker = L.circleMarker([site.latitude, site.longitude], {
+            if (site.coordinates_lat && site.coordinates_lng) {
+                const marker = L.circleMarker([site.coordinates_lat, site.coordinates_lng], {
                     radius: 8,
                     fillColor: "#3498db",
                     color: "#ffffff",
@@ -560,8 +560,8 @@ class MapController extends BaseController
         
         // Ajouter les marqueurs des SECTEURS
         climbingData.sectors.forEach(sector => {
-            if (sector.latitude && sector.longitude) {
-                const marker = L.circleMarker([sector.latitude, sector.longitude], {
+            if (sector.coordinates_lat && sector.coordinates_lng) {
+                const marker = L.circleMarker([sector.coordinates_lat, sector.coordinates_lng], {
                     radius: 6,
                     fillColor: "#2ecc71",
                     color: "#ffffff",
@@ -604,7 +604,7 @@ class MapController extends BaseController
                 "</div>" +
             "</div>" +
             "<div style=\"font-size: 11px; color: #999; text-align: center;\">" +
-                region.latitude.toFixed(4) + ", " + region.longitude.toFixed(4) +
+                (region.coordinates_lat || region.latitude || 0).toFixed(4) + ", " + (region.coordinates_lng || region.longitude || 0).toFixed(4) +
             "</div>" +
         "</div>";
     }
@@ -630,7 +630,7 @@ class MapController extends BaseController
                 "</div>" +
             "</div>" +
             "<div style=\"font-size: 10px; color: #999; text-align: center;\">" +
-                site.latitude.toFixed(4) + ", " + site.longitude.toFixed(4) +
+                (site.coordinates_lat || site.latitude || 0).toFixed(4) + ", " + (site.coordinates_lng || site.longitude || 0).toFixed(4) +
             "</div>" +
         "</div>";
     }
@@ -659,7 +659,7 @@ class MapController extends BaseController
                 "<div style=\"font-size: 11px; color: #666;\">Voies d&#39;escalade</div>" +
             "</div>" +
             "<div style=\"font-size: 10px; color: #999; text-align: center;\">" +
-                sector.latitude.toFixed(4) + ", " + sector.longitude.toFixed(4) +
+                (sector.coordinates_lat || sector.latitude || 0).toFixed(4) + ", " + (sector.coordinates_lng || sector.longitude || 0).toFixed(4) +
             "</div>" +
         "</div>";
     }
