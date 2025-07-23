@@ -42,6 +42,12 @@ class MapController extends BaseController
      */
     public function index(?Request $request = null): Response
     {
+        // Headers anti-cache pour éviter les problèmes CSS/JS
+        header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0, private");
+        header("Pragma: no-cache");
+        header("Expires: Thu, 01 Jan 1970 00:00:00 GMT");
+        header("X-Timestamp: " . time());
+        
         try {
             // Récupérer les paramètres de filtrage depuis $_GET
             $filters = [
