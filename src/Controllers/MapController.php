@@ -314,7 +314,7 @@ class MapController extends BaseController
     // Test de diagnostic
     document.addEventListener("DOMContentLoaded", function() {
         console.log("🔥 DOM chargé - Test diagnostic");
-        console.log("🔍 Leaflet disponible:", typeof L !== 'undefined');
+        console.log('🔍 Leaflet disponible:', typeof L !== 'undefined');
         console.log("🔍 Element map:", document.getElementById("map"));
         
         // Test basique Leaflet
