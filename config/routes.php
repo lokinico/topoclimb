@@ -19,7 +19,7 @@ return array (
   array (
     'method' => 'GET',
     'path' => '/map',
-    'controller' => 'TopoclimbCH\\Controllers\\MapController',
+    'controller' => 'TopoclimbCH\\Controllers\\MapControllerFixed',
     'action' => 'index',
   ),
   3 => 
