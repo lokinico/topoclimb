@@ -104,28 +104,32 @@ class SectorController extends BaseController
             $totalSectorsCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM climbing_sectors")['count'] ?? 0;
             error_log("DEBUG: Total sectors in DB: " . $totalSectorsCount);
 
-            // Créer le filtre à partir des paramètres de requête
-            $filter = new SectorFilter($request->query->all());
-
-            // Récupérer la page courante avec validation
-            $page = max(1, (int) $request->query->get('page', 1));
-            $perPage = min(100, max(10, (int) $request->query->get('per_page', 20))); // Limiter entre 10-100
-
-            // Obtenir le champ et la direction de tri avec validation
-            $allowedSortFields = ['name', 'code', 'altitude', 'access_time', 'created_at'];
-            $sortBy = in_array($request->query->get('sort_by'), $allowedSortFields)
-                ? $request->query->get('sort_by')
-                : 'name';
-            $sortDir = strtoupper($request->query->get('sort_dir', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
-
-            // Paginer les résultats filtrés
-            $paginatedSectors = Sector::filterAndPaginate(
-                $filter,
-                $page,
-                $perPage,
-                $sortBy,
-                $sortDir
-            );
+            // TEST SIMPLE: Récupérer directement tous les secteurs sans filtre
+            $simpleSectors = $this->db->fetchAll("
+                SELECT 
+                    s.id, 
+                    s.name, 
+                    s.code,
+                    s.region_id,
+                    r.name as region_name,
+                    s.altitude,
+                    s.access_time,
+                    s.description,
+                    s.coordinates_lat,
+                    s.coordinates_lng,
+                    s.active,
+                    s.created_at
+                FROM climbing_sectors s 
+                LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                WHERE s.active = 1
+                ORDER BY s.name ASC 
+                LIMIT 50
+            ");
+            
+            error_log("DEBUG: Direct SQL query returned " . count($simpleSectors) . " sectors");
+            
+            // Créer un objet paginator simple pour la compatibilité
+            $paginatedSectors = new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
             
             // Debug: vérifier les résultats paginés
             error_log("DEBUG: Paginated sectors total: " . $paginatedSectors->getTotal());
