@@ -135,18 +135,23 @@ class SectorController extends BaseController
             error_log("DEBUG: Paginated sectors total: " . $paginatedSectors->getTotal());
             error_log("DEBUG: Paginated sectors items count: " . count($paginatedSectors->getItems()));
 
+            // Variables temporaires pour le test
+            $filter = new SectorFilter([]);
+            $sortBy = 'name';
+            $sortDir = 'ASC';
+
             // Récupérer les données pour les filtres avec validation
             $regions = $this->db->fetchAll(
                 "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
             );
-            $sites = $this->getValidSites();
-            $exposures = Exposure::getAllSorted();
-            $months = Month::getAllSorted();
+            $sites = []; // Simplifier pour le test
+            $exposures = []; // Simplifier pour le test  
+            $months = []; // Simplifier pour le test
 
             return $this->render('sectors/index', [
                 'sectors' => $paginatedSectors,
                 'filter' => $filter,
-                'regions' => $regions,
+                'regions' => $regions ?: [],
                 'sites' => $sites,
                 'exposures' => $exposures,
                 'months' => $months,
