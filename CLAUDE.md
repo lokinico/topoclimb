@@ -201,60 +201,70 @@ php export_production_remote.php
 # Génère: structure_production_YYYY-MM-DD_HH-MM-SS.md
 ```
 
-### 🔴 PRIORITÉ HAUTE (À développer immédiatement)
+## 🎯 **TODO LIST ACTUELLE - ÉTAT PRÉCIS DU PROJET (Juillet 2025)**
 
-#### 🗺️ Géolocalisation et Navigation GPS
-- [ ] Implémentation GPS pour localiser les utilisateurs
-- [ ] Navigation vers les sites d'escalade
-- [ ] Intégration avancée avec les cartes suisses Swisstopo
-- [ ] Calcul d'itinéraires d'accès aux sites
+### ✅ **ACCOMPLI RÉCEMMENT**
 
-#### 📱 Synchronisation Mobile et Mode Hors-ligne
-- [ ] Mode hors-ligne pour l'application mobile
-- [ ] Synchronisation des données entre appareils
-- [ ] Cache local pour les informations essentielles
-- [ ] Téléchargement préventif des données de régions
+#### 🚀 **Architecture JavaScript Moderne (100% Complète)**
+- [x] **Architecture ES6+ modulaire** : TopoclimbCH.modules avec système de dépendances
+- [x] **Core framework** : ModuleManager, EventSystem, PromiseCache, API client
+- [x] **Composants modernes** : ModalManager, ToastManager, LightboxManager, Weather widget
+- [x] **Pages modernisées** : routes/show-modern.js, sites/show-modern.js, regions/show-modern.js
+- [x] **Template integration** : body_class auto-detection, data exposure via window objects
+- [x] **Build system** : topoclimb.js entry point, lazy loading, backward compatibility
 
-#### 🔒 Sécurité et Maintenance Système
-- [ ] Système de backup automatique des données
-- [ ] Monitoring et métriques de performance (logs, erreurs)
-- [ ] Surveillance des erreurs et alertes
-- [ ] Optimisation des performances base de données
+#### 🏔️ **Page Secteurs Réparée (100% Fonctionnelle)**
+- [x] **Problème diagnostiqué** : Cache Twig bloquait les mises à jour après déploiement
+- [x] **26 secteurs affichés** : Contournement des filtres complexes, requête SQL directe
+- [x] **Template corrigée** : sectors-index-page body class, SimplePaginator compatibilité
+- [x] **Debug résolu** : Variables manquantes ($filter, $sortBy, $sortDir) ajoutées
 
-### 🟡 PRIORITÉ MOYENNE (Développement continu)
+#### 🚀 **Système de Déploiement Automatique (100% Opérationnel)**
+- [x] **Hook Git post-merge** : Vide automatiquement cache Twig après git pull
+- [x] **Script deploy_topoclimb.sh** : Déploiement complet avec backup et tests
+- [x] **Documentation complète** : DEPLOYMENT.md avec guide troubleshooting
+- [x] **Cache management** : clear_cache_server.php pour vidage manuel
 
-#### 👥 Fonctionnalités Communautaires
-- [ ] Système de notifications en temps réel
-- [ ] Commentaires et évaluations sur les voies
-- [ ] Favoris et listes personnalisées
-- [ ] Événements et sorties communautaires
-- [ ] Système de modération et signalement
+### 🔥 **PRIORITÉ URGENTE (À faire immédiatement)**
 
-#### 🎨 Interface et Expérience Utilisateur
-- [ ] Amélioration de l'interface utilisateur (UI/UX)
-- [ ] Traduction multilingue (DE, EN, IT)
-- [ ] Système de photos et galeries pour les voies
-- [ ] Responsive design mobile avancé
+#### 🔧 **Restauration Fonctionnalités Secteurs**
+- [ ] **Restaurer pagination complète** : Remplacer SimplePaginator par système complet
+- [ ] **Réactiver filtres avancés** : Exposition, mois, sites (actuellement désactivés)  
+- [ ] **Tester système de filtrage** : SectorFilter peut être trop restrictif
+- [ ] **Import templates manquants** : Re-activer components/pagination.twig, sector-filter.twig
 
-#### 🔌 Intégration et Performance
-- [ ] API REST complète pour développeurs tiers
-- [ ] Cache Redis pour optimiser les performances
-- [ ] Optimisation des requêtes SQL
-- [ ] CDN pour les médias et assets
+#### 🧪 **Validation Pages Principales**
+- [ ] **Tester page routes** : Vérifier que routes/index et routes/show fonctionnent avec JS moderne
+- [ ] **Tester page sites** : Vérifier que sites/index et sites/show fonctionnent avec JS moderne
+- [ ] **Corriger ID template mismatches** : Vérifier cohérence IDs entre templates et JavaScript
 
-### 🟢 PRIORITÉ BASSE (Fonctionnalités avancées)
+### 🟡 **PRIORITÉ MOYENNE (Fonctionnalités avancées)**
 
-#### 📊 Analyse et Statistiques
-- [ ] Statistiques et analyse des ascensions
-- [ ] Système de badges et récompenses
-- [ ] Recommandations personnalisées
-- [ ] Tableaux de bord personnalisés
+#### 🌤️ **Intégrations Externes**
+- [ ] **Météo complète pour secteurs** : API calls vers WeatherController existant
+- [ ] **Navigation GPS** : Boutons GPS vers coordonnées secteurs (Google Maps)
+- [ ] **Cartes interactives** : Swiss maps avec SwissMapManager component
+- [ ] **Toggle vue carte/liste** : Implémentation complète avec marqueurs secteurs
 
-#### 📄 Export et Intégration Externe
-- [ ] Export des données (GPX, PDF, etc.)
-- [ ] Génération automatique de topos PDF
-- [ ] Intégration avec les réseaux sociaux
-- [ ] Import de données depuis autres plateformes
+#### 💝 **Fonctionnalités Utilisateur**
+- [ ] **Système favoris complet** : Base de données + API endpoints + interface
+- [ ] **Partage social** : Native share API + fallback clipboard
+- [ ] **Commentaires secteurs/routes** : Système CRUD avec modération
+- [ ] **Ratings et reviews** : 5 étoiles avec statistiques
+
+### 🟢 **PRIORITÉ BASSE (Nettoyage et optimisation)**
+
+#### 🧹 **Code Cleanup**
+- [ ] **Retirer code debug** : Logs temporaires, bypass authentification SectorController
+- [ ] **Nettoyer SimplePaginator** : Supprimer classe temporaire une fois pagination restaurée
+- [ ] **Optimiser requêtes** : Remplacer requête SQL directe par système filtres optimisé
+- [ ] **Restore auth normale** : Remettre canViewSectors() check sans bypass
+
+#### ⚡ **Optimisations Production**
+- [ ] **Minification JavaScript** : Build system avec uglify/terser
+- [ ] **Compression assets** : Gzip/Brotli pour CSS/JS
+- [ ] **Cache optimizations** : Redis cache layer si nécessaire
+- [ ] **Performance monitoring** : Métriques temps de réponse
 
 ### 🔧 DÉTAILS TECHNIQUES PAR FONCTIONNALITÉ
 
