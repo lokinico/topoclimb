@@ -1,5 +1,7 @@
 {% extends "layouts/app.twig" %}
 
+{% block body_class %} route-show-page{% endblock %}
+
 {% block title %}{{ route.name }} - TopoclimbCH{% endblock %}
 
 {% block content %}
@@ -303,4 +305,33 @@
             });
         </script>
     {% endif %}
+
+    <script>
+    // Exposer les données de la route pour les composants JavaScript modernes
+    window.routeData = {
+        id: {{ route.id }},
+        name: {{ route.name|json_encode|raw }},
+        difficulty: {{ route.difficulty|default('')|json_encode|raw }},
+        style: {{ route.style|default('')|json_encode|raw }},
+        beauty: {{ route.beauty|default(0) }},
+        length: {{ route.length|default(0) }},
+        equipment: {{ route.equipment|default('')|json_encode|raw }},
+        comment: {{ route.comment|default('')|json_encode|raw }},
+        rappel: {{ route.rappel|default('')|json_encode|raw }},
+        coordinates_lat: {{ route.coordinates_lat|default(route.sector.coordinates_lat|default('null')) }},
+        coordinates_lng: {{ route.coordinates_lng|default(route.sector.coordinates_lng|default('null')) }},
+        sector: {
+            id: {{ route.sector.id|default('null') }},
+            name: {{ route.sector.name|default('')|json_encode|raw }},
+            coordinates_lat: {{ route.sector.coordinates_lat|default('null') }},
+            coordinates_lng: {{ route.sector.coordinates_lng|default('null') }}
+        },
+        stats: {
+            total_ascents: {{ ascentStats.total_ascents|default(0) }},
+            average_rating: {{ ascentStats.average_rating|default(0) }},
+            flash_percent: {{ ascentStats.flash_percent|default(0) }},
+            average_attempts: {{ ascentStats.average_attempts|default(0) }}
+        }
+    };
+    </script>
 {% endblock %}
