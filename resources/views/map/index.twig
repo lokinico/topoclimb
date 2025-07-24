@@ -138,163 +138,132 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Leaflet JS -->
+<!-- Leaflet JavaScript -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+<!-- TopoclimbCH JavaScript Components -->
+<script src="{{ url('/js/common.js') }}"></script>
+<script src="{{ url('/js/utils/api-client.js') }}"></script>
+<script src="{{ url('/js/utils/coordinates-helper.js') }}"></script>
+<script src="{{ url('/js/components/swiss-map-manager.js') }}"></script>
+<script src="{{ url('/js/components/interactive-map-manager.js') }}"></script>
 
 <script>
-console.log('🗺️ Carte TopoclimbCH - Version intégrée');
-
-// Configuration
-const SWISS_CENTER = [46.8182, 8.2275];
-let map = null;
-let currentLayer = 'osm';
-let sitesData = [];
-
-// Initialisation
 document.addEventListener('DOMContentLoaded', function() {
-    initializeMap();
-    loadSitesData();
-    setupControls();
+    console.log('🗺️ Initialisation carte TopoclimbCH avec clustering hiérarchique');
+    
+    try {
+        // Initialiser le gestionnaire de carte interactive
+        const mapManager = new InteractiveMapManager('climbing-map', {
+            center: [46.8182, 8.2275], // Centre Suisse
+            zoom: 8,
+            enableClustering: true,
+            showHierarchy: true,
+            showControls: true
+        });
+        
+        // Initialiser la carte
+        mapManager.init();
+        
+        // Charger les données d'escalade
+        mapManager.loadClimbingData()
+            .then(() => {
+                console.log('✅ Carte avec clustering chargée avec succès');
+                document.getElementById('status').textContent = 'Prêt';
+            })
+            .catch(error => {
+                console.error('❌ Erreur chargement carte:', error);
+                document.getElementById('status').textContent = 'Erreur';
+            });
+        
+        // Configuration des contrôles existants avec nouvelles fonctionnalités
+        setupEnhancedControls(mapManager);
+        
+    } catch (error) {
+        console.error('❌ Erreur initialisation carte:', error);
+        document.getElementById('status').textContent = 'Erreur init';
+        
+        // Fallback vers carte simple si erreur
+        initFallbackMap();
+    }
 });
 
-function initializeMap() {
-    console.log('Initialisation carte...');
-    document.getElementById('status').textContent = 'Création carte...';
+/**
+ * Configure les contrôles améliorés
+ */
+function setupEnhancedControls(mapManager) {
+    const map = mapManager.getLeafletMap();
     
-    // Créer la carte
-    map = L.map('climbing-map', {
-        center: SWISS_CENTER,
-        zoom: 8,
-        zoomControl: false,
-        attributionControl: false
-    });
-    
-    // Ajouter les tuiles
-    addMapLayers();
-    
-    console.log('✅ Carte initialisée');
-}
-
-function addMapLayers() {
-    document.getElementById('status').textContent = 'Chargement tuiles...';
-    
-    // Tuiles OpenStreetMap
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    
-    // Stocker les couches
-    window.mapLayers = {
-        osm: osmLayer,
-        satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 18,
-            attribution: '© Esri'
-        })
-    };
-    
-    console.log('✅ Tuiles ajoutées');
-    document.getElementById('status').textContent = 'Tuiles chargées';
-}
-
-function loadSitesData() {
-    document.getElementById('status').textContent = 'Chargement sites...';
-    
-    // Charger depuis l'API
-    fetch('/api/sites')
-        .then(response => response.json())
-        .then(data => {
-            sitesData = data.data || [];
-            console.log('Sites chargés:', sitesData.length);
-            
-            if (sitesData.length > 0) {
-                addSiteMarkers();
-            } else {
-                // Marqueur test si pas de données
-                addTestMarker();
-            }
-            
-            document.getElementById('site-count').textContent = sitesData.length;
-            document.getElementById('status').textContent = 'Sites chargés';
-        })
-        .catch(error => {
-            console.error('Erreur chargement sites:', error);
-            document.getElementById('status').textContent = 'Erreur données';
-            addTestMarker();
-        });
-}
-
-function addSiteMarkers() {
-    sitesData.forEach(site => {
-        const lat = site.coordinates_lat;
-        const lng = site.coordinates_lng;
-        
-        if (lat && lng) {
-            const marker = L.circleMarker([lat, lng], {
-                radius: 8,
-                fillColor: '#e74c3c',
-                color: '#ffffff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.8
-            }).addTo(map);
-            
-            marker.bindPopup(`
-                <div>
-                    <h6>${site.name}</h6>
-                    <p class="small text-muted">${site.region_name || 'Région inconnue'}</p>
-                    <p class="small">${site.description || ''}</p>
-                </div>
-            `);
-        }
-    });
-}
-
-function addTestMarker() {
-    // Marqueur test si pas de données réelles
-    L.marker([46.1817, 7.1947])
-        .addTo(map)
-        .bindPopup('<div><h6>🏔️ Saillon</h6><p>Site d\'escalade de test</p></div>')
-        .openPopup();
-}
-
-function setupControls() {
-    // Géolocalisation
+    // Géolocalisation améliorée
     document.getElementById('locate-btn').addEventListener('click', () => {
         if (navigator.geolocation) {
+            document.getElementById('status').textContent = 'Localisation...';
             navigator.geolocation.getCurrentPosition(
                 position => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     map.setView([lat, lng], 12);
                     
+                    // Marqueur position utilisateur
                     L.circleMarker([lat, lng], {
                         radius: 10,
                         fillColor: '#3b82f6',
                         color: '#ffffff',
                         weight: 3,
                         fillOpacity: 1
-                    }).addTo(map).bindPopup('Votre position');
+                    }).addTo(map).bindPopup('🎯 Votre position');
+                    
+                    document.getElementById('status').textContent = 'Localisé';
                 },
-                () => alert('Géolocalisation impossible')
+                () => {
+                    TopoclimbCH.Notifications.error('Géolocalisation impossible');
+                    document.getElementById('status').textContent = 'Prêt';
+                }
             );
         }
     });
     
-    // Changement de couches
+    // Changement de couches avec SwissMapManager
     document.getElementById('layers-btn').addEventListener('click', () => {
-        const layers = window.mapLayers;
-        map.removeLayer(layers[currentLayer]);
-        
-        currentLayer = currentLayer === 'osm' ? 'satellite' : 'osm';
-        layers[currentLayer].addTo(map);
-        
-        console.log('Couche changée:', currentLayer);
+        const currentLayer = mapManager.currentLayer;
+        const nextLayer = currentLayer === 'pixelkarte' ? 'orthophoto' : 'pixelkarte';
+        mapManager.setLayer(nextLayer);
+        console.log(`🔄 Couche changée: ${nextLayer}`);
     });
     
-    // Zoom
+    // Contrôles zoom
     document.getElementById('zoom-in').addEventListener('click', () => map.zoomIn());
     document.getElementById('zoom-out').addEventListener('click', () => map.zoomOut());
+}
+
+/**
+ * Carte de fallback en cas d'erreur avec les composants avancés
+ */
+function initFallbackMap() {
+    console.log('🔄 Initialisation carte de fallback');
+    
+    const map = L.map('climbing-map', {
+        center: [46.8182, 8.2275],
+        zoom: 8,
+        zoomControl: false,
+        attributionControl: false
+    });
+    
+    // Couche de base simple
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Marqueur test
+    L.marker([46.1817, 7.1947])
+        .addTo(map)
+        .bindPopup('<div><h6>🏔️ Saillon</h6><p>Site de test - Mode fallback</p></div>')
+        .openPopup();
+    
+    document.getElementById('status').textContent = 'Mode simple';
+    document.getElementById('site-count').textContent = '1';
 }
 </script>
 {% endblock %}

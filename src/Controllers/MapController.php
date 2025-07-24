@@ -39,6 +39,7 @@ class MapController extends BaseController
 
     /**
      * Affiche la carte principale avec cartes suisses officielles
+     * JavaScript extrait dans /public/js/components/
      */
     public function index(?Request $request = null): Response
     {
