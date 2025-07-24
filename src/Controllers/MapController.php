@@ -42,7 +42,7 @@ class MapController extends BaseController
      */
     public function index(?Request $request = null): Response
     {
-        // Headers anti-cache robustes
+        // Headers anti-cache
         $headers = [
             "Cache-Control: no-cache, no-store, must-revalidate, max-age=0, private",
             "Pragma: no-cache",
@@ -56,7 +56,7 @@ class MapController extends BaseController
             header($header);
         }
         
-        // HTML avec cartes suisses officielles intégrées
+        // HTML basé sur la version fonctionnelle de map-clean
         $html = '<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -311,35 +311,53 @@ class MapController extends BaseController
         }
     };
     
-    // Test de diagnostic
+    // Version fonctionnelle basée sur map-clean
     document.addEventListener("DOMContentLoaded", function() {
-            console.log("🔥 DOM chargé - Test diagnostic");
-            console.log("🔍 Leaflet disponible:", typeof L !== "undefined");
-            console.log("🔍 Element map:", document.getElementById("map"));
+        console.log("🇨🇭 CARTES SUISSES OFFICIELLES - " + new Date().toISOString());
         
-        // Test basique Leaflet
-        if (typeof L !== "undefined") {
-            console.log("✅ Leaflet OK, tentative d initialisation basique");
-            try {
-                const testMap = L.map("map").setView([46.8182, 8.2275], 8);
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(testMap);
-                console.log("✅ Carte basique créée");
-                document.getElementById("status").textContent = "Carte de test OK";
-            } catch(e) {
-                console.error("❌ Erreur création carte:", e);
-                document.getElementById("status").textContent = "Erreur: " + e.message;
-            }
-        } else {
-            console.error("❌ Leaflet non disponible");
-            document.getElementById("status").textContent = "Leaflet non chargé";
-        }
+        // Configuration pour la Suisse  
+        const swissCenter = [46.8182, 8.2275];
+        const swissZoom = 8;
+        
+        // Initialiser la carte avec Swisstopo
+        const map = L.map("map", {
+            center: swissCenter,
+            zoom: swissZoom,
+            maxZoom: 18,
+            minZoom: 6
+        });
+        
+        // Couche Swisstopo par défaut
+        const swissLayer = L.tileLayer("https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg", {
+            attribution: "© swisstopo",
+            maxZoom: 18
+        });
+        
+        swissLayer.addTo(map);
+        
+        // Marqueur test de Saillon
+        L.marker([46.1817, 7.1947])
+            .addTo(map)
+            .bindPopup("<b>🏔️ Saillon</b><br>Site d escalade de test<br><small>Coordonnées: 46.1817, 7.1947</small>")
+            .openPopup();
+        
+        // Status
+        document.getElementById("status").textContent = "Carte suisse chargée";
+        document.getElementById("site-count").textContent = "1";
+        console.log("✅ Carte suisse initialisée avec succès");
     });
-    
-    function initializeMap() {
-        document.getElementById("status").textContent = "Initialisation...";
-        
-        map = L.map("map", {
-            center: SWISS_CENTER,
+    </script>
+</body>
+</html>';
+
+        return new CoreResponse($html);
+    }
+
+    /**
+     * API pour récupérer les sites  
+     */
+    public function apiSites(?Request $request = null): Response
+    {
             zoom: 8,
             zoomControl: false,
             attributionControl: false
