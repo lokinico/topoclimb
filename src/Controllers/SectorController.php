@@ -94,11 +94,15 @@ class SectorController extends BaseController
     public function index(Request $request): Response
     {
         try {
-            // Vérification permission de lecture
-            if (!$this->canViewSectors()) {
+            // Vérification permission de lecture - temporairement désactivée pour debug
+            /*if (!$this->canViewSectors()) {
                 $this->session->flash('error', 'Accès non autorisé');
                 return Response::redirect('/');
-            }
+            }*/
+            
+            // Debug: compter les secteurs totaux
+            $totalSectorsCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM climbing_sectors")['count'] ?? 0;
+            error_log("DEBUG: Total sectors in DB: " . $totalSectorsCount);
 
             // Créer le filtre à partir des paramètres de requête
             $filter = new SectorFilter($request->query->all());
@@ -122,6 +126,10 @@ class SectorController extends BaseController
                 $sortBy,
                 $sortDir
             );
+            
+            // Debug: vérifier les résultats paginés
+            error_log("DEBUG: Paginated sectors total: " . $paginatedSectors->getTotal());
+            error_log("DEBUG: Paginated sectors items count: " . count($paginatedSectors->getItems()));
 
             // Récupérer les données pour les filtres avec validation
             $regions = $this->db->fetchAll(

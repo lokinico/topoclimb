@@ -24,9 +24,7 @@
         <!-- Barre de tri et de résultats -->
         <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
-                {% if sectors.total is defined %}
-                    <span class="text-muted">{{ sectors.total }} secteur(s) trouvé(s)</span>
-                {% endif %}
+                <span class="text-muted">{{ sectors.getTotal() }} secteur(s) trouvé(s)</span>
             </div>
             
             <div class="d-flex align-items-center gap-2">
@@ -91,7 +89,7 @@
     <!-- Vue liste -->
     <div id="sectors-list">
         <div id="sectors-container" class="row g-4">
-            {% set sectorItems = sectors.items is defined ? sectors.items : (sectors is iterable ? sectors : []) %}
+            {% set sectorItems = sectors.getItems() %}
             
             {% if sectorItems|length > 0 %}
                 {% for sector in sectorItems %}
@@ -184,11 +182,11 @@
         </div>
         
         <!-- Pagination -->
-        {% if sectorItems|length > 0 and (sectors.items is defined or sectors.total is defined) %}
+        {% if sectorItems|length > 0 %}
             <div class="pagination-container mt-4">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
                     <div>
-                        {{ pagination.perPageSelector(sectors.perPage|default(20), currentUrl) }}
+                        {{ pagination.perPageSelector(sectors.getPerPage(), currentUrl) }}
                     </div>
                     <div>
                         {{ pagination.render(sectors) }}
@@ -234,10 +232,10 @@ window.sectorsData = {
         {% endfor %}
     ],
     pagination: {
-        currentPage: {{ sectors.currentPage|default(1) }},
-        totalPages: {{ sectors.totalPages|default(1) }},
-        total: {{ sectors.total|default(sectorItems|length) }},
-        perPage: {{ sectors.perPage|default(20) }}
+        currentPage: {{ sectors.getCurrentPage() }},
+        totalPages: {{ sectors.getTotalPages() }},
+        total: {{ sectors.getTotal() }},
+        perPage: {{ sectors.getPerPage() }}
     }
 };
 
