@@ -1,5 +1,7 @@
 {% extends "layouts/app.twig" %}
 
+{% block body_class %} site-form-page{% endblock %}
+
 {% block title %}
     {% if site %}
         Modifier le site {{ site.name }}
@@ -37,7 +39,11 @@
         <form action="{{ site ? url('/sites/' ~ site.id) : url('/sites') }}" 
               method="post" 
               enctype="multipart/form-data" 
-              class="site-form" autocomplete="on">
+              class="site-form-content" 
+              id="site-form"
+              data-site-id="{{ site.id|default('') }}"
+              data-region-id="{{ site.region_id|default(region.id|default('')) }}"
+              autocomplete="on">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if site %}
@@ -164,7 +170,10 @@
                     <!-- Carte interactive -->
                     <div class="map-section">
                         <label class="form-label">Sélectionner la position sur la carte</label>
-                        <div id="map" style="height: 350px; border-radius: 0.375rem; border: 1px solid #dee2e6;"></div>
+                        <div id="site-map" 
+                             data-coordinates-lat="{{ site.coordinates_lat|default('') }}" 
+                             data-coordinates-lng="{{ site.coordinates_lng|default('') }}"
+                             style="height: 350px; border-radius: 0.375rem; border: 1px solid #dee2e6;"></div>
                         <small class="form-text text-muted mt-2">
                             Cliquez sur la carte pour placer le marker du site
                         </small>
@@ -408,10 +417,7 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <!-- TopoclimbCH JavaScript Components -->
-<script src="{{ url('/js/common.js') }}"></script>
-<script src="{{ url('/js/utils/api-client.js') }}"></script>
-<script src="{{ url('/js/utils/coordinates-helper.js') }}"></script>
-<script src="{{ url('/js/components/site-form-manager.js') }}"></script>
+<!-- Modules automatiquement chargés par topoclimb.js selon les besoins -->
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -420,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         // Initialiser le gestionnaire de formulaire avec coordonnées existantes
         const formManager = new SiteFormManager({
-            mapId: 'map',
+            mapId: 'site-map',
             latInputId: 'coordinates_lat',
             lngInputId: 'coordinates_lng'
         });

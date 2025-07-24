@@ -1,5 +1,7 @@
 {% extends "layouts/app.twig" %}
 
+{% block body_class %} site-show-page{% endblock %}
+
 {% block title %}{{ site.name }} - TopoclimbCH{% endblock %}
 
 {% block content %}
@@ -448,4 +450,28 @@ function confirmDelete(siteId, siteName) {
     border: 2px dashed #dee2e6;
 }
 </style>
+
+<script>
+// Exposer les données du site pour les composants JavaScript modernes
+window.siteData = {
+    id: {{ site.id }},
+    name: {{ site.name|json_encode|raw }},
+    description: {{ site.description|default('')|json_encode|raw }},
+    coordinates_lat: {{ site.coordinates_lat|default('null') }},
+    coordinates_lng: {{ site.coordinates_lng|default('null') }},
+    region_id: {{ site.region_id|default('null') }},
+    sectors: [
+        {% for sector in sectors %}
+        {
+            id: {{ sector.id }},
+            name: {{ sector.name|json_encode|raw }},
+            coordinates_lat: {{ sector.coordinates_lat|default('null') }},
+            coordinates_lng: {{ sector.coordinates_lng|default('null') }},
+            route_count: {{ sector.route_count|default(0) }},
+            difficulty_range: {{ sector.difficulty_range|default('')|json_encode|raw }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+};
+</script>
 {% endblock %}
