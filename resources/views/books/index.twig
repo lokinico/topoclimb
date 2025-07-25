@@ -3,8 +3,8 @@
 {% block body_class %} books-index-page{% endblock %}
 
 {% block head %}
-    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
-    <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
+    <link rel="stylesheet" href="/css/pages-common.css">
+    <link rel="stylesheet" href="/css/view-modes.css">
 {% endblock %}
 
 {% block title %}Guides d'escalade - TopoclimbCH{% endblock %}
@@ -63,7 +63,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-1">
-                                    <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none">{{ book.name }}</a>
+                                    <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.name }}</a>
                                 </h5>
                                 <div class="book-actions">
                                     <button class="btn btn-sm btn-outline-secondary quick-favorite" 
@@ -141,7 +141,7 @@
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-book-id="{{ book.id }}">
                         <div class="flex-grow-1">
                             <h5 class="mb-1">
-                                <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none">{{ book.name }}</a>
+                                <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.name }}</a>
                             </h5>
                             <div class="text-muted small mb-1">
                                 {% if book.code %}📝 {{ book.code }}{% endif %}
@@ -192,7 +192,7 @@
                             {% for book in books %}
                                 <tr data-book-id="{{ book.id }}">
                                     <td>
-                                        <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none fw-medium">{{ book.name }}</a>
+                                        <a href="/books/{{ book.id }}" class="text-decoration-none fw-medium">{{ book.name }}</a>
                                     </td>
                                     <td class="text-muted">{{ book.code|default('-') }}</td>
                                     <td class="text-muted">{{ book.publisher|default('-') }}</td>
@@ -232,8 +232,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url('/js/pages-common.js') }}"></script>
-<script src="{{ url('/js/view-manager.js') }}"></script>
+<script src="/js/pages-common.js"></script>
+<script src="/js/view-manager.js"></script>
 <script>
 // Exposer les données des guides pour les composants JavaScript modernes
 window.booksData = {
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetBtn = document.getElementById('reset-filters-fallback');
     if (resetBtn) {
         resetBtn.addEventListener('click', function() {
-            window.location.href = '{{ url('/books') }}';
+            window.location.href = '/books';
         });
     }
 });

@@ -3,8 +3,8 @@
 {% block body_class %} sectors-index-page{% endblock %}
 
 {% block head %}
-    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
-    <link rel="stylesheet" href="{{ url('/css/view-modes-debug.css') }}">
+    <link rel="stylesheet" href="/css/pages-common.css">
+    <link rel="stylesheet" href="/css/view-modes-debug.css">
 {% endblock %}
 
 {# {% import 'components/pagination.twig' as pagination %} #}
@@ -81,7 +81,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title mb-1">
-                                        <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">{{ sector.name }}</a>
+                                        <a href="/sectors/{{ sector.id }}" class="text-decoration-none">{{ sector.name }}</a>
                                     </h5>
                                     <div class="sector-actions">
                                         <button class="btn btn-sm btn-outline-secondary quick-weather" 
@@ -163,7 +163,7 @@
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-sector-id="{{ sector.id }}">
                         <div class="flex-grow-1">
                             <h5 class="mb-1">
-                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">{{ sector.name }}</a>
+                                <a href="/sectors/{{ sector.id }}" class="text-decoration-none">{{ sector.name }}</a>
                             </h5>
                             <div class="text-muted small mb-1">
                                 {% if sector.region_name is defined %}
@@ -220,7 +220,7 @@
                             {% for sector in sectorItems %}
                                 <tr data-sector-id="{{ sector.id }}">
                                     <td>
-                                        <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none fw-medium">{{ sector.name }}</a>
+                                        <a href="/sectors/{{ sector.id }}" class="text-decoration-none fw-medium">{{ sector.name }}</a>
                                     </td>
                                     <td class="text-muted">
                                         {% if sector.region_name is defined %}
@@ -272,8 +272,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url('/js/pages-common.js') }}"></script>
-<script src="{{ url('/js/view-manager-debug.js') }}"></script>
+<script src="/js/pages-common.js"></script>
+<script src="/js/view-manager-debug.js"></script>
 <script>
 // Exposer les données des secteurs pour les composants JavaScript modernes
 window.sectorsData = {

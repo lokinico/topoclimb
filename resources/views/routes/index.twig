@@ -3,8 +3,8 @@
 {% block body_class %} routes-index-page{% endblock %}
 
 {% block head %}
-    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
-    <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
+    <link rel="stylesheet" href="/css/pages-common.css">
+    <link rel="stylesheet" href="/css/view-modes.css">
 {% endblock %}
 
 {% import 'components/pagination.twig' as pagination %}
@@ -82,7 +82,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title mb-1">
-                                        <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none">{{ route.name }}</a>
+                                        <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
                                     </h5>
                                     <div class="route-actions">
                                         <button class="btn btn-sm btn-outline-secondary quick-favorite" 
@@ -118,7 +118,7 @@
                                 
                                 <div class="route-footer mt-3">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="/routes/{{ route.id }}" class="btn btn-sm btn-outline-primary">
                                             Voir détails
                                         </a>
                                         <small class="text-muted">{{ route.styleFormatted }}</small>
@@ -151,7 +151,7 @@
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-route-id="{{ route.id }}">
                         <div class="flex-grow-1">
                             <h5 class="mb-1">
-                                <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none">{{ route.name }}</a>
+                                <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
                                 <span class="difficulty-badge badge bg-primary ms-2">{{ route.difficulty|default('N/A') }}</span>
                             </h5>
                             <div class="text-muted small mb-1">
@@ -203,7 +203,7 @@
                             {% for route in routeItems %}
                                 <tr data-route-id="{{ route.id }}">
                                     <td>
-                                        <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none fw-medium">{{ route.name }}</a>
+                                        <a href="/routes/{{ route.id }}" class="text-decoration-none fw-medium">{{ route.name }}</a>
                                     </td>
                                     <td><span class="difficulty-badge badge bg-primary">{{ route.difficulty|default('N/A') }}</span></td>
                                     <td class="text-muted">{{ route.sector ? route.sector.name : '-' }}</td>
@@ -246,8 +246,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url('/js/pages-common.js') }}"></script>
-<script src="{{ url('/js/view-manager.js') }}"></script>
+<script src="/js/pages-common.js"></script>
+<script src="/js/view-manager.js"></script>
 <script>
 // Exposer les données des voies pour les composants JavaScript modernes
 window.routesData = {
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetBtn = document.getElementById('reset-filters-fallback');
     if (resetBtn) {
         resetBtn.addEventListener('click', function() {
-            window.location.href = '{{ url('/routes') }}';
+            window.location.href = '/routes';
         });
     }
 });
