@@ -10,246 +10,263 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-container">
-    <!-- En-tête épuré -->
-    <div class="page-header-clean">
-        <div class="container">
-            <div class="page-header-content">
-                <div class="page-header-text">
-                    <h1 class="page-title">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Sites d'escalade
-                    </h1>
-                    <p class="page-subtitle">
-                        Découvrez les sites d'escalade et leurs secteurs
-                    </p>
-                </div>
-                
-                <!-- Bouton Create pour les admins -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Sites d'escalade</h1>
+            
+            <div class="actions">
                 {% if user and user.autorisation in ['0', '1', '2'] %}
-                <div class="page-header-actions">
-                    <a href="{{ url('/sites/create') }}" class="btn btn-success">
-                        <i class="fas fa-plus"></i>
-                        Nouveau site
+                    <a href="{{ url('/sites/create') }}" class="btn btn-primary">
+                        <i class="fa fa-plus"></i> Ajouter un site
                     </a>
-                </div>
                 {% endif %}
             </div>
-            
-            <!-- Statistiques simples -->
-            <div class="page-stats">
-                <span class="stat">
-                    <strong>{{ pagination.total|default(sites|length) }}</strong> Sites
-                </span>
-                <span class="stat">
-                    <strong>0</strong> Secteurs
-                </span>
-                <span class="stat">
-                    <strong>0</strong> Voies
-                </span>
-            </div>
         </div>
-    </div>
-
-    <!-- Contenu principal -->
-    <div class="container">
-        <!-- Filtres avancés unifiés -->
-        {% include 'components/advanced-filters.twig' with {
-            'entity': 'sites',
-            'currentFilters': currentFilters|default({}),
-            'regions': regions|default([])
-        } %}
-
-        <!-- Barre d'outils avec contrôles de vue -->
-        <div class="toolbar">
+        
+        <!-- Controls d'affichage et statistiques -->
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
                 <span class="text-muted">{{ pagination.total|default(sites|length) }} site(s) trouvé(s)</span>
             </div>
             
-            <!-- Contrôles de vue -->
+            <!-- Controls d'affichage -->
             <div class="view-controls">
                 <div class="btn-group" role="group" aria-label="Mode d'affichage">
                     <button type="button" class="btn btn-outline-primary active" data-view="grid">
-                        <i class="fas fa-th"></i>
+                        <i class="fas fa-th"></i> Cartes
                     </button>
                     <button type="button" class="btn btn-outline-primary" data-view="list">
-                        <i class="fas fa-list"></i>
+                        <i class="fas fa-list"></i> Liste
                     </button>
                     <button type="button" class="btn btn-outline-primary" data-view="compact">
-                        <i class="fas fa-bars"></i>
+                        <i class="fas fa-bars"></i> Compact
                     </button>
                 </div>
             </div>
         </div>
+    </div>
+    <!-- Filtres avancés unifiés -->
+    {% include 'components/advanced-filters.twig' with {
+        'entity': 'sites',
+        'currentFilters': currentFilters|default({}),
+        'regions': regions|default([])
+    } %}
 
-        <!-- Conteneur des vues -->
-        <div class="sites-container entities-container" id="sites-container">
-            <!-- Vue grille (cartes) -->
-            <div class="sites-grid entities-grid view-grid active" id="sites-grid">
-                {% if sites is defined and sites|length > 0 %}
-                    {% for site in sites %}
-                        <div class="site-card entity-card" data-site-id="{{ site.id }}">
-                            <div class="card-header">
-                                <h3 class="entity-title">{{ site.name }}</h3>
-                                {% if site.region_name %}
-                                    <span class="entity-badge">{{ site.region_name }}</span>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="card-body">
-                                {% if site.description %}
-                                    <p class="entity-description">{{ site.description|slice(0, 120) }}{{ site.description|length > 120 ? '...' : '' }}</p>
-                                {% endif %}
-                                
-                                <div class="entity-meta">
-                                    {% if site.altitude %}
-                                        <span class="meta-item">
-                                            <i class="fas fa-mountain"></i>
-                                            {{ site.altitude }}m
-                                        </span>
-                                    {% endif %}
-                                    {% if site.access_time %}
-                                        <span class="meta-item">
-                                            <i class="fas fa-clock"></i>
-                                            {{ site.access_time }}min
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <div class="card-actions">
-                                <a href="/sites/{{ site.id }}" class="btn btn-primary">
-                                    <i class="fas fa-eye"></i>
-                                    Voir
-                                </a>
-                                
-                                <div class="quick-actions">
-                                    <button class="btn-action" title="Météo" data-action="weather" data-id="{{ site.id }}">
+    <!-- Conteneur principal -->
+    <div class="sites-container entities-container" id="sites-container">
+        <!-- Vue grille (cartes) -->
+        <div class="sites-grid entities-grid view-grid active" id="sites-grid">
+            {% if sites is defined and sites|length > 0 %}
+                {% for site in sites %}
+                    <div class="site-card entity-card card h-100" data-site-id="{{ site.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-1">
+                                    <a href="{{ url('/sites/' ~ site.id) }}" class="text-decoration-none">{{ site.name }}</a>
+                                </h5>
+                                <div class="site-actions">
+                                    <button class="btn btn-sm btn-outline-secondary quick-weather" 
+                                            title="Météo" data-action="weather" data-id="{{ site.id }}">
                                         <i class="fas fa-cloud-sun"></i>
                                     </button>
-                                    <button class="btn-action" title="Carte" data-action="map" data-id="{{ site.id }}">
+                                    <button class="btn btn-sm btn-outline-secondary quick-map" 
+                                            title="Carte" data-action="map" data-id="{{ site.id }}">
                                         <i class="fas fa-map"></i>
                                     </button>
-                                    <button class="btn-action" title="Favoris" data-action="favorite" data-id="{{ site.id }}">
-                                        <i class="fas fa-heart"></i>
+                                    <button class="btn btn-sm btn-outline-secondary quick-favorite" 
+                                            title="Favoris" data-action="favorite" data-id="{{ site.id }}">
+                                        <i class="far fa-heart"></i>
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="no-results">
-                        <i class="fas fa-search"></i>
-                        <h3>Aucun site trouvé</h3>
-                        <p>Aucun site ne correspond à vos critères de recherche.</p>
-                    </div>
-                {% endif %}
-            </div>
-            
-            <!-- Vue liste -->
-            <div class="sites-list entities-list view-list" id="sites-list">
-                {% if sites is defined and sites|length > 0 %}
-                    {% for site in sites %}
-                        <div class="site-list-item entity-list-item" data-site-id="{{ site.id }}">
-                            <div class="item-content">
-                                <h4 class="item-title">{{ site.name }}</h4>
+                            
+                            <div class="site-meta text-muted small mb-2">
                                 {% if site.region_name %}
-                                    <p class="item-subtitle">{{ site.region_name }}</p>
-                                {% endif %}
-                                {% if site.description %}
-                                    <p class="item-description">{{ site.description|slice(0, 150) }}{{ site.description|length > 150 ? '...' : '' }}</p>
-                                {% endif %}
-                                <div class="item-meta">
-                                    {% if site.altitude %}
-                                        <span><i class="fas fa-mountain"></i> {{ site.altitude }}m</span>
-                                    {% endif %}
-                                    {% if site.access_time %}
-                                        <span><i class="fas fa-clock"></i> {{ site.access_time }}min</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="item-actions">
-                                <a href="/sites/{{ site.id }}" class="btn btn-primary">Voir</a>
-                                <button class="btn btn-outline-secondary" title="Météo" data-action="weather" data-id="{{ site.id }}">
-                                    <i class="fas fa-cloud-sun"></i>
-                                </button>
-                                <button class="btn btn-outline-secondary" title="Carte" data-action="map" data-id="{{ site.id }}">
-                                    <i class="fas fa-map"></i>
-                                </button>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            
-            <!-- Vue compacte -->
-            <div class="sites-compact entities-compact view-compact" id="sites-compact">
-                {% if sites is defined and sites|length > 0 %}
-                    {% for site in sites %}
-                        <div class="site-compact-item entity-compact-item" data-site-id="{{ site.id }}">
-                            <div class="compact-name">
-                                <a href="/sites/{{ site.id }}">{{ site.name }}</a>
-                            </div>
-                            <div class="compact-meta">
-                                {% if site.region_name %}
-                                    <span class="compact-region">{{ site.region_name }}</span>
+                                    <span class="me-2">🏔️ {{ site.region_name }}</span>
                                 {% endif %}
                                 {% if site.altitude %}
-                                    <span class="compact-altitude">{{ site.altitude }}m</span>
+                                    <span class="me-2">⛰️ {{ site.altitude }}m</span>
                                 {% endif %}
                             </div>
-                            <div class="compact-actions">
-                                <button title="Météo" data-action="weather" data-id="{{ site.id }}"><i class="fas fa-cloud-sun"></i></button>
-                                <button title="Carte" data-action="map" data-id="{{ site.id }}"><i class="fas fa-map"></i></button>
-                                <button title="Favoris" data-action="favorite" data-id="{{ site.id }}"><i class="fas fa-heart"></i></button>
+                            
+                            {% if site.description %}
+                                <p class="card-text">{{ site.description|slice(0, 100) ~ (site.description|length > 100 ? '...' : '') }}</p>
+                            {% endif %}
+                            
+                            <div class="site-stats row text-center mt-3">
+                                <div class="col-6">
+                                    <div class="stat-value h6 mb-0">{{ site.sectors_count|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Secteurs</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-value h6 mb-0">{{ site.routes_count|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Voies</div>
+                                </div>
                             </div>
                         </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Pagination -->
-        {% if pagination is defined and pagination.total_pages > 1 %}
-        <nav aria-label="Navigation des pages" class="pagination-nav">
-            <ul class="pagination justify-content-center">
-                {% if pagination.current_page > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ pagination.current_page - 1 }}">
-                            <i class="fas fa-chevron-left"></i> Précédent
-                        </a>
-                    </li>
-                {% endif %}
-                
-                {% for page in 1..pagination.total_pages %}
-                    {% if page == pagination.current_page %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ page }}</span>
-                        </li>
-                    {% elseif page == 1 or page == pagination.total_pages or (page >= pagination.current_page - 2 and page <= pagination.current_page + 2) %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page }}">{{ page }}</a>
-                        </li>
-                    {% elseif page == pagination.current_page - 3 or page == pagination.current_page + 3 %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                    {% endif %}
+                    </div>
                 {% endfor %}
-                
-                {% if pagination.current_page < pagination.total_pages %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ pagination.current_page + 1 }}">
-                            Suivant <i class="fas fa-chevron-right"></i>
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
+            {% else %}
+                <div class="col-12">
+                    <div class="empty-state text-center py-5">
+                        <div class="empty-icon mb-3">
+                            <i class="fas fa-map-marker-alt fa-3x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted">Aucun site trouvé</h4>
+                        <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                        <button class="btn btn-outline-primary" id="reset-filters-fallback">
+                            Réinitialiser les filtres
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+            
+        <!-- Vue Liste -->
+        <div class="sites-list entities-list view-list" id="sites-list">
+            {% if sites is defined and sites|length > 0 %}
+                {% for site in sites %}
+                    <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-site-id="{{ site.id }}">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="{{ url('/sites/' ~ site.id) }}" class="text-decoration-none">{{ site.name }}</a>
+                            </h5>
+                            <div class="text-muted small mb-1">
+                                {% if site.region_name %}
+                                    🏔️ {{ site.region_name }}
+                                {% endif %}
+                                {% if site.altitude %} - ⛰️ {{ site.altitude }}m{% endif %}
+                            </div>
+                            {% if site.description %}
+                                <p class="mb-1 text-muted">{{ site.description|slice(0, 120) }}{{ site.description|length > 120 ? '...' : '' }}</p>
+                            {% endif %}
+                            <small class="text-muted">
+                                {{ site.sectors_count|default(0) }} secteurs | {{ site.routes_count|default(0) }} voies
+                            </small>
+                        </div>
+                        <div class="ms-3">
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Météo" data-action="weather" data-id="{{ site.id }}">
+                                    <i class="fas fa-cloud-sun"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Carte" data-action="map" data-id="{{ site.id }}">
+                                    <i class="fas fa-map"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ site.id }}">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+            
+        <!-- Vue Compacte -->
+        <div class="sites-compact entities-compact view-compact" id="sites-compact">
+            {% if sites is defined and sites|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Région</th>
+                                <th>Altitude</th>
+                                <th>Secteurs</th>
+                                <th>Voies</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for site in sites %}
+                                <tr data-site-id="{{ site.id }}">
+                                    <td>
+                                        <a href="{{ url('/sites/' ~ site.id) }}" class="text-decoration-none fw-medium">{{ site.name }}</a>
+                                    </td>
+                                    <td class="text-muted">{{ site.region_name|default('-') }}</td>
+                                    <td class="text-muted">{{ site.altitude|default('-') }}m</td>
+                                    <td class="text-muted">{{ site.sectors_count|default(0) }}</td>
+                                    <td class="text-muted">{{ site.routes_count|default(0) }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-secondary" title="Météo" data-action="weather" data-id="{{ site.id }}">
+                                                <i class="fas fa-cloud-sun"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Carte" data-action="map" data-id="{{ site.id }}">
+                                                <i class="fas fa-map"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ site.id }}">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if sites|length > 0 %}
+            <div class="pagination-container mt-4">
+                <div class="d-flex justify-content-center">
+                    <div class="text-muted">
+                        {{ pagination.total|default(sites|length) }} sites trouvés
+                    </div>
+                </div>
+            </div>
         {% endif %}
     </div>
-</div>
+{% endblock %}
+
+{% block scripts %}
 
 <script src="{{ url('/js/pages-common.js') }}"></script>
 <script src="{{ url('/js/view-manager.js') }}"></script>
+<script>
+// Exposer les données des sites pour les composants JavaScript modernes
+window.sitesData = {
+    sites: [
+        {% for site in sites %}
+        {
+            id: {{ site.id }},
+            name: {{ site.name|json_encode|raw }},
+            description: {{ site.description|default('')|json_encode|raw }},
+            coordinates_lat: {{ site.coordinates_lat|default('null') }},
+            coordinates_lng: {{ site.coordinates_lng|default('null') }},
+            altitude: {{ site.altitude|default('null') }},
+            region_name: {{ site.region_name|default('')|json_encode|raw }},
+            sectors_count: {{ site.sectors_count|default(0) }},
+            routes_count: {{ site.routes_count|default(0) }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    regions: [
+        {% for region in regions|default([]) %}
+        {
+            id: {{ region.id }},
+            name: {{ region.name|json_encode|raw }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    pagination: {
+        currentPage: {{ pagination.current_page|default(1) }},
+        totalPages: {{ pagination.total_pages|default(1) }},
+        total: {{ pagination.total|default(sites|length) }}
+    }
+};
+
+// Reset filters fallback
+document.addEventListener('DOMContentLoaded', function() {
+    const resetBtn = document.getElementById('reset-filters-fallback');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            window.location.href = '{{ url('/sites') }}';
+        });
+    }
+});
+</script>
 {% endblock %}
