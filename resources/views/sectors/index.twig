@@ -156,6 +156,105 @@
             {% endif %}
         </div>
         
+        <!-- Vue Liste -->
+        <div class="sectors-list entities-list view-list" id="sectors-list">
+            {% if sectorItems|length > 0 %}
+                {% for sector in sectorItems %}
+                    <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-sector-id="{{ sector.id }}">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">{{ sector.name }}</a>
+                            </h5>
+                            <div class="text-muted small mb-1">
+                                {% if sector.region_name is defined %}
+                                    🏔️ {{ sector.region_name }}
+                                {% elseif sector.region %}
+                                    🏔️ {{ sector.region.name }}
+                                {% endif %}
+                                {% if sector.altitude %} - ⛰️ {{ sector.altitude }}m{% endif %}
+                            </div>
+                            {% if sector.description %}
+                                <p class="mb-1 text-muted">{{ sector.description|slice(0, 120) }}{{ sector.description|length > 120 ? '...' : '' }}</p>
+                            {% endif %}
+                            <small class="text-muted">
+                                {{ sector.routes_count|default(0) }} voies
+                                {% if sector.difficulty_range %} | {{ sector.difficulty_range }}{% endif %}
+                            </small>
+                        </div>
+                        <div class="ms-3">
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Météo" data-action="weather" data-id="{{ sector.id }}">
+                                    <i class="fas fa-cloud-sun"></i>
+                                </button>
+                                {% if sector.coordinates_lat and sector.coordinates_lng %}
+                                    <button class="btn btn-sm btn-outline-secondary mb-1" title="GPS" data-action="map" data-id="{{ sector.id }}">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ sector.id }}">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <!-- Vue Compacte -->
+        <div class="sectors-compact entities-compact view-compact" id="sectors-compact">
+            {% if sectorItems|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Région</th>
+                                <th>Altitude</th>
+                                <th>Voies</th>
+                                <th>Difficultés</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sector in sectorItems %}
+                                <tr data-sector-id="{{ sector.id }}">
+                                    <td>
+                                        <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none fw-medium">{{ sector.name }}</a>
+                                    </td>
+                                    <td class="text-muted">
+                                        {% if sector.region_name is defined %}
+                                            {{ sector.region_name }}
+                                        {% elseif sector.region %}
+                                            {{ sector.region.name }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted">{{ sector.altitude|default('-') }}m</td>
+                                    <td class="text-muted">{{ sector.routes_count|default(0) }}</td>
+                                    <td class="text-muted">{{ sector.difficulty_range|default('-') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-secondary" title="Météo" data-action="weather" data-id="{{ sector.id }}">
+                                                <i class="fas fa-cloud-sun"></i>
+                                            </button>
+                                            {% if sector.coordinates_lat and sector.coordinates_lng %}
+                                                <button class="btn btn-outline-secondary" title="GPS" data-action="map" data-id="{{ sector.id }}">
+                                                    <i class="fas fa-map-marker-alt"></i>
+                                                </button>
+                                            {% endif %}
+                                            <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ sector.id }}">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+
         <!-- Pagination temporairement simplifiée pour le test -->
         {% if sectorItems|length > 0 %}
             <div class="pagination-container mt-4">
