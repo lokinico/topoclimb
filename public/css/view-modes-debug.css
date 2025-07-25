@@ -1,0 +1,108 @@
+/**
+ * CSS SIMPLIFIÉ POUR DÉBUGGAGE DES VUES
+ */
+
+/* ===== MASQUER TOUTES LES VUES PAR DÉFAUT ===== */
+.view-list,
+.view-compact {
+    display: none !important;
+}
+
+.view-grid {
+    display: grid !important;
+}
+
+/* ===== AFFICHER SEULEMENT LA VUE ACTIVE ===== */
+.view-grid.active {
+    display: grid !important;
+}
+
+.view-list.active {
+    display: block !important;
+    width: 100% !important;
+}
+
+.view-compact.active {
+    display: block !important;
+    width: 100% !important;
+}
+
+/* ===== FORCER MASQUAGE DES VUES NON-ACTIVES ===== */
+.view-grid:not(.active),
+.view-list:not(.active), 
+.view-compact:not(.active) {
+    display: none !important;
+}
+
+/* ===== BOUTONS DE VUE ===== */
+.view-controls .btn {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+.view-controls .btn.active {
+    background: #007bff !important;
+    color: white !important;
+}
+
+/* ===== MODE GRILLE (CARTES CARRÉES) ===== */
+.view-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.entity-card {
+    aspect-ratio: 1;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #f1f3f4;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== MODE LISTE (PLEINE LARGEUR) ===== */
+.view-list {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    border: 1px solid #f1f3f4;
+}
+
+/* ===== MODE COMPACT (TABLE PLEINE LARGEUR) ===== */
+.view-compact {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.view-compact .table-responsive {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+}
+
+/* ===== DEBUG ===== */
+.view-grid.active {
+    border: 3px solid green !important;
+    background: rgba(0, 255, 0, 0.1) !important;
+}
+
+.view-list.active {
+    border: 3px solid blue !important;
+    background: rgba(0, 0, 255, 0.1) !important;
+}
+
+.view-compact.active {
+    border: 3px solid red !important;
+    background: rgba(255, 0, 0, 0.1) !important;
+}

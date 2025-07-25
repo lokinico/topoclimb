@@ -4,7 +4,7 @@
 
 {% block head %}
     <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
-    <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
+    <link rel="stylesheet" href="{{ url('/css/view-modes-debug.css') }}">
 {% endblock %}
 
 {# {% import 'components/pagination.twig' as pagination %} #}
@@ -273,7 +273,7 @@
 
 {% block scripts %}
 <script src="{{ url('/js/pages-common.js') }}"></script>
-<script src="{{ url('/js/view-manager.js') }}"></script>
+<script src="{{ url('/js/view-manager-debug.js') }}"></script>
 <script>
 // Exposer les données des secteurs pour les composants JavaScript modernes
 window.sectorsData = {
