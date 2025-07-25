@@ -85,17 +85,17 @@
                                     </h5>
                                     <div class="sector-actions">
                                         <button class="btn btn-sm btn-outline-secondary quick-weather" 
-                                                title="Météo" data-sector-id="{{ sector.id }}">
+                                                title="Météo" data-action="weather" data-id="{{ sector.id }}">
                                             <i class="fas fa-cloud-sun"></i>
                                         </button>
                                         {% if sector.coordinates_lat and sector.coordinates_lng %}
                                             <button class="btn btn-sm btn-outline-secondary quick-gps" 
-                                                    title="Navigation GPS" data-sector-id="{{ sector.id }}">
+                                                    title="Navigation GPS" data-action="gps" data-id="{{ sector.id }}">
                                                 <i class="fas fa-map-marker-alt"></i>
                                             </button>
                                         {% endif %}
                                         <button class="btn btn-sm btn-outline-secondary quick-favorite" 
-                                                title="Favoris" data-sector-id="{{ sector.id }}">
+                                                title="Favoris" data-action="favorite" data-id="{{ sector.id }}">
                                             <i class="far fa-heart"></i>
                                         </button>
                                     </div>

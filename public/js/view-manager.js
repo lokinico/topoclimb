@@ -153,12 +153,30 @@ class ViewManager {
             }
         });
         
+        // Actions GPS (spécifique aux secteurs)
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="gps"]')) {
+                const button = e.target.closest('[data-action="gps"]');
+                const entityId = button.dataset.id;
+                this.handleGpsAction(entityId);
+            }
+        });
+        
         // Actions favoris
         document.addEventListener('click', (e) => {
             if (e.target.closest('[data-action="favorite"]')) {
                 const button = e.target.closest('[data-action="favorite"]');
                 const entityId = button.dataset.id;
                 this.handleFavoriteAction(entityId, button);
+            }
+        });
+        
+        // Actions partage
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="share"]')) {
+                const button = e.target.closest('[data-action="share"]');
+                const entityId = button.dataset.id;
+                this.handleShareAction(entityId);
             }
         });
     }
@@ -175,6 +193,54 @@ class ViewManager {
         setTimeout(() => {
             this.showToast('Fonctionnalité carte bientôt disponible', 'warning');
         }, 1000);
+    }
+    
+    handleGpsAction(entityId) {
+        this.showToast('Ouverture GPS Navigation...', 'info');
+        setTimeout(() => {
+            this.showToast('Fonctionnalité GPS bientôt disponible', 'warning');
+        }, 1000);
+    }
+    
+    handleShareAction(entityId) {
+        // Essayer d'utiliser l'API native de partage si disponible
+        if (navigator.share) {
+            navigator.share({
+                title: 'TopoclimbCH',
+                text: 'Découvrez ce contenu sur TopoclimbCH',
+                url: window.location.href
+            }).then(() => {
+                this.showToast('Partagé avec succès', 'success');
+            }).catch(() => {
+                this.copyToClipboard();
+            });
+        } else {
+            // Fallback: copier l'URL dans le presse-papier
+            this.copyToClipboard();
+        }
+    }
+    
+    copyToClipboard() {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                this.showToast('URL copiée dans le presse-papier', 'success');
+            }).catch(() => {
+                this.showToast('Impossible de copier l\'URL', 'error');
+            });
+        } else {
+            // Fallback legacy
+            const textArea = document.createElement('textarea');
+            textArea.value = window.location.href;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                this.showToast('URL copiée dans le presse-papier', 'success');
+            } catch (err) {
+                this.showToast('Impossible de copier l\'URL', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
     }
     
     handleFavoriteAction(entityId, button) {
