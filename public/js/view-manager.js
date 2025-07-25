@@ -5,7 +5,7 @@
 class ViewManager {
     constructor(containerSelector = '.entities-container') {
         this.container = document.querySelector(containerSelector);
-        this.currentView = 'grid';
+        this.currentView = null; // Sera détecté depuis le DOM
         
         console.log('ViewManager constructor:', containerSelector, this.container);
         
@@ -14,23 +14,49 @@ class ViewManager {
             return;
         }
         
+        // Détecter quelle vue est active dans le HTML
+        this.detectInitialView();
+        
         this.init();
     }
     
+    detectInitialView() {
+        // Chercher quelle vue a la classe 'active' dans le HTML
+        const activeView = this.container.querySelector('.view-grid.active, .view-list.active, .view-compact.active');
+        
+        if (activeView) {
+            if (activeView.classList.contains('view-grid')) {
+                this.currentView = 'grid';
+            } else if (activeView.classList.contains('view-list')) {
+                this.currentView = 'list';
+            } else if (activeView.classList.contains('view-compact')) {
+                this.currentView = 'compact';
+            }
+        } else {
+            // Fallback si aucune vue active trouvée
+            this.currentView = 'grid';
+        }
+        
+        console.log('ViewManager: Detected initial view from DOM:', this.currentView);
+    }
+    
     init() {
-        console.log('ViewManager init started');
+        console.log('ViewManager init started - Current view detected:', this.currentView);
         
         // Debug: Vérifier les vues disponibles dans le container
         const views = this.container.querySelectorAll('.view-grid, .view-list, .view-compact');
         console.log('ViewManager: Found views:', views.length);
         views.forEach((view, i) => {
-            console.log(`ViewManager: View ${i}:`, view.className, view.classList.contains('active') ? '(ACTIVE)' : '(HIDDEN)');
+            const computed = window.getComputedStyle(view);
+            console.log(`ViewManager: View ${i}:`, view.className, 
+                'Active:', view.classList.contains('active'), 
+                'Display:', computed.display);
         });
         
         this.setupViewControls();
         this.loadSavedView();
         this.setupQuickActions();
-        console.log('ViewManager init completed');
+        console.log('ViewManager init completed - Final state:', this.currentView);
     }
     
     setupViewControls() {
@@ -123,9 +149,19 @@ class ViewManager {
     loadSavedView() {
         try {
             const savedView = localStorage.getItem('topoclimb_view_preference');
+            console.log('ViewManager: Raw saved view from localStorage:', savedView);
+            console.log('ViewManager: Current view from DOM:', this.currentView);
+            
             if (savedView && ['grid', 'list', 'compact'].includes(savedView)) {
                 console.log('ViewManager: 💾 Loading saved view:', savedView);
-                this.switchView(savedView);
+                
+                // Si la vue sauvegardée est différente de celle détectée, faire le switch
+                if (savedView !== this.currentView) {
+                    console.log('ViewManager: Switching from', this.currentView, 'to saved view', savedView);
+                    this.switchView(savedView);
+                } else {
+                    console.log('ViewManager: Saved view matches current view, no switch needed');
+                }
                 
                 // Mettre à jour le bouton actif
                 const button = document.querySelector(`[data-view="${savedView}"]`);
@@ -133,20 +169,17 @@ class ViewManager {
                     this.updateActiveButton(button);
                 }
             } else {
-                console.log('ViewManager: 🆕 No saved view, using default grid view (already active in HTML)');
-                // Ne pas appeler switchView('grid') car c'est déjà actif dans le HTML
-                this.currentView = 'grid';
+                console.log('ViewManager: 🆕 No saved view, using detected view:', this.currentView);
                 
-                // S'assurer que le bouton grid est actif
-                const gridButton = document.querySelector('[data-view="grid"]');
-                if (gridButton) {
-                    this.updateActiveButton(gridButton);
+                // S'assurer que le bouton correspondant est actif
+                const currentButton = document.querySelector(`[data-view="${this.currentView}"]`);
+                if (currentButton) {
+                    this.updateActiveButton(currentButton);
                 }
             }
         } catch (e) {
             console.warn('ViewManager: ⚠️ Could not load view preference:', e);
-            // En cas d'erreur, laisser le HTML par défaut (grid actif)
-            this.currentView = 'grid';
+            // En cas d'erreur, garder la vue détectée depuis le DOM
         }
     }
     
