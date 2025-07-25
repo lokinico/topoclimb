@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear ViewManager Storage</title>
+</head>
+<body>
+    <h1>Clear ViewManager localStorage</h1>
+    <button onclick="clearStorage()">Clear Storage</button>
+    <div id="result"></div>
+    
+    <script>
+        function clearStorage() {
+            const oldValue = localStorage.getItem('topoclimb_view_preference');
+            localStorage.removeItem('topoclimb_view_preference');
+            document.getElementById('result').innerHTML = 
+                `<p>Cleared! Old value was: <strong>${oldValue || 'null'}</strong></p>
+                 <p>Now you can test with clean state.</p>`;
+        }
+        
+        // Show current value
+        window.onload = function() {
+            const current = localStorage.getItem('topoclimb_view_preference');
+            document.getElementById('result').innerHTML = 
+                `<p>Current stored preference: <strong>${current || 'none'}</strong></p>`;
+        }
+    </script>
+</body>
+</html>
