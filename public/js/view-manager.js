@@ -53,44 +53,29 @@ class ViewManager {
             return;
         }
         
-        console.log('ViewManager: Switching to view:', viewType);
+        console.log('ViewManager: 🔄 Switching to view:', viewType);
         
-        // Chercher TOUS les éléments de vue dans le container
-        const allViews = this.container.querySelectorAll('[class*="view-"]');
-        console.log('ViewManager: Found all views:', allViews.length);
+        // Masquer toutes les vues avec les classes standards
+        const allViews = this.container.querySelectorAll('.view-grid, .view-list, .view-compact');
+        console.log('ViewManager: Found views to hide:', allViews.length);
         
-        // Masquer toutes les vues
         allViews.forEach((view, index) => {
-            console.log(`ViewManager: Processing view ${index}:`, view.className);
+            console.log(`ViewManager: 👁️ Hiding view ${index}:`, view.className);
             view.classList.remove('active');
-            view.style.display = 'none';
+            // Ne pas forcer le style display, laisser le CSS gérer
         });
         
-        // Chercher spécifiquement la vue cible
-        const targetSelectors = [
-            `.view-${viewType}`,
-            `.${viewType}-grid`,
-            `.${viewType}-list`, 
-            `.${viewType}-compact`,
-            `#${this.container.id.replace('-container', '')}-${viewType}`
-        ];
-        
-        let targetView = null;
-        for (const selector of targetSelectors) {
-            targetView = this.container.querySelector(selector);
-            if (targetView) {
-                console.log('ViewManager: Found target view with selector:', selector);
-                break;
-            }
-        }
+        // Trouver et afficher la vue cible
+        const targetView = this.container.querySelector(`.view-${viewType}`);
         
         if (targetView) {
+            console.log('ViewManager: ✅ Found and activating view:', targetView.className);
             targetView.classList.add('active');
-            targetView.style.display = viewType === 'grid' ? 'grid' : 'block';
-            console.log('ViewManager: View switched successfully to:', viewType);
+            console.log('ViewManager: ✅ View switched successfully to:', viewType);
         } else {
-            console.error('ViewManager: Could not find target view for:', viewType);
-            console.log('ViewManager: Available views in container:', this.container.innerHTML);
+            console.error('ViewManager: ❌ Could not find target view for:', viewType);
+            console.log('ViewManager: Available views:', 
+                Array.from(this.container.querySelectorAll('[class*="view-"]')).map(v => v.className));
         }
         
         this.currentView = viewType;
@@ -121,7 +106,7 @@ class ViewManager {
         try {
             const savedView = localStorage.getItem('topoclimb_view_preference');
             if (savedView && ['grid', 'list', 'compact'].includes(savedView)) {
-                console.log('ViewManager: Loading saved view:', savedView);
+                console.log('ViewManager: 💾 Loading saved view:', savedView);
                 this.switchView(savedView);
                 
                 // Mettre à jour le bouton actif
@@ -129,9 +114,13 @@ class ViewManager {
                 if (button) {
                     this.updateActiveButton(button);
                 }
+            } else {
+                console.log('ViewManager: 🆕 No saved view, using default grid view');
+                this.switchView('grid');
             }
         } catch (e) {
-            console.warn('Could not load view preference:', e);
+            console.warn('ViewManager: ⚠️ Could not load view preference:', e);
+            this.switchView('grid'); // Fallback to grid
         }
     }
     
