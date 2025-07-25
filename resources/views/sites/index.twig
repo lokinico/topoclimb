@@ -56,7 +56,7 @@
     <div class="sites-container entities-container" id="sites-container">
         <!-- Vue grille (cartes) -->
         <div class="sites-grid entities-grid view-grid active" id="sites-grid">
-            {% if sites is defined and sites|length > 0 %}
+            {% if sites is defined %}
                 {% for site in sites %}
                     <div class="site-card entity-card card h-100" data-site-id="{{ site.id }}">
                         <div class="card-body">
@@ -124,7 +124,7 @@
             
         <!-- Vue Liste -->
         <div class="sites-list entities-list view-list" id="sites-list">
-            {% if sites is defined and sites|length > 0 %}
+            {% if sites is defined %}
                 {% for site in sites %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-site-id="{{ site.id }}">
                         <div class="flex-grow-1">
@@ -164,7 +164,7 @@
             
         <!-- Vue Compacte -->
         <div class="sites-compact entities-compact view-compact" id="sites-compact">
-            {% if sites is defined and sites|length > 0 %}
+            {% if sites is defined %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-light">

@@ -76,7 +76,7 @@
         
         <!-- Vue grille (cartes) -->
         <div class="routes-grid entities-grid view-grid active" id="routes-grid">
-            {% if routeItems|length > 0 %}
+            {% if routeItems %}
                 {% for route in routeItems %}
                     <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
                             <div class="card-body">
@@ -146,7 +146,7 @@
         
         <!-- Vue Liste -->
         <div class="routes-list entities-list view-list" id="routes-list">
-            {% if routeItems|length > 0 %}
+            {% if routeItems %}
                 {% for route in routeItems %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-route-id="{{ route.id }}">
                         <div class="flex-grow-1">
@@ -185,7 +185,7 @@
         
         <!-- Vue Compacte -->
         <div class="routes-compact entities-compact view-compact" id="routes-compact">
-            {% if routeItems|length > 0 %}
+            {% if routeItems %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-light">
@@ -229,7 +229,7 @@
         </div>
         
         <!-- Pagination -->
-        {% if routeItems|length > 0 %}
+        {% if routeItems %}
             <div class="pagination-container mt-4">
                 {% if routes.render is defined %}
                     {{ routes.render() }}

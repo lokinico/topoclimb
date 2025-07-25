@@ -123,7 +123,7 @@
         
         <!-- Vue Liste -->
         <div class="regions-list entities-list view-list" id="regions-list">
-            {% if regions is defined and regions|length > 0 %}
+            {% if regions is defined %}
                 {% for region in regions %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-region-id="{{ region.id }}">
                         <div class="flex-grow-1">
@@ -161,7 +161,7 @@
         
         <!-- Vue Compacte -->
         <div class="regions-compact entities-compact view-compact" id="regions-compact">
-            {% if regions is defined and regions|length > 0 %}
+            {% if regions is defined %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-light">
