@@ -1,6 +1,7 @@
 /**
- * Styles pour les différents modes d'affichage des listes
- * Modes supportés: grid (cartes), list (liste), compact (compact)
+ * SYSTÈME DE VUES UNIFIÉ TOPOCLIMB
+ * Cartes carrées + Listes pleine largeur + Compact optimisé
+ * Pour toutes les pages: regions, sites, sectors, routes, books
  */
 
 /* ===== STYLES GÉNÉRAUX ===== */
@@ -9,63 +10,53 @@
     background: #f8f9fa;
 }
 
-.page-header-clean {
-    background: #f8f9fa;
-    color: #2c3e50;
+.page-header {
+    background: white;
     padding: 2rem 0;
     margin-bottom: 2rem;
     border-bottom: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.page-header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.page-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: #2c3e50;
-}
-
-.page-subtitle {
-    font-size: 1.2rem;
-    opacity: 0.8;
+.toolbar, .view-controls {
     margin-bottom: 1.5rem;
-    color: #6c757d;
 }
 
-.page-stats {
-    display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
+/* ===== CONTENEURS ET VUES ===== */
+.entities-container {
+    position: relative;
+    min-height: 200px;
+    width: 100%;
 }
 
-.stat {
-    font-size: 1rem;
-    color: #6c757d;
+/* Cacher toutes les vues par défaut sauf grid */
+.view-list,
+.view-compact {
+    display: none !important;
 }
 
-.toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+.view-grid {
+    display: grid !important;
 }
 
-/* ===== CONTRÔLES DE VUE ===== */
+/* Afficher seulement la vue active */
+.view-grid.active {
+    display: grid !important;
+}
+
+.view-list.active,
+.view-compact.active {
+    display: block !important;
+}
+
+/* Forcer masquage des vues non-actives */
+.entities-container .view-grid:not(.active),
+.entities-container .view-list:not(.active), 
+.entities-container .view-compact:not(.active) {
+    display: none !important;
+}
+
+/* ===== BOUTONS DE VUE ===== */
 .view-controls .btn-group {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     border-radius: 8px;
@@ -82,6 +73,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    cursor: pointer;
 }
 
 .view-controls .btn:hover {
@@ -90,49 +82,17 @@
 }
 
 .view-controls .btn.active {
-    background: #007bff;
-    color: white;
+    background: #007bff !important;
+    color: white !important;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* ===== CONTENEURS PRINCIPAUX ===== */
-.entities-container {
-    position: relative;
-    min-height: 200px;
-}
-
-/* Cacher toutes les vues par défaut */
-.view-list,
-.view-compact {
-    display: none !important;
-}
-
-/* Afficher la vue active */
-.view-grid.active {
-    display: grid !important;
-}
-
-.view-list.active,
-.view-compact.active {
-    display: block !important;
-}
-
-/* Vue grille par défaut */
+/* ===== MODE GRILLE (CARTES CARRÉES) ===== */
 .view-grid {
     display: grid;
-}
-
-/* Assurer que seule la vue active est visible */
-.entities-container .view-grid:not(.active),
-.entities-container .view-list:not(.active), 
-.entities-container .view-compact:not(.active) {
-    display: none !important;
-}
-
-/* ===== MODE GRILLE (CARTES) ===== */
-.view-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.5rem;
+    width: 100%;
     padding: 0;
 }
 
@@ -144,6 +104,11 @@
     transition: all 0.3s ease;
     border: 1px solid #f1f3f4;
     position: relative;
+    
+    /* CARTES CARRÉES */
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .entity-card:hover {
@@ -153,352 +118,273 @@
 }
 
 .entity-card .card-header {
-    padding: 1.5rem 1.5rem 1rem;
-    border-bottom: 1px solid #f8f9fa;
+    padding: 1rem 1rem 0.5rem;
+    flex-shrink: 0;
 }
 
 .entity-card .card-body {
-    padding: 1rem 1.5rem;
-}
-
-/* ===== STYLES STANDARDISÉS POUR CARTES ===== */
-.entity-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #2c3e50;
-}
-
-.entity-badge {
-    background: #007bff;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.entity-description {
-    color: #6c757d;
-    line-height: 1.5;
-    margin-bottom: 1rem;
-}
-
-.entity-meta {
+    padding: 0.5rem 1rem;
+    flex: 1;
     display: flex;
-    gap: 1rem;
-    font-size: 0.9rem;
-    color: #6c757d;
-    margin-bottom: 1rem;
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .entity-card .card-actions {
-    padding: 1rem 1.5rem;
+    padding: 1rem;
     background: #f8f9fa;
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
     gap: 0.5rem;
 }
 
-.btn-admin-edit {
-    background: #ffc107;
-    color: #212529;
-    padding: 0.5rem;
-    border-radius: 6px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    transition: all 0.3s ease;
+/* Titres et contenus des cartes */
+.entity-card .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    line-height: 1.2;
 }
 
-.btn-admin-edit:hover {
-    background: #e0a800;
-    transform: translateY(-1px);
-    text-decoration: none;
-    color: #212529;
-}
-
-.btn-admin-delete {
-    background: #dc3545;
-    color: white;
-    padding: 0.5rem;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    transition: all 0.3s ease;
-}
-
-.btn-admin-delete:hover {
-    background: #c82333;
-    transform: translateY(-1px);
-}
-
-.admin-actions {
-    display: flex;
-    gap: 0.25rem;
-}
-
-.pagination-nav {
-    margin-top: 2rem;
-}
-
-.results-info {
+.entity-card .card-text {
     font-size: 0.9rem;
     color: #6c757d;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+    flex: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
 }
 
-.quick-actions {
+/* Actions rapides dans cartes */
+.quick-actions, .sector-actions, .region-actions {
     display: flex;
     gap: 0.25rem;
 }
 
-.btn-action {
+.btn-action, .quick-weather, .quick-gps, .quick-favorite, .quick-map {
     background: none;
     border: 1px solid #dee2e6;
     color: #6c757d;
-    padding: 0.5rem;
+    padding: 0.4rem;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
 }
 
-.btn-action:hover {
+.btn-action:hover, .quick-weather:hover, .quick-gps:hover, .quick-favorite:hover, .quick-map:hover {
     background: #e9ecef;
     color: #495057;
     border-color: #adb5bd;
 }
 
-.btn-action.favorited {
-    color: #dc3545;
-    border-color: #dc3545;
-}
-
-/* ===== MODE LISTE ===== */
+/* ===== MODE LISTE (PLEINE LARGEUR) ===== */
 .view-list {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    width: 100% !important;
+    max-width: none !important;
 }
 
-.entity-list-item {
+.list-item, .entity-list-item {
     display: flex;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 1px solid #f8f9fa;
-    transition: background-color 0.3s ease;
-}
-
-.entity-list-item:last-child {
-    border-bottom: none;
-}
-
-.entity-list-item:hover {
-    background: #f8f9fa;
-}
-
-.entity-list-item .item-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.entity-list-item .item-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-    color: #2c3e50;
-}
-
-.entity-list-item .item-subtitle {
-    color: #6c757d;
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
-}
-
-.entity-list-item .item-description {
-    color: #6c757d;
-    line-height: 1.5;
-    margin-bottom: 0.5rem;
-}
-
-.entity-list-item .item-meta {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.85rem;
-    color: #8b949e;
-}
-
-.entity-list-item .item-actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.entity-list-item .btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-}
-
-/* ===== MODE COMPACT ===== */
-.view-compact {
+    margin-bottom: 1rem;
     background: white;
     border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    width: 100%;
+    border: 1px solid #f1f3f4;
 }
 
-.entity-compact-item {
+.list-item:hover, .entity-list-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    border-color: #007bff;
+}
+
+.list-item .flex-grow-1 {
+    flex: 1;
+    min-width: 0;
+    margin-right: 1rem;
+}
+
+.list-item h5 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.list-item .text-muted {
+    color: #6c757d;
+    line-height: 1.5;
+}
+
+.list-item .btn-group-vertical {
     display: flex;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #f8f9fa;
-    transition: background-color 0.3s ease;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
-.entity-compact-item:last-child {
-    border-bottom: none;
+.list-item .btn-group-vertical .btn {
+    min-width: 36px;
+    padding: 0.5rem;
+    border-radius: 6px;
 }
 
-.entity-compact-item:hover {
+/* ===== MODE COMPACT (TABLE PLEINE LARGEUR) ===== */
+.view-compact {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.view-compact .table-responsive {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+    width: 100%;
+}
+
+.view-compact table {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.view-compact thead th {
+    background: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    padding: 1rem;
+}
+
+.view-compact tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.view-compact tbody tr:hover {
     background: #f8f9fa;
 }
 
-.compact-name {
-    flex: 1;
-    min-width: 0;
-}
-
-.compact-name a {
-    color: #2c3e50;
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 1.1rem;
-}
-
-.compact-name a:hover {
-    color: #007bff;
-    text-decoration: underline;
-}
-
-.compact-meta {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    margin-right: 1rem;
-    font-size: 0.9rem;
-    color: #6c757d;
-    flex-shrink: 0;
-}
-
-.compact-country {
-    background: #e9ecef;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.compact-altitude {
-    color: #8b949e;
-}
-
-.compact-actions {
-    display: flex;
-    gap: 0.25rem;
-    flex-shrink: 0;
-}
-
-.compact-actions button {
-    background: none;
-    border: none;
-    color: #6c757d;
-    padding: 0.25rem;
+.view-compact .btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    margin: 0 0.125rem;
     border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-.compact-actions button:hover {
-    background: #e9ecef;
+/* ===== STATISTIQUES ET MÉTA ===== */
+.stat-value {
+    font-weight: 600;
+    color: #007bff;
+    font-size: 1rem;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sector-meta, .region-meta {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+/* ===== ÉTATS VIDES ===== */
+.empty-state, .no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 1rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #dee2e6;
+}
+
+.empty-state i, .no-results i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    color: #6c757d;
+}
+
+/* ===== PAGINATION ===== */
+.pagination-container {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.pagination .page-link {
+    border-radius: 8px;
+    margin: 0 0.25rem;
+    border: 1px solid #dee2e6;
     color: #495057;
+    padding: 0.75rem 1rem;
+}
+
+.pagination .page-item.active .page-link {
+    background: #007bff;
+    border-color: #007bff;
 }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-    .view-controls {
-        justify-content: center;
-        margin-bottom: 1rem;
-    }
-    
     .view-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 1rem;
     }
     
-    .entity-list-item {
+    .entity-card {
+        aspect-ratio: 0.9; /* Légèrement moins carré sur mobile */
+    }
+    
+    .list-item, .entity-list-item {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
     }
     
-    .entity-list-item .item-actions {
+    .list-item .btn-group-vertical {
+        flex-direction: row;
         width: 100%;
         justify-content: center;
     }
     
-    .entity-compact-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .compact-meta,
-    .compact-actions {
-        margin-right: 0;
-    }
-}
-
-@media (max-width: 480px) {
     .view-controls .btn {
         padding: 0.5rem 0.75rem;
         font-size: 0.9rem;
     }
     
-    .entity-card .card-actions {
-        flex-direction: column;
-        gap: 1rem;
+    .view-controls .btn span {
+        display: none; /* Masquer texte sur mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    .view-grid {
+        grid-template-columns: 1fr;
     }
     
-    .quick-actions {
-        width: 100%;
-        justify-content: center;
+    .entity-card {
+        aspect-ratio: 1.2; /* Plus large que haut sur très petit écran */
     }
 }
 
@@ -520,30 +406,19 @@
     animation: fadeIn 0.3s ease;
 }
 
-/* ===== TOAST NOTIFICATIONS ===== */
-.toast-notification {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+/* ===== FORCE OVERRIDE BOOTSTRAP ===== */
+.container, .container-fluid {
+    max-width: none !important;
+    width: 100% !important;
 }
 
-/* ===== ÉTATS SPÉCIAUX ===== */
-.entity-card.featured {
-    border-color: #ffc107;
-    background: linear-gradient(145deg, #fff 0%, #fffbf0 100%);
+.view-list, .view-compact {
+    width: 100% !important;
+    max-width: none !important;
 }
 
-.entity-card.featured::before {
-    content: '⭐';
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    font-size: 1.2rem;
-}
-
-.entity-list-item.featured {
-    background: linear-gradient(145deg, #fff 0%, #fffbf0 100%);
-}
-
-.entity-compact-item.featured {
-    background: linear-gradient(145deg, #fff 0%, #fffbf0 100%);
+/* ===== DEBUG (à supprimer en prod) ===== */
+.debug-view {
+    border: 2px solid red !important;
+    background: rgba(255,0,0,0.1) !important;
 }
