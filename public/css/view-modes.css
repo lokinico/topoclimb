@@ -29,31 +29,24 @@
     width: 100%;
 }
 
-/* Cacher toutes les vues par défaut sauf grid */
-.view-list,
-.view-compact {
+/* Masquer toutes les vues par défaut */
+.entities-container .view-grid,
+.entities-container .view-list,
+.entities-container .view-compact {
     display: none !important;
 }
 
-.view-grid {
+/* Afficher seulement la vue active avec spécificité plus élevée */
+.entities-container .view-grid.active {
     display: grid !important;
 }
 
-/* Afficher seulement la vue active */
-.view-grid.active {
-    display: grid !important;
-}
-
-.view-list.active,
-.view-compact.active {
+.entities-container .view-list.active {
     display: block !important;
 }
 
-/* Forcer masquage des vues non-actives */
-.entities-container .view-grid:not(.active),
-.entities-container .view-list:not(.active), 
-.entities-container .view-compact:not(.active) {
-    display: none !important;
+.entities-container .view-compact.active {
+    display: block !important;
 }
 
 /* ===== BOUTONS DE VUE ===== */

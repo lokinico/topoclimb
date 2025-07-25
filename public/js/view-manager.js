@@ -19,6 +19,14 @@ class ViewManager {
     
     init() {
         console.log('ViewManager init started');
+        
+        // Debug: Vérifier les vues disponibles dans le container
+        const views = this.container.querySelectorAll('.view-grid, .view-list, .view-compact');
+        console.log('ViewManager: Found views:', views.length);
+        views.forEach((view, i) => {
+            console.log(`ViewManager: View ${i}:`, view.className, view.classList.contains('active') ? '(ACTIVE)' : '(HIDDEN)');
+        });
+        
         this.setupViewControls();
         this.loadSavedView();
         this.setupQuickActions();
@@ -125,12 +133,20 @@ class ViewManager {
                     this.updateActiveButton(button);
                 }
             } else {
-                console.log('ViewManager: 🆕 No saved view, using default grid view');
-                this.switchView('grid');
+                console.log('ViewManager: 🆕 No saved view, using default grid view (already active in HTML)');
+                // Ne pas appeler switchView('grid') car c'est déjà actif dans le HTML
+                this.currentView = 'grid';
+                
+                // S'assurer que le bouton grid est actif
+                const gridButton = document.querySelector('[data-view="grid"]');
+                if (gridButton) {
+                    this.updateActiveButton(gridButton);
+                }
             }
         } catch (e) {
             console.warn('ViewManager: ⚠️ Could not load view preference:', e);
-            this.switchView('grid'); // Fallback to grid
+            // En cas d'erreur, laisser le HTML par défaut (grid actif)
+            this.currentView = 'grid';
         }
     }
     
