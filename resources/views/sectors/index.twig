@@ -4,6 +4,7 @@
 
 {% block head %}
     <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+    <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
 {% endblock %}
 
 {# {% import 'components/pagination.twig' as pagination %} #}
@@ -25,31 +26,24 @@
             </div>
         </div>
         
-        <!-- Barre de tri et de résultats -->
+        <!-- Controls d’affichage et statistiques -->
         <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
                 <span class="text-muted">{{ sectors.getTotal() }} secteur(s) trouvé(s)</span>
             </div>
             
-            <div class="d-flex align-items-center gap-2">
-                <!-- Toggle vue carte/liste -->
-                <button type="button" id="map-view-toggle" class="btn btn-outline-secondary btn-sm" title="Vue carte">
-                    <i class="fas fa-map"></i>
-                </button>
-                
-                <div class="sort-controls">
-                    <div class="btn-group" role="group" aria-label="Options de tri">
-                        <select name="sort_by" id="sort-select" class="form-select form-select-sm">
-                            <option value="name" {{ sort_by == 'name' ? 'selected' : '' }}>Nom</option>
-                            <option value="altitude" {{ sort_by == 'altitude' ? 'selected' : '' }}>Altitude</option>
-                            <option value="access_time" {{ sort_by == 'access_time' ? 'selected' : '' }}>Temps d'accès</option>
-                            <option value="created_at" {{ sort_by == 'created_at' ? 'selected' : '' }}>Date de création</option>
-                        </select>
-                        
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleSortDirection()" title="Inverser l'ordre">
-                            <i class="fa fa-sort-{{ sort_dir == 'DESC' ? 'down' : 'up' }}"></i>
-                        </button>
-                    </div>
+            <!-- Controls d’affichage -->
+            <div class="view-controls">
+                <div class="btn-group" role="group" aria-label="Mode d'affichage">
+                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                        <i class="fas fa-th"></i> Cartes
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-view="list">
+                        <i class="fas fa-list"></i> Liste
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-view="compact">
+                        <i class="fas fa-bars"></i> Compact
+                    </button>
                 </div>
             </div>
         </div>
@@ -67,9 +61,10 @@
         'regions': regions
     } %}
     
-    <!-- Vue liste -->
-    <div id="sectors-list">
-        <div id="sectors-container" class="sectors-grid entities-grid">
+    <!-- Conteneur principal -->
+    <div class="sectors-container entities-container" id="sectors-container">
+        <!-- Vue grille (cartes) -->
+        <div class="sectors-grid entities-grid view-grid active" id="sectors-grid">
             {% set sectorItems = sectors.getItems() %}
             
             {% if sectorItems|length > 0 %}

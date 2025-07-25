@@ -6,6 +6,7 @@
 
 {% block head %}
     <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+    <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
 {% endblock %}
 {# Cache bust: {{ "now"|date("Y-m-d H:i:s") }} #}
 
@@ -19,8 +20,8 @@
 
 {% block content %}
 <div class="regions-page">
-    <!-- En-tête simple -->
-    <div class="page-header">
+    <!-- En-tête épuré -->
+    <div class="page-header-clean">
         <div class="container">
             <div class="page-header-content">
                 <div class="page-header-text">
@@ -73,59 +74,183 @@
             'countries': countries|default([])
         } %}
 
+        <!-- Controls d'affichage -->
+        <div class="view-controls mb-3">
+            <div class="btn-group" role="group" aria-label="Mode d\'affichage">
+                <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                    <i class="fas fa-th"></i> Cartes
+                </button>
+                <button type="button" class="btn btn-outline-primary" data-view="list">
+                    <i class="fas fa-list"></i> Liste
+                </button>
+                <button type="button" class="btn btn-outline-primary" data-view="compact">
+                    <i class="fas fa-bars"></i> Compact
+                </button>
+            </div>
+        </div>
+
         <!-- Liste des régions -->
-        <div class="regions-grid entities-grid" id="regions-grid">
-            {% if regions is defined and regions|length > 0 %}
-                {% for region in regions %}
-                    <div class="region-card entity-card" data-region-id="{{ region.id }}">
-                        <div class="region-card-header">
-                            <h3 class="region-name">{{ region.name }}</h3>
-                            <span class="region-country">{{ region.country_name }}</span>
-                        </div>
-                        
-                        <div class="region-card-body">
-                            {% if region.description %}
-                                <p class="region-description">{{ region.description }}</p>
-                            {% endif %}
+        <div class="regions-container entities-container" id="regions-container">
+            <!-- Vue grille (cartes) -->
+            <div class="regions-grid entities-grid view-grid active" id="regions-grid">
+                {% if regions is defined and regions|length > 0 %}
+                    {% for region in regions %}
+                        <div class="region-card entity-card" data-region-id="{{ region.id }}">
+                            <div class="region-card-header">
+                                <h3 class="region-name">{{ region.name }}</h3>
+                                <span class="region-country">{{ region.country_name|default('Suisse') }}</span>
+                            </div>
                             
-                            <div class="region-meta">
-                                {% if region.altitude %}
-                                    <span class="region-altitude">
-                                        <i class="fas fa-mountain"></i>
-                                        {{ region.altitude }}m
-                                    </span>
+                            <div class="region-card-body">
+                                {% if region.description %}
+                                    <p class="region-description">{{ region.description }}</p>
+                                {% endif %}
+                                
+                                <div class="region-meta">
+                                    {% if region.altitude %}
+                                        <span class="region-altitude">
+                                            <i class="fas fa-mountain"></i>
+                                            {{ region.altitude }}m
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="region-card-actions">
+                                <a href="/regions/{{ region.id }}" class="btn-primary">
+                                    <i class="fas fa-eye"></i>
+                                    Voir la région
+                                </a>
+                                
+                                <div class="quick-actions">
+                                    <button class="btn-action" title="Météo" data-action="weather" data-id="{{ region.id }}">
+                                        <i class="fas fa-cloud-sun"></i>
+                                    </button>
+                                    <button class="btn-action" title="Carte" data-action="map" data-id="{{ region.id }}">
+                                        <i class="fas fa-map"></i>
+                                    </button>
+                                    <button class="btn-action" title="Favoris" data-action="favorite" data-id="{{ region.id }}">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Actions admin -->
+                                {% if user and user.autorisation in ['0', '1', '2'] %}
+                                <div class="admin-actions">
+                                    <a href="/regions/{{ region.id }}/edit" class="btn-edit" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn-delete" onclick="confirmDelete({{ region.id }}, '{{ region.name }}')" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                                 {% endif %}
                             </div>
                         </div>
-                        
-                        <div class="region-card-actions">
-                            <a href="/regions/{{ region.id }}" class="btn-primary">
-                                <i class="fas fa-eye"></i>
-                                Voir la région
-                            </a>
-                            
-                            <!-- Actions admin -->
-                            {% if user and user.autorisation in ['0', '1', '2'] %}
-                            <div class="admin-actions">
-                                <a href="/regions/{{ region.id }}/edit" class="btn-edit" title="Modifier">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button class="btn-delete" onclick="confirmDelete({{ region.id }}, '{{ region.name }}')" title="Supprimer">
-                                    <i class="fas fa-trash"></i>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-results">
+                        <i class="fas fa-search"></i>
+                        <h3>Aucune région trouvée</h3>
+                        <p>Aucune région ne correspond à vos critères de recherche.</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Vue liste -->
+            <div class="regions-list entities-list view-list" id="regions-list">
+                {% if regions is defined and regions|length > 0 %}
+                    {% for region in regions %}
+                        <div class="region-list-item entity-list-item" data-region-id="{{ region.id }}">
+                            <div class="item-content">
+                                <h4 class="item-title">{{ region.name }}</h4>
+                                <p class="item-subtitle">{{ region.country_name|default('Suisse') }}</p>
+                                {% if region.description %}
+                                    <p class="item-description">{{ region.description|slice(0, 150) }}...</p>
+                                {% endif %}
+                                <div class="item-meta">
+                                    {% if region.altitude %}
+                                        <span><i class="fas fa-mountain"></i> {{ region.altitude }}m</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <a href="/regions/{{ region.id }}" class="btn btn-primary">Voir</a>
+                                <button class="btn btn-outline-secondary" title="Météo" data-action="weather" data-id="{{ region.id }}">
+                                    <i class="fas fa-cloud-sun"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" title="Carte" data-action="map" data-id="{{ region.id }}">
+                                    <i class="fas fa-map"></i>
                                 </button>
                             </div>
-                            {% endif %}
                         </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="no-results">
-                    <i class="fas fa-search"></i>
-                    <h3>Aucune région trouvée</h3>
-                    <p>Aucune région ne correspond à vos critères de recherche.</p>
-                </div>
-            {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <!-- Vue compacte -->
+            <div class="regions-compact entities-compact view-compact" id="regions-compact">
+                {% if regions is defined and regions|length > 0 %}
+                    {% for region in regions %}
+                        <div class="region-compact-item entity-compact-item" data-region-id="{{ region.id }}">
+                            <div class="compact-name">
+                                <a href="/regions/{{ region.id }}">{{ region.name }}</a>
+                            </div>
+                            <div class="compact-meta">
+                                <span class="compact-country">{{ region.country_name|default('Suisse') }}</span>
+                                {% if region.altitude %}
+                                    <span class="compact-altitude">{{ region.altitude }}m</span>
+                                {% endif %}
+                            </div>
+                            <div class="compact-actions">
+                                <button title="Météo" data-action="weather" data-id="{{ region.id }}"><i class="fas fa-cloud-sun"></i></button>
+                                <button title="Carte" data-action="map" data-id="{{ region.id }}"><i class="fas fa-map"></i></button>
+                                <button title="Favoris" data-action="favorite" data-id="{{ region.id }}"><i class="fas fa-heart"></i></button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
         </div>
+
+        <!-- Pagination -->
+        {% if pagination is defined and pagination.totalPages > 1 %}
+        <nav aria-label="Navigation des pages" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if pagination.currentPage > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.currentPage - 1 }}&{{ app.request.query|url_encode }}">
+                            <i class="fas fa-chevron-left"></i> Précédent
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for page in 1..pagination.totalPages %}
+                    {% if page == pagination.currentPage %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page }}</span>
+                        </li>
+                    {% elseif page == 1 or page == pagination.totalPages or (page >= pagination.currentPage - 2 and page <= pagination.currentPage + 2) %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page }}&{{ app.request.query|url_encode }}">{{ page }}</a>
+                        </li>
+                    {% elseif page == pagination.currentPage - 3 or page == pagination.currentPage + 3 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if pagination.currentPage < pagination.totalPages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.currentPage + 1 }}&{{ app.request.query|url_encode }}">
+                            Suivant <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
@@ -136,11 +261,12 @@
     background: var(--bg-color, #f8f9fa);
 }
 
-.page-header {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    color: white;
+.page-header-clean {
+    background: #f8f9fa;
+    color: #2c3e50;
     padding: 2rem 0;
     margin-bottom: 2rem;
+    border-bottom: 1px solid #e9ecef;
 }
 
 .page-header-content {
@@ -480,6 +606,7 @@
 </style>
 
 <script src="{{ url('/js/pages-common.js') }}"></script>
+<script src="{{ url('/js/view-manager.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('region-search');

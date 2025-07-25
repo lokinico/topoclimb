@@ -136,7 +136,17 @@ class RegionController extends BaseController
             $filters['order'] = 'asc';
         }
 
-        return array_filter($filters, fn($value) => $value !== '' && $value !== null);
+        $cleanFilters = array_filter($filters, fn($value) => $value !== '' && $value !== null);
+        
+        // Assurer des valeurs par défaut pour le tri
+        if (!isset($cleanFilters['sort'])) {
+            $cleanFilters['sort'] = 'r.name';
+        }
+        if (!isset($cleanFilters['order'])) {
+            $cleanFilters['order'] = 'asc';
+        }
+        
+        return $cleanFilters;
     }
 
     /**
