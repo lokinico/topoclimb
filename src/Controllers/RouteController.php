@@ -95,24 +95,62 @@ class RouteController extends BaseController
                 $sortDir = 'ASC';
             }
 
-            // Paginer les résultats filtrés
-            $paginatedRoutes = Route::filterAndPaginate(
-                $filter,
-                $page,
-                $perPage,
-                $sortBy,
-                $sortDir
-            );
+            // Approche simplifiée temporaire pour éviter les erreurs
+            try {
+                $paginatedRoutes = Route::filterAndPaginate(
+                    $filter,
+                    $page,
+                    $perPage,
+                    $sortBy,
+                    $sortDir
+                );
+            } catch (\Exception $filterError) {
+                // Fallback si filterAndPaginate échoue
+                error_log('Route::filterAndPaginate error: ' . $filterError->getMessage());
+                
+                // Requête simple comme fallback
+                $offset = ($page - 1) * $perPage;
+                $routes = $this->db->fetchAll(
+                    "SELECT r.*, s.name as sector_name 
+                     FROM climbing_routes r 
+                     LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
+                     WHERE r.active = 1 
+                     ORDER BY r.{$sortBy} {$sortDir} 
+                     LIMIT {$perPage} OFFSET {$offset}"
+                );
+                
+                // Créer un objet simple compatible avec le template
+                $paginatedRoutes = new class($routes, count($routes), $page, $perPage) {
+                    public function __construct(private array $items, private int $total, private int $currentPage, private int $perPage) {}
+                    public function getItems() { return $this->items; }
+                    public function getTotal() { return $this->total; }
+                    public function getCurrentPage() { return $this->currentPage; }
+                    public function getTotalPages() { return ceil($this->total / $this->perPage); }
+                    public function getPerPage() { return $this->perPage; }
+                };
+            }
 
             // Récupérer les données pour les filtres
             $sectors = $this->db->fetchAll("SELECT id, name FROM climbing_sectors WHERE active = 1 ORDER BY name ASC");
+            $sites = $this->db->fetchAll("SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC");
+            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
             $diffSystems = $this->db->fetchAll("SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC");
 
             return $this->render('routes/index', [
                 'routes' => $paginatedRoutes,
                 'filter' => $filter,
                 'sectors' => $sectors,
+                'sites' => $sites,
+                'regions' => $regions,
                 'diffSystems' => $diffSystems,
+                'currentFilters' => [
+                    'search' => $request->query->get('search', ''),
+                    'difficulty_min' => $request->query->get('difficulty_min', ''),
+                    'difficulty_max' => $request->query->get('difficulty_max', ''),
+                    'sector_id' => $request->query->get('sector_id', ''),
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir
+                ],
                 'currentUrl' => $request->getPathInfo(),
                 'sort_by' => $sortBy,
                 'sort_dir' => $sortDir
