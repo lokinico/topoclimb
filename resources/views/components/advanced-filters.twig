@@ -1,0 +1,564 @@
+{#
+  Composant de filtres avancés repliables uniforme
+  
+  Props:
+  - entity: 'regions' | 'sites' | 'sectors' | 'routes' 
+  - filters: array des filtres disponibles
+  - currentFilters: valeurs actuelles des filtres
+  - regions: liste des régions (optionnel)
+  - sites: liste des sites (optionnel)
+  - advanced: filtres avancés spécifiques à l'entité
+#}
+
+{% set entityConfig = {
+    'regions': {
+        'icon': 'fa-mountain',
+        'title': 'Filtrer les régions',
+        'basicFilters': ['search', 'country'],
+        'advancedFilters': ['altitude_min', 'altitude_max', 'has_sectors']
+    },
+    'sites': {
+        'icon': 'fa-map-marker-alt',
+        'title': 'Filtrer les sites',
+        'basicFilters': ['search', 'region'],
+        'advancedFilters': ['altitude_min', 'altitude_max', 'has_coordinates', 'sectors_count']
+    },
+    'sectors': {
+        'icon': 'fa-mountain',
+        'title': 'Filtrer les secteurs',
+        'basicFilters': ['search', 'region', 'site'],
+        'advancedFilters': ['altitude_min', 'altitude_max', 'exposure', 'season', 'difficulty', 'routes_count']
+    },
+    'routes': {
+        'icon': 'fa-route',
+        'title': 'Filtrer les voies',
+        'basicFilters': ['search', 'region', 'site', 'sector'],
+        'advancedFilters': ['difficulty_min', 'difficulty_max', 'height_min', 'height_max', 'rating']
+    }
+} %}
+
+{% set config = entityConfig[entity] %}
+
+<div class="advanced-filters-container" id="filters-container">
+    <!-- En-tête des filtres -->
+    <div class="filters-header">
+        <h3 class="filters-title">
+            <i class="fas {{ config.icon }}"></i>
+            {{ config.title }}
+        </h3>
+        <div class="filters-actions">
+            <button type="button" id="toggle-advanced-filters" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-sliders-h"></i>
+                <span class="toggle-text">Filtres avancés</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </button>
+            <button type="button" id="reset-filters" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-times"></i>
+                Réinitialiser
+            </button>
+        </div>
+    </div>
+
+    <!-- Formulaire des filtres -->
+    <form method="GET" class="filters-form" id="filters-form">
+        <!-- Filtres de base (toujours visibles) -->
+        <div class="basic-filters">
+            <div class="row g-3">
+                {% if 'search' in config.basicFilters %}
+                <div class="col-md-4">
+                    <label for="search" class="form-label">
+                        <i class="fas fa-search"></i>
+                        Recherche
+                    </label>
+                    <input type="text" 
+                           name="search" 
+                           id="search" 
+                           class="form-control" 
+                           value="{{ currentFilters.search|default('') }}" 
+                           placeholder="Nom, description...">
+                </div>
+                {% endif %}
+
+                {% if 'region' in config.basicFilters and regions is defined %}
+                <div class="col-md-3">
+                    <label for="region_id" class="form-label">
+                        <i class="fas fa-mountain"></i>
+                        Région
+                    </label>
+                    <select name="region_id" id="region_id" class="form-select">
+                        <option value="">Toutes les régions</option>
+                        {% for region in regions %}
+                            <option value="{{ region.id }}" 
+                                    {% if currentFilters.region_id == region.id %}selected{% endif %}>
+                                {{ region.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if 'site' in config.basicFilters %}
+                <div class="col-md-3">
+                    <label for="site_id" class="form-label">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Site
+                    </label>
+                    <select name="site_id" id="site_id" class="form-select">
+                        <option value="">Tous les sites</option>
+                        {% if sites is defined %}
+                            {% for site in sites %}
+                                <option value="{{ site.id }}" 
+                                        {% if currentFilters.site_id == site.id %}selected{% endif %}>
+                                    {{ site.name }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if 'country' in config.basicFilters and countries is defined %}
+                <div class="col-md-3">
+                    <label for="country_id" class="form-label">
+                        <i class="fas fa-flag"></i>
+                        Pays
+                    </label>
+                    <select name="country_id" id="country_id" class="form-select">
+                        <option value="">Tous les pays</option>
+                        {% for country in countries %}
+                            <option value="{{ country.id }}" 
+                                    {% if currentFilters.country_id == country.id %}selected{% endif %}>
+                                {{ country.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <!-- Tri -->
+                <div class="col-md-2">
+                    <label for="sort_by" class="form-label">
+                        <i class="fas fa-sort"></i>
+                        Trier par
+                    </label>
+                    <select name="sort_by" id="sort_by" class="form-select">
+                        <option value="name" {% if currentFilters.sort_by == 'name' %}selected{% endif %}>Nom</option>
+                        {% if entity in ['sites', 'sectors'] %}
+                            <option value="altitude" {% if currentFilters.sort_by == 'altitude' %}selected{% endif %}>Altitude</option>
+                        {% endif %}
+                        {% if entity == 'sectors' %}
+                            <option value="routes_count" {% if currentFilters.sort_by == 'routes_count' %}selected{% endif %}>Nb voies</option>
+                        {% endif %}
+                        <option value="created_at" {% if currentFilters.sort_by == 'created_at' %}selected{% endif %}>Date création</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres avancés (repliables) -->
+        <div class="advanced-filters collapse" id="advanced-filters">
+            <hr class="my-3">
+            <div class="row g-3">
+                {% if 'altitude_min' in config.advancedFilters %}
+                <div class="col-md-3">
+                    <label for="altitude_min" class="form-label">
+                        <i class="fas fa-mountain"></i>
+                        Altitude min (m)
+                    </label>
+                    <input type="number" 
+                           name="altitude_min" 
+                           id="altitude_min" 
+                           class="form-control" 
+                           value="{{ currentFilters.altitude_min|default('') }}" 
+                           placeholder="Ex: 1000">
+                </div>
+                <div class="col-md-3">
+                    <label for="altitude_max" class="form-label">
+                        <i class="fas fa-mountain"></i>
+                        Altitude max (m)
+                    </label>
+                    <input type="number" 
+                           name="altitude_max" 
+                           id="altitude_max" 
+                           class="form-control" 
+                           value="{{ currentFilters.altitude_max|default('') }}" 
+                           placeholder="Ex: 2500">
+                </div>
+                {% endif %}
+
+                {% if 'exposure' in config.advancedFilters %}
+                <div class="col-md-3">
+                    <label for="exposure" class="form-label">
+                        <i class="fas fa-compass"></i>
+                        Exposition
+                    </label>
+                    <select name="exposure" id="exposure" class="form-select">
+                        <option value="">Toutes expositions</option>
+                        <option value="N" {% if currentFilters.exposure == 'N' %}selected{% endif %}>Nord</option>
+                        <option value="NE" {% if currentFilters.exposure == 'NE' %}selected{% endif %}>Nord-Est</option>
+                        <option value="E" {% if currentFilters.exposure == 'E' %}selected{% endif %}>Est</option>
+                        <option value="SE" {% if currentFilters.exposure == 'SE' %}selected{% endif %}>Sud-Est</option>
+                        <option value="S" {% if currentFilters.exposure == 'S' %}selected{% endif %}>Sud</option>
+                        <option value="SW" {% if currentFilters.exposure == 'SW' %}selected{% endif %}>Sud-Ouest</option>
+                        <option value="W" {% if currentFilters.exposure == 'W' %}selected{% endif %}>Ouest</option>
+                        <option value="NW" {% if currentFilters.exposure == 'NW' %}selected{% endif %}>Nord-Ouest</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if 'season' in config.advancedFilters %}
+                <div class="col-md-3">
+                    <label for="season" class="form-label">
+                        <i class="fas fa-calendar-alt"></i>
+                        Saison optimale
+                    </label>
+                    <select name="season" id="season" class="form-select">
+                        <option value="">Toutes saisons</option>
+                        <option value="spring" {% if currentFilters.season == 'spring' %}selected{% endif %}>Printemps</option>
+                        <option value="summer" {% if currentFilters.season == 'summer' %}selected{% endif %}>Été</option>
+                        <option value="autumn" {% if currentFilters.season == 'autumn' %}selected{% endif %}>Automne</option>
+                        <option value="winter" {% if currentFilters.season == 'winter' %}selected{% endif %}>Hiver</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if 'difficulty' in config.advancedFilters %}
+                <div class="col-md-3">
+                    <label for="difficulty_min" class="form-label">
+                        <i class="fas fa-chart-line"></i>
+                        Difficulté min
+                    </label>
+                    <select name="difficulty_min" id="difficulty_min" class="form-select">
+                        <option value="">Toutes</option>
+                        <option value="3a" {% if currentFilters.difficulty_min == '3a' %}selected{% endif %}>3a</option>
+                        <option value="3b" {% if currentFilters.difficulty_min == '3b' %}selected{% endif %}>3b</option>
+                        <option value="3c" {% if currentFilters.difficulty_min == '3c' %}selected{% endif %}>3c</option>
+                        <option value="4a" {% if currentFilters.difficulty_min == '4a' %}selected{% endif %}>4a</option>
+                        <option value="4b" {% if currentFilters.difficulty_min == '4b' %}selected{% endif %}>4b</option>
+                        <option value="4c" {% if currentFilters.difficulty_min == '4c' %}selected{% endif %}>4c</option>
+                        <option value="5a" {% if currentFilters.difficulty_min == '5a' %}selected{% endif %}>5a</option>
+                        <option value="5b" {% if currentFilters.difficulty_min == '5b' %}selected{% endif %}>5b</option>
+                        <option value="5c" {% if currentFilters.difficulty_min == '5c' %}selected{% endif %}>5c</option>
+                        <option value="6a" {% if currentFilters.difficulty_min == '6a' %}selected{% endif %}>6a</option>
+                        <option value="6a+" {% if currentFilters.difficulty_min == '6a+' %}selected{% endif %}>6a+</option>
+                        <option value="6b" {% if currentFilters.difficulty_min == '6b' %}selected{% endif %}>6b</option>
+                        <option value="6b+" {% if currentFilters.difficulty_min == '6b+' %}selected{% endif %}>6b+</option>
+                        <option value="6c" {% if currentFilters.difficulty_min == '6c' %}selected{% endif %}>6c</option>
+                        <option value="6c+" {% if currentFilters.difficulty_min == '6c+' %}selected{% endif %}>6c+</option>
+                        <option value="7a" {% if currentFilters.difficulty_min == '7a' %}selected{% endif %}>7a</option>
+                        <option value="7a+" {% if currentFilters.difficulty_min == '7a+' %}selected{% endif %}>7a+</option>
+                        <option value="7b" {% if currentFilters.difficulty_min == '7b' %}selected{% endif %}>7b</option>
+                        <option value="7b+" {% if currentFilters.difficulty_min == '7b+' %}selected{% endif %}>7b+</option>
+                        <option value="7c" {% if currentFilters.difficulty_min == '7c' %}selected{% endif %}>7c</option>
+                        <option value="7c+" {% if currentFilters.difficulty_min == '7c+' %}selected{% endif %}>7c+</option>
+                        <option value="8a" {% if currentFilters.difficulty_min == '8a' %}selected{% endif %}>8a</option>
+                        <option value="8a+" {% if currentFilters.difficulty_min == '8a+' %}selected{% endif %}>8a+</option>
+                        <option value="8b" {% if currentFilters.difficulty_min == '8b' %}selected{% endif %}>8b</option>
+                        <option value="8b+" {% if currentFilters.difficulty_min == '8b+' %}selected{% endif %}>8b+</option>
+                        <option value="8c" {% if currentFilters.difficulty_min == '8c' %}selected{% endif %}>8c</option>
+                        <option value="8c+" {% if currentFilters.difficulty_min == '8c+' %}selected{% endif %}>8c+</option>
+                        <option value="9a" {% if currentFilters.difficulty_min == '9a' %}selected{% endif %}>9a</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="difficulty_max" class="form-label">
+                        <i class="fas fa-chart-line"></i>
+                        Difficulté max
+                    </label>
+                    <select name="difficulty_max" id="difficulty_max" class="form-select">
+                        <option value="">Toutes</option>
+                        <option value="3a" {% if currentFilters.difficulty_max == '3a' %}selected{% endif %}>3a</option>
+                        <option value="3b" {% if currentFilters.difficulty_max == '3b' %}selected{% endif %}>3b</option>
+                        <option value="3c" {% if currentFilters.difficulty_max == '3c' %}selected{% endif %}>3c</option>
+                        <option value="4a" {% if currentFilters.difficulty_max == '4a' %}selected{% endif %}>4a</option>
+                        <option value="4b" {% if currentFilters.difficulty_max == '4b' %}selected{% endif %}>4b</option>
+                        <option value="4c" {% if currentFilters.difficulty_max == '4c' %}selected{% endif %}>4c</option>
+                        <option value="5a" {% if currentFilters.difficulty_max == '5a' %}selected{% endif %}>5a</option>
+                        <option value="5b" {% if currentFilters.difficulty_max == '5b' %}selected{% endif %}>5b</option>
+                        <option value="5c" {% if currentFilters.difficulty_max == '5c' %}selected{% endif %}>5c</option>
+                        <option value="6a" {% if currentFilters.difficulty_max == '6a' %}selected{% endif %}>6a</option>
+                        <option value="6a+" {% if currentFilters.difficulty_max == '6a+' %}selected{% endif %}>6a+</option>
+                        <option value="6b" {% if currentFilters.difficulty_max == '6b' %}selected{% endif %}>6b</option>
+                        <option value="6b+" {% if currentFilters.difficulty_max == '6b+' %}selected{% endif %}>6b+</option>
+                        <option value="6c" {% if currentFilters.difficulty_max == '6c' %}selected{% endif %}>6c</option>
+                        <option value="6c+" {% if currentFilters.difficulty_max == '6c+' %}selected{% endif %}>6c+</option>
+                        <option value="7a" {% if currentFilters.difficulty_max == '7a' %}selected{% endif %}>7a</option>
+                        <option value="7a+" {% if currentFilters.difficulty_max == '7a+' %}selected{% endif %}>7a+</option>
+                        <option value="7b" {% if currentFilters.difficulty_max == '7b' %}selected{% endif %}>7b</option>
+                        <option value="7b+" {% if currentFilters.difficulty_max == '7b+' %}selected{% endif %}>7b+</option>
+                        <option value="7c" {% if currentFilters.difficulty_max == '7c' %}selected{% endif %}>7c</option>
+                        <option value="7c+" {% if currentFilters.difficulty_max == '7c+' %}selected{% endif %}>7c+</option>
+                        <option value="8a" {% if currentFilters.difficulty_max == '8a' %}selected{% endif %}>8a</option>
+                        <option value="8a+" {% if currentFilters.difficulty_max == '8a+' %}selected{% endif %}>8a+</option>
+                        <option value="8b" {% if currentFilters.difficulty_max == '8b' %}selected{% endif %}>8b</option>
+                        <option value="8b+" {% if currentFilters.difficulty_max == '8b+' %}selected{% endif %}>8b+</option>
+                        <option value="8c" {% if currentFilters.difficulty_max == '8c' %}selected{% endif %}>8c</option>
+                        <option value="8c+" {% if currentFilters.difficulty_max == '8c+' %}selected{% endif %}>8c+</option>
+                        <option value="9a" {% if currentFilters.difficulty_max == '9a' %}selected{% endif %}>9a</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if 'has_coordinates' in config.advancedFilters %}
+                <div class="col-md-3">
+                    <label for="has_coordinates" class="form-label">
+                        <i class="fas fa-map-pin"></i>
+                        Coordonnées GPS
+                    </label>
+                    <select name="has_coordinates" id="has_coordinates" class="form-select">
+                        <option value="">Tous</option>
+                        <option value="1" {% if currentFilters.has_coordinates == '1' %}selected{% endif %}>Avec coordonnées</option>
+                        <option value="0" {% if currentFilters.has_coordinates == '0' %}selected{% endif %}>Sans coordonnées</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if 'routes_count' in config.advancedFilters %}
+                <div class="col-md-3">
+                    <label for="routes_count_min" class="form-label">
+                        <i class="fas fa-route"></i>
+                        Nb voies min
+                    </label>
+                    <input type="number" 
+                           name="routes_count_min" 
+                           id="routes_count_min" 
+                           class="form-control" 
+                           value="{{ currentFilters.routes_count_min|default('') }}" 
+                           placeholder="Ex: 5">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Boutons de soumission (cachés, le formulaire se soumet automatiquement) -->
+        <input type="hidden" name="sort_dir" value="{{ currentFilters.sort_dir|default('ASC') }}" id="sort_dir">
+    </form>
+</div>
+
+<style>
+.advanced-filters-container {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border: 1px solid #e9ecef;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.filters-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filters-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filters-form {
+    margin: 0;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.form-control, .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.advanced-filters {
+    transition: all 0.3s ease;
+}
+
+.advanced-filters.show {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#toggle-advanced-filters {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+#toggle-advanced-filters .toggle-icon {
+    transition: transform 0.3s ease;
+    margin-left: 0.5rem;
+}
+
+#toggle-advanced-filters.expanded .toggle-icon {
+    transform: rotate(180deg);
+}
+
+#toggle-advanced-filters:hover {
+    background-color: #e9ecef;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filters-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filters-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .filters-title {
+        font-size: 1.1rem;
+    }
+}
+
+/* Animation d'entrée pour les résultats */
+.fade-in {
+    animation: fadeIn 0.4s ease-out both;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<script>
+// JavaScript pour la gestion des filtres avancés
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButton = document.getElementById('toggle-advanced-filters');
+    const advancedFilters = document.getElementById('advanced-filters');
+    const resetButton = document.getElementById('reset-filters');
+    const form = document.getElementById('filters-form');
+    const sortDirInput = document.getElementById('sort_dir');
+    
+    // Vérifier si les filtres avancés ont des valeurs
+    function hasAdvancedFiltersValues() {
+        const advancedInputs = advancedFilters.querySelectorAll('input, select');
+        return Array.from(advancedInputs).some(input => input.value && input.value !== '');
+    }
+    
+    // Ouvrir automatiquement si des filtres avancés ont des valeurs
+    if (hasAdvancedFiltersValues()) {
+        advancedFilters.classList.add('show');
+        toggleButton.classList.add('expanded');
+    }
+    
+    // Toggle des filtres avancés
+    toggleButton.addEventListener('click', function() {
+        const isExpanded = advancedFilters.classList.contains('show');
+        
+        if (isExpanded) {
+            advancedFilters.classList.remove('show');
+            toggleButton.classList.remove('expanded');
+        } else {
+            advancedFilters.classList.add('show');
+            toggleButton.classList.add('expanded');
+        }
+    });
+    
+    // Réinitialiser les filtres
+    resetButton.addEventListener('click', function() {
+        // Réinitialiser tous les champs
+        const inputs = form.querySelectorAll('input[type="text"], input[type="number"]');
+        const selects = form.querySelectorAll('select');
+        
+        inputs.forEach(input => input.value = '');
+        selects.forEach(select => select.selectedIndex = 0);
+        
+        // Fermer les filtres avancés
+        advancedFilters.classList.remove('show');
+        toggleButton.classList.remove('expanded');
+        
+        // Soumettre le formulaire
+        form.submit();
+    });
+    
+    // Soumission automatique du formulaire
+    const filterInputs = form.querySelectorAll('input, select');
+    
+    filterInputs.forEach(input => {
+        if (input.type === 'text' || input.type === 'number') {
+            // Délai pour les champs texte
+            input.addEventListener('input', function() {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    form.submit();
+                }, 800);
+            });
+        } else {
+            // Soumission immédiate pour les selects
+            input.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+    });
+    
+    // Gestion du tri avec direction
+    const sortBySelect = document.getElementById('sort_by');
+    if (sortBySelect) {
+        sortBySelect.addEventListener('change', function() {
+            // Réinitialiser la direction de tri lors du changement de colonne
+            sortDirInput.value = 'ASC';
+        });
+    }
+});
+
+// Fonction globale pour inverser la direction du tri
+window.toggleSortDirection = function() {
+    const sortDirInput = document.getElementById('sort_dir');
+    const currentDir = sortDirInput.value || 'ASC';
+    const newDir = currentDir === 'ASC' ? 'DESC' : 'ASC';
+    sortDirInput.value = newDir;
+    
+    document.getElementById('filters-form').submit();
+};
+</script>

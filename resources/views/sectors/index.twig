@@ -2,6 +2,10 @@
 
 {% block body_class %} sectors-index-page{% endblock %}
 
+{% block head %}
+    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+{% endblock %}
+
 {# {% import 'components/pagination.twig' as pagination %} #}
 {# {% import 'components/sector-filter.twig' as sectorFilter %} #}
 
@@ -51,50 +55,26 @@
         </div>
     </div>
     
-    <!-- Filtres modernes -->
-    <div class="filters mb-4">
-        <div class="row g-3">
-            <div class="col-md-4">
-                <label for="search-input" class="form-label">Recherche</label>
-                <input type="text" id="search-input" class="form-control sector-filter" placeholder="Nom du secteur...">
-            </div>
-            <div class="col-md-3">
-                <label for="region-filter" class="form-label">Région</label>
-                <select id="region-filter" class="form-select sector-filter">
-                    <option value="">Toutes les régions</option>
-                    {% for region in regions %}
-                        <option value="{{ region.id }}" {% if currentRegionId == region.id %}selected{% endif %}>
-                            {{ region.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="site-filter" class="form-label">Site</label>
-                <select id="site-filter" class="form-select sector-filter">
-                    <option value="">Tous sites</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">&nbsp;</label>
-                <div class="d-flex gap-2">
-                    <button type="button" id="reset-filters" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> Reset
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Filtres avancés unifiés -->
+    {% include 'components/advanced-filters.twig' with {
+        'entity': 'sectors',
+        'currentFilters': {
+            'region_id': currentRegionId|default(''),
+            'search': '',
+            'sort_by': sort_by|default('name'),
+            'sort_dir': sort_dir|default('ASC')
+        },
+        'regions': regions
+    } %}
     
     <!-- Vue liste -->
     <div id="sectors-list">
-        <div id="sectors-container" class="row g-4">
+        <div id="sectors-container" class="sectors-grid entities-grid">
             {% set sectorItems = sectors.getItems() %}
             
             {% if sectorItems|length > 0 %}
                 {% for sector in sectorItems %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="sector-card card h-100" data-sector-id="{{ sector.id }}">
+                        <div class="sector-card entity-card card h-100" data-sector-id="{{ sector.id }}">
                             {% set image = sector.image ? url('/uploads/' ~ sector.image) : url('/images/placeholder-sector.jpg') %}
                             
                             {% if sector.image %}
@@ -198,6 +178,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url('/js/pages-common.js') }}"></script>
 <script>
 // Exposer les données des secteurs pour les composants JavaScript modernes
 window.sectorsData = {

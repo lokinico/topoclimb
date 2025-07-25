@@ -2,6 +2,10 @@
 
 {% block body_class %} routes-index-page{% endblock %}
 
+{% block head %}
+    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+{% endblock %}
+
 {% import 'components/pagination.twig' as pagination %}
 {% import 'components/route-filter.twig' as routeFilter %}
 
@@ -37,54 +41,31 @@
         </div>
     </div>
     
-    <!-- Filtres modernes -->
-    <div class="filters mb-4">
-        <div class="row g-3">
-            <div class="col-md-3">
-                <label for="search-input" class="form-label">Recherche</label>
-                <input type="text" id="search-input" class="form-control route-filter" placeholder="Nom de la voie...">
-            </div>
-            <div class="col-md-2">
-                <label for="difficulty-filter" class="form-label">Difficulté</label>
-                <select id="difficulty-filter" class="form-select route-filter">
-                    <option value="">Toutes difficultés</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label for="style-filter" class="form-label">Style</label>
-                <select id="style-filter" class="form-select route-filter">
-                    <option value="">Tous styles</option>
-                    <option value="sportive">Sportive</option>
-                    <option value="traditionnelle">Traditionnelle</option>
-                    <option value="mixte">Mixte</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="sector-filter" class="form-label">Secteur</label>
-                <select id="sector-filter" class="form-select route-filter">
-                    <option value="">Tous secteurs</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">&nbsp;</label>
-                <div class="d-flex gap-2">
-                    <button type="button" id="reset-filters" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> Reset
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Filtres avancés unifiés -->
+    {% include 'components/advanced-filters.twig' with {
+        'entity': 'routes',
+        'currentFilters': {
+            'search': '',
+            'difficulty_min': '',
+            'difficulty_max': '',
+            'style': '',
+            'sector_id': '',
+            'sort_by': 'name',
+            'sort_dir': 'ASC'
+        },
+        'regions': regions|default([]),
+        'sites': sites|default([]),
+        'sectors': sectors|default([])
+    } %}
     
     <!-- Conteneur des voies -->
     <div id="routes-container" class="routes-list">
         {% set routeItems = routes.getItems() %}
         
         {% if routeItems|length > 0 %}
-            <div class="row g-4">
+            <div class="routes-grid entities-grid">
                 {% for route in routeItems %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="route-card card h-100" data-route-id="{{ route.id }}">
+                        <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title mb-1">
@@ -156,6 +137,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url('/js/pages-common.js') }}"></script>
 <script>
 // Exposer les données des voies pour les composants JavaScript modernes
 window.routesData = {

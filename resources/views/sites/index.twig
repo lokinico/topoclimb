@@ -2,6 +2,12 @@
 
 {% block title %}Sites d'escalade - TopoclimbCH{% endblock %}
 
+{% block body_class %} sites-index-page{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
@@ -14,70 +20,57 @@
     </div>
 </div>
 
-<!-- Filtres -->
-<div class="filters-section mb-4">
-    <form method="GET" action="{{ url('/sites') }}" class="filters-form">
-        <div class="row">
-            <div class="col-md-3">
-                <label for="region_id" class="form-label">Région</label>
-                <select name="region_id" id="region_id" class="form-control">
-                    <option value="">Toutes les régions</option>
-                    {% for region in regions %}
-                        <option value="{{ region.id }}" 
-                                {% if currentFilters.region_id == region.id %}selected{% endif %}>
-                            {{ region.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-4">
-                <label for="search" class="form-label">Recherche</label>
-                <input type="text" name="search" id="search" class="form-control" 
-                       value="{{ currentFilters.search }}" 
-                       placeholder="Nom, code ou description...">
-            </div>
-            
-            <div class="col-md-2">
-                <label for="sort_by" class="form-label">Trier par</label>
-                <select name="sort_by" id="sort_by" class="form-control">
-                    <option value="name" {% if currentFilters.sort_by == 'name' %}selected{% endif %}>Nom</option>
-                    <option value="code" {% if currentFilters.sort_by == 'code' %}selected{% endif %}>Code</option>
-                    <option value="region_name" {% if currentFilters.sort_by == 'region_name' %}selected{% endif %}>Région</option>
-                    <option value="created_at" {% if currentFilters.sort_by == 'created_at' %}selected{% endif %}>Date création</option>
-                </select>
-            </div>
-            
-            <div class="col-md-2">
-                <label for="sort_dir" class="form-label">Ordre</label>
-                <select name="sort_dir" id="sort_dir" class="form-control">
-                    <option value="ASC" {% if currentFilters.sort_dir == 'ASC' %}selected{% endif %}>Croissant</option>
-                    <option value="DESC" {% if currentFilters.sort_dir == 'DESC' %}selected{% endif %}>Décroissant</option>
-                </select>
-            </div>
-            
-            <div class="col-md-1 d-flex align-items-end">
-                <button type="submit" class="btn btn-secondary w-100">
-                    <i class="fa fa-search"></i>
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
+<!-- Filtres avancés unifiés -->
+{% include 'components/advanced-filters.twig' with {
+    'entity': 'sites',
+    'currentFilters': currentFilters,
+    'regions': regions
+} %}
 
 <!-- Résultats -->
 <div class="results-section">
     {% if sites|length > 0 %}
-        <div class="results-info mb-3">
-            <span class="text-muted">
-                Affichage de {{ pagination.from }} à {{ pagination.to }} sur {{ pagination.total }} sites
-            </span>
+        <div class="results-info">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="results-text">
+                    <i class="fas fa-map-marker-alt text-primary"></i>
+                    <strong>{{ pagination.total }}</strong> site{{ pagination.total > 1 ? 's' : '' }} trouvé{{ pagination.total > 1 ? 's' : '' }}
+                    {% if currentFilters.search or currentFilters.region_id %}
+                        <span class="text-muted"> | Filtres actifs</span>
+                    {% endif %}
+                </span>
+                <div class="view-options">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary active" id="grid-view">
+                            <i class="fas fa-th"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="list-view">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="sites-grid">
+        <div class="sites-grid entities-grid">
             {% for site in sites %}
-                <div class="site-card card h-100">
+                <div class="site-card entity-card card h-100">
                     <div class="card-body">
+                        <!-- Actions rapides -->
+                        <div class="site-quick-actions entity-quick-actions">
+                            <button class="quick-action-btn" title="Ajouter aux favoris" data-site-id="{{ site.id }}">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                            {% if site.coordinates_lat and site.coordinates_lng %}
+                                <a href="https://www.google.com/maps?q={{ site.coordinates_lat }},{{ site.coordinates_lng }}" 
+                                   target="_blank" class="quick-action-btn" title="Voir sur la carte">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </a>
+                            {% endif %}
+                            <button class="quick-action-btn" title="Partager" data-site-id="{{ site.id }}">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
+                        </div>
                         <div class="site-header d-flex justify-content-between align-items-start mb-3">
                             <div>
                                 <h5 class="card-title mb-1">
@@ -174,39 +167,13 @@
             {% endfor %}
         </div>
 
-        <!-- Pagination -->
-        {% if pagination.last_page > 1 %}
-            <nav aria-label="Navigation sites" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    <!-- Précédent -->
-                    {% if pagination.current_page > 1 %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url('/sites') }}?{{ query_string(currentFilters|merge({page: pagination.current_page - 1})) }}">
-                                Précédent
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- Pages -->
-                    {% for page in range(max(1, pagination.current_page - 2), min(pagination.last_page, pagination.current_page + 2)) %}
-                        <li class="page-item {% if page == pagination.current_page %}active{% endif %}">
-                            <a class="page-link" href="{{ url('/sites') }}?{{ query_string(currentFilters|merge({page: page})) }}">
-                                {{ page }}
-                            </a>
-                        </li>
-                    {% endfor %}
-
-                    <!-- Suivant -->
-                    {% if pagination.current_page < pagination.last_page %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url('/sites') }}?{{ query_string(currentFilters|merge({page: pagination.current_page + 1})) }}">
-                                Suivant
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
+        <!-- Pagination unifiée -->
+        {% include 'components/pagination.twig' with {
+            'pagination': pagination,
+            'currentFilters': currentFilters,
+            'baseUrl': url('/sites'),
+            'entity': 'sites'
+        } %}
 
     {% else %}
         <div class="empty-state text-center py-5">
@@ -237,6 +204,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url('/js/pages-common.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-submit du formulaire de filtres
@@ -278,6 +246,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .site-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 .site-card:hover {
@@ -288,38 +258,155 @@ document.addEventListener('DOMContentLoaded', function() {
 .stat-value {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #495057;
+    color: #007bff;
 }
 
 .stat-label {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    color: #6c757d;
 }
 
 .site-actions .btn-link {
     color: #6c757d;
     padding: 0.25rem;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .site-actions .btn-link:hover {
     color: #495057;
+    background-color: #f8f9fa;
 }
 
-.filters-form {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid #e9ecef;
+.site-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.site-code {
+    background: #e9ecef;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+}
+
+.site-region {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.site-region:hover {
+    text-decoration: underline;
 }
 
 .empty-state {
-    max-width: 500px;
-    margin: 0 auto;
+    text-align: center;
+    padding: 3rem 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #dee2e6;
 }
 
 .empty-icon i {
     opacity: 0.5;
+    color: #6c757d;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.results-info {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+/* Actions rapides sur les cartes */
+.site-quick-actions {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.site-card:hover .site-quick-actions {
+    opacity: 1;
+}
+
+.quick-action-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+}
+
+.quick-action-btn:hover {
+    background: #007bff;
+    color: white;
+    transform: scale(1.1);
+}
+
+.card-body {
+    position: relative;
+}
+
+/* Animation d'entrée */
+.site-card {
+    animation: fadeInUp 0.6s ease-out both;
+}
+
+.site-card:nth-child(2) { animation-delay: 0.1s; }
+.site-card:nth-child(3) { animation-delay: 0.2s; }
+.site-card:nth-child(4) { animation-delay: 0.3s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .sites-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .site-quick-actions {
+        opacity: 1; /* Toujours visible sur mobile */
+    }
+    
+    .quick-action-btn {
+        background: rgba(255, 255, 255, 0.95);
+    }
 }
 </style>
 {% endblock %}

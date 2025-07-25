@@ -1,6 +1,12 @@
 {% extends "layouts/app.twig" %}
 
 {% block title %}Régions d'escalade en Suisse - TopoclimbCH{% endblock %}
+
+{% block body_class %} regions-index-page{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+{% endblock %}
 {# Cache bust: {{ "now"|date("Y-m-d H:i:s") }} #}
 
 {% block meta %}
@@ -55,54 +61,23 @@
 
     <!-- Contenu principal -->
     <div class="container">
-        <!-- Filtres simplifiés -->
-        <div class="filters-section">
-            <h2 class="filters-title">Filtrer les régions</h2>
-            
-            <div class="filters-row">
-                <!-- Recherche -->
-                <div class="filter-group">
-                    <label for="region-search" class="filter-label">
-                        <i class="fas fa-search"></i>
-                        Rechercher
-                    </label>
-                    <input 
-                        type="text" 
-                        id="region-search" 
-                        class="filter-input"
-                        placeholder="Nom de région..."
-                    >
-                </div>
-                
-                <!-- Pays -->
-                <div class="filter-group">
-                    <label for="country-filter" class="filter-label">
-                        <i class="fas fa-flag"></i>
-                        Pays
-                    </label>
-                    <select id="country-filter" class="filter-select">
-                        <option value="">Tous les pays</option>
-                        {% for country in countries %}
-                            <option value="{{ country.id }}">{{ country.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <!-- Actions -->
-                <div class="filter-actions">
-                    <button type="button" class="btn-clear-filters">
-                        <i class="fas fa-times"></i>
-                        Effacer les filtres
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- Filtres avancés unifiés -->
+        {% include 'components/advanced-filters.twig' with {
+            'entity': 'regions',
+            'currentFilters': {
+                'search': '',
+                'country_id': '',
+                'sort_by': 'name',
+                'sort_dir': 'ASC'
+            },
+            'countries': countries|default([])
+        } %}
 
         <!-- Liste des régions -->
-        <div class="regions-grid" id="regions-grid">
+        <div class="regions-grid entities-grid" id="regions-grid">
             {% if regions is defined and regions|length > 0 %}
                 {% for region in regions %}
-                    <div class="region-card" data-region-id="{{ region.id }}">
+                    <div class="region-card entity-card" data-region-id="{{ region.id }}">
                         <div class="region-card-header">
                             <h3 class="region-name">{{ region.name }}</h3>
                             <span class="region-country">{{ region.country_name }}</span>
@@ -504,6 +479,7 @@
 }
 </style>
 
+<script src="{{ url('/js/pages-common.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('region-search');
