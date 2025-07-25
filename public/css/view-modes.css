@@ -101,19 +101,32 @@
     min-height: 200px;
 }
 
-.view-grid,
+/* Cacher toutes les vues par défaut */
 .view-list,
 .view-compact {
-    display: none;
+    display: none !important;
 }
 
+/* Afficher la vue active */
 .view-grid.active {
-    display: grid;
+    display: grid !important;
 }
 
 .view-list.active,
 .view-compact.active {
-    display: block;
+    display: block !important;
+}
+
+/* Vue grille par défaut */
+.view-grid {
+    display: grid;
+}
+
+/* Assurer que seule la vue active est visible */
+.entities-container .view-grid:not(.active),
+.entities-container .view-list:not(.active), 
+.entities-container .view-compact:not(.active) {
+    display: none !important;
 }
 
 /* ===== MODE GRILLE (CARTES) ===== */

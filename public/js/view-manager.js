@@ -218,6 +218,8 @@ class ViewManager {
 
 // Auto-initialisation
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('ViewManager: Initializing...');
+    
     // Initialiser pour différents types de conteneurs
     const containers = [
         '.regions-container',
@@ -228,9 +230,17 @@ document.addEventListener('DOMContentLoaded', () => {
         '.entities-container'
     ];
     
+    let initialized = false;
     containers.forEach(selector => {
-        if (document.querySelector(selector)) {
+        const container = document.querySelector(selector);
+        if (container) {
+            console.log('ViewManager: Found container:', selector);
             new ViewManager(selector);
+            initialized = true;
         }
     });
+    
+    if (!initialized) {
+        console.warn('ViewManager: No containers found');
+    }
 });

@@ -1,290 +1,382 @@
 {% extends "layouts/app.twig" %}
 
-{% block title %}Régions d'escalade en Suisse - TopoclimbCH{% endblock %}
-
-{% block body_class %}regions-index-page{% endblock %}
+{% block body_class %} regions-index-page{% endblock %}
 
 {% block head %}
     <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
     <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
 {% endblock %}
 
+{% block title %}Régions d'escalade - TopoclimbCH{% endblock %}
+
 {% block content %}
-<div class="page-container">
-    <!-- En-tête épuré -->
-    <div class="page-header-clean">
-        <div class="container">
-            <div class="page-header-content">
-                <div class="page-header-text">
-                    <h1 class="page-title">
-                        <i class="fas fa-mountain"></i>
-                        Régions d'escalade
-                    </h1>
-                    <p class="page-subtitle">
-                        Découvrez les plus beaux sites d'escalade de Suisse
-                    </p>
-                </div>
-                
-                <!-- Bouton Create pour les admins -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Régions d'escalade</h1>
+            
+            <div class="actions">
                 {% if user and user.autorisation in ['0', '1', '2'] %}
-                <div class="page-header-actions">
-                    <a href="/regions/create" class="btn btn-success">
-                        <i class="fas fa-plus"></i>
-                        Nouvelle région
+                    <a href="/regions/create" class="btn btn-primary">
+                        <i class="fa fa-plus"></i> Ajouter une région
                     </a>
-                </div>
                 {% endif %}
             </div>
-            
-            <!-- Statistiques simples -->
-            <div class="page-stats">
-                <span class="stat">
-                    <strong>{{ regions|length }}</strong> Régions
-                </span>
-                <span class="stat">
-                    <strong>{{ stats.total_sectors|default(0) }}</strong> Secteurs
-                </span>
-                <span class="stat">
-                    <strong>{{ stats.total_routes|default(0) }}</strong> Voies
-                </span>
-            </div>
         </div>
-    </div>
-
-    <!-- Contenu principal -->
-    <div class="container">
-        <!-- Filtres avancés unifiés -->
-        {% include 'components/advanced-filters.twig' with {
-            'entity': 'regions',
-            'currentFilters': filters|default({}),
-            'countries': countries|default([])
-        } %}
-
-        <!-- Barre d'outils avec contrôles de vue -->
-        <div class="toolbar">
+        
+        <!-- Controls d'affichage et statistiques -->
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
-                <span class="text-muted">
-                    {% if pagination is defined %}
-                        {{ pagination.total }} région(s) trouvée(s)
-                    {% else %}
-                        {{ regions|length }} région(s) trouvée(s)
-                    {% endif %}
-                </span>
+                <span class="text-muted">{{ regions|length }} région(s) trouvée(s)</span>
             </div>
             
-            <!-- Contrôles de vue -->
+            <!-- Controls d'affichage -->
             <div class="view-controls">
                 <div class="btn-group" role="group" aria-label="Mode d'affichage">
                     <button type="button" class="btn btn-outline-primary active" data-view="grid">
-                        <i class="fas fa-th"></i>
+                        <i class="fas fa-th"></i> Cartes
                     </button>
                     <button type="button" class="btn btn-outline-primary" data-view="list">
-                        <i class="fas fa-list"></i>
+                        <i class="fas fa-list"></i> Liste
                     </button>
                     <button type="button" class="btn btn-outline-primary" data-view="compact">
-                        <i class="fas fa-bars"></i>
+                        <i class="fas fa-bars"></i> Compact
                     </button>
                 </div>
             </div>
         </div>
-
-        <!-- Conteneur des vues -->
-        <div class="regions-container entities-container" id="regions-container">
-            <!-- Vue grille (cartes) -->
-            <div class="regions-grid entities-grid view-grid active" id="regions-grid">
-                {% if regions is defined and regions|length > 0 %}
-                    {% for region in regions %}
-                        <div class="region-card entity-card" data-region-id="{{ region.id }}">
-                            <div class="card-header">
-                                <h3 class="entity-title">{{ region.name }}</h3>
-                                <span class="entity-badge">{{ region.country_name|default('Suisse') }}</span>
-                            </div>
-                            
-                            <div class="card-body">
-                                {% if region.description %}
-                                    <p class="entity-description">{{ region.description|slice(0, 120) }}{{ region.description|length > 120 ? '...' : '' }}</p>
-                                {% endif %}
-                                
-                                <div class="entity-meta">
-                                    {% if region.altitude %}
-                                        <span class="meta-item">
-                                            <i class="fas fa-mountain"></i>
-                                            {{ region.altitude }}m
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <div class="card-actions">
-                                <a href="/regions/{{ region.id }}" class="btn btn-primary">
-                                    <i class="fas fa-eye"></i>
-                                    Voir
-                                </a>
-                                
-                                <div class="quick-actions">
-                                    <button class="btn-action" title="Météo" data-action="weather" data-id="{{ region.id }}">
+    </div>
+    
+    <!-- Filtres avancés unifiés -->
+    {% include 'components/advanced-filters.twig' with {
+        'entity': 'regions',
+        'currentFilters': filters|default({}),
+        'countries': countries|default([])
+    } %}
+    
+    <!-- Conteneur principal -->
+    <div class="regions-container entities-container" id="regions-container">
+        <!-- Vue grille (cartes) -->
+        <div class="regions-grid entities-grid view-grid active" id="regions-grid">
+            {% if regions is defined and regions|length > 0 %}
+                {% for region in regions %}
+                    <div class="region-card entity-card card h-100" data-region-id="{{ region.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-1">
+                                    <a href="/regions/{{ region.id }}" class="text-decoration-none">{{ region.name }}</a>
+                                </h5>
+                                <div class="region-actions">
+                                    <button class="btn btn-sm btn-outline-secondary quick-weather" 
+                                            title="Météo" data-action="weather" data-id="{{ region.id }}">
                                         <i class="fas fa-cloud-sun"></i>
                                     </button>
-                                    <button class="btn-action" title="Carte" data-action="map" data-id="{{ region.id }}">
+                                    <button class="btn btn-sm btn-outline-secondary quick-map" 
+                                            title="Carte" data-action="map" data-id="{{ region.id }}">
                                         <i class="fas fa-map"></i>
                                     </button>
-                                    <button class="btn-action" title="Favoris" data-action="favorite" data-id="{{ region.id }}">
-                                        <i class="fas fa-heart"></i>
+                                    <button class="btn btn-sm btn-outline-secondary quick-favorite" 
+                                            title="Favoris" data-action="favorite" data-id="{{ region.id }}">
+                                        <i class="far fa-heart"></i>
                                     </button>
                                 </div>
-                                
-                                <!-- Actions admin -->
-                                {% if user and user.autorisation in ['0', '1', '2'] %}
-                                <div class="admin-actions">
-                                    <a href="/regions/{{ region.id }}/edit" class="btn-admin-edit" title="Modifier">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button class="btn-admin-delete" onclick="confirmDelete({{ region.id }}, '{{ region.name }}')" title="Supprimer">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
+                            </div>
+                            
+                            <div class="region-meta text-muted small mb-2">
+                                <span class="me-2">🇨🇭 {{ region.country_name|default('Suisse') }}</span>
+                                {% if region.altitude %}
+                                    <span class="me-2">⛰️ {{ region.altitude }}m</span>
                                 {% endif %}
+                            </div>
+                            
+                            {% if region.description %}
+                                <p class="card-text">{{ region.description|slice(0, 100) ~ (region.description|length > 100 ? '...' : '') }}</p>
+                            {% endif %}
+                            
+                            <div class="region-stats row text-center mt-3">
+                                <div class="col-6">
+                                    <div class="stat-value h6 mb-0">{{ stats.total_sectors|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Secteurs</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-value h6 mb-0">{{ stats.total_routes|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Voies</div>
+                                </div>
                             </div>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="no-results">
-                        <i class="fas fa-search"></i>
-                        <h3>Aucune région trouvée</h3>
-                        <p>Aucune région ne correspond à vos critères de recherche.</p>
                     </div>
-                {% endif %}
-            </div>
-            
-            <!-- Vue liste -->
-            <div class="regions-list entities-list view-list" id="regions-list">
-                {% if regions is defined and regions|length > 0 %}
-                    {% for region in regions %}
-                        <div class="region-list-item entity-list-item" data-region-id="{{ region.id }}">
-                            <div class="item-content">
-                                <h4 class="item-title">{{ region.name }}</h4>
-                                <p class="item-subtitle">{{ region.country_name|default('Suisse') }}</p>
-                                {% if region.description %}
-                                    <p class="item-description">{{ region.description|slice(0, 150) }}{{ region.description|length > 150 ? '...' : '' }}</p>
-                                {% endif %}
-                                <div class="item-meta">
-                                    {% if region.altitude %}
-                                        <span><i class="fas fa-mountain"></i> {{ region.altitude }}m</span>
-                                    {% endif %}
-                                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="empty-state text-center py-5">
+                        <div class="empty-icon mb-3">
+                            <i class="fas fa-mountain fa-3x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted">Aucune région trouvée</h4>
+                        <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                        <button class="btn btn-outline-primary" id="reset-filters-fallback">
+                            Réinitialiser les filtres
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Vue Liste -->
+        <div class="regions-list entities-list view-list" id="regions-list">
+            {% if regions is defined and regions|length > 0 %}
+                {% for region in regions %}
+                    <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-region-id="{{ region.id }}">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="/regions/{{ region.id }}" class="text-decoration-none">{{ region.name }}</a>
+                            </h5>
+                            <div class="text-muted small mb-1">
+                                🇨🇭 {{ region.country_name|default('Suisse') }}
+                                {% if region.altitude %} - ⛰️ {{ region.altitude }}m{% endif %}
                             </div>
-                            <div class="item-actions">
-                                <a href="/regions/{{ region.id }}" class="btn btn-primary">Voir</a>
-                                <button class="btn btn-outline-secondary" title="Météo" data-action="weather" data-id="{{ region.id }}">
+                            {% if region.description %}
+                                <p class="mb-1 text-muted">{{ region.description|slice(0, 120) }}{{ region.description|length > 120 ? '...' : '' }}</p>
+                            {% endif %}
+                            <small class="text-muted">
+                                {{ stats.total_sectors|default(0) }} secteurs | {{ stats.total_routes|default(0) }} voies
+                            </small>
+                        </div>
+                        <div class="ms-3">
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Météo" data-action="weather" data-id="{{ region.id }}">
                                     <i class="fas fa-cloud-sun"></i>
                                 </button>
-                                <button class="btn btn-outline-secondary" title="Carte" data-action="map" data-id="{{ region.id }}">
+                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Carte" data-action="map" data-id="{{ region.id }}">
                                     <i class="fas fa-map"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ region.id }}">
+                                    <i class="far fa-heart"></i>
                                 </button>
                             </div>
                         </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            
-            <!-- Vue compacte -->
-            <div class="regions-compact entities-compact view-compact" id="regions-compact">
-                {% if regions is defined and regions|length > 0 %}
-                    {% for region in regions %}
-                        <div class="region-compact-item entity-compact-item" data-region-id="{{ region.id }}">
-                            <div class="compact-name">
-                                <a href="/regions/{{ region.id }}">{{ region.name }}</a>
-                            </div>
-                            <div class="compact-meta">
-                                <span class="compact-country">{{ region.country_name|default('Suisse') }}</span>
-                                {% if region.altitude %}
-                                    <span class="compact-altitude">{{ region.altitude }}m</span>
-                                {% endif %}
-                            </div>
-                            <div class="compact-actions">
-                                <button title="Météo" data-action="weather" data-id="{{ region.id }}"><i class="fas fa-cloud-sun"></i></button>
-                                <button title="Carte" data-action="map" data-id="{{ region.id }}"><i class="fas fa-map"></i></button>
-                                <button title="Favoris" data-action="favorite" data-id="{{ region.id }}"><i class="fas fa-heart"></i></button>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
         </div>
-
+        
+        <!-- Vue Compacte -->
+        <div class="regions-compact entities-compact view-compact" id="regions-compact">
+            {% if regions is defined and regions|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Pays</th>
+                                <th>Altitude</th>
+                                <th>Secteurs</th>
+                                <th>Voies</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for region in regions %}
+                                <tr data-region-id="{{ region.id }}">
+                                    <td>
+                                        <a href="/regions/{{ region.id }}" class="text-decoration-none fw-medium">{{ region.name }}</a>
+                                    </td>
+                                    <td class="text-muted">{{ region.country_name|default('Suisse') }}</td>
+                                    <td class="text-muted">{{ region.altitude|default('-') }}m</td>
+                                    <td class="text-muted">{{ stats.total_sectors|default(0) }}</td>
+                                    <td class="text-muted">{{ stats.total_routes|default(0) }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-secondary" title="Météo" data-action="weather" data-id="{{ region.id }}">
+                                                <i class="fas fa-cloud-sun"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Carte" data-action="map" data-id="{{ region.id }}">
+                                                <i class="fas fa-map"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ region.id }}">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+        
         <!-- Pagination -->
         {% if pagination is defined and pagination.totalPages > 1 %}
-        <nav aria-label="Navigation des pages" class="pagination-nav">
-            <ul class="pagination justify-content-center">
-                {% if pagination.currentPage > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ pagination.currentPage - 1 }}">
-                            <i class="fas fa-chevron-left"></i> Précédent
-                        </a>
-                    </li>
-                {% endif %}
-                
-                {% for page in 1..pagination.totalPages %}
-                    {% if page == pagination.currentPage %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ page }}</span>
-                        </li>
-                    {% elseif page == 1 or page == pagination.totalPages or (page >= pagination.currentPage - 2 and page <= pagination.currentPage + 2) %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page }}">{{ page }}</a>
-                        </li>
-                    {% elseif page == pagination.currentPage - 3 or page == pagination.currentPage + 3 %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-                
-                {% if pagination.currentPage < pagination.totalPages %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ pagination.currentPage + 1 }}">
-                            Suivant <i class="fas fa-chevron-right"></i>
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
+            <div class="pagination-container mt-4">
+                <nav aria-label="Navigation des pages">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.currentPage > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.currentPage - 1 }}">
+                                    <i class="fas fa-chevron-left"></i> Précédent
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page in 1..pagination.totalPages %}
+                            {% if page == pagination.currentPage %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page }}</span>
+                                </li>
+                            {% elseif page == 1 or page == pagination.totalPages or (page >= pagination.currentPage - 2 and page <= pagination.currentPage + 2) %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page }}">{{ page }}</a>
+                                </li>
+                            {% elseif page == pagination.currentPage - 3 or page == pagination.currentPage + 3 %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if pagination.currentPage < pagination.totalPages %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ pagination.currentPage + 1 }}">
+                                    Suivant <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% else %}
+            <div class="pagination-container mt-4">
+                <div class="d-flex justify-content-center">
+                    <div class="text-muted">
+                        {{ regions|length }} régions trouvées
+                    </div>
+                </div>
+            </div>
         {% endif %}
     </div>
-</div>
+{% endblock %}
 
+{% block scripts %}
 <script src="{{ url('/js/pages-common.js') }}"></script>
 <script src="{{ url('/js/view-manager.js') }}"></script>
 <script>
-// Fonction de confirmation de suppression
-function confirmDelete(regionId, regionName) {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer la région "${regionName}" ?\n\nCette action est irréversible et supprimera également tous les sites, secteurs et voies associés.`)) {
-        // Créer un formulaire pour la requête DELETE
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/regions/${regionId}`;
-        form.style.display = 'none';
-        
-        // Ajouter le champ _method pour DELETE
-        const methodInput = document.createElement('input');
-        methodInput.type = 'hidden';
-        methodInput.name = '_method';
-        methodInput.value = 'DELETE';
-        form.appendChild(methodInput);
-        
-        // Ajouter le token CSRF si disponible
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (csrfToken) {
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = '_token';
-            csrfInput.value = csrfToken.getAttribute('content');
-            form.appendChild(csrfInput);
-        }
-        
-        document.body.appendChild(form);
-        form.submit();
+// Exposer les données des régions pour les composants JavaScript modernes
+window.regionsData = {
+    regions: [
+        {% for region in regions %}
+        {
+            id: {{ region.id }},
+            name: {{ region.name|json_encode|raw }},
+            description: {{ region.description|default('')|json_encode|raw }},
+            coordinates_lat: {{ region.coordinates_lat|default('null') }},
+            coordinates_lng: {{ region.coordinates_lng|default('null') }},
+            altitude: {{ region.altitude|default('null') }},
+            country_name: {{ region.country_name|default('Suisse')|json_encode|raw }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    countries: [
+        {% for country in countries %}
+        {
+            id: {{ country.id }},
+            name: {{ country.name|json_encode|raw }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    pagination: {
+        {% if pagination is defined %}
+            currentPage: {{ pagination.currentPage }},
+            totalPages: {{ pagination.totalPages }},
+            total: {{ pagination.total }}
+        {% else %}
+            currentPage: 1,
+            totalPages: 1,
+            total: {{ regions|length }}
+        {% endif %}
+    }
+};
+
+// Reset filters fallback
+document.addEventListener('DOMContentLoaded', function() {
+    const resetBtn = document.getElementById('reset-filters-fallback');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            window.location.href = '/regions';
+        });
+    }
+});
+</script>
+
+<style>
+.region-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.region-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.region-card.elevated {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.region-actions .btn {
+    margin-left: 0.25rem;
+}
+
+.region-actions .btn:first-child {
+    margin-left: 0;
+}
+
+.region-stats .stat-value {
+    font-weight: 600;
+    color: var(--bs-primary);
+}
+
+.results-info {
+    font-size: 0.9rem;
+}
+
+.empty-state {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border: 2px dashed #dee2e6;
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
-</script>
+
+.filters {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .region-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .region-actions .btn {
+        margin-left: 0;
+        font-size: 0.75rem;
+    }
+}
+</style>
 {% endblock %}
