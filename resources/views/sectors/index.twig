@@ -158,7 +158,8 @@
         
         <!-- Vue Liste -->
         <div class="sectors-list entities-list view-list" id="sectors-list">
-            {% for sector in sectorItems %}
+            {% if sectorItems|length > 0 %}
+                {% for sector in sectorItems %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-sector-id="{{ sector.id }}">
                         <div class="flex-grow-1">
                             <h5 class="mb-1">
@@ -197,6 +198,15 @@
                         </div>
                     </div>
                 {% endfor %}
+            {% else %}
+                <div class="empty-state text-center py-5">
+                    <div class="empty-icon mb-3">
+                        <i class="fas fa-map-signs fa-3x text-muted"></i>
+                    </div>
+                    <h4 class="text-muted">Aucun secteur trouvé</h4>
+                    <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                </div>
+            {% endif %}
         </div>
         
         <!-- Vue Compacte -->
@@ -214,8 +224,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for sector in sectorItems %}
-                            <tr data-sector-id="{{ sector.id }}">
+                        {% if sectorItems|length > 0 %}
+                            {% for sector in sectorItems %}
+                                <tr data-sector-id="{{ sector.id }}">
                                 <td>
                                     <a href="/sectors/{{ sector.id }}" class="text-decoration-none fw-medium">{{ sector.name }}</a>
                                 </td>
@@ -245,7 +256,17 @@
                                     </div>
                                 </td>
                             </tr>
-                        {% endfor %}
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="empty-state">
+                                        <i class="fas fa-map-signs fa-2x text-muted mb-2"></i>
+                                        <div class="text-muted">Aucun secteur trouvé</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
