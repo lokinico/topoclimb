@@ -40,8 +40,12 @@ class ViewManager {
             return;
         }
         
+        console.log('ViewManager: Switching to view:', viewType);
+        
         // Masquer toutes les vues
         const allViews = this.container.querySelectorAll('.view-grid, .view-list, .view-compact');
+        console.log('ViewManager: Found views:', allViews.length);
+        
         allViews.forEach(view => {
             view.classList.remove('active');
             view.style.display = 'none';
@@ -49,9 +53,14 @@ class ViewManager {
         
         // Afficher la vue sélectionnée
         const targetView = this.container.querySelector(`.view-${viewType}`);
+        console.log('ViewManager: Target view found:', !!targetView);
+        
         if (targetView) {
             targetView.classList.add('active');
             targetView.style.display = viewType === 'grid' ? 'grid' : 'block';
+            console.log('ViewManager: View switched successfully to:', viewType);
+        } else {
+            console.error('ViewManager: Could not find target view:', `.view-${viewType}`);
         }
         
         this.currentView = viewType;

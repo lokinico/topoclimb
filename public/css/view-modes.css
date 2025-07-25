@@ -3,13 +3,69 @@
  * Modes supportés: grid (cartes), list (liste), compact (compact)
  */
 
-/* ===== CONTRÔLES DE VUE ===== */
-.view-controls {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 1.5rem;
+/* ===== STYLES GÉNÉRAUX ===== */
+.page-container {
+    min-height: 100vh;
+    background: #f8f9fa;
 }
 
+.page-header-clean {
+    background: #f8f9fa;
+    color: #2c3e50;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.page-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: #2c3e50;
+}
+
+.page-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.8;
+    margin-bottom: 1.5rem;
+    color: #6c757d;
+}
+
+.page-stats {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.stat {
+    font-size: 1rem;
+    color: #6c757d;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ===== CONTRÔLES DE VUE ===== */
 .view-controls .btn-group {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     border-radius: 8px;
@@ -92,6 +148,43 @@
     padding: 1rem 1.5rem;
 }
 
+/* ===== STYLES STANDARDISÉS POUR CARTES ===== */
+.entity-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.entity-badge {
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.entity-description {
+    color: #6c757d;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+.entity-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .entity-card .card-actions {
     padding: 1rem 1.5rem;
     background: #f8f9fa;
@@ -100,6 +193,61 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem;
+}
+
+.btn-admin-edit {
+    background: #ffc107;
+    color: #212529;
+    padding: 0.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    transition: all 0.3s ease;
+}
+
+.btn-admin-edit:hover {
+    background: #e0a800;
+    transform: translateY(-1px);
+    text-decoration: none;
+    color: #212529;
+}
+
+.btn-admin-delete {
+    background: #dc3545;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    transition: all 0.3s ease;
+}
+
+.btn-admin-delete:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+
+.admin-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.pagination-nav {
+    margin-top: 2rem;
+}
+
+.results-info {
+    font-size: 0.9rem;
+    color: #6c757d;
 }
 
 .quick-actions {

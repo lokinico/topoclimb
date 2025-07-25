@@ -1,119 +1,133 @@
 {% extends "layouts/app.twig" %}
 
-{% block body_class %} sectors-index-page{% endblock %}
+{% block title %}Secteurs d'escalade - TopoclimbCH{% endblock %}
+
+{% block body_class %}sectors-index-page{% endblock %}
 
 {% block head %}
     <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
     <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
 {% endblock %}
 
-{# {% import 'components/pagination.twig' as pagination %} #}
-{# {% import 'components/sector-filter.twig' as sectorFilter %} #}
-
-{% block title %}Secteurs d'escalade - TopoclimbCH{% endblock %}
-
 {% block content %}
-    <div class="page-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h1>Secteurs d'escalade</h1>
-            
-            <div class="actions">
+<div class="page-container">
+    <!-- En-tête épuré -->
+    <div class="page-header-clean">
+        <div class="container">
+            <div class="page-header-content">
+                <div class="page-header-text">
+                    <h1 class="page-title">
+                        <i class="fas fa-mountain"></i>
+                        Secteurs d'escalade
+                    </h1>
+                    <p class="page-subtitle">
+                        Explorez les secteurs et leurs voies d'escalade
+                    </p>
+                </div>
+                
+                <!-- Bouton Create pour les admins -->
                 {% if user and user.autorisation in ['0', '1', '2'] %}
-                    <a href="{{ url('/sectors/create') }}" class="btn btn-primary">
-                        <i class="fa fa-plus"></i> Ajouter un secteur
+                <div class="page-header-actions">
+                    <a href="{{ url('/sectors/create') }}" class="btn btn-success">
+                        <i class="fas fa-plus"></i>
+                        Nouveau secteur
                     </a>
+                </div>
                 {% endif %}
             </div>
+            
+            <!-- Statistiques simples -->
+            <div class="page-stats">
+                <span class="stat">
+                    <strong>{{ sectors.getTotal() }}</strong> Secteurs
+                </span>
+                <span class="stat">
+                    <strong>0</strong> Voies
+                </span>
+                <span class="stat">
+                    <strong>0</strong> Sites
+                </span>
+            </div>
         </div>
-        
-        <!-- Controls d’affichage et statistiques -->
-        <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="container">
+        <!-- Filtres avancés unifiés -->
+        {% include 'components/advanced-filters.twig' with {
+            'entity': 'sectors',
+            'currentFilters': {
+                'region_id': currentRegionId|default(''),
+                'search': '',
+                'sort_by': sort_by|default('name'),
+                'sort_dir': sort_dir|default('ASC')
+            },
+            'regions': regions|default([])
+        } %}
+
+        <!-- Barre d'outils avec contrôles de vue -->
+        <div class="toolbar">
             <div class="results-info">
                 <span class="text-muted">{{ sectors.getTotal() }} secteur(s) trouvé(s)</span>
             </div>
             
-            <!-- Controls d’affichage -->
+            <!-- Contrôles de vue -->
             <div class="view-controls">
                 <div class="btn-group" role="group" aria-label="Mode d'affichage">
                     <button type="button" class="btn btn-outline-primary active" data-view="grid">
-                        <i class="fas fa-th"></i> Cartes
+                        <i class="fas fa-th"></i>
                     </button>
                     <button type="button" class="btn btn-outline-primary" data-view="list">
-                        <i class="fas fa-list"></i> Liste
+                        <i class="fas fa-list"></i>
                     </button>
                     <button type="button" class="btn btn-outline-primary" data-view="compact">
-                        <i class="fas fa-bars"></i> Compact
+                        <i class="fas fa-bars"></i>
                     </button>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Filtres avancés unifiés -->
-    {% include 'components/advanced-filters.twig' with {
-        'entity': 'sectors',
-        'currentFilters': {
-            'region_id': currentRegionId|default(''),
-            'search': '',
-            'sort_by': sort_by|default('name'),
-            'sort_dir': sort_dir|default('ASC')
-        },
-        'regions': regions
-    } %}
-    
-    <!-- Conteneur principal -->
-    <div class="sectors-container entities-container" id="sectors-container">
-        <!-- Vue grille (cartes) -->
-        <div class="sectors-grid entities-grid view-grid active" id="sectors-grid">
-            {% set sectorItems = sectors.getItems() %}
-            
-            {% if sectorItems|length > 0 %}
-                {% for sector in sectorItems %}
-                        <div class="sector-card entity-card card h-100" data-sector-id="{{ sector.id }}">
-                            {% set image = sector.image ? url('/uploads/' ~ sector.image) : url('/images/placeholder-sector.jpg') %}
-                            
+
+        <!-- Conteneur des vues -->
+        <div class="sectors-container entities-container" id="sectors-container">
+            <!-- Vue grille (cartes) -->
+            <div class="sectors-grid entities-grid view-grid active" id="sectors-grid">
+                {% set sectorItems = sectors.getItems() %}
+                {% if sectorItems|length > 0 %}
+                    {% for sector in sectorItems %}
+                        <div class="sector-card entity-card" data-sector-id="{{ sector.id }}">
                             {% if sector.image %}
-                                <div class="sector-image">
-                                    <img src="{{ image }}" alt="{{ sector.name }}" class="img-fluid">
+                                <div class="card-header">
+                                    <img src="{{ url('/uploads/' ~ sector.image) }}" alt="{{ sector.name }}" class="img-fluid">
                                 </div>
                             {% endif %}
                             
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-1">
-                                        <a href="{{ url('/sectors/' ~ sector.id) }}" class="text-decoration-none">{{ sector.name }}</a>
-                                    </h5>
-                                    <div class="sector-actions">
-                                        <button class="btn btn-sm btn-outline-secondary quick-weather" 
-                                                title="Météo" data-sector-id="{{ sector.id }}">
-                                            <i class="fas fa-cloud-sun"></i>
-                                        </button>
-                                        {% if sector.coordinates_lat and sector.coordinates_lng %}
-                                            <button class="btn btn-sm btn-outline-secondary quick-gps" 
-                                                    title="Navigation GPS" data-sector-id="{{ sector.id }}">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                            </button>
-                                        {% endif %}
-                                        <button class="btn btn-sm btn-outline-secondary quick-favorite" 
-                                                title="Favoris" data-sector-id="{{ sector.id }}">
-                                            <i class="far fa-heart"></i>
-                                        </button>
-                                    </div>
+                                    <h3 class="entity-title">{{ sector.name }}</h3>
                                 </div>
                                 
-                                <div class="sector-meta text-muted small mb-2">
+                                <div class="entity-meta">
                                     {% if sector.region_name is defined %}
-                                        <span class="me-2">🏔️ {{ sector.region_name }}</span>
+                                        <span class="meta-item">
+                                            <i class="fas fa-mountain"></i>
+                                            {{ sector.region_name }}
+                                        </span>
                                     {% elseif sector.region %}
-                                        <span class="me-2">🏔️ {{ sector.region.name }}</span>
+                                        <span class="meta-item">
+                                            <i class="fas fa-mountain"></i>
+                                            {{ sector.region.name }}
+                                        </span>
                                     {% endif %}
                                     {% if sector.altitude %}
-                                        <span class="me-2">⛰️ {{ sector.altitude }}m</span>
+                                        <span class="meta-item">
+                                            <i class="fas fa-chart-line"></i>
+                                            {{ sector.altitude }}m
+                                        </span>
                                     {% endif %}
                                 </div>
                                 
                                 {% if sector.description %}
-                                    <p class="card-text">{{ sector.description|slice(0, 100) ~ (sector.description|length > 100 ? '...' : '') }}</p>
+                                    <p class="entity-description">{{ sector.description|slice(0, 100) }}{{ sector.description|length > 100 ? '...' : '' }}</p>
                                 {% endif %}
                                 
                                 <div class="sector-stats row text-center mt-3">
@@ -137,180 +151,124 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <div class="card-actions">
+                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-primary">
+                                    <i class="fas fa-eye"></i>
+                                    Voir
+                                </a>
+                                
+                                <div class="quick-actions">
+                                    <button class="btn-action" title="Météo" data-action="weather" data-id="{{ sector.id }}">
+                                        <i class="fas fa-cloud-sun"></i>
+                                    </button>
+                                    {% if sector.coordinates_lat and sector.coordinates_lng %}
+                                        <button class="btn-action" title="Navigation GPS" data-action="map" data-id="{{ sector.id }}">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </button>
+                                    {% endif %}
+                                    <button class="btn-action" title="Favoris" data-action="favorite" data-id="{{ sector.id }}">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-results">
+                        <i class="fas fa-mountain"></i>
+                        <h3>Aucun secteur trouvé</h3>
+                        <p>Essayez de modifier vos critères de recherche.</p>
                     </div>
-                {% endfor %}
-            {% else %}
-                <div class="col-12">
-                    <div class="empty-state text-center py-5">
-                        <div class="empty-icon mb-3">
-                            <i class="fas fa-mountain fa-3x text-muted"></i>
+                {% endif %}
+            </div>
+            
+            <!-- Vue liste -->
+            <div class="sectors-list entities-list view-list" id="sectors-list">
+                {% if sectorItems|length > 0 %}
+                    {% for sector in sectorItems %}
+                        <div class="sector-list-item entity-list-item" data-sector-id="{{ sector.id }}">
+                            <div class="item-content">
+                                <h4 class="item-title">{{ sector.name }}</h4>
+                                <p class="item-subtitle">
+                                    {% if sector.region_name is defined %}
+                                        {{ sector.region_name }}
+                                    {% elseif sector.region %}
+                                        {{ sector.region.name }}
+                                    {% endif %}
+                                    {% if sector.altitude %} - {{ sector.altitude }}m{% endif %}
+                                </p>
+                                {% if sector.description %}
+                                    <p class="item-description">{{ sector.description|slice(0, 150) }}...</p>
+                                {% endif %}
+                                <div class="item-meta">
+                                    <span><i class="fas fa-route"></i> {{ sector.routes_count|default(0) }} voies</span>
+                                    {% if sector.difficulty_range %}
+                                        <span><i class="fas fa-chart-line"></i> {{ sector.difficulty_range }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-primary">Voir</a>
+                                <button class="btn btn-outline-secondary" title="Météo" data-action="weather" data-id="{{ sector.id }}">
+                                    <i class="fas fa-cloud-sun"></i>
+                                </button>
+                                {% if sector.coordinates_lat and sector.coordinates_lng %}
+                                    <button class="btn btn-outline-secondary" title="Carte" data-action="map" data-id="{{ sector.id }}">
+                                        <i class="fas fa-map"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
                         </div>
-                        <h4 class="text-muted">Aucun secteur trouvé</h4>
-                        <p class="text-muted">Essayez de modifier vos critères de recherche</p>
-                        <button class="btn btn-outline-primary" id="reset-filters-fallback">
-                            Réinitialiser les filtres
-                        </button>
-                    </div>
-                </div>
-            {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <!-- Vue compacte -->
+            <div class="sectors-compact entities-compact view-compact" id="sectors-compact">
+                {% if sectorItems|length > 0 %}
+                    {% for sector in sectorItems %}
+                        <div class="sector-compact-item entity-compact-item" data-sector-id="{{ sector.id }}">
+                            <div class="compact-name">
+                                <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a>
+                            </div>
+                            <div class="compact-meta">
+                                {% if sector.region_name is defined %}
+                                    <span class="compact-region">{{ sector.region_name }}</span>
+                                {% elseif sector.region %}
+                                    <span class="compact-region">{{ sector.region.name }}</span>
+                                {% endif %}
+                                {% if sector.altitude %}
+                                    <span class="compact-altitude">{{ sector.altitude }}m</span>
+                                {% endif %}
+                                <span class="compact-routes">{{ sector.routes_count|default(0) }} voies</span>
+                            </div>
+                            <div class="compact-actions">
+                                <button title="Météo" data-action="weather" data-id="{{ sector.id }}"><i class="fas fa-cloud-sun"></i></button>
+                                {% if sector.coordinates_lat and sector.coordinates_lng %}
+                                    <button title="Carte" data-action="map" data-id="{{ sector.id }}"><i class="fas fa-map"></i></button>
+                                {% endif %}
+                                <button title="Favoris" data-action="favorite" data-id="{{ sector.id }}"><i class="fas fa-heart"></i></button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
         </div>
-        
-        <!-- Pagination temporairement simplifiée pour le test -->
+
+        <!-- Pagination temporaire simplifiée -->
         {% if sectorItems|length > 0 %}
-            <div class="pagination-container mt-4">
+            <nav aria-label="Navigation des pages" class="pagination-nav">
                 <div class="d-flex justify-content-center">
                     <div class="text-muted">
                         {{ sectors.getTotal() }} secteurs trouvés
                     </div>
                 </div>
-            </div>
+            </nav>
         {% endif %}
     </div>
-    
-    <!-- Vue carte (cachée par défaut) -->
-    <div id="sectors-map" class="d-none" style="height: 600px;"></div>
-{% endblock %}
+</div>
 
-{% block scripts %}
 <script src="{{ url('/js/pages-common.js') }}"></script>
-<script>
-// Exposer les données des secteurs pour les composants JavaScript modernes
-window.sectorsData = {
-    sectors: [
-        {% for sector in sectorItems %}
-        {
-            id: {{ sector.id }},
-            name: {{ sector.name|json_encode|raw }},
-            description: {{ sector.description|default('')|json_encode|raw }},
-            coordinates_lat: {{ sector.coordinates_lat|default('null') }},
-            coordinates_lng: {{ sector.coordinates_lng|default('null') }},
-            altitude: {{ sector.altitude|default('null') }},
-            region_id: {{ sector.region_id|default('null') }},
-            region_name: {{ (sector.region_name is defined ? sector.region_name : (sector.region ? sector.region.name : ''))|json_encode|raw }},
-            site_id: {{ sector.site_id|default('null') }},
-            routes_count: {{ sector.routes_count|default(0) }},
-            difficulty_range: {{ sector.difficulty_range|default('')|json_encode|raw }},
-            avg_beauty: {{ sector.avg_beauty|default('null') }},
-            access_time: {{ sector.access_time|default('null') }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ],
-    regions: [
-        {% for region in regions %}
-        {
-            id: {{ region.id }},
-            name: {{ region.name|json_encode|raw }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ],
-    pagination: {
-        currentPage: {{ sectors.getCurrentPage() }},
-        totalPages: {{ sectors.getTotalPages() }},
-        total: {{ sectors.getTotal() }},
-        perPage: {{ sectors.getPerPage() }}
-    }
-};
-
-// Fonction de tri legacy pour compatibilité
-window.toggleSortDirection = function() {
-    const currentUrl = new URL(window.location);
-    const currentDir = currentUrl.searchParams.get('sort_dir') || 'ASC';
-    const newDir = currentDir === 'ASC' ? 'DESC' : 'ASC';
-    currentUrl.searchParams.set('sort_dir', newDir);
-    window.location.href = currentUrl.toString();
-};
-
-// Reset filters fallback
-document.addEventListener('DOMContentLoaded', function() {
-    const resetBtn = document.getElementById('reset-filters-fallback');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function() {
-            window.location.href = '{{ url('/sectors') }}';
-        });
-    }
-});
-</script>
-
-<style>
-.sector-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.sector-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.sector-card.elevated {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
-.sector-actions .btn {
-    margin-left: 0.25rem;
-}
-
-.sector-actions .btn:first-child {
-    margin-left: 0;
-}
-
-.sector-stats .stat-value {
-    font-weight: 600;
-    color: var(--bs-primary);
-}
-
-.sort-controls .form-select {
-    min-width: 120px;
-}
-
-.results-info {
-    font-size: 0.9rem;
-}
-
-.empty-state {
-    background: #f8f9fa;
-    border-radius: 0.5rem;
-    border: 2px dashed #dee2e6;
-}
-
-.fade-in-up {
-    animation: fadeInUp 0.6s ease-out both;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-#map-view-toggle.active {
-    background-color: var(--bs-primary);
-    color: white;
-}
-
-.filters {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
-}
-
-@media (max-width: 768px) {
-    .sector-actions {
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-    
-    .sector-actions .btn {
-        margin-left: 0;
-        font-size: 0.75rem;
-    }
-}
-</style>
+<script src="{{ url('/js/view-manager.js') }}"></script>
 {% endblock %}
