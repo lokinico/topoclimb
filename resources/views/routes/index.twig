@@ -4,6 +4,7 @@
 
 {% block head %}
     <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+    <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
 {% endblock %}
 
 {% import 'components/pagination.twig' as pagination %}
@@ -23,7 +24,7 @@
             </div>
         </div>
         
-        <!-- Barre de tri et de résultats -->
+        <!-- Controls d'affichage et statistiques -->
         <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
                 <span class="text-muted">
@@ -35,14 +36,19 @@
                 </span>
             </div>
             
-            <div class="sort-controls">
-                <select id="sort-select" class="form-select form-select-sm">
-                    <option value="name">Nom</option>
-                    <option value="difficulty">Difficulté</option>
-                    <option value="beauty">Beauté</option>
-                    <option value="length">Longueur</option>
-                    <option value="created_at">Date de création</option>
-                </select>
+            <!-- Controls d'affichage -->
+            <div class="view-controls">
+                <div class="btn-group" role="group" aria-label="Mode d'affichage">
+                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                        <i class="fas fa-th"></i> Cartes
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-view="list">
+                        <i class="fas fa-list"></i> Liste
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-view="compact">
+                        <i class="fas fa-bars"></i> Compact
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -64,14 +70,15 @@
         'sectors': sectors|default([])
     } %}
     
-    <!-- Conteneur des voies -->
-    <div id="routes-container" class="routes-list">
+    <!-- Conteneur principal -->
+    <div class="routes-container entities-container" id="routes-container">
         {% set routeItems = routes.getItems is defined ? routes.getItems() : routes %}
         
-        {% if routeItems|length > 0 %}
-            <div class="routes-grid entities-grid">
+        <!-- Vue grille (cartes) -->
+        <div class="routes-grid entities-grid view-grid active" id="routes-grid">
+            {% if routeItems|length > 0 %}
                 {% for route in routeItems %}
-                        <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
+                    <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title mb-1">
@@ -121,24 +128,118 @@
                         </div>
                     </div>
                 {% endfor %}
-            </div>
-            
-            <!-- Pagination -->
-            {% if routes.render is defined %}
-                <div class="pagination-container mt-4">
-                    {{ routes.render() }}
+                {% else %}
+                <div class="col-12">
+                    <div class="empty-state text-center py-5">
+                        <div class="empty-icon mb-3">
+                            <i class="fas fa-route fa-3x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted">Aucune voie trouvée</h4>
+                        <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                        <button class="btn btn-outline-primary" id="reset-filters-fallback">
+                            Réinitialiser les filtres
+                        </button>
+                    </div>
                 </div>
             {% endif %}
-        {% else %}
-            <div class="empty-state text-center py-5">
-                <div class="empty-icon mb-3">
-                    <i class="fas fa-search fa-3x text-muted"></i>
+        </div>
+        
+        <!-- Vue Liste -->
+        <div class="routes-list entities-list view-list" id="routes-list">
+            {% if routeItems|length > 0 %}
+                {% for route in routeItems %}
+                    <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-route-id="{{ route.id }}">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none">{{ route.name }}</a>
+                                <span class="difficulty-badge badge bg-primary ms-2">{{ route.difficulty|default('N/A') }}</span>
+                            </h5>
+                            <div class="text-muted small mb-1">
+                                {% if route.sector %}
+                                    📍 {{ route.sector.name }}
+                                {% endif %}
+                                {% if route.length %} - 📏 {{ route.lengthFormatted }}{% endif %}
+                            </div>
+                            {% if route.comment %}
+                                <p class="mb-1 text-muted">{{ route.comment|slice(0, 120) }}{{ route.comment|length > 120 ? '...' : '' }}</p>
+                            {% endif %}
+                            <small class="text-muted">
+                                {{ route.styleFormatted }}
+                                {% if route.beautyStars %} | {{ route.beautyStars|raw }}{% endif %}
+                            </small>
+                        </div>
+                        <div class="ms-3">
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Favoris" data-action="favorite" data-id="{{ route.id }}">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" title="Partager" data-action="share" data-id="{{ route.id }}">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <!-- Vue Compacte -->
+        <div class="routes-compact entities-compact view-compact" id="routes-compact">
+            {% if routeItems|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Difficulté</th>
+                                <th>Secteur</th>
+                                <th>Longueur</th>
+                                <th>Style</th>
+                                <th>Beauté</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for route in routeItems %}
+                                <tr data-route-id="{{ route.id }}">
+                                    <td>
+                                        <a href="{{ url('/routes/' ~ route.id) }}" class="text-decoration-none fw-medium">{{ route.name }}</a>
+                                    </td>
+                                    <td><span class="difficulty-badge badge bg-primary">{{ route.difficulty|default('N/A') }}</span></td>
+                                    <td class="text-muted">{{ route.sector ? route.sector.name : '-' }}</td>
+                                    <td class="text-muted">{{ route.lengthFormatted|default('-') }}</td>
+                                    <td class="text-muted">{{ route.styleFormatted|default('-') }}</td>
+                                    <td class="text-muted">{{ route.beautyStars ? route.beautyStars|raw : '-' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ route.id }}">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Partager" data-action="share" data-id="{{ route.id }}">
+                                                <i class="fas fa-share-alt"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <h4 class="text-muted">Aucune voie trouvée</h4>
-                <p class="text-muted">Essayez de modifier vos critères de recherche</p>
-                <button class="btn btn-outline-primary" id="reset-filters-fallback">
-                    Réinitialiser les filtres
-                </button>
+            {% endif %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if routeItems|length > 0 %}
+            <div class="pagination-container mt-4">
+                {% if routes.render is defined %}
+                    {{ routes.render() }}
+                {% else %}
+                    <div class="d-flex justify-content-center">
+                        <div class="text-muted">
+                            {{ routeItems|length }} voies trouvées
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         {% endif %}
     </div>
@@ -146,6 +247,7 @@
 
 {% block scripts %}
 <script src="{{ url('/js/pages-common.js') }}"></script>
+<script src="{{ url('/js/view-manager.js') }}"></script>
 <script>
 // Exposer les données des voies pour les composants JavaScript modernes
 window.routesData = {

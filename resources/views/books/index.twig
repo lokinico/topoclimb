@@ -1,335 +1,281 @@
 {% extends "layouts/app.twig" %}
 
+{% block body_class %} books-index-page{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url('/css/pages-common.css') }}">
+    <link rel="stylesheet" href="{{ url('/css/view-modes.css') }}">
+{% endblock %}
+
 {% block title %}Guides d'escalade - TopoclimbCH{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <h1>Guides d'escalade</h1>
-        <div class="header-actions">
-            <a href="{{ url('/books/create') }}" class="btn btn-primary">
-                <i class="fa fa-plus mr-1"></i> Nouveau guide
-            </a>
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Guides d'escalade</h1>
+            
+            <div class="actions">
+                {% if user and user.autorisation in ['0', '1', '2'] %}
+                    <a href="{{ url('/books/create') }}" class="btn btn-primary">
+                        <i class="fa fa-plus"></i> Ajouter un guide
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Controls d'affichage et statistiques -->
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+            <div class="results-info">
+                <span class="text-muted">{{ pagination.total|default(books|length) }} guide(s) trouvé(s)</span>
+            </div>
+            
+            <!-- Controls d'affichage -->
+            <div class="view-controls">
+                <div class="btn-group" role="group" aria-label="Mode d'affichage">
+                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                        <i class="fas fa-th"></i> Cartes
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-view="list">
+                        <i class="fas fa-list"></i> Liste
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-view="compact">
+                        <i class="fas fa-bars"></i> Compact
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Filtres -->
-<div class="filters-section mb-4">
-    <form method="GET" action="{{ url('/books') }}" class="filters-form">
-        <div class="row">
-            <div class="col-md-4">
-                <label for="search" class="form-label">Recherche</label>
-                <input type="text" name="search" id="search" class="form-control" 
-                       value="{{ currentFilters.search }}" 
-                       placeholder="Nom, code ou éditeur...">
-            </div>
-            
-            <div class="col-md-3">
-                <label for="region_id" class="form-label">Région principale</label>
-                <select name="region_id" id="region_id" class="form-control">
-                    <option value="">Toutes les régions</option>
-                    {% for region in regions %}
-                        <option value="{{ region.id }}" 
-                                {% if currentFilters.region_id == region.id %}selected{% endif %}>
-                            {{ region.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-secondary w-100">
-                    <i class="fa fa-search"></i> Rechercher
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
+    <!-- Filtres avancés unifiés -->
+    {% include 'components/advanced-filters.twig' with {
+        'entity': 'books',
+        'currentFilters': currentFilters|default({}),
+        'regions': regions|default([])
+    } %}
 
-<!-- Résultats -->
-<div class="results-section">
-    {% if books|length > 0 %}
-        <div class="results-info mb-3">
-            <span class="text-muted">
-                {{ pagination.total }} guide(s) trouvé(s)
-            </span>
-        </div>
-
-        <div class="books-grid">
-            {% for book in books %}
-                <div class="book-card card h-100">
-                    <div class="card-body">
-                        <div class="book-header d-flex justify-content-between align-items-start mb-3">
-                            <div class="flex-grow-1">
+    <!-- Conteneur principal -->
+    <div class="books-container entities-container" id="books-container">
+        <!-- Vue grille (cartes) -->
+        <div class="books-grid entities-grid view-grid active" id="books-grid">
+            {% if books is defined and books|length > 0 %}
+                {% for book in books %}
+                    <div class="book-card entity-card card h-100" data-book-id="{{ book.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-1">
-                                    <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none">
-                                        {{ book.name }}
-                                    </a>
+                                    <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none">{{ book.name }}</a>
                                 </h5>
-                                
-                                <div class="book-meta small text-muted">
-                                    {% if book.code %}
-                                        <span class="book-code">{{ book.code }}</span>
-                                    {% endif %}
-                                    {% if book.publisher %}
-                                        {% if book.code %} • {% endif %}
-                                        <span class="book-publisher">{{ book.publisher }}</span>
-                                    {% endif %}
-                                    {% if book.year %}
-                                        {% if book.code or book.publisher %} • {% endif %}
-                                        <span class="book-year">{{ book.year }}</span>
-                                    {% endif %}
+                                <div class="book-actions">
+                                    <button class="btn btn-sm btn-outline-secondary quick-favorite" 
+                                            title="Favoris" data-action="favorite" data-id="{{ book.id }}">
+                                        <i class="far fa-heart"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary quick-share" 
+                                            title="Partager" data-action="share" data-id="{{ book.id }}">
+                                        <i class="fas fa-share-alt"></i>
+                                    </button>
                                 </div>
-                                
-                                {% if book.region_name %}
-                                    <div class="book-region mt-1">
-                                        <small class="text-primary">
-                                            <i class="fa fa-map-marker-alt mr-1"></i>
-                                            {{ book.region_name }}
-                                        </small>
-                                    </div>
+                            </div>
+                            
+                            <div class="book-meta text-muted small mb-2">
+                                {% if book.code %}
+                                    <span class="me-2">📝 {{ book.code }}</span>
+                                {% endif %}
+                                {% if book.publisher %}
+                                    <span class="me-2">🏢 {{ book.publisher }}</span>
+                                {% endif %}
+                                {% if book.year %}
+                                    <span class="me-2">📅 {{ book.year }}</span>
                                 {% endif %}
                             </div>
                             
-                            <div class="book-actions dropdown">
-                                <button class="btn btn-link btn-sm" type="button" 
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fa fa-ellipsis-v"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url('/books/' ~ book.id) }}">
-                                            <i class="fa fa-eye mr-2"></i> Voir détails
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url('/books/' ~ book.id ~ '/edit') }}">
-                                            <i class="fa fa-edit mr-2"></i> Modifier
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url('/books/' ~ book.id ~ '/sectors') }}">
-                                            <i class="fa fa-plus mr-2"></i> Gérer secteurs
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="book-stats">
-                            <div class="row text-center">
-                                <div class="col-3">
-                                    <div class="stat-value text-primary">{{ book.sites_count|default(0) }}</div>
-                                    <div class="stat-label small text-muted">Sites</div>
+                            {% if book.region_name %}
+                                <div class="text-primary small mb-2">
+                                    🏔️ {{ book.region_name }}
                                 </div>
-                                <div class="col-3">
-                                    <div class="stat-value text-success">{{ book.sectors_count|default(0) }}</div>
+                            {% endif %}
+                            
+                            <div class="book-stats row text-center mt-3">
+                                <div class="col-4">
+                                    <div class="stat-value h6 mb-0">{{ book.sectors_count|default(0) }}</div>
                                     <div class="stat-label small text-muted">Secteurs</div>
                                 </div>
-                                <div class="col-3">
-                                    <div class="stat-value text-info">{{ book.routes_count|default(0) }}</div>
+                                <div class="col-4">
+                                    <div class="stat-value h6 mb-0">{{ book.routes_count|default(0) }}</div>
                                     <div class="stat-label small text-muted">Voies</div>
                                 </div>
-                                <div class="col-3">
-                                    {% if book.isbn %}
-                                        <div class="stat-value">
-                                            <i class="fa fa-book text-warning"></i>
-                                        </div>
-                                        <div class="stat-label small text-muted">ISBN</div>
-                                    {% else %}
-                                        <div class="stat-value">-</div>
-                                        <div class="stat-label small text-muted">ISBN</div>
-                                    {% endif %}
+                                <div class="col-4">
+                                    <div class="stat-value h6 mb-0">
+                                        {% if book.isbn %}
+                                            ✓
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </div>
+                                    <div class="stat-label small text-muted">ISBN</div>
                                 </div>
                             </div>
                         </div>
-
-                        {% if book.isbn %}
-                            <div class="book-isbn mt-2">
-                                <small class="text-muted">
-                                    <strong>ISBN:</strong> {{ book.isbn }}
-                                </small>
-                            </div>
-                        {% endif %}
                     </div>
-
-                    <div class="card-footer bg-transparent">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ url('/books/' ~ book.id) }}" class="btn btn-outline-primary btn-sm">
-                                Voir détails
-                            </a>
-                            
-                            <a href="{{ url('/books/' ~ book.id ~ '/sectors') }}" class="btn btn-outline-secondary btn-sm">
-                                <i class="fa fa-cog"></i> Gérer
-                            </a>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="empty-state text-center py-5">
+                        <div class="empty-icon mb-3">
+                            <i class="fas fa-book fa-3x text-muted"></i>
                         </div>
+                        <h4 class="text-muted">Aucun guide trouvé</h4>
+                        <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                        <button class="btn btn-outline-primary" id="reset-filters-fallback">
+                            Réinitialiser les filtres
+                        </button>
                     </div>
                 </div>
-            {% endfor %}
+            {% endif %}
         </div>
-
+        
+        <!-- Vue Liste -->
+        <div class="books-list entities-list view-list" id="books-list">
+            {% if books is defined and books|length > 0 %}
+                {% for book in books %}
+                    <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-book-id="{{ book.id }}">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none">{{ book.name }}</a>
+                            </h5>
+                            <div class="text-muted small mb-1">
+                                {% if book.code %}📝 {{ book.code }}{% endif %}
+                                {% if book.publisher %} - 🏢 {{ book.publisher }}{% endif %}
+                                {% if book.year %} (📅 {{ book.year }}){% endif %}
+                            </div>
+                            {% if book.region_name %}
+                                <p class="mb-1 text-primary small">🏔️ {{ book.region_name }}</p>
+                            {% endif %}
+                            <small class="text-muted">
+                                {{ book.sectors_count|default(0) }} secteurs | {{ book.routes_count|default(0) }} voies
+                                {% if book.isbn %} | ISBN disponible{% endif %}
+                            </small>
+                        </div>
+                        <div class="ms-3">
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Favoris" data-action="favorite" data-id="{{ book.id }}">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" title="Partager" data-action="share" data-id="{{ book.id }}">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <!-- Vue Compacte -->
+        <div class="books-compact entities-compact view-compact" id="books-compact">
+            {% if books is defined and books|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Code</th>
+                                <th>Éditeur</th>
+                                <th>Année</th>
+                                <th>Région</th>
+                                <th>Secteurs</th>
+                                <th>Voies</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for book in books %}
+                                <tr data-book-id="{{ book.id }}">
+                                    <td>
+                                        <a href="{{ url('/books/' ~ book.id) }}" class="text-decoration-none fw-medium">{{ book.name }}</a>
+                                    </td>
+                                    <td class="text-muted">{{ book.code|default('-') }}</td>
+                                    <td class="text-muted">{{ book.publisher|default('-') }}</td>
+                                    <td class="text-muted">{{ book.year|default('-') }}</td>
+                                    <td class="text-muted">{{ book.region_name|default('-') }}</td>
+                                    <td class="text-muted">{{ book.sectors_count|default(0) }}</td>
+                                    <td class="text-muted">{{ book.routes_count|default(0) }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ book.id }}">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Partager" data-action="share" data-id="{{ book.id }}">
+                                                <i class="fas fa-share-alt"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+        
         <!-- Pagination -->
-        {% if pagination.last_page > 1 %}
-            <nav aria-label="Navigation guides" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    <!-- Précédent -->
-                    {% if pagination.current_page > 1 %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url('/books') }}?{{ query_string(currentFilters|merge({page: pagination.current_page - 1})) }}">
-                                Précédent
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- Pages -->
-                    {% for page in range(max(1, pagination.current_page - 2), min(pagination.last_page, pagination.current_page + 2)) %}
-                        <li class="page-item {% if page == pagination.current_page %}active{% endif %}">
-                            <a class="page-link" href="{{ url('/books') }}?{{ query_string(currentFilters|merge({page: page})) }}">
-                                {{ page }}
-                            </a>
-                        </li>
-                    {% endfor %}
-
-                    <!-- Suivant -->
-                    {% if pagination.current_page < pagination.last_page %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url('/books') }}?{{ query_string(currentFilters|merge({page: pagination.current_page + 1})) }}">
-                                Suivant
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
+        {% if books|length > 0 %}
+            <div class="pagination-container mt-4">
+                <div class="d-flex justify-content-center">
+                    <div class="text-muted">
+                        {{ pagination.total|default(books|length) }} guides trouvés
+                    </div>
+                </div>
+            </div>
         {% endif %}
-
-    {% else %}
-        <div class="empty-state text-center py-5">
-            <div class="empty-icon mb-3">
-                <i class="fa fa-book fa-3x text-muted"></i>
-            </div>
-            <h3 class="text-muted">Aucun guide trouvé</h3>
-            <p class="text-muted">
-                {% if currentFilters.search or currentFilters.region_id %}
-                    Aucun guide ne correspond à vos critères de recherche.
-                {% else %}
-                    Il n'y a pas encore de guides d'escalade enregistrés.
-                {% endif %}
-            </p>
-            <div class="mt-3">
-                {% if currentFilters.search or currentFilters.region_id %}
-                    <a href="{{ url('/books') }}" class="btn btn-secondary me-2">
-                        Voir tous les guides
-                    </a>
-                {% endif %}
-                <a href="{{ url('/books/create') }}" class="btn btn-primary">
-                    Créer le premier guide
-                </a>
-            </div>
-        </div>
-    {% endif %}
-</div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url('/js/pages-common.js') }}"></script>
+<script src="{{ url('/js/view-manager.js') }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-submit du formulaire de filtres avec délai
-    const searchInput = document.getElementById('search');
-    const regionSelect = document.getElementById('region_id');
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => {
-                this.form.submit();
-            }, 500);
-        });
+// Exposer les données des guides pour les composants JavaScript modernes
+window.booksData = {
+    books: [
+        {% for book in books %}
+        {
+            id: {{ book.id }},
+            name: {{ book.name|json_encode|raw }},
+            code: {{ book.code|default('')|json_encode|raw }},
+            publisher: {{ book.publisher|default('')|json_encode|raw }},
+            year: {{ book.year|default('null') }},
+            isbn: {{ book.isbn|default('')|json_encode|raw }},
+            region_name: {{ book.region_name|default('')|json_encode|raw }},
+            sectors_count: {{ book.sectors_count|default(0) }},
+            routes_count: {{ book.routes_count|default(0) }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    regions: [
+        {% for region in regions|default([]) %}
+        {
+            id: {{ region.id }},
+            name: {{ region.name|json_encode|raw }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    pagination: {
+        currentPage: {{ pagination.current_page|default(1) }},
+        totalPages: {{ pagination.last_page|default(1) }},
+        total: {{ pagination.total|default(books|length) }}
     }
+};
 
-    if (regionSelect) {
-        regionSelect.addEventListener('change', function() {
-            this.form.submit();
+// Reset filters fallback
+document.addEventListener('DOMContentLoaded', function() {
+    const resetBtn = document.getElementById('reset-filters-fallback');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            window.location.href = '{{ url('/books') }}';
         });
     }
 });
 </script>
-
-<style>
-.books-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 1.5rem;
-}
-
-.book-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid #e9ecef;
-}
-
-.book-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.stat-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #495057;
-}
-
-.stat-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.book-actions .btn-link {
-    color: #6c757d;
-    padding: 0.25rem;
-}
-
-.book-actions .btn-link:hover {
-    color: #495057;
-}
-
-.filters-form {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid #e9ecef;
-}
-
-.empty-state {
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.empty-icon i {
-    opacity: 0.5;
-}
-
-.book-meta {
-    line-height: 1.4;
-}
-
-.book-region {
-    margin-top: 0.5rem;
-}
-
-.card-footer {
-    padding: 0.75rem 1.25rem;
-    border-top: 1px solid rgba(0,0,0,.125);
-}
-
-@media (max-width: 768px) {
-    .books-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .filters-form .row {
-        gap: 1rem 0;
-    }
-}
 </style>
 {% endblock %}
