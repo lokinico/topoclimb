@@ -123,7 +123,7 @@
         
         <!-- Vue Liste -->
         <div class="regions-list entities-list view-list" id="regions-list">
-            {% if regions is defined %}
+            {% if regions is defined and regions|length > 0 %}
                 {% for region in regions %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-region-id="{{ region.id }}">
                         <div class="flex-grow-1">
@@ -156,12 +156,20 @@
                         </div>
                     </div>
                 {% endfor %}
+            {% else %}
+                <div class="empty-state text-center py-5">
+                    <div class="empty-icon mb-3">
+                        <i class="fas fa-mountain fa-3x text-muted"></i>
+                    </div>
+                    <h4 class="text-muted">Aucune région trouvée</h4>
+                    <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                </div>
             {% endif %}
         </div>
         
         <!-- Vue Compacte -->
         <div class="regions-compact entities-compact view-compact" id="regions-compact">
-            {% if regions is defined %}
+            {% if regions is defined and regions|length > 0 %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-light">
@@ -199,6 +207,31 @@
                                     </td>
                                 </tr>
                             {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Pays</th>
+                                <th>Altitude</th>
+                                <th>Secteurs</th>
+                                <th>Voies</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="empty-state">
+                                        <i class="fas fa-mountain fa-2x text-muted mb-2"></i>
+                                        <div class="text-muted">Aucune région trouvée</div>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

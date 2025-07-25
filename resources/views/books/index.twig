@@ -136,8 +136,8 @@
         
         <!-- Vue Liste -->
         <div class="books-list entities-list view-list" id="books-list">
-            {% if books is defined %}
-                {% for book in books %}
+            {% if books is defined and books|length > 0 %}
+                {% for book in books %>
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-book-id="{{ book.id }}">
                         <div class="flex-grow-1">
                             <h5 class="mb-1">
@@ -168,12 +168,20 @@
                         </div>
                     </div>
                 {% endfor %}
+            {% else %}
+                <div class="empty-state text-center py-5">
+                    <div class="empty-icon mb-3">
+                        <i class="fas fa-book fa-3x text-muted"></i>
+                    </div>
+                    <h4 class="text-muted">Aucun guide trouvé</h4>
+                    <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                </div>
             {% endif %}
         </div>
         
         <!-- Vue Compacte -->
         <div class="books-compact entities-compact view-compact" id="books-compact">
-            {% if books is defined %}
+            {% if books is defined and books|length > 0 %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-light">
@@ -212,6 +220,33 @@
                                     </td>
                                 </tr>
                             {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Code</th>
+                                <th>Éditeur</th>
+                                <th>Année</th>
+                                <th>Région</th>
+                                <th>Secteurs</th>
+                                <th>Voies</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="empty-state">
+                                        <i class="fas fa-book fa-2x text-muted mb-2"></i>
+                                        <div class="text-muted">Aucun guide trouvé</div>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
