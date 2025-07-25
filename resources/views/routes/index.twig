@@ -146,7 +146,7 @@
         
         <!-- Vue Liste -->
         <div class="routes-list entities-list view-list" id="routes-list">
-            {% if routeItems %}
+            {% if routeItems and routeItems|length > 0 %}
                 {% for route in routeItems %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-route-id="{{ route.id }}">
                         <div class="flex-grow-1">
@@ -180,6 +180,14 @@
                         </div>
                     </div>
                 {% endfor %}
+            {% else %}
+                <div class="empty-state text-center py-5">
+                    <div class="empty-icon mb-3">
+                        <i class="fas fa-route fa-3x text-muted"></i>
+                    </div>
+                    <h4 class="text-muted">Aucune voie trouvée</h4>
+                    <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                </div>
             {% endif %}
         </div>
         
