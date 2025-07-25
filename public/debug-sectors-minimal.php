@@ -10,6 +10,21 @@
 <body>
     <h1>🔍 Debug Sectors - Version Minimale</h1>
     
+    <!-- BOUTONS ViewManager (manquants sur votre serveur !) -->
+    <div class="view-controls mb-4">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                <i class="fas fa-th"></i> Cartes
+            </button>
+            <button type="button" class="btn btn-outline-primary" data-view="list">
+                <i class="fas fa-list"></i> Liste
+            </button>
+            <button type="button" class="btn btn-outline-primary" data-view="compact">
+                <i class="fas fa-bars"></i> Compact
+            </button>
+        </div>
+    </div>
+    
     <!-- EXACTEMENT la structure du template sectors -->
     <div class="sectors-container entities-container" id="sectors-container">
         
