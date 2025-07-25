@@ -26,7 +26,13 @@
         <!-- Barre de tri et de résultats -->
         <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
-                <span class="text-muted">{{ routes.getTotal() }} voie(s) trouvée(s)</span>
+                <span class="text-muted">
+                    {% if routes.getTotal is defined %}
+                        {{ routes.getTotal() }} voie(s) trouvée(s)
+                    {% else %}
+                        {{ routes|length }} voie(s) trouvée(s)
+                    {% endif %}
+                </span>
             </div>
             
             <div class="sort-controls">
@@ -60,7 +66,7 @@
     
     <!-- Conteneur des voies -->
     <div id="routes-container" class="routes-list">
-        {% set routeItems = routes.getItems() %}
+        {% set routeItems = routes.getItems is defined ? routes.getItems() : routes %}
         
         {% if routeItems|length > 0 %}
             <div class="routes-grid entities-grid">
@@ -84,7 +90,7 @@
                                 </div>
                                 
                                 <div class="route-meta text-muted small mb-2">
-                                    <span class="difficulty-badge badge bg-primary me-2">{{ route.difficulty || 'N/A' }}</span>
+                                    <span class="difficulty-badge badge bg-primary me-2">{{ route.difficulty|default('N/A') }}</span>
                                     {% if route.sector %}
                                         <span class="me-2">📍 {{ route.sector.name }}</span>
                                     {% endif %}
@@ -118,9 +124,11 @@
             </div>
             
             <!-- Pagination -->
-            <div class="pagination-container mt-4">
-                {{ pagination.render(routes) }}
-            </div>
+            {% if routes.render is defined %}
+                <div class="pagination-container mt-4">
+                    {{ routes.render() }}
+                </div>
+            {% endif %}
         {% else %}
             <div class="empty-state text-center py-5">
                 <div class="empty-icon mb-3">
@@ -159,10 +167,10 @@ window.routesData = {
         {% endfor %}
     ],
     pagination: {
-        currentPage: {{ routes.getCurrentPage()|default(1) }},
-        totalPages: {{ routes.getTotalPages()|default(1) }},
-        total: {{ routes.getTotal()|default(routeItems|length) }},
-        perPage: {{ routes.getPerPage()|default(20) }}
+        currentPage: {% if routes.getCurrentPage is defined %}{{ routes.getCurrentPage() }}{% else %}1{% endif %},
+        totalPages: {% if routes.getTotalPages is defined %}{{ routes.getTotalPages() }}{% else %}1{% endif %},
+        total: {% if routes.getTotal is defined %}{{ routes.getTotal() }}{% else %}{{ routeItems|length }}{% endif %},
+        perPage: {% if routes.getPerPage is defined %}{{ routes.getPerPage() }}{% else %}20{% endif %}
     }
 };
 
