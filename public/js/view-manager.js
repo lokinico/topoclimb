@@ -7,6 +7,8 @@ class ViewManager {
         this.container = document.querySelector(containerSelector);
         this.currentView = 'grid';
         
+        console.log('ViewManager constructor:', containerSelector, this.container);
+        
         if (!this.container) {
             console.warn('ViewManager: Container not found:', containerSelector);
             return;
@@ -16,17 +18,28 @@ class ViewManager {
     }
     
     init() {
+        console.log('ViewManager init started');
         this.setupViewControls();
         this.loadSavedView();
         this.setupQuickActions();
+        console.log('ViewManager init completed');
     }
     
     setupViewControls() {
+        // Chercher les boutons dans toute la page, pas seulement dans le container
         const viewControls = document.querySelectorAll('[data-view]');
+        console.log('ViewManager: Found view controls:', viewControls.length);
         
-        viewControls.forEach(control => {
+        viewControls.forEach((control, index) => {
+            console.log(`ViewManager: Setting up control ${index}:`, control.dataset.view);
+            
+            // Supprimer les anciens événements
+            control.removeEventListener('click', this.handleViewChange);
+            
+            // Ajouter le nouvel événement
             control.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log('ViewManager: Button clicked:', control.dataset.view);
                 const viewType = control.dataset.view;
                 this.switchView(viewType);
                 this.updateActiveButton(control);
@@ -42,25 +55,42 @@ class ViewManager {
         
         console.log('ViewManager: Switching to view:', viewType);
         
-        // Masquer toutes les vues
-        const allViews = this.container.querySelectorAll('.view-grid, .view-list, .view-compact');
-        console.log('ViewManager: Found views:', allViews.length);
+        // Chercher TOUS les éléments de vue dans le container
+        const allViews = this.container.querySelectorAll('[class*="view-"]');
+        console.log('ViewManager: Found all views:', allViews.length);
         
-        allViews.forEach(view => {
+        // Masquer toutes les vues
+        allViews.forEach((view, index) => {
+            console.log(`ViewManager: Processing view ${index}:`, view.className);
             view.classList.remove('active');
             view.style.display = 'none';
         });
         
-        // Afficher la vue sélectionnée
-        const targetView = this.container.querySelector(`.view-${viewType}`);
-        console.log('ViewManager: Target view found:', !!targetView);
+        // Chercher spécifiquement la vue cible
+        const targetSelectors = [
+            `.view-${viewType}`,
+            `.${viewType}-grid`,
+            `.${viewType}-list`, 
+            `.${viewType}-compact`,
+            `#${this.container.id.replace('-container', '')}-${viewType}`
+        ];
+        
+        let targetView = null;
+        for (const selector of targetSelectors) {
+            targetView = this.container.querySelector(selector);
+            if (targetView) {
+                console.log('ViewManager: Found target view with selector:', selector);
+                break;
+            }
+        }
         
         if (targetView) {
             targetView.classList.add('active');
             targetView.style.display = viewType === 'grid' ? 'grid' : 'block';
             console.log('ViewManager: View switched successfully to:', viewType);
         } else {
-            console.error('ViewManager: Could not find target view:', `.view-${viewType}`);
+            console.error('ViewManager: Could not find target view for:', viewType);
+            console.log('ViewManager: Available views in container:', this.container.innerHTML);
         }
         
         this.currentView = viewType;
@@ -75,11 +105,13 @@ class ViewManager {
         
         // Ajouter la classe active au bouton cliqué
         activeButton.classList.add('active');
+        console.log('ViewManager: Updated active button to:', activeButton.dataset.view);
     }
     
     saveViewPreference(viewType) {
         try {
             localStorage.setItem('topoclimb_view_preference', viewType);
+            console.log('ViewManager: Saved view preference:', viewType);
         } catch (e) {
             console.warn('Could not save view preference:', e);
         }
@@ -89,6 +121,7 @@ class ViewManager {
         try {
             const savedView = localStorage.getItem('topoclimb_view_preference');
             if (savedView && ['grid', 'list', 'compact'].includes(savedView)) {
+                console.log('ViewManager: Loading saved view:', savedView);
                 this.switchView(savedView);
                 
                 // Mettre à jour le bouton actif
@@ -132,20 +165,14 @@ class ViewManager {
     }
     
     handleWeatherAction(entityId) {
-        // Pour l'instant, afficher un toast informatif
         this.showToast('Météo en cours de chargement...', 'info');
-        
-        // TODO: Intégrer avec l'API météo
         setTimeout(() => {
             this.showToast('Fonctionnalité météo bientôt disponible', 'warning');
         }, 1000);
     }
     
     handleMapAction(entityId) {
-        // Pour l'instant, afficher un toast informatif
         this.showToast('Ouverture de la carte...', 'info');
-        
-        // TODO: Intégrer avec le système de cartes
         setTimeout(() => {
             this.showToast('Fonctionnalité carte bientôt disponible', 'warning');
         }, 1000);
@@ -163,8 +190,6 @@ class ViewManager {
             button.innerHTML = '<i class="fas fa-heart text-danger"></i>';
             this.showToast('Ajouté aux favoris', 'success');
         }
-        
-        // TODO: Synchroniser avec le backend
     }
     
     showToast(message, type = 'info') {
@@ -216,31 +241,48 @@ class ViewManager {
     }
 }
 
-// Auto-initialisation
+// Auto-initialisation FORCÉE
+console.log('ViewManager script loaded');
+
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('ViewManager: Initializing...');
+    console.log('DOM loaded, initializing ViewManager...');
     
-    // Initialiser pour différents types de conteneurs
-    const containers = [
-        '.regions-container',
-        '.sites-container', 
-        '.sectors-container',
-        '.routes-container',
-        '.books-container',
-        '.entities-container'
-    ];
-    
-    let initialized = false;
-    containers.forEach(selector => {
-        const container = document.querySelector(selector);
-        if (container) {
-            console.log('ViewManager: Found container:', selector);
-            new ViewManager(selector);
-            initialized = true;
+    // Attendre un peu pour que tout soit bien chargé
+    setTimeout(() => {
+        // Chercher tous les conteneurs possibles
+        const selectors = [
+            '.regions-container',
+            '.sites-container', 
+            '.sectors-container',
+            '.routes-container',
+            '.books-container',
+            '.entities-container'
+        ];
+        
+        let found = false;
+        selectors.forEach(selector => {
+            const container = document.querySelector(selector);
+            if (container) {
+                console.log('ViewManager: ✅ Initializing for container:', selector);
+                window.viewManager = new ViewManager(selector);
+                found = true;
+                
+                // Test immédiat des boutons
+                const buttons = document.querySelectorAll('[data-view]');
+                console.log('ViewManager: ✅ Found', buttons.length, 'view buttons');
+                buttons.forEach((btn, i) => {
+                    console.log(`ViewManager: Button ${i} - ${btn.dataset.view}:`, btn);
+                });
+            }
+        });
+        
+        if (!found) {
+            console.error('ViewManager: ❌ No valid containers found!');
+            console.log('Available containers:', document.querySelectorAll('[class*="container"]'));
+            console.log('Available view buttons:', document.querySelectorAll('[data-view]'));
         }
-    });
-    
-    if (!initialized) {
-        console.warn('ViewManager: No containers found');
-    }
+    }, 100); // Réduire le délai pour test plus rapide
 });
+
+// Export global pour debug
+window.ViewManager = ViewManager;
