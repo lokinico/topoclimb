@@ -53,24 +53,34 @@ class ViewManager {
             return;
         }
         
-        console.log('ViewManager: 🔄 Switching to view:', viewType);
+        // Ne pas changer si c'est déjà la vue active
+        if (this.currentView === viewType) {
+            console.log('ViewManager: ✅ View already active:', viewType);
+            return;
+        }
         
-        // Masquer toutes les vues avec les classes standards
+        console.log('ViewManager: 🔄 Switching from', this.currentView, 'to view:', viewType);
+        
+        // Masquer seulement les vues qui ne sont pas la cible
         const allViews = this.container.querySelectorAll('.view-grid, .view-list, .view-compact');
-        console.log('ViewManager: Found views to hide:', allViews.length);
+        console.log('ViewManager: Found views:', allViews.length);
         
-        allViews.forEach((view, index) => {
-            console.log(`ViewManager: 👁️ Hiding view ${index}:`, view.className);
-            view.classList.remove('active');
-            // Ne pas forcer le style display, laisser le CSS gérer
+        allViews.forEach((view) => {
+            const isTarget = view.classList.contains(`view-${viewType}`);
+            if (!isTarget && view.classList.contains('active')) {
+                console.log('ViewManager: 👁️ Hiding view:', view.className);
+                view.classList.remove('active');
+            }
         });
         
         // Trouver et afficher la vue cible
         const targetView = this.container.querySelector(`.view-${viewType}`);
         
         if (targetView) {
-            console.log('ViewManager: ✅ Found and activating view:', targetView.className);
-            targetView.classList.add('active');
+            if (!targetView.classList.contains('active')) {
+                console.log('ViewManager: ✅ Activating view:', targetView.className);
+                targetView.classList.add('active');
+            }
             console.log('ViewManager: ✅ View switched successfully to:', viewType);
         } else {
             console.error('ViewManager: ❌ Could not find target view for:', viewType);
