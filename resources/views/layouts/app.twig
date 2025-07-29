@@ -19,8 +19,15 @@
     <link rel="stylesheet" href="{{ asset('css/topoclimb-js.css') }}">
     <link rel="stylesheet" href="{{ asset('css/topoclimb-js-extended.css') }}">
     
+    <!-- Système de vues unifié -->
+    <link rel="stylesheet" href="{{ asset('css/pages-common.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/view-modes.css') }}">
+    
     <!-- Styles spécifiques aux pages -->
     {% block styles %}{% endblock %}
+    
+    <!-- Block head pour inclusions additionnelles -->
+    {% block head %}{% endblock %}
     
     <!-- Google Analytics -->
     {% if config('google_analytics_id') %}
@@ -602,6 +609,10 @@
     <script src="{{ asset('js/topoclimb.js') }}" defer></script>
     <script src="{{ asset('js/components/common.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
+    
+    <!-- Système de vues unifié -->
+    <script src="{{ asset('js/pages-common.js') }}"></script>
+    <script src="{{ asset('js/view-manager.js') }}"></script>
     {% if config('google_analytics_id') %}
     <script src="{{ asset('js/analytics.js') }}"></script>
     {% endif %}
