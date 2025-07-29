@@ -89,18 +89,7 @@ class AuthService
             // Créer l'objet User avec l'ID
             $user = User::fromDatabase($result);
 
-            // AJOUT DE DEBUG
-            error_log("DEBUG - ID depuis BDD: " . ($result['id'] ?? 'NULL'));
-            error_log("DEBUG - User attributes: " . json_encode($user->getAttribute('id')));
-            error_log("DEBUG - User __get id: " . ($user->id ?? 'NULL'));
-            error_log("DEBUG - User getId(): " . (method_exists($user, 'getId') ? $user->getId() : 'method not found'));
-
-            // SOLUTION DIRECTE : stocker l'ID en session AVANT login()
-            $userId = (int)$result['id'];
-            $this->session->set('auth_user_id', $userId);
-            $_SESSION['auth_user_id'] = $userId;
-
-            // Connecter l'utilisateur (login() retourne void)
+            // Connecter l'utilisateur - Auth::login() gère maintenant correctement l'ID
             $this->auth->login($user, $remember);
 
             // Vérifier que la connexion a réussi

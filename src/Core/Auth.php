@@ -227,37 +227,60 @@ class Auth
     {
         $this->user = $user;
 
-        // Récupérer l'ID de différentes manières
+        // Récupérer l'ID de différentes manières - Version améliorée
         $userId = null;
 
         // Méthode 1 : cache (si disponible)
         if ($this->userDataCache && isset($this->userDataCache['id'])) {
             $userId = (int)$this->userDataCache['id'];
         }
-        // Méthode 2 : via __get magic method
-        elseif ($user->id) {
-            $userId = (int)$user->id;
-        }
-        // Méthode 3 : via getAttribute (Model.php ligne 60)
-        elseif ($user->getAttribute('id')) {
+        // Méthode 2 : via getAttribute (Model.php)
+        elseif (method_exists($user, 'getAttribute') && $user->getAttribute('id')) {
             $userId = (int)$user->getAttribute('id');
         }
-        // Méthode 4 : via la méthode getId() si elle existe
+        // Méthode 3 : via propriété publique id
+        elseif (isset($user->id)) {
+            $userId = (int)$user->id;
+        }
+        // Méthode 4 : via __get magic method
+        elseif (property_exists($user, 'id') && $user->id) {
+            $userId = (int)$user->id;
+        }
+        // Méthode 5 : via la méthode getId() si elle existe
         elseif (method_exists($user, 'getId') && $user->getId()) {
             $userId = (int)$user->getId();
         }
-
-        if (!$userId) {
-            throw new \RuntimeException("Impossible de récupérer l'ID utilisateur");
+        // Méthode 6 : via réflexion pour accéder aux attributs protégés
+        else {
+            try {
+                $reflection = new \ReflectionObject($user);
+                if ($reflection->hasProperty('attributes')) {
+                    $attributesProperty = $reflection->getProperty('attributes');
+                    $attributesProperty->setAccessible(true);
+                    $attributes = $attributesProperty->getValue($user);
+                    if (isset($attributes['id']) && $attributes['id']) {
+                        $userId = (int)$attributes['id'];
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("Auth::login - Erreur réflexion: " . $e->getMessage());
+            }
         }
 
-        error_log("Auth::login - ID utilisateur: $userId");
+        if (!$userId || $userId <= 0) {
+            error_log("Auth::login - Impossible de récupérer l'ID utilisateur. Objet User: " . print_r($user, true));
+            throw new \RuntimeException("Impossible de récupérer l'ID utilisateur pour la connexion");
+        }
+
+        error_log("Auth::login - ID utilisateur récupéré: $userId");
 
         // Stocker en session
         $this->session->set('auth_user_id', $userId);
         $this->session->set('is_authenticated', true);
         $_SESSION['auth_user_id'] = $userId;
         $_SESSION['is_authenticated'] = true;
+
+        error_log("Auth::login - Session définie: auth_user_id=$userId, is_authenticated=true");
 
         // Cookie remember me
         if ($remember) {
