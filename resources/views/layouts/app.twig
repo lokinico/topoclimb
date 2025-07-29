@@ -378,6 +378,9 @@
         <!-- Messages flash -->
         {% include 'partials/flash.twig' %}
         
+        <!-- Live region pour annonces d'accessibilité -->
+        <div id="view-change-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+        
         <!-- Zone de contenu -->
         {% block content %}{% endblock %}
     </main>

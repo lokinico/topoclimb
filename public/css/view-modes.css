@@ -423,6 +423,54 @@
     }
 }
 
+/* ===== ACCESSIBILITÉ ===== */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.sr-only.focusable:active,
+.sr-only.focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+/* Améliorer les indicateurs de focus */
+.view-controls .btn:focus,
+.btn-action:focus,
+.quick-weather:focus,
+.quick-gps:focus,
+.quick-favorite:focus,
+.quick-map:focus {
+    outline: 3px solid #4f46e5;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+}
+
+/* Améliorer les contrastes pour les boutons actifs */
+.view-controls .btn.active {
+    background: #4f46e5 !important;
+    color: white !important;
+    border-color: #4f46e5 !important;
+}
+
+.view-controls .btn.active:hover {
+    background: #3730a3 !important;
+    border-color: #3730a3 !important;
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes fadeIn {
     from {

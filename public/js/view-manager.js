@@ -69,8 +69,9 @@ class ViewManager {
             
             // Supprimer les anciens événements
             control.removeEventListener('click', this.handleViewChange);
+            control.removeEventListener('keydown', this.handleKeyboardNavigation);
             
-            // Ajouter le nouvel événement
+            // Ajouter le nouvel événement de clic
             control.addEventListener('click', (e) => {
                 e.preventDefault();
                 console.log('ViewManager: Button clicked:', control.dataset.view);
@@ -78,7 +79,51 @@ class ViewManager {
                 this.switchView(viewType);
                 this.updateActiveButton(control);
             });
+            
+            // Ajouter la navigation clavier
+            control.addEventListener('keydown', (e) => {
+                this.handleKeyboardNavigation(e, control);
+            });
         });
+    }
+    
+    handleKeyboardNavigation(e, currentControl) {
+        const viewControls = Array.from(document.querySelectorAll('[data-view]'));
+        const currentIndex = viewControls.indexOf(currentControl);
+        
+        switch (e.key) {
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                e.preventDefault();
+                const prevIndex = currentIndex > 0 ? currentIndex - 1 : viewControls.length - 1;
+                viewControls[prevIndex].focus();
+                break;
+                
+            case 'ArrowRight':
+            case 'ArrowDown':
+                e.preventDefault();
+                const nextIndex = currentIndex < viewControls.length - 1 ? currentIndex + 1 : 0;
+                viewControls[nextIndex].focus();
+                break;
+                
+            case 'Home':
+                e.preventDefault();
+                viewControls[0].focus();
+                break;
+                
+            case 'End':
+                e.preventDefault();
+                viewControls[viewControls.length - 1].focus();
+                break;
+                
+            case 'Enter':
+            case ' ':
+                e.preventDefault();
+                const viewType = currentControl.dataset.view;
+                this.switchView(viewType);
+                this.updateActiveButton(currentControl);
+                break;
+        }
     }
     
     switchView(viewType) {
@@ -120,6 +165,10 @@ class ViewManager {
                 targetView.style.display = 'block';
             }
             
+            // Gestion du focus pour l'accessibilité
+            targetView.focus({ preventScroll: true });
+            console.log('ViewManager: ✅ Focus moved to new view:', targetView.id);
+            
             console.log('ViewManager: ✅ View switched successfully to:', viewType);
             
             // Test final
@@ -133,16 +182,19 @@ class ViewManager {
         
         this.currentView = viewType;
         this.saveViewPreference(viewType);
+        this.announceViewChange(viewType);
     }
     
     updateActiveButton(activeButton) {
-        // Retirer la classe active de tous les boutons
+        // Retirer la classe active de tous les boutons et mettre à jour aria-pressed
         document.querySelectorAll('[data-view]').forEach(btn => {
             btn.classList.remove('active');
+            btn.setAttribute('aria-pressed', 'false');
         });
         
-        // Ajouter la classe active au bouton cliqué
+        // Ajouter la classe active au bouton cliqué et mettre à jour aria-pressed
         activeButton.classList.add('active');
+        activeButton.setAttribute('aria-pressed', 'true');
         console.log('ViewManager: Updated active button to:', activeButton.dataset.view);
     }
     
@@ -185,6 +237,9 @@ class ViewManager {
                 if (currentButton) {
                     this.updateActiveButton(currentButton);
                 }
+                
+                // Annoncer la vue initiale
+                this.announceViewChange(this.currentView);
             }
         } catch (e) {
             console.warn('ViewManager: ⚠️ Could not load view preference:', e);
@@ -312,6 +367,32 @@ class ViewManager {
             button.classList.add('favorited');
             button.innerHTML = '<i class="fas fa-heart text-danger"></i>';
             this.showToast('Ajouté aux favoris', 'success');
+        }
+    }
+    
+    announceViewChange(viewType) {
+        const announcer = document.getElementById('view-change-announcer');
+        if (announcer) {
+            // Capitaliser la première lettre pour une meilleure synthèse vocale
+            const viewName = viewType.charAt(0).toUpperCase() + viewType.slice(1);
+            let announcement = '';
+            
+            switch (viewType) {
+                case 'grid':
+                    announcement = 'Affichage en mode cartes activé.';
+                    break;
+                case 'list':
+                    announcement = 'Affichage en mode liste activé.';
+                    break;
+                case 'compact':
+                    announcement = 'Affichage en mode compact activé.';
+                    break;
+                default:
+                    announcement = `Affichage en mode ${viewName} activé.`;
+            }
+            
+            announcer.textContent = announcement;
+            console.log('ViewManager: Announced view change:', announcement);
         }
     }
     

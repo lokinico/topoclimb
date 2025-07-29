@@ -39,14 +39,35 @@
             <!-- Controls d'affichage -->
             <div class="view-controls">
                 <div class="btn-group" role="group" aria-label="Mode d'affichage">
-                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
-                        <i class="fas fa-th"></i> Cartes
+                    <button type="button" 
+                            class="btn btn-outline-primary active" 
+                            data-view="grid"
+                            aria-pressed="true"
+                            aria-controls="routes-grid"
+                            title="Affichage en cartes">
+                        <i class="fas fa-th" aria-hidden="true"></i> 
+                        <span>Cartes</span>
+                        <span class="sr-only">Affichage en mode cartes</span>
                     </button>
-                    <button type="button" class="btn btn-outline-primary" data-view="list">
-                        <i class="fas fa-list"></i> Liste
+                    <button type="button" 
+                            class="btn btn-outline-primary" 
+                            data-view="list"
+                            aria-pressed="false"
+                            aria-controls="routes-list"
+                            title="Affichage en liste">
+                        <i class="fas fa-list" aria-hidden="true"></i> 
+                        <span>Liste</span>
+                        <span class="sr-only">Affichage en mode liste</span>
                     </button>
-                    <button type="button" class="btn btn-outline-primary" data-view="compact">
-                        <i class="fas fa-bars"></i> Compact
+                    <button type="button" 
+                            class="btn btn-outline-primary" 
+                            data-view="compact"
+                            aria-pressed="false"
+                            aria-controls="routes-compact"
+                            title="Affichage compact">
+                        <i class="fas fa-bars" aria-hidden="true"></i> 
+                        <span>Compact</span>
+                        <span class="sr-only">Affichage en mode compact</span>
                     </button>
                 </div>
             </div>
@@ -75,7 +96,7 @@
         {% set routeItems = routes.getItems is defined ? routes.getItems() : routes %}
         
         <!-- Vue grille (cartes) -->
-        <div class="routes-grid entities-grid view-grid active" id="routes-grid">
+        <div class="routes-grid entities-grid view-grid active" id="routes-grid" tabindex="-1" aria-label="Affichage en cartes des voies d'escalade">
             {% if routeItems %}
                 {% for route in routeItems %}
                     <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
@@ -145,7 +166,7 @@
         </div>
         
         <!-- Vue Liste -->
-        <div class="routes-list entities-list view-list" id="routes-list">
+        <div class="routes-list entities-list view-list" id="routes-list" tabindex="-1" aria-label="Affichage en liste des voies d'escalade">
             {% if routeItems and routeItems|length > 0 %}
                 {% for route in routeItems %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-route-id="{{ route.id }}">
@@ -192,7 +213,7 @@
         </div>
         
         <!-- Vue Compacte -->
-        <div class="routes-compact entities-compact view-compact" id="routes-compact">
+        <div class="routes-compact entities-compact view-compact" id="routes-compact" tabindex="-1" aria-label="Affichage en tableau compact des voies d'escalade">
             {% if routeItems %}
                 <div class="table-responsive">
                     <table class="table table-hover">
