@@ -170,7 +170,7 @@ class Auth
      */
     public function attempt(string $username, string $password, bool $remember = false): bool
     {
-        $query = "SELECT * FROM users WHERE username = ? OR mail = ? LIMIT 1";
+        $query = "SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1";
         $result = $this->db->query($query, [$username, $username])->fetch();
 
         if (!$result) {

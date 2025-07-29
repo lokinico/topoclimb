@@ -75,14 +75,14 @@ class AuthService
     {
         try {
             // Récupérer l'utilisateur par email
-            $result = $this->db->fetchOne("SELECT * FROM users WHERE mail = ? LIMIT 1", [$email]);
+            $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? LIMIT 1", [$email]);
 
             if (!$result) {
                 return false;
             }
 
             // Vérifier le mot de passe
-            if (!password_verify($password, $result['password'])) {
+            if (!password_verify($password, $result['password_hash'])) {
                 return false;
             }
 
@@ -127,7 +127,7 @@ class AuthService
     {
         try {
             // Vérifier si l'email existe déjà
-            $emailExists = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE mail = ?", [$data['email']]);
+            $emailExists = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE email = ?", [$data['email']]);
             if ($emailExists && $emailExists['count'] > 0) {
                 throw new \Exception('Cet email est déjà utilisé');
             }
@@ -142,10 +142,10 @@ class AuthService
             $userId = $this->db->insert('users', [
                 'nom' => $data['nom'],
                 'prenom' => $data['prenom'],
-                'mail' => $data['email'],
+                'email' => $data['email'],
                 'username' => $data['username'],
                 'ville' => $data['ville'] ?? '',
-                'password' => password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]),
+                'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]),
                 'autorisation' => '3', // Utilisateur standard
                 'date_registered' => date('Y-m-d H:i:s')
             ]);
@@ -257,7 +257,7 @@ class AuthService
 
     public function sendPasswordResetEmail(string $email): bool
     {
-        $result = $this->db->fetchOne("SELECT * FROM users WHERE mail = ? LIMIT 1", [$email]);
+        $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? LIMIT 1", [$email]);
 
         if (!$result) {
             return false; // Email non révélé
@@ -315,7 +315,7 @@ class AuthService
         $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
 
         $updateResult = $this->db->query(
-            "UPDATE users SET password = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?",
+            "UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?",
             [$hashedPassword, $result['id']]
         );
 
@@ -386,14 +386,14 @@ class AuthService
             }
 
             // Vérifier le mot de passe actuel
-            $userData = $this->db->fetchOne("SELECT password FROM users WHERE id = ?", [$user->id]);
-            if (!password_verify($currentPassword, $userData['password'])) {
+            $userData = $this->db->fetchOne("SELECT password_hash FROM users WHERE id = ?", [$user->id]);
+            if (!password_verify($currentPassword, $userData['password_hash'])) {
                 return false;
             }
 
             // Mettre à jour le mot de passe
             $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-            $this->db->update('users', ['password' => $hashedPassword], ['id' => $user->id]);
+            $this->db->update('users', ['password_hash' => $hashedPassword], ['id' => $user->id]);
 
             // Supprimer tous les tokens de souvenir pour forcer une nouvelle connexion
             $this->db->delete('remember_tokens', ['user_id' => $user->id]);

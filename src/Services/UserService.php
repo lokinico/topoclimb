@@ -37,7 +37,7 @@ class UserService
      */
     public function getUserByEmail(string $email): ?User
     {
-        return User::where(['mail' => $email])[0] ?? null;
+        return User::where(['email' => $email])[0] ?? null;
     }
 
     /**

@@ -24,7 +24,7 @@ class User extends Model
         'nom',
         'prenom',
         'ville',
-        'mail',
+        'email',
         'username',
         'autorisation' // AJOUT: Permet l'assignation de l'autorisation
     ];
@@ -46,7 +46,7 @@ class User extends Model
     protected array $rules = [
         'nom' => 'required|max:255',
         'prenom' => 'required|max:255',
-        'mail' => 'required|email|max:255',
+        'email' => 'required|email|max:255',
         'username' => 'required|max:100',
         'password' => 'required|min:8'
     ];
@@ -246,7 +246,7 @@ class User extends Model
      */
     public static function findByEmail(string $email): ?User
     {
-        return static::findWhere(['mail' => $email]);
+        return static::findWhere(['email' => $email]);
     }
 
     /**
