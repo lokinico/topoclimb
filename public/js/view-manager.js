@@ -95,27 +95,36 @@ class ViewManager {
         
         console.log('ViewManager: 🔄 Switching from', this.currentView, 'to view:', viewType);
         
-        // Masquer seulement les vues qui ne sont pas la cible
+        // FORCER le masquage de TOUTES les vues d'abord
         const allViews = this.container.querySelectorAll('.view-grid, .view-list, .view-compact');
-        console.log('ViewManager: Found views:', allViews.length);
+        console.log('ViewManager: Found views for hiding:', allViews.length);
         
         allViews.forEach((view) => {
-            const isTarget = view.classList.contains(`view-${viewType}`);
-            if (!isTarget && view.classList.contains('active')) {
-                console.log('ViewManager: 👁️ Hiding view:', view.className);
-                view.classList.remove('active');
-            }
+            console.log('ViewManager: 👁️ Force hiding view:', view.className);
+            view.classList.remove('active');
+            // Force hide via style également 
+            view.style.display = 'none';
         });
         
-        // Trouver et afficher la vue cible
+        // Trouver et FORCER l'affichage de la vue cible
         const targetView = this.container.querySelector(`.view-${viewType}`);
         
         if (targetView) {
-            if (!targetView.classList.contains('active')) {
-                console.log('ViewManager: ✅ Activating view:', targetView.className);
-                targetView.classList.add('active');
+            console.log('ViewManager: ✅ Force activating view:', targetView.className);
+            targetView.classList.add('active');
+            
+            // Force show via style également
+            if (viewType === 'grid') {
+                targetView.style.display = 'grid';
+            } else {
+                targetView.style.display = 'block';
             }
+            
             console.log('ViewManager: ✅ View switched successfully to:', viewType);
+            
+            // Test final
+            const finalComputed = window.getComputedStyle(targetView);
+            console.log('ViewManager: Final computed display:', finalComputed.display);
         } else {
             console.error('ViewManager: ❌ Could not find target view for:', viewType);
             console.log('ViewManager: Available views:', 
