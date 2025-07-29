@@ -30,27 +30,13 @@
 }
 
 /* FORCER l'affichage/masquage des vues avec spécificité maximale */
-.entities-container .view-grid {
-    display: grid !important;
-}
-
+.entities-container .view-grid,
 .entities-container .view-list,
 .entities-container .view-compact {
     display: none !important;
 }
 
-/* Masquer toutes les vues SAUF celle active */
-.entities-container .view-grid:not(.active) {
-    display: none !important;
-}
-
-.entities-container .view-list:not(.active) {
-    display: none !important;
-}
-
-.entities-container .view-compact:not(.active) {
-    display: none !important;
-}
+/* Les règles ci-dessus masquent toutes les vues par défaut */
 
 /* Afficher UNIQUEMENT la vue active avec spécificité maximale */
 .entities-container .view-grid.active {
