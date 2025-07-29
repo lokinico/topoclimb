@@ -29,11 +29,14 @@
     width: 100%;
 }
 
-/* Masquer toutes les vues par défaut */
-.entities-container .view-grid,
+/* Masquer les vues non actives - grid par défaut visible */
+.entities-container .view-grid {
+    display: grid;
+}
+
 .entities-container .view-list,
 .entities-container .view-compact {
-    display: none !important;
+    display: none;
 }
 
 /* Afficher seulement la vue active avec spécificité plus élevée */

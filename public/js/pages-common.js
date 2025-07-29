@@ -20,7 +20,7 @@ class EntityPageManager {
     
     init() {
         this.setupFilterEvents();
-        this.setupViewToggle();
+        // this.setupViewToggle(); // Désactivé - conflit avec ViewManager
         this.setupQuickActions();
         this.setupPagination();
         this.setupSearch();
