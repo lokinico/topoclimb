@@ -2373,4 +2373,35 @@ return array (
     'controller' => 'TopoclimbCH\\Controllers\\TestMapController',
     'action' => 'index',
   ),
+  216 => 
+  array (
+    'method' => 'POST',
+    'path' => '/api/analytics/views',
+    'controller' => 'TopoclimbCH\\Controllers\\AnalyticsController',
+    'action' => 'receiveViewEvents',
+  ),
+  217 => 
+  array (
+    'method' => 'GET',
+    'path' => '/admin/analytics',
+    'controller' => 'TopoclimbCH\\Controllers\\AnalyticsController',
+    'action' => 'dashboard',
+    'middlewares' => 
+    array (
+      0 => 'TopoclimbCH\\Middleware\\AuthMiddleware',
+      1 => 'TopoclimbCH\\Middleware\\AdminMiddleware',
+    ),
+  ),
+  218 => 
+  array (
+    'method' => 'POST',
+    'path' => '/admin/analytics/cleanup',
+    'controller' => 'TopoclimbCH\\Controllers\\AnalyticsController',
+    'action' => 'cleanup',
+    'middlewares' => 
+    array (
+      0 => 'TopoclimbCH\\Middleware\\AuthMiddleware',
+      1 => 'TopoclimbCH\\Middleware\\AdminMiddleware',
+    ),
+  ),
 );
