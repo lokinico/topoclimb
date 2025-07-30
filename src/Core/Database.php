@@ -27,23 +27,39 @@ class Database
     public function __construct(?array $config = null)
     {
         if ($config === null) {
-            // Configuration par défaut depuis les variables d'environnement
-            $this->config = [
-                'host' => $_ENV['DB_HOST'] ?? 'localhost',
-                'database' => $_ENV['DB_DATABASE'] ?? 'sh139940_',
-                'username' => $_ENV['DB_USERNAME'] ?? 'root',
-                'password' => $_ENV['DB_PASSWORD'] ?? '',
-                'charset' => 'utf8mb4',
-                'port' => $_ENV['DB_PORT'] ?? 3306,
-                'options' => [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]
-            ];
+            // Auto-détection: SQLite si fichier existe, sinon MySQL
+            if (file_exists('climbing_sqlite.db')) {
+                // Configuration SQLite
+                $this->config = [
+                    'driver' => 'sqlite',
+                    'database' => 'climbing_sqlite.db',
+                    'options' => [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]
+                ];
+            } else {
+                // Configuration MySQL par défaut
+                $this->config = [
+                    'driver' => 'mysql',
+                    'host' => $_ENV['DB_HOST'] ?? 'localhost',
+                    'database' => $_ENV['DB_DATABASE'] ?? 'sh139940_',
+                    'username' => $_ENV['DB_USERNAME'] ?? 'root',
+                    'password' => $_ENV['DB_PASSWORD'] ?? '',
+                    'charset' => 'utf8mb4',
+                    'port' => $_ENV['DB_PORT'] ?? 3306,
+                    'options' => [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]
+                ];
+            }
         } else {
             // Configuration injectée
             $this->config = array_merge([
+                'driver' => 'mysql',
                 'charset' => 'utf8mb4',
                 'port' => 3306,
                 'options' => [
@@ -75,37 +91,29 @@ class Database
     public function getConnection(): PDO
     {
         if ($this->connection === null) {
-            // Supporter SQLite et MySQL
-            $driver = $_ENV['DB_DRIVER'] ?? 'mysql';
-            
-            if ($driver === 'sqlite') {
-                // Configuration SQLite
-                $dbPath = $this->config['database'];
-                if (strpos($dbPath, '/') !== 0) {
-                    $dbPath = BASE_PATH . '/' . $dbPath;
-                }
-                $dsn = "sqlite:" . $dbPath;
-            } else {
-                // Configuration MySQL (par défaut)
-                $dsn = sprintf(
-                    "mysql:host=%s;port=%s;dbname=%s;charset=%s",
-                    $this->config['host'],
-                    $this->config['port'],
-                    $this->config['database'],
-                    $this->config['charset']
-                );
-            }
-
             try {
-                if ($driver === 'sqlite') {
+                if ($this->config['driver'] === 'sqlite') {
+                    // Configuration SQLite
+                    $dsn = "sqlite:" . $this->config['database'];
                     $this->connection = new PDO($dsn, null, null, $this->config['options']);
+                    error_log("Database: Connexion SQLite établie avec succès");
                 } else {
+                    // Configuration MySQL
+                    $dsn = sprintf(
+                        "mysql:host=%s;port=%s;dbname=%s;charset=%s",
+                        $this->config['host'],
+                        $this->config['port'],
+                        $this->config['database'],
+                        $this->config['charset']
+                    );
+                    
                     $this->connection = new PDO(
                         $dsn,
                         $this->config['username'],
                         $this->config['password'],
                         $this->config['options']
                     );
+                    error_log("Database: Connexion MySQL établie avec succès");
                 }
             } catch (PDOException $e) {
                 throw new PDOException("Erreur de connexion à la base de données : " . $e->getMessage());

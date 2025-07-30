@@ -75,7 +75,20 @@ class AuthService
     {
         try {
             // Récupérer l'utilisateur par email
-            $result = $this->db->fetchOne("SELECT * FROM users WHERE mail = ? AND actif = 1 LIMIT 1", [$email]);
+            // Auto-détection colonne email vs mail
+            $emailColumn = 'email'; // Par défaut
+            try {
+                // Tester avec 'email' d'abord
+                $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? AND actif = 1 LIMIT 1", [$email]);
+            } catch (Exception $e) {
+                if (strpos($e->getMessage(), 'email') !== false) {
+                    // Si erreur contient 'email', essayer avec 'mail'
+                    $emailColumn = 'mail';
+                    $result = $this->db->fetchOne("SELECT * FROM users WHERE mail = ? AND actif = 1 LIMIT 1", [$email]);
+                } else {
+                    throw $e;
+                }
+            }
 
             if (!$result) {
                 return false;
