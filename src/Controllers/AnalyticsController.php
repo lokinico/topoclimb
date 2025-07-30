@@ -8,12 +8,22 @@ namespace TopoclimbCH\Controllers;
 use Symfony\Component\HttpFoundation\Request;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\View;
+use TopoclimbCH\Core\Session;
+use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\Auth;
 
 class AnalyticsController extends BaseController
 {
-    private Database $db;
+    protected ?Database $db;
     
-    public function __construct($view, $session, $csrfManager, $db = null, $auth = null)
+    public function __construct(
+        View $view, 
+        Session $session, 
+        CsrfManager $csrfManager,
+        ?Database $db = null,
+        ?Auth $auth = null
+    )
     {
         parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->db = $db ?: new Database();
