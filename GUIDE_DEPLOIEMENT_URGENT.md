@@ -1,17 +1,44 @@
 # 🔥 GUIDE DE DÉPLOIEMENT URGENT - TopoclimbCH
 
-## ❌ PROBLÈME CRITIQUE IDENTIFIÉ
+## ❌ NOUVEAU PROBLÈME CRITIQUE IDENTIFIÉ
 
-**CAUSE:** La base de données `climbing_sqlite.db` sur le serveur de production est vide ou corrompue.
-- ✅ **DIAGNOSTIC:** Seule la table `view_analytics` existait
-- ❌ **MANQUANT:** Table `users` et toutes les tables principales
-- 🚫 **RÉSULTAT:** Impossible de se connecter (aucun utilisateur existant)
+**LOGS DE PRODUCTION (30 juillet 2025):**
+```
+Erreur lors de la tentative de connexion: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'email' in 'where clause'
+Response status code: 500
+```
+
+**CAUSES IDENTIFIÉES:**
+1. 🗄️ **Structure DB différente:** La base de production utilise `mail` au lieu de `email`
+2. 🔥 **Erreur 500:** Problème lors de la connexion même avec les bons identifiants
+3. 📊 **Base incomplète:** Tables manquantes ou structure différente
 
 ---
 
-## ✅ SOLUTION IMMÉDIATE
+## ✅ SOLUTION IMMÉDIATE - OPTION A: RÉPARATION AUTOMATIQUE
 
-### 1️⃣ **COPIER LA NOUVELLE BASE DE DONNÉES**
+### 1️⃣ **SCRIPT DE RÉPARATION AUTOMATIQUE** (RECOMMANDÉ)
+
+```bash
+# Sur le serveur de production
+# 1. Uploader le script de réparation
+scp fix_production_database.php user@serveur:/path/to/topoclimb/
+
+# 2. Exécuter la réparation automatique
+php fix_production_database.php
+
+# 3. Tester le diagnostic
+php debug_500_error.php
+```
+
+**Ce script va automatiquement :**
+- ✅ Détecter si la colonne est `mail` ou `email`
+- ✅ Ajouter la colonne `email` si manquante
+- ✅ Ajouter la colonne `password_hash` si manquante
+- ✅ Créer l'utilisateur admin avec les bons identifiants
+- ✅ Hasher les mots de passe existants
+
+### 2️⃣ **OPTION B: REMPLACEMENT COMPLET**
 
 ```bash
 # Sur votre serveur de production
