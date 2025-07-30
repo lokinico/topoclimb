@@ -75,8 +75,30 @@ class AuthService
     {
         try {
             // Récupérer l'utilisateur par email
-            // CONFIGURATION EXACTE POUR VOTRE BASE DE PRODUCTION
-            $result = $this->db->fetchOne("SELECT * FROM users WHERE mail = ? AND actif = 1 LIMIT 1", [$email]);
+            // Auto-détection colonne email vs mail - VERSION CORRIGÉE
+            $result = null;
+            $emailColumn = "email"; // Défaut
+            
+            try {
+                // Tester avec email d'abord (SQLite local)
+                $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? AND actif = 1 LIMIT 1", [$email]);
+                $emailColumn = "email";
+                error_log("AuthService: Utilisation colonne 'email' réussie");
+            } catch (Exception $e) {
+                // Si erreur avec email, essayer mail (MySQL production)
+                if (strpos($e->getMessage(), "email") !== false || strpos($e->getMessage(), "Column not found") !== false) {
+                    try {
+                        $result = $this->db->fetchOne("SELECT * FROM users WHERE mail = ? AND actif = 1 LIMIT 1", [$email]);
+                        $emailColumn = "mail";
+                        error_log("AuthService: Fallback vers colonne 'mail' réussi");
+                    } catch (Exception $e2) {
+                        error_log("AuthService: Erreur avec les deux colonnes - " . $e2->getMessage());
+                        throw $e2;
+                    }
+                } else {
+                    throw $e;
+                }
+            }
 
             if (!$result) {
                 return false;
