@@ -1,28 +1,19 @@
--- Requête SQL pour exporter toute la structure de votre base de données MySQL
--- Exécutez cette requête sur votre serveur de production
+-- Requêtes SQL pour identifier votre structure exacte
+-- Exécutez dans l'ordre pour trouver vos tables
 
--- 1. Export de la structure de toutes les tables
-SELECT 
-    CONCAT('-- Structure de la table: ', TABLE_NAME) as export_line
-FROM information_schema.TABLES 
-WHERE TABLE_SCHEMA = DATABASE()
-UNION ALL
-SELECT 
-    CONCAT('SHOW CREATE TABLE `', TABLE_NAME, '`;') as export_line
-FROM information_schema.TABLES 
-WHERE TABLE_SCHEMA = DATABASE()
-ORDER BY export_line;
+-- 1. LISTER TOUTES VOS TABLES (peu importe le préfixe)
+SHOW TABLES;
 
--- 2. Alternative: Export complet avec mysqldump (à exécuter en ligne de commande)
--- mysqldump -u USERNAME -p --no-data --routines --triggers DATABASE_NAME > structure_complete.sql
+-- 2. Chercher table users avec différents préfixes possibles
+SHOW TABLES LIKE '%users%';
 
--- 3. Export spécifique de la table users seulement
-SHOW CREATE TABLE users;
-
--- 4. Description détaillée de la table users
+-- 3. Si table users sans préfixe
 DESCRIBE users;
 
--- 5. Export des colonnes de la table users avec détails
+-- 4. Si table sh139940_users existe  
+DESCRIBE sh139940_users;
+
+-- 5. Export détaillé si table users sans préfixe
 SELECT 
     COLUMN_NAME,
     DATA_TYPE,
@@ -34,3 +25,22 @@ FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() 
 AND TABLE_NAME = 'users'
 ORDER BY ORDINAL_POSITION;
+
+-- 6. Export détaillé si table avec préfixe sh139940_
+SELECT 
+    COLUMN_NAME,
+    DATA_TYPE,
+    IS_NULLABLE,
+    COLUMN_DEFAULT,
+    COLUMN_KEY,
+    EXTRA
+FROM information_schema.COLUMNS 
+WHERE TABLE_SCHEMA = DATABASE() 
+AND TABLE_NAME = 'sh139940_users'
+ORDER BY ORDINAL_POSITION;
+
+-- 7. LISTE COMPLÈTE de toutes vos tables
+SELECT TABLE_NAME 
+FROM information_schema.TABLES 
+WHERE TABLE_SCHEMA = DATABASE()
+ORDER BY TABLE_NAME;
