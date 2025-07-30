@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Responsive Design - TopoclimbCH</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/view-modes.css">
+    <style>
+        .test-container { 
+            margin: 20px auto; 
+            max-width: 1200px; 
+            padding: 20px;
+        }
+        .device-simulation {
+            border: 2px solid #ccc;
+            margin: 20px 0;
+            overflow: hidden;
+            background: white;
+        }
+        .device-header {
+            background: #333;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+        }
+        .mobile { width: 375px; }
+        .tablet { width: 768px; }
+        .desktop { width: 1200px; }
+        
+        .viewport-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewport-indicator" id="viewportIndicator">
+        📱 Largeur: <span id="widthDisplay">-</span>px
+    </div>
+
+    <div class="test-container">
+        <h1>🧪 Test Responsive Design - Système de Vues</h1>
+        <p>Ce test simule l'affichage sur différentes tailles d'écran pour valider le responsive design du système de vues.</p>
+
+        <!-- Test Mobile -->
+        <div class="device-simulation mobile">
+            <div class="device-header">📱 Mobile (375px)</div>
+            <div class="test-content">
+                <!-- Contrôles de vue -->
+                <div class="view-controls mb-3">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                            <i class="fas fa-th"></i> <span>Cartes</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" data-view="list">
+                            <i class="fas fa-list"></i> <span>Liste</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" data-view="compact">
+                            <i class="fas fa-table"></i> <span>Compact</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Conteneur entités -->
+                <div class="entities-container">
+                    <!-- Vue grille -->
+                    <div class="view-grid active">
+                        <div class="entity-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Route Test Mobile</h5>
+                                <p class="card-text">Test responsive sur mobile</p>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn-action" title="Favoris">♥</button>
+                                <button class="btn-action" title="Partager">↗</button>
+                            </div>
+                        </div>
+                        <div class="entity-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Route Test 2</h5>
+                                <p class="card-text">Deuxième carte pour test grille</p>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn-action" title="Favoris">♥</button>
+                                <button class="btn-action" title="Partager">↗</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vue liste -->
+                    <div class="view-list">
+                        <div class="list-item">
+                            <div class="flex-grow-1">
+                                <h5>Route Test Liste</h5>
+                                <p class="text-muted">Description en mode liste</p>
+                            </div>
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-sm btn-outline-primary">♥</button>
+                                <button class="btn btn-sm btn-outline-primary">↗</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vue compacte -->
+                    <div class="view-compact">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Grade</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Route Compact</td>
+                                        <td>6a</td>
+                                        <td>
+                                            <button class="btn btn-sm">♥</button>
+                                            <button class="btn btn-sm">↗</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Tablette -->
+        <div class="device-simulation tablet">
+            <div class="device-header">📟 Tablette (768px)</div>
+            <div class="test-content">
+                <!-- Mêmes éléments que mobile mais dans conteneur tablette -->
+                <div class="view-controls mb-3">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                            <i class="fas fa-th"></i> <span>Cartes</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" data-view="list">
+                            <i class="fas fa-list"></i> <span>Liste</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" data-view="compact">
+                            <i class="fas fa-table"></i> <span>Compact</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="entities-container">
+                    <div class="view-grid active">
+                        <div class="entity-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Route Tablette 1</h5>
+                                <p class="card-text">Test sur tablette</p>
+                            </div>
+                        </div>
+                        <div class="entity-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Route Tablette 2</h5>
+                                <p class="card-text">Deuxième carte</p>
+                            </div>
+                        </div>
+                        <div class="entity-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Route Tablette 3</h5>
+                                <p class="card-text">Troisième carte</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="view-list">
+                        <div class="list-item">
+                            <div class="flex-grow-1">
+                                <h5>Route Tablette Liste</h5>
+                                <p class="text-muted">Vue liste sur tablette</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="view-compact">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr><th>Nom</th><th>Grade</th><th>Secteur</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Route Tab 1</td><td>6a</td><td>Secteur A</td><td>♥ ↗</td></tr>
+                                    <tr><td>Route Tab 2</td><td>6b</td><td>Secteur B</td><td>♥ ↗</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions de test -->
+        <div class="alert alert-info">
+            <h4>🧪 Instructions de Test</h4>
+            <ol>
+                <li>Ouvrez cette page dans votre navigateur</li>
+                <li>Testez les boutons dans chaque simulation d'appareil</li>
+                <li>Redimensionnez votre navigateur pour voir le responsive réel</li>
+                <li>Vérifiez que les cartes s'adaptent correctement</li>
+                <li>Vérifiez que les boutons restent utilisables sur mobile</li>
+            </ol>
+            
+            <h5>✅ Points de rupture CSS :</h5>
+            <ul>
+                <li><strong>Mobile (&lt; 480px)</strong> : 1 colonne, cartes plus larges</li>
+                <li><strong>Mobile large (480-768px)</strong> : 2 colonnes</li>
+                <li><strong>Tablette (768px+)</strong> : 3+ colonnes selon contenu</li>
+                <li><strong>Desktop (1200px+)</strong> : Grille complète optimisée</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="/js/view-manager.js"></script>
+    <script>
+        // Mettre à jour l'indicateur de viewport
+        function updateViewportIndicator() {
+            const width = window.innerWidth;
+            document.getElementById('widthDisplay').textContent = width;
+            
+            let device = '🖥️ Desktop';
+            if (width < 480) device = '📱 Mobile';
+            else if (width < 768) device = '📱 Mobile Large';
+            else if (width < 1200) device = '📟 Tablette';
+            
+            document.getElementById('viewportIndicator').innerHTML = 
+                `${device} | Largeur: <span id="widthDisplay">${width}</span>px`;
+        }
+
+        // Initialiser les ViewManagers pour chaque simulation
+        document.addEventListener('DOMContentLoaded', function() {
+            updateViewportIndicator();
+            window.addEventListener('resize', updateViewportIndicator);
+            
+            // Initialiser ViewManager pour chaque conteneur
+            const containers = document.querySelectorAll('.entities-container');
+            containers.forEach((container, index) => {
+                new ViewManager(`.device-simulation:nth-child(${index + 2}) .entities-container`);
+            });
+        });
+    </script>
+</body>
+</html>

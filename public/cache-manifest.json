@@ -1,0 +1,37 @@
+{
+    "version": "2025-07-29-17-46-19",
+    "css": [
+        {
+            "file": "public\/css\/view-modes.min.css",
+            "size": 7209,
+            "hash": "a4843f76593af745edf3d1e4186d362a"
+        },
+        {
+            "file": "public\/css\/pages-common.min.css",
+            "size": 6042,
+            "hash": "0342fa76d83e0b327f54a5a16351208f"
+        },
+        {
+            "file": "public\/css\/app.min.css",
+            "size": 18204,
+            "hash": "c152f5069150cac06de6fd74518aba6d"
+        }
+    ],
+    "js": [
+        {
+            "file": "public\/js\/view-manager.min.js",
+            "size": 10052,
+            "hash": "c38ed52f569b9419d7b2024abee0b46a"
+        },
+        {
+            "file": "public\/js\/pages-common.min.js",
+            "size": 11390,
+            "hash": "4c9be600a31282786837011faabfc8d3"
+        },
+        {
+            "file": "public\/js\/topoclimb.min.js",
+            "size": 606,
+            "hash": "2617215d010e084ec9e692c181b7f70d"
+        }
+    ]
+}
