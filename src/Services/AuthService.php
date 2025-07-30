@@ -81,6 +81,12 @@ class AuthService
                 return false;
             }
 
+            // Vérifier si l'utilisateur est banni (niveau 5)
+            if ($result['autorisation'] === '5') {
+                error_log("Tentative de connexion d'un utilisateur banni: $email");
+                return false;
+            }
+
             // Vérifier le mot de passe - ADAPTÉ À VOTRE STRUCTURE DB
             if (!password_verify($password, $result['password'])) {
                 return false;

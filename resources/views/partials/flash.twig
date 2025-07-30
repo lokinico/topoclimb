@@ -20,7 +20,7 @@
                         {% endif %}
                     </div>
                     <div class="content">
-                        <div class="message">{{ message|raw }}</div>
+                        <div class="message">{{ message is iterable ? message|join(' ') : message|raw }}</div>
                     </div>
                     <button type="button" class="alert-close" aria-label="Fermer">
                         <i class="fas fa-times"></i>

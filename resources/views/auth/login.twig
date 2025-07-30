@@ -16,10 +16,10 @@
                         
                         <div class="mb-3">
                             <label for="email" class="form-label">Email ou nom d'utilisateur</label>
-                            <input type="text" class="form-control" id="email" name="email" value="{{ old.email }}" 
+                            <input type="text" class="form-control" id="email" name="email" value="{{ old.email is defined ? (old.email is iterable ? old.email|join('') : old.email) : '' }}" 
                                    autocomplete="username" required autofocus>
-                            {% if errors.email %}
-                                <div class="text-danger">{{ errors.email[0] }}</div>
+                            {% if errors.email is defined %}
+                                <div class="text-danger">{{ errors.email is iterable ? errors.email[0] : errors.email }}</div>
                             {% endif %}
                         </div>
                         
@@ -27,8 +27,8 @@
                             <label for="password" class="form-label">Mot de passe</label>
                             <input type="password" class="form-control" id="password" name="password" 
                                    autocomplete="current-password" required>
-                            {% if errors.password %}
-                                <div class="text-danger">{{ errors.password[0] }}</div>
+                            {% if errors.password is defined %}
+                                <div class="text-danger">{{ errors.password is iterable ? errors.password[0] : errors.password }}</div>
                             {% endif %}
                         </div>
                         
