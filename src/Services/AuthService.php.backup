@@ -75,7 +75,7 @@ class AuthService
     {
         try {
             // Récupérer l'utilisateur par email
-            $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? AND actif = 1 LIMIT 1", [$email]);
+            $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? LIMIT 1", [$email]);
 
             if (!$result) {
                 return false;
@@ -246,7 +246,7 @@ class AuthService
 
     public function sendPasswordResetEmail(string $email): bool
     {
-        $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? AND actif = 1 LIMIT 1", [$email]);
+        $result = $this->db->fetchOne("SELECT * FROM users WHERE email = ? LIMIT 1", [$email]);
 
         if (!$result) {
             return false; // Email non révélé
