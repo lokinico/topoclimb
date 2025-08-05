@@ -54,4 +54,14 @@ class SimplePaginator
     {
         return $this->currentPage > 1;
     }
+
+    public function getData(): array
+    {
+        return $this->items;
+    }
+
+    public function getTotalItems(): int
+    {
+        return $this->total;
+    }
 }
