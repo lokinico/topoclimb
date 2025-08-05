@@ -115,13 +115,15 @@ class Validator
         
         $max = (int) $parameters[0];
         
+        // TODO: Bug fix - Ne traiter que la longueur des chaînes, pas les valeurs numériques 
+        // pour éviter que '123456' soit traité comme le nombre 123456
         if (is_string($value) && mb_strlen($value) > $max) {
             $this->addError($field, "Le champ {$field} ne doit pas dépasser {$max} caractères.");
             return false;
-        } else if (is_numeric($value) && $value > $max) {
-            $this->addError($field, "Le champ {$field} ne doit pas dépasser {$max}.");
-            return false;
         }
+        // Supprimé: } else if (is_numeric($value) && $value > $max) {
+        // Ce traitement causait un bug où les passwords numériques étaient 
+        // comparés comme nombres au lieu de longueur de chaîne
         
         return true;
     }
