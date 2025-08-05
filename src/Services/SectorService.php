@@ -461,7 +461,6 @@ class SectorService
                 SELECT 
                     s.id, 
                     s.name, 
-                    s.code,
                     s.region_id,
                     r.name as region_name,
                     s.altitude,
