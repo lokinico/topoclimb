@@ -41,55 +41,16 @@
 /* Afficher UNIQUEMENT la vue active avec spécificité maximale */
 .entities-container .view-grid.active {
     display: grid !important;
-    border: 3px solid green !important;
-    background: rgba(0,255,0,0.1) !important;
 }
 
 .entities-container .view-list.active {
     display: block !important;
-    border: 3px solid blue !important;
-    background: rgba(0,0,255,0.1) !important;
 }
 
 .entities-container .view-compact.active {
     display: block !important;
-    border: 3px solid orange !important;
-    background: rgba(255,165,0,0.1) !important;
 }
 
-/* DEBUG VISUEL - LABELS */
-.entities-container .view-grid.active::before {
-    content: "🟢 VUE GRILLE ACTIVE";
-    display: block;
-    background: green;
-    color: white;
-    padding: 10px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.entities-container .view-list.active::before {
-    content: "🔵 VUE LISTE ACTIVE";
-    display: block;
-    background: blue;
-    color: white;
-    padding: 10px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.entities-container .view-compact.active::before {
-    content: "🟠 VUE COMPACTE ACTIVE";
-    display: block;
-    background: orange;
-    color: white;
-    padding: 10px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 16px;
-}
 
 /* ===== BOUTONS DE VUE ===== */
 .view-controls .btn-group {
@@ -500,57 +461,3 @@
     max-width: none !important;
 }
 
-/* ===== DEBUG TEMPORAIRE (à supprimer en prod) ===== */
-.debug-view {
-    border: 2px solid red !important;
-    background: rgba(255,0,0,0.1) !important;
-}
-
-/* Debug: Bordures colorées pour identifier les vues */
-.view-grid.active {
-    border: 3px solid green !important;
-}
-
-.view-list.active {
-    border: 3px solid blue !important;
-}
-
-.view-compact.active {
-    border: 3px solid orange !important;
-}
-
-/* Force minimum height pour voir les changements */
-.view-grid, .view-list, .view-compact {
-    min-height: 100px !important;
-}
-
-/* Message de debug */
-.view-grid.active::before {
-    content: "VUE GRILLE ACTIVE";
-    display: block;
-    background: green;
-    color: white;
-    padding: 5px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
-
-.view-list.active::before {
-    content: "VUE LISTE ACTIVE"; 
-    display: block;
-    background: blue;
-    color: white;
-    padding: 5px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
-
-.view-compact.active::before {
-    content: "VUE COMPACTE ACTIVE";
-    display: block;
-    background: orange;
-    color: white;
-    padding: 5px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
