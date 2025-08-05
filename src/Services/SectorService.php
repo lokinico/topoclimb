@@ -66,8 +66,7 @@ class SectorService
                 WHERE s.region_id = ?";
                 
         if ($activeOnly) {
-            // Note: colonne 'active' n'existe pas dans climbing_sectors
-            // Tous les secteurs sont considérés comme actifs
+            $sql .= " AND s.active = 1";
         }
         
         $sql .= " ORDER BY s.name ASC";
@@ -294,7 +293,7 @@ class SectorService
         $sql = "SELECT r.*, ds.name as difficulty_system_name
                 FROM climbing_routes r
                 LEFT JOIN climbing_difficulty_systems ds ON r.difficulty_system_id = ds.id
-                WHERE r.sector_id = ?
+                WHERE r.sector_id = ? AND r.active = 1
                 ORDER BY r.number ASC";
                 
         return $this->db->fetchAll($sql, [$sectorId]);
@@ -360,7 +359,7 @@ class SectorService
                         sin(radians(?)) * sin(radians(s.coordinates_lat)))) AS distance
                 FROM climbing_sectors s
                 LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.id != ? 
+                WHERE s.id != ? AND s.active = 1 
                 AND s.coordinates_lat IS NOT NULL 
                 AND s.coordinates_lng IS NOT NULL
                 HAVING distance < ?
@@ -379,8 +378,8 @@ class SectorService
      */
     private function validateSectorData(array $data): bool
     {
-        // Required fields - code removed (column doesn't exist)
-        $requiredFields = ['name'];
+        // Required fields
+        $requiredFields = ['name', 'code', 'book_id'];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
                 throw new ServiceException("Field {$field} is required");
@@ -421,7 +420,7 @@ class SectorService
             'book_id' => (int) $data['book_id'],
             'region_id' => isset($data['region_id']) && $data['region_id'] !== '' ? (int) $data['region_id'] : null,
             'name' => trim($data['name']),
-            // 'code' => trim($data['code']), // Colonne 'code' n'existe pas
+            'code' => trim($data['code']),
             'description' => isset($data['description']) ? trim($data['description']) : null,
             'access_info' => isset($data['access_info']) ? trim($data['access_info']) : null,
             'color' => isset($data['color']) ? trim($data['color']) : '#FF0000',
@@ -457,20 +456,23 @@ class SectorService
     public function getPaginatedSectors($filter)
     {
         try {
-            // BYPASS TEMPORAIRE - Requête simple garantie pour afficher les secteurs
+            // Requête complète avec toutes les colonnes nécessaires
             $simpleSectors = $this->db->fetchAll("
                 SELECT 
                     s.id, 
                     s.name, 
+                    s.code,
                     s.region_id,
                     r.name as region_name,
                     s.description,
                     s.altitude,
                     s.coordinates_lat,
                     s.coordinates_lng,
+                    s.active,
                     (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id) as routes_count
                 FROM climbing_sectors s 
                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                WHERE s.active = 1
                 ORDER BY s.name ASC
                 LIMIT 50
             ");
