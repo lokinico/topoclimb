@@ -456,27 +456,37 @@ class SectorService
     public function getPaginatedSectors($filter)
     {
         try {
-            // Base query with joins for enriched data
+            // BYPASS TEMPORAIRE - Requête simple garantie pour afficher les secteurs
+            $simpleSectors = $this->db->fetchAll("
+                SELECT 
+                    s.id, 
+                    s.name, 
+                    s.region_id,
+                    r.name as region_name,
+                    s.description,
+                    (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id) as routes_count
+                FROM climbing_sectors s 
+                LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                WHERE s.active = 1
+                ORDER BY s.name ASC
+                LIMIT 50
+            ");
+            
+            // Créer un paginator simple avec les données
+            return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+            
+            /* CODE ORIGINAL COMPLEXE DÉSACTIVÉ TEMPORAIREMENT
             $baseQuery = "
                 SELECT 
                     s.id, 
                     s.name, 
                     s.region_id,
                     r.name as region_name,
-                    s.altitude,
-                    s.access_time,
                     s.description,
-                    s.coordinates_lat,
-                    s.coordinates_lng,
-                    s.active,
-                    s.created_at,
-                    -- Enriched data
-                    (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id) as routes_count,
-                    (SELECT MIN(difficulty) FROM climbing_routes WHERE sector_id = s.id) as min_difficulty,
-                    (SELECT MAX(difficulty) FROM climbing_routes WHERE sector_id = s.id) as max_difficulty
+                    (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id) as routes_count
                 FROM climbing_sectors s 
                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                WHERE s.active = 1
+                WHERE 1=1
             ";
             
             $params = [];
