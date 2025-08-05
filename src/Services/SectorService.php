@@ -379,8 +379,8 @@ class SectorService
      */
     private function validateSectorData(array $data): bool
     {
-        // Required fields
-        $requiredFields = ['name', 'code', 'book_id'];
+        // Required fields - code removed (column doesn't exist)
+        $requiredFields = ['name'];
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
                 throw new ServiceException("Field {$field} is required");
@@ -421,7 +421,7 @@ class SectorService
             'book_id' => (int) $data['book_id'],
             'region_id' => isset($data['region_id']) && $data['region_id'] !== '' ? (int) $data['region_id'] : null,
             'name' => trim($data['name']),
-            'code' => trim($data['code']),
+            // 'code' => trim($data['code']), // Colonne 'code' n'existe pas
             'description' => isset($data['description']) ? trim($data['description']) : null,
             'access_info' => isset($data['access_info']) ? trim($data['access_info']) : null,
             'color' => isset($data['color']) ? trim($data['color']) : '#FF0000',
