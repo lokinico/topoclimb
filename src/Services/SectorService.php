@@ -66,7 +66,8 @@ class SectorService
                 WHERE s.region_id = ?";
                 
         if ($activeOnly) {
-            $sql .= " AND s.active = 1";
+            // Note: colonne 'active' n'existe pas dans climbing_sectors
+            // Tous les secteurs sont considérés comme actifs
         }
         
         $sql .= " ORDER BY s.name ASC";
@@ -293,7 +294,7 @@ class SectorService
         $sql = "SELECT r.*, ds.name as difficulty_system_name
                 FROM climbing_routes r
                 LEFT JOIN climbing_difficulty_systems ds ON r.difficulty_system_id = ds.id
-                WHERE r.sector_id = ? AND r.active = 1
+                WHERE r.sector_id = ?
                 ORDER BY r.number ASC";
                 
         return $this->db->fetchAll($sql, [$sectorId]);
@@ -359,7 +360,7 @@ class SectorService
                         sin(radians(?)) * sin(radians(s.coordinates_lat)))) AS distance
                 FROM climbing_sectors s
                 LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.id != ? AND s.active = 1 
+                WHERE s.id != ? 
                 AND s.coordinates_lat IS NOT NULL 
                 AND s.coordinates_lng IS NOT NULL
                 HAVING distance < ?
@@ -464,10 +465,12 @@ class SectorService
                     s.region_id,
                     r.name as region_name,
                     s.description,
+                    s.altitude,
+                    s.coordinates_lat,
+                    s.coordinates_lng,
                     (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id) as routes_count
                 FROM climbing_sectors s 
                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                WHERE s.active = 1
                 ORDER BY s.name ASC
                 LIMIT 50
             ");
@@ -482,7 +485,6 @@ class SectorService
                 SELECT 
                     s.id, 
                     s.name, 
-                    s.code,
                     s.region_id,
                     r.name as region_name,
                     s.altitude,
@@ -490,11 +492,9 @@ class SectorService
                     s.description,
                     s.coordinates_lat,
                     s.coordinates_lng,
-                    s.active,
                     s.created_at
                 FROM climbing_sectors s 
                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                WHERE s.active = 1
                 ORDER BY s.name ASC 
                 LIMIT 50
             ");
