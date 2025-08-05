@@ -1,6 +1,6 @@
 <?php
 
-namespace TopoclimbCH\Core;
+namespace TopoclimbCH\Helpers;
 
 use TopoclimbCH\Core\Auth;
 use Twig\Extension\AbstractExtension;

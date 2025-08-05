@@ -9,7 +9,7 @@ use Twig\TwigFilter;
 use Twig\Extension\DebugExtension;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
-use TopoclimbCH\Core\TwigHelpers;
+// use TopoclimbCH\Helpers\TwigHelpers; // Désactivé temporairement
 
 class View
 {
@@ -40,8 +40,8 @@ class View
             $this->twig->addExtension(new DebugExtension());
         }
 
-        // Ajouter l'extension TwigHelpers avec les fonctions de formatage
-        $this->twig->addExtension(new TwigHelpers(null));
+        // TEMPORAIRE - Désactiver TwigHelpers pour debug
+        // $this->twig->addExtension(new TwigHelpers(null));
 
         $this->registerFunctions();
         $this->registerFilters();
