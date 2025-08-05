@@ -123,7 +123,7 @@
                                         <span class="me-2">📍 {{ route.sector.name }}</span>
                                     {% endif %}
                                     {% if route.length %}
-                                        <span class="me-2">📏 {{ route.lengthFormatted }}</span>
+                                        <span class="me-2">📏 {{ format_length(route.length) }}</span>
                                     {% endif %}
                                 </div>
                                 
@@ -131,9 +131,9 @@
                                     <p class="card-text">{{ route.comment|slice(0, 100) ~ (route.comment|length > 100 ? '...' : '') }}</p>
                                 {% endif %}
                                 
-                                {% if route.beautyStars %}
+                                {% if route.beauty %}
                                     <div class="route-rating mt-2">
-                                        {{ route.beautyStars|raw }}
+                                        {{ format_beauty(route.beauty)|raw }}
                                     </div>
                                 {% endif %}
                                 
@@ -179,14 +179,14 @@
                                 {% if route.sector %}
                                     📍 {{ route.sector.name }}
                                 {% endif %}
-                                {% if route.length %} - 📏 {{ route.lengthFormatted }}{% endif %}
+                                {% if route.length %} - 📏 {{ format_length(route.length) }}{% endif %}
                             </div>
                             {% if route.comment %}
                                 <p class="mb-1 text-muted">{{ route.comment|slice(0, 120) }}{{ route.comment|length > 120 ? '...' : '' }}</p>
                             {% endif %}
                             <small class="text-muted">
-                                {{ route.styleFormatted }}
-                                {% if route.beautyStars %} | {{ route.beautyStars|raw }}{% endif %}
+                                {{ format_style(route.style) }}
+                                {% if route.beauty %} | {{ format_beauty(route.beauty)|raw }}{% endif %}
                             </small>
                         </div>
                         <div class="ms-3">
@@ -236,9 +236,9 @@
                                     </td>
                                     <td><span class="difficulty-badge badge bg-primary">{{ route.difficulty|default('N/A') }}</span></td>
                                     <td class="text-muted">{{ route.sector ? route.sector.name : '-' }}</td>
-                                    <td class="text-muted">{{ route.lengthFormatted|default('-') }}</td>
-                                    <td class="text-muted">{{ route.styleFormatted|default('-') }}</td>
-                                    <td class="text-muted">{{ route.beautyStars ? route.beautyStars|raw : '-' }}</td>
+                                    <td class="text-muted">{{ format_length(route.length) }}</td>
+                                    <td class="text-muted">{{ format_style(route.style) }}</td>
+                                    <td class="text-muted">{{ route.beauty ? format_beauty(route.beauty)|raw : '-' }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ route.id }}">

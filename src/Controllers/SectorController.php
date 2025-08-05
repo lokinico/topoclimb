@@ -94,59 +94,41 @@ class SectorController extends BaseController
     public function index(Request $request): Response
     {
         try {
-            // Vérification permission de lecture - temporairement désactivée pour debug
-            /*if (!$this->canViewSectors()) {
+            // TODO: Restauré - Vérification permission de lecture
+            if (!$this->canViewSectors()) {
                 $this->session->flash('error', 'Accès non autorisé');
                 return Response::redirect('/');
-            }*/
+            }
             
-            // Debug: compter les secteurs totaux
-            $totalSectorsCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM climbing_sectors")['count'] ?? 0;
-            error_log("DEBUG: Total sectors in DB: " . $totalSectorsCount);
+            // TODO: Restauré - Utilisation du système de filtrage complet
+            $filter = new SectorFilter($request->query->all());
 
-            // TEST SIMPLE: Récupérer directement tous les secteurs sans filtre
-            $simpleSectors = $this->db->fetchAll("
-                SELECT 
-                    s.id, 
-                    s.name, 
-                    s.code,
-                    s.region_id,
-                    r.name as region_name,
-                    s.altitude,
-                    s.access_time,
-                    s.description,
-                    s.coordinates_lat,
-                    s.coordinates_lng,
-                    s.active,
-                    s.created_at
-                FROM climbing_sectors s 
-                LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                WHERE s.active = 1
-                ORDER BY s.name ASC 
-                LIMIT 50
-            ");
+            // TODO: Restauré - Utilisation du SectorService avec pagination complète
+            $paginatedSectors = $this->sectorService->getPaginatedSectors($filter);
             
-            error_log("DEBUG: Direct SQL query returned " . count($simpleSectors) . " sectors");
-            
-            // Créer un objet paginator simple pour la compatibilité
-            $paginatedSectors = new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
-            
-            // Debug: vérifier les résultats paginés
-            error_log("DEBUG: Paginated sectors total: " . $paginatedSectors->getTotal());
-            error_log("DEBUG: Paginated sectors items count: " . count($paginatedSectors->getItems()));
+            // Get sort parameters from filter or request
+            $sortBy = $request->query->get('sort_by', 'name');
+            $sortDir = $request->query->get('sort_dir', 'ASC');
 
-            // Variables temporaires pour le test
-            $filter = new SectorFilter([]);
-            $sortBy = 'name';
-            $sortDir = 'ASC';
-
-            // Récupérer les données pour les filtres avec validation
+            // TODO: Restauré - Récupérer les données pour les filtres complets
             $regions = $this->db->fetchAll(
                 "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
             );
-            $sites = []; // Simplifier pour le test
-            $exposures = []; // Simplifier pour le test  
-            $months = []; // Simplifier pour le test
+            
+            // Récupérer les sites pour les filtres
+            $sites = $this->db->fetchAll(
+                "SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC"
+            );
+            
+            // Récupérer les expositions
+            $exposures = $this->db->fetchAll(
+                "SELECT id, code, name FROM climbing_exposures ORDER BY code ASC"
+            );
+            
+            // Récupérer les mois avec qualité
+            $months = $this->db->fetchAll(
+                "SELECT id, code, name FROM climbing_months ORDER BY id ASC"
+            );
 
             return $this->render('sectors/index', [
                 'sectors' => $paginatedSectors,

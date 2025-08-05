@@ -41,7 +41,11 @@ class TwigHelpers extends AbstractExtension
             new TwigFunction('csrf_token', [$this, 'csrfToken']),
             new TwigFunction('url', [$this, 'url']),
             new TwigFunction('asset', [$this, 'asset']),
-            new TwigFunction('is_active', [$this, 'isActive'])
+            new TwigFunction('is_active', [$this, 'isActive']),
+            // TODO: Ajouté - Fonctions de formatage pour routes
+            new TwigFunction('format_length', [$this, 'formatLength']),
+            new TwigFunction('format_beauty', [$this, 'formatBeauty']),
+            new TwigFunction('format_style', [$this, 'formatStyle'])
         ];
     }
 
@@ -380,5 +384,61 @@ class TwigHelpers extends AbstractExtension
             default:
                 return 'Accès complet au contenu.';
         }
+    }
+    
+    /**
+     * TODO: Ajouté - Formate la longueur d'une route
+     */
+    public function formatLength($length): string
+    {
+        if (!$length || $length <= 0) {
+            return '-';
+        }
+        
+        return $length . 'm';
+    }
+    
+    /**
+     * TODO: Ajouté - Formate la note de beauté en étoiles
+     */
+    public function formatBeauty($beauty): string
+    {
+        if (!$beauty || $beauty <= 0) {
+            return '';
+        }
+        
+        $rating = (float) $beauty;
+        $fullStars = floor($rating);
+        $halfStar = ($rating - $fullStars) >= 0.5;
+        $emptyStars = 5 - $fullStars - ($halfStar ? 1 : 0);
+        
+        $stars = str_repeat('★', $fullStars);
+        if ($halfStar) {
+            $stars .= '☆';
+        }
+        $stars .= str_repeat('☆', $emptyStars);
+        
+        return '<span class="beauty-rating" title="Beauté: ' . $rating . '/5">' . $stars . '</span>';
+    }
+    
+    /**
+     * TODO: Ajouté - Formate le style d'escalade
+     */
+    public function formatStyle($style): string
+    {
+        if (!$style) {
+            return '-';
+        }
+        
+        $styles = [
+            'sport' => 'Sportive',
+            'trad' => 'Trad',
+            'mixed' => 'Mixte',
+            'boulder' => 'Bloc',
+            'multipitch' => 'Grandes voies',
+            'aid' => 'Artificielle'
+        ];
+        
+        return $styles[$style] ?? ucfirst($style);
     }
 }

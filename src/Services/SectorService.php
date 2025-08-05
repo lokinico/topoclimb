@@ -446,4 +446,148 @@ class SectorService
         
         return $sanitized;
     }
+    
+    /**
+     * Get paginated sectors with filtering and enriched data
+     *
+     * @param \TopoclimbCH\Core\Filtering\SectorFilter $filter
+     * @return \TopoclimbCH\Core\Pagination\Paginator
+     */
+    public function getPaginatedSectors($filter)
+    {
+        try {
+            // Base query with joins for enriched data
+            $baseQuery = "
+                SELECT 
+                    s.id, 
+                    s.name, 
+                    s.code,
+                    s.region_id,
+                    r.name as region_name,
+                    s.altitude,
+                    s.access_time,
+                    s.description,
+                    s.coordinates_lat,
+                    s.coordinates_lng,
+                    s.active,
+                    s.created_at,
+                    -- Enriched data
+                    (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id) as routes_count,
+                    (SELECT MIN(difficulty) FROM climbing_routes WHERE sector_id = s.id) as min_difficulty,
+                    (SELECT MAX(difficulty) FROM climbing_routes WHERE sector_id = s.id) as max_difficulty
+                FROM climbing_sectors s 
+                LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                WHERE s.active = 1
+            ";
+            
+            $params = [];
+            $conditions = [];
+            
+            // Apply filters if provided
+            if (method_exists($filter, 'getRegionId') && $filter->getRegionId()) {
+                $conditions[] = "s.region_id = ?";
+                $params[] = $filter->getRegionId();
+            }
+            
+            if (method_exists($filter, 'getSearch') && $filter->getSearch()) {
+                $conditions[] = "(s.name LIKE ? OR s.description LIKE ?)";
+                $searchTerm = '%' . $filter->getSearch() . '%';
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            // Add conditions to query
+            if (!empty($conditions)) {
+                $baseQuery .= " AND " . implode(" AND ", $conditions);
+            }
+            
+            // Get sort parameters
+            $sortBy = method_exists($filter, 'getSortBy') ? $filter->getSortBy() : 'name';
+            $sortDir = method_exists($filter, 'getSortDirection') ? $filter->getSortDirection() : 'ASC';
+            
+            // Validate sort parameters
+            $allowedSortFields = ['name', 'region_name', 'altitude', 'created_at', 'routes_count'];
+            if (!in_array($sortBy, $allowedSortFields)) {
+                $sortBy = 'name';
+            }
+            
+            if (!in_array(strtoupper($sortDir), ['ASC', 'DESC'])) {
+                $sortDir = 'ASC';
+            }
+            
+            $baseQuery .= " ORDER BY {$sortBy} {$sortDir}";
+            
+            // Get pagination parameters
+            $page = method_exists($filter, 'getPage') ? $filter->getPage() : 1;
+            $perPage = method_exists($filter, 'getPerPage') ? $filter->getPerPage() : 20;
+            
+            // Get total count
+            $countQuery = "
+                SELECT COUNT(*) as total
+                FROM climbing_sectors s 
+                LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                WHERE s.active = 1
+            ";
+            
+            if (!empty($conditions)) {
+                $countQuery .= " AND " . implode(" AND ", $conditions);
+            }
+            
+            $totalResult = $this->db->fetchOne($countQuery, $params);
+            $total = $totalResult['total'] ?? 0;
+            
+            // Get paginated results
+            $offset = ($page - 1) * $perPage;
+            $paginatedQuery = $baseQuery . " LIMIT {$perPage} OFFSET {$offset}";
+            
+            $sectors = $this->db->fetchAll($paginatedQuery, $params);
+            
+            // Enrich sectors with additional calculated data
+            foreach ($sectors as &$sector) {
+                // Format difficulty range
+                if ($sector['min_difficulty'] && $sector['max_difficulty']) {
+                    if ($sector['min_difficulty'] === $sector['max_difficulty']) {
+                        $sector['difficulty_range'] = $sector['min_difficulty'];
+                    } else {
+                        $sector['difficulty_range'] = $sector['min_difficulty'] . ' - ' . $sector['max_difficulty'];
+                    }
+                } else {
+                    $sector['difficulty_range'] = 'N/A';
+                }
+                
+                // Ensure routes_count is integer
+                $sector['routes_count'] = (int) ($sector['routes_count'] ?? 0);
+            }
+            
+            // Return paginator object
+            return new \TopoclimbCH\Core\Pagination\Paginator($sectors, $total, $page, $perPage);
+            
+        } catch (\Exception $e) {
+            error_log("SectorService::getPaginatedSectors Error: " . $e->getMessage());
+            
+            // Fallback to simple query
+            $simpleSectors = $this->db->fetchAll("
+                SELECT 
+                    s.id, 
+                    s.name, 
+                    s.code,
+                    s.region_id,
+                    r.name as region_name,
+                    s.altitude,
+                    s.access_time,
+                    s.description,
+                    s.coordinates_lat,
+                    s.coordinates_lng,
+                    s.active,
+                    s.created_at
+                FROM climbing_sectors s 
+                LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                WHERE s.active = 1
+                ORDER BY s.name ASC 
+                LIMIT 50
+            ");
+            
+            return new \TopoclimbCH\Core\Pagination\Paginator($simpleSectors, count($simpleSectors), 1, 50);
+        }
+    }
 }

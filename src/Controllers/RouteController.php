@@ -119,15 +119,13 @@ class RouteController extends BaseController
                      LIMIT {$perPage} OFFSET {$offset}"
                 );
                 
-                // Créer un objet simple compatible avec le template
-                $paginatedRoutes = new class($routes, count($routes), $page, $perPage) {
-                    public function __construct(private array $items, private int $total, private int $currentPage, private int $perPage) {}
-                    public function getItems() { return $this->items; }
-                    public function getTotal() { return $this->total; }
-                    public function getCurrentPage() { return $this->currentPage; }
-                    public function getTotalPages() { return ceil($this->total / $this->perPage); }
-                    public function getPerPage() { return $this->perPage; }
-                };
+                // TODO: Corrigé - Utiliser le vrai Paginator au lieu de classe anonyme
+                // Get total count for proper pagination
+                $totalRoutes = $this->db->fetchOne(
+                    "SELECT COUNT(*) as total FROM climbing_routes r WHERE r.active = 1"
+                )['total'] ?? 0;
+                
+                $paginatedRoutes = new \TopoclimbCH\Core\Pagination\Paginator($routes, $totalRoutes, $page, $perPage);
             }
 
             // Récupérer les données pour les filtres
@@ -171,16 +169,13 @@ class RouteController extends BaseController
     public function show(Request $request): Response
     {
         $id = $request->attributes->get('id');
-        error_log("DEBUG show() - ID reçu: " . ($id ?? 'NULL'));
 
         if (!$id) {
-            error_log("DEBUG show() - Pas d'ID, redirection");
             $this->session->flash('error', 'ID de la voie non spécifié');
             return Response::redirect('/routes');
         }
 
         try {
-            error_log("DEBUG show() - Appel getRouteById pour ID: " . $id);
             $route = $this->db->fetchOne(
                 "SELECT r.*, s.name as sector_name, s.region_id 
                  FROM climbing_routes r 

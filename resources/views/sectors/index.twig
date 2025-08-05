@@ -86,7 +86,7 @@
     <div class="sectors-container entities-container" id="sectors-container">
         <!-- Vue grille (cartes) -->
         <div class="sectors-grid entities-grid view-grid active" id="sectors-grid" tabindex="-1" aria-label="Affichage en cartes des secteurs">
-            {% set sectorItems = sectors.getItems() %}
+            {% set sectorItems = sectors.getItems is defined ? sectors.getItems() : sectors %}
             
             {% if sectorItems|length > 0 %}
                 {% for sector in sectorItems %}
@@ -129,10 +129,8 @@
                                 </div>
                                 
                                 <div class="sector-meta text-muted small mb-2">
-                                    {% if sector.region_name is defined %}
+                                    {% if sector.region_name %}
                                         <span class="me-2">🏔️ {{ sector.region_name }}</span>
-                                    {% elseif sector.region %}
-                                        <span class="me-2">🏔️ {{ sector.region.name }}</span>
                                     {% endif %}
                                     {% if sector.altitude %}
                                         <span class="me-2">⛰️ {{ sector.altitude }}m</span>
@@ -193,10 +191,8 @@
                                 <a href="/sectors/{{ sector.id }}" class="text-decoration-none">{{ sector.name }}</a>
                             </h5>
                             <div class="text-muted small mb-1">
-                                {% if sector.region_name is defined %}
+                                {% if sector.region_name %}
                                     🏔️ {{ sector.region_name }}
-                                {% elseif sector.region %}
-                                    🏔️ {{ sector.region.name }}
                                 {% endif %}
                                 {% if sector.altitude %} - ⛰️ {{ sector.altitude }}m{% endif %}
                             </div>
@@ -258,11 +254,7 @@
                                     <a href="/sectors/{{ sector.id }}" class="text-decoration-none fw-medium">{{ sector.name }}</a>
                                 </td>
                                 <td class="text-muted">
-                                    {% if sector.region_name is defined %}
-                                        {{ sector.region_name }}
-                                    {% elseif sector.region %}
-                                        {{ sector.region.name }}
-                                    {% endif %}
+                                    {{ sector.region_name|default('') }}
                                 </td>
                                 <td class="text-muted">{{ sector.altitude|default('-') }}m</td>
                                 <td class="text-muted">{{ sector.routes_count|default(0) }}</td>
@@ -331,7 +323,7 @@ window.sectorsData = {
             coordinates_lng: {{ sector.coordinates_lng|default('null') }},
             altitude: {{ sector.altitude|default('null') }},
             region_id: {{ sector.region_id|default('null') }},
-            region_name: {{ (sector.region_name is defined ? sector.region_name : (sector.region ? sector.region.name : ''))|json_encode|raw }},
+            region_name: {{ sector.region_name|default('')|json_encode|raw }},
             site_id: {{ sector.site_id|default('null') }},
             routes_count: {{ sector.routes_count|default(0) }},
             difficulty_range: {{ sector.difficulty_range|default('')|json_encode|raw }},
