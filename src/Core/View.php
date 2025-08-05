@@ -41,7 +41,7 @@ class View
         }
 
         // Ajouter l'extension TwigHelpers avec les fonctions de formatage
-        $this->twig->addExtension(new TwigHelpers());
+        $this->twig->addExtension(new TwigHelpers(null));
 
         $this->registerFunctions();
         $this->registerFilters();
