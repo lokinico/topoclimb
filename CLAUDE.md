@@ -888,6 +888,42 @@ git commit -m "fix: resolve session persistence issue in AuthController"
 gemini -p "@src/ Verify that authentication fix doesn't break other components"
 ```
 
+## 🛠️ OUTILS DE DÉVELOPPEMENT AJOUTÉS (Août 2025)
+
+### Scripts de diagnostic et synchronisation DB
+
+```bash
+# 🔧 OBLIGATOIRE : Synchroniser structure DB locale avec production
+php fix_local_db_structure.php
+
+# 🧪 Test complet des secteurs (structure + données + SectorService)
+php test_sectors_final.php
+
+# 📊 Vérifier structure d'une table spécifique
+php check_table_structure.php
+
+# 🐛 Diagnostic complet secteurs avec logs détaillés
+php debug_sectors_clean.php
+
+# 📝 Mettre à jour données de test
+php update_test_data.php
+```
+
+### Scripts de validation structure
+
+```bash
+# ✅ Vérifier correspondance structure locale/production
+php check_table_structure.php
+php check_exposures_table.php
+
+# ⚡ Diagnostic rapide problèmes SQL
+php debug_quick.php
+```
+
+**⚠️ RÈGLE CRITIQUE :** Toujours synchroniser la structure DB locale avec `fix_local_db_structure.php` avant de développer !
+
+**🔍 LEÇON APPRISE :** Le problème d'affichage des secteurs était causé par une différence de structure entre la base SQLite locale (12 colonnes) et MySQL production (24 colonnes). Les colonnes `active`, `code`, `book_id` manquaient en local.
+
 ## Commandes utiles rapides
 
 ### Avec Gemini CLI (analyse - PRIORITÉ)
