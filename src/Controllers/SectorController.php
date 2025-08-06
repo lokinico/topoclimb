@@ -104,7 +104,8 @@ class SectorController extends BaseController
             $filter = new SectorFilter($request->query->all());
 
             // TODO: Restauré - Utilisation du SectorService avec pagination complète
-            $paginatedSectors = $this->sectorService->getPaginatedSectors($filter);
+            // TEMPORAIRE: Ignorer filtres pour éviter erreur colonne code
+            $paginatedSectors = $this->sectorService->getPaginatedSectors(null);
             
             // Get sort parameters from filter or request
             $sortBy = $request->query->get('sort_by', 'name');
