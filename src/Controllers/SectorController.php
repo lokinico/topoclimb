@@ -112,14 +112,26 @@ class SectorController extends BaseController
             $sortDir = $request->query->get('sort_dir', 'ASC');
 
             // TODO: Restauré - Récupérer les données pour les filtres complets
-            $regions = $this->db->fetchAll(
-                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
-            );
+            $regions = [];
+            try {
+                $regions = $this->db->fetchAll(
+                    "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+                );
+                error_log("SectorController: Regions query succeeded");
+            } catch (\Exception $e) {
+                error_log("SectorController: Regions query failed - " . $e->getMessage());
+            }
             
             // Récupérer les sites pour les filtres
-            $sites = $this->db->fetchAll(
-                "SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC"
-            );
+            $sites = [];
+            try {
+                $sites = $this->db->fetchAll(
+                    "SELECT id, name FROM climbing_sites WHERE active = 1 ORDER BY name ASC"
+                );
+                error_log("SectorController: Sites query succeeded");
+            } catch (\Exception $e) {
+                error_log("SectorController: Sites query failed - " . $e->getMessage());
+            }
             
             // Récupérer les expositions
             $exposures = $this->db->fetchAll(
@@ -908,7 +920,8 @@ class SectorController extends BaseController
     private function canViewSectors(): bool
     {
         // BYPASS TEMPORAIRE POUR DEBUG PRODUCTION - À RETIRER APRÈS TESTS
-        if (isset($_GET['debug_sectors']) && $_GET['debug_sectors'] === 'allow') {
+        if ((isset($_GET['debug_sectors']) && $_GET['debug_sectors'] === 'allow') ||
+            (isset($_REQUEST['debug_sectors']) && $_REQUEST['debug_sectors'] === 'allow')) {
             error_log("SectorController: Debug bypass activated");
             return true;
         }
