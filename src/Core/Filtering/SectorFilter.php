@@ -87,7 +87,7 @@ class SectorFilter extends Filter
         // Recherche par nom ou description
         if ($this->hasFilter('search')) {
             $searchTerm = '%' . $this->getFilter('search') . '%';
-            $conditions[] = "(s.name LIKE :search OR s.description LIKE :search OR s.code LIKE :search)";
+            $conditions[] = "(s.name LIKE :search OR s.description LIKE :search)";
             $parameters['search'] = $searchTerm;
         }
         
@@ -149,11 +149,9 @@ class SectorFilter extends Filter
                 $search = strtolower($this->getFilter('search'));
                 $name = strtolower($isObject ? $sector->name : $sector['name']);
                 $description = strtolower($isObject ? ($sector->description ?? '') : ($sector['description'] ?? ''));
-                $code = strtolower($isObject ? ($sector->code ?? '') : ($sector['code'] ?? ''));
                 
                 if (strpos($name, $search) === false && 
-                    strpos($description, $search) === false && 
-                    strpos($code, $search) === false) {
+                    strpos($description, $search) === false) {
                     return false;
                 }
             }
