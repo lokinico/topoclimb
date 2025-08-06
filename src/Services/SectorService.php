@@ -459,16 +459,8 @@ class SectorService
             // VERSION 1: Tenter avec la colonne 'code'
             $simpleSectors = $this->db->fetchAll("
                 SELECT 
-                    s.id, 
-                    s.name, 
-                    s.code,
-                    s.region_id,
+                    s.*, 
                     r.name as region_name,
-                    s.description,
-                    s.altitude,
-                    s.coordinates_lat,
-                    s.coordinates_lng,
-                    s.active,
                     (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id AND active = 1) as routes_count
                 FROM climbing_sectors s 
                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
@@ -477,11 +469,11 @@ class SectorService
                 LIMIT 50
             ");
             
-            error_log("SectorService: Query with 'code' column succeeded - " . count($simpleSectors) . " results");
+            error_log("SectorService: Query succeeded - " . count($simpleSectors) . " results");
             return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
             
         } catch (\Exception $e) {
-            error_log("SectorService::getPaginatedSectors Error with 'code': " . $e->getMessage());
+            error_log("SectorService::getPaginatedSectors Error: " . $e->getMessage());
             
             try {
                 // VERSION 2: Fallback sans la colonne 'code' - générer un code
