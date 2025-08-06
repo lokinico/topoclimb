@@ -456,7 +456,7 @@ class SectorService
     public function getPaginatedSectors($filter)
     {
         try {
-            // Requête complète avec toutes les colonnes nécessaires
+            // VERSION 1: Tenter avec la colonne 'code'
             $simpleSectors = $this->db->fetchAll("
                 SELECT 
                     s.id, 
@@ -469,7 +469,7 @@ class SectorService
                     s.coordinates_lat,
                     s.coordinates_lng,
                     s.active,
-                    (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id) as routes_count
+                    (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id AND active = 1) as routes_count
                 FROM climbing_sectors s 
                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
                 WHERE s.active = 1
@@ -477,31 +477,79 @@ class SectorService
                 LIMIT 50
             ");
             
-            // Créer un paginator simple avec les données
+            error_log("SectorService: Query with 'code' column succeeded - " . count($simpleSectors) . " results");
             return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+            
         } catch (\Exception $e) {
-            error_log("SectorService::getPaginatedSectors Error: " . $e->getMessage());
+            error_log("SectorService::getPaginatedSectors Error with 'code': " . $e->getMessage());
             
-            // Fallback to simple query
-            $simpleSectors = $this->db->fetchAll("
-                SELECT 
-                    s.id, 
-                    s.name, 
-                    s.region_id,
-                    r.name as region_name,
-                    s.altitude,
-                    s.access_time,
-                    s.description,
-                    s.coordinates_lat,
-                    s.coordinates_lng,
-                    s.created_at
-                FROM climbing_sectors s 
-                LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                ORDER BY s.name ASC 
-                LIMIT 50
-            ");
-            
-            return new \TopoclimbCH\Core\Pagination\Paginator($simpleSectors, count($simpleSectors), 1, 50);
+            try {
+                // VERSION 2: Fallback sans la colonne 'code' - générer un code
+                $simpleSectors = $this->db->fetchAll("
+                    SELECT 
+                        s.id, 
+                        s.name, 
+                        CONCAT('SEC', LPAD(s.id, 3, '0')) as code,
+                        s.region_id,
+                        r.name as region_name,
+                        s.description,
+                        s.altitude,
+                        s.coordinates_lat,
+                        s.coordinates_lng,
+                        s.active,
+                        (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id AND active = 1) as routes_count
+                    FROM climbing_sectors s 
+                    LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                    WHERE s.active = 1
+                    ORDER BY s.name ASC 
+                    LIMIT 50
+                ");
+                
+                error_log("SectorService: Fallback query without 'code' succeeded - " . count($simpleSectors) . " results");
+                return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+                
+            } catch (\Exception $e2) {
+                error_log("SectorService::getPaginatedSectors Fallback Error: " . $e2->getMessage());
+                
+                // VERSION 3: Fallback ultra-minimal
+                try {
+                    $simpleSectors = $this->db->fetchAll("
+                        SELECT 
+                            s.id, 
+                            s.name,
+                            CONCAT('SEC', s.id) as code,
+                            '' as description,
+                            NULL as region_id,
+                            '' as region_name,
+                            0 as altitude,
+                            0 as routes_count
+                        FROM climbing_sectors s 
+                        WHERE s.active = 1 
+                        ORDER BY s.name ASC 
+                        LIMIT 50
+                    ");
+                    
+                    error_log("SectorService: Ultra-minimal query succeeded - " . count($simpleSectors) . " results");
+                    return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+                    
+                } catch (\Exception $e3) {
+                    error_log("SectorService: Even minimal query failed - " . $e3->getMessage());
+                    
+                    // VERSION 4: Données factices pour éviter crash total
+                    $fakeSectors = [[
+                        'id' => 0,
+                        'name' => 'Erreur technique - secteurs non disponibles',
+                        'code' => 'ERROR',
+                        'description' => 'Contactez l\'administrateur. Erreur: ' . $e3->getMessage(),
+                        'region_id' => null,
+                        'region_name' => '',
+                        'altitude' => 0,
+                        'routes_count' => 0
+                    ]];
+                    
+                    return new \TopoclimbCH\Core\Pagination\SimplePaginator($fakeSectors, 1, 1, 1);
+                }
+            }
         }
     }
 }
