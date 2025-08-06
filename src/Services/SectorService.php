@@ -458,13 +458,12 @@ class SectorService
         try {
             // VERSION 1: Tenter avec la colonne 'code'
             $simpleSectors = $this->db->fetchAll("
-                SELECT 
-                    s.*, 
-                    r.name as region_name,
-                    (SELECT COUNT(*) FROM climbing_routes WHERE sector_id = s.id AND active = 1) as routes_count
-                FROM climbing_sectors s 
-                LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                SELECT s.*, COUNT(rt.id) as routes_count, r.name as region_name
+                FROM climbing_sectors s
+                LEFT JOIN climbing_routes rt ON s.id = rt.sector_id AND rt.active = 1
+                LEFT JOIN climbing_regions r ON s.region_id = r.id
                 WHERE s.active = 1
+                GROUP BY s.id
                 ORDER BY s.name ASC
                 LIMIT 50
             ");
