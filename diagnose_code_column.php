@@ -3,32 +3,33 @@
 echo "=== DIAGNOSTIC COLONNE 'code' - TopoclimbCH ===\n\n";
 
 try {
-    // Connexion à la base de production (utilise les paramètres de config)
-    require_once __DIR__ . '/config/database.php';
-    require_once __DIR__ . '/src/Core/Database.php';
+    // Utiliser bootstrap pour initialiser l'application
+    require_once __DIR__ . '/bootstrap.php';
     
     $db = TopoclimbCH\Core\Database::getInstance();
     echo "✅ Connexion DB réussie\n\n";
 
-    // 1. VÉRIFIER SI LA COLONNE 'code' EXISTE
+    // 1. VÉRIFIER SI LA COLONNE 'code' EXISTE  
     echo "1. STRUCTURE TABLE climbing_sectors:\n";
     echo "=====================================\n";
     
-    $columns = $db->fetchAll("DESCRIBE climbing_sectors");
+    // Adapter pour SQLite
+    $columns = $db->fetchAll("PRAGMA table_info(climbing_sectors)");
     
     $hasCodeColumn = false;
     foreach ($columns as $column) {
-        echo sprintf("%-20s | %-15s | %-8s | %-10s | %s\n", 
-            $column['Field'], 
-            $column['Type'], 
-            $column['Null'], 
-            $column['Key'], 
-            $column['Default'] ?? 'NULL'
+        // Format SQLite: cid, name, type, notnull, dflt_value, pk
+        echo sprintf("%-20s | %-15s | NotNull:%-3s | PK:%-3s | %s\n", 
+            $column['name'], 
+            $column['type'], 
+            $column['notnull'] ? 'YES' : 'NO',
+            $column['pk'] ? 'YES' : 'NO',
+            $column['dflt_value'] ?? 'NULL'
         );
         
-        if ($column['Field'] === 'code') {
+        if ($column['name'] === 'code') {
             $hasCodeColumn = true;
-            echo "👉 COLONNE 'code' TROUVÉE : " . $column['Type'] . "\n";
+            echo "👉 COLONNE 'code' TROUVÉE : " . $column['type'] . "\n";
         }
     }
     
@@ -84,11 +85,11 @@ try {
     echo "============================\n";
     
     if (!$hasCodeColumn) {
-        echo "🔧 SOLUTION: Ajouter la colonne 'code' manquante\n";
-        echo "ALTER TABLE climbing_sectors ADD COLUMN code VARCHAR(50) NOT NULL DEFAULT '' COMMENT 'Code secteur';\n\n";
+        echo "🔧 SOLUTION SQLite: Ajouter la colonne 'code' manquante\n";
+        echo "ALTER TABLE climbing_sectors ADD COLUMN code TEXT DEFAULT '';\n\n";
         
-        echo "📋 MISE À JOUR DONNÉES:\n";
-        echo "UPDATE climbing_sectors SET code = CONCAT('SEC', LPAD(id, 3, '0')) WHERE code = '';\n";
+        echo "📋 MISE À JOUR DONNÉES:\n";  
+        echo "UPDATE climbing_sectors SET code = 'SEC' || printf('%03d', id) WHERE code = '' OR code IS NULL;\n";
     } else {
         echo "🤔 La colonne existe mais requête échoue - Causes possibles:\n";
         echo "- Cache MySQL/PHP\n";

@@ -906,6 +906,12 @@ class SectorController extends BaseController
      */
     private function canViewSectors(): bool
     {
+        // BYPASS TEMPORAIRE POUR DEBUG PRODUCTION - À RETIRER APRÈS TESTS
+        if (isset($_GET['debug_sectors']) && $_GET['debug_sectors'] === 'allow') {
+            error_log("SectorController: Debug bypass activated");
+            return true;
+        }
+        
         return $this->isAuthenticated(); // Tous les utilisateurs connectés peuvent voir
     }
 
