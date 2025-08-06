@@ -84,9 +84,20 @@ gemini -p "@src/ @config/ Analyze current implementation before I modify XYZ"
 - ✅ **ANALYSE EXHAUSTIVE COMPLÈTE** (770 tests d'authentification et permissions)
 - ✅ **STRUCTURE DB CONFIRMÉE** (champ 'mail', 6 utilisateurs de test niveaux 0-5)
 
-### 🆕 **CORRECTIONS RÉCENTES (Juillet 2025)**
+### 🆕 **CORRECTIONS RÉCENTES (Août 2025)**
 
-#### ✅ **Erreurs Critiques Résolues**
+#### 🚨 **PROBLÈME CRITIQUE EN PRODUCTION - 6 AOÛT 2025**
+- **Erreur persistante**: `Unknown column 'code' in 'field list'` sur page secteurs
+- **Diagnostic**: Désynchronisation entre code local et structure DB production
+- **Impact**: Aucun secteur affiché en production malgré auth OK (user ID 1, rôle 0)
+
+#### ✅ **CORRECTIONS APPLIQUÉES (6 AOÛT 2025)**
+- **SectorService.php**: Version résistante aux erreurs avec 4 niveaux de fallback
+- **Scripts diagnostic**: `diagnose_code_column.php` et `fix_sectors_code_column.php` créés
+- **Fallback automatique**: Génération codes secteurs si colonne 'code' manquante
+- **Logging détaillé**: Identification précise du niveau d'erreur dans les logs
+
+#### ✅ **Erreurs Critiques Résolues (Juillet 2025)**
 - **SQL Error**: Corrigé `Column 'r.difficulty_value' not found` dans RegionController:260
 - **Validation Error**: Supprimé les règles de validation 'string' invalides
 - **Missing Methods**: Ajouté `logAscent()` et `apiSectors()` manquantes
@@ -1096,6 +1107,121 @@ claude create "Implement missing APIs: OpenWeatherMap, Swisstopo, Nominatim geoc
 # 3. Validation avec Gemini CLI
 gemini -p "@src/Services/ @config/ Are all external APIs properly integrated with error handling and caching?"
 ```
+
+---
+
+## 🚨 PLAN D'ACTION SECTEURS - PROBLÈME PRODUCTION (6 AOÛT 2025)
+
+### 📊 **DIAGNOSTIC COMPLET**
+
+**Problème identifié :** Erreur `Unknown column 'code' in 'field list'` empêche l'affichage des secteurs en production.
+
+**Analyse effectuée :**
+- ✅ Authentification fonctionne (user ID 1, rôle 0 confirmé)
+- ✅ Code local attend une colonne `code` dans `climbing_sectors`
+- ❌ Structure DB production potentiellement différente
+- ❌ Désynchronisation entre schéma local et production
+
+### 🔧 **CORRECTIONS APPLIQUÉES**
+
+#### SectorService.php - Version Résistante (4 Niveaux de Fallback)
+
+```php
+public function getPaginatedSectors($filter) {
+    try {
+        // NIVEAU 1: Requête normale avec colonne 'code'
+        $simpleSectors = $this->db->fetchAll("SELECT s.id, s.name, s.code, ... FROM climbing_sectors s ...");
+        error_log("SectorService: Query with 'code' column succeeded - " . count($simpleSectors) . " results");
+        return new SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+        
+    } catch (\Exception $e) {
+        // NIVEAU 2: Fallback - génère code avec CONCAT
+        try {
+            $simpleSectors = $this->db->fetchAll("SELECT s.id, s.name, CONCAT('SEC', LPAD(s.id, 3, '0')) as code, ... FROM climbing_sectors s ...");
+            error_log("SectorService: Fallback query without 'code' succeeded - " . count($simpleSectors) . " results");
+            return new SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+            
+        } catch (\Exception $e2) {
+            // NIVEAU 3: Ultra-minimal
+            try {
+                $simpleSectors = $this->db->fetchAll("SELECT s.id, s.name, CONCAT('SEC', s.id) as code, ... FROM climbing_sectors s ...");
+                error_log("SectorService: Ultra-minimal query succeeded - " . count($simpleSectors) . " results");
+                return new SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+                
+            } catch (\Exception $e3) {
+                // NIVEAU 4: Données factices pour éviter crash
+                $fakeSectors = [['id' => 0, 'name' => 'Erreur technique - secteurs non disponibles', 'code' => 'ERROR', ...]];
+                return new SimplePaginator($fakeSectors, 1, 1, 1);
+            }
+        }
+    }
+}
+```
+
+#### Scripts de Diagnostic Créés
+
+1. **`diagnose_code_column.php`** - Diagnostic immédiat
+   - Vérifie structure exacte table `climbing_sectors`
+   - Test requête problématique
+   - Comptage secteurs
+   - Suggestions de correction
+
+2. **`fix_sectors_code_column.php`** - Correction automatique
+   - Ajoute colonne `code` si manquante
+   - Génère codes uniques pour tous secteurs existants
+   - Test final de validation
+
+### 📋 **ÉTAPES D'EXÉCUTION EN PRODUCTION**
+
+#### Étape 1 - DIAGNOSTIC ⚡ (URGENT)
+```bash
+# Sur le serveur de production
+php diagnose_code_column.php
+```
+**Ce script va :**
+- Afficher la structure exacte de `climbing_sectors`
+- Identifier si colonne `code` existe
+- Tester la requête qui échoue
+- Proposer solution adaptée
+
+#### Étape 2 - CORRECTION 🔧
+**Si colonne `code` manque :**
+```bash
+php fix_sectors_code_column.php
+```
+**Si colonne existe :**
+- Analyser logs détaillés pour identifier autre cause
+- Le fallback automatique devrait temporairement résoudre
+
+#### Étape 3 - VALIDATION 🧪
+```bash
+# Vider cache si nécessaire
+php clear_cache_server.php
+
+# Tester affichage secteurs
+# URL: https://votre-site.ch/sectors
+```
+
+#### Étape 4 - MONITORING 📊
+```bash
+# Surveiller logs pour identifier niveau de fallback utilisé
+tail -f storage/logs/debug-$(date +%Y-%m-%d).log | grep SectorService
+```
+
+### ✅ **RÉSULTATS ATTENDUS**
+
+- **Aucun crash** : Application fonctionne même avec structure DB incorrecte
+- **Auto-diagnostic** : Logs précis du problème exact
+- **Auto-réparation** : Codes générés automatiquement si nécessaire
+- **Secteurs affichés** : Page fonctionnelle avec données complètes
+
+### 🎯 **SUIVI ET NEXT STEPS**
+
+Une fois les secteurs fonctionnels :
+1. **Synchroniser structure DB** - Aligner local et production
+2. **Scripts de migration** - Créer migrations propres
+3. **Tests automatisés** - Éviter futures désynchronisations
+4. **Documentation** - Procédure de déploiement sécurisée
 
 ---
 
