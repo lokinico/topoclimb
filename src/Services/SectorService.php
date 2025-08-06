@@ -509,22 +509,25 @@ class SectorService
                 return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
                 
             } catch (\Exception $e2) {
-                error_log("SectorService::getPaginatedSectors Fallback Error: " . $e2->getMessage());
+                error_log("SectorService: Fallback query also failed - " . $e2->getMessage());
                 
-                // VERSION 3: Fallback ultra-minimal
                 try {
+                    // VERSION 3: Requête ultra-minimale
                     $simpleSectors = $this->db->fetchAll("
                         SELECT 
                             s.id, 
-                            s.name,
+                            s.name, 
                             CONCAT('SEC', s.id) as code,
-                            '' as description,
-                            NULL as region_id,
-                            '' as region_name,
-                            0 as altitude,
+                            s.region_id,
+                            r.name as region_name,
+                            COALESCE(s.description, '') as description,
+                            s.altitude,
+                            s.coordinates_lat,
+                            s.coordinates_lng,
+                            1 as active,
                             0 as routes_count
                         FROM climbing_sectors s 
-                        WHERE s.active = 1 
+                        LEFT JOIN climbing_regions r ON s.region_id = r.id 
                         ORDER BY s.name ASC 
                         LIMIT 50
                     ");
@@ -533,23 +536,28 @@ class SectorService
                     return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
                     
                 } catch (\Exception $e3) {
-                    error_log("SectorService: Even minimal query failed - " . $e3->getMessage());
+                    error_log("SectorService: ALL QUERIES FAILED - " . $e3->getMessage());
                     
-                    // VERSION 4: Données factices pour éviter crash total
-                    $fakeSectors = [[
-                        'id' => 0,
-                        'name' => 'Erreur technique - secteurs non disponibles',
-                        'code' => 'ERROR',
-                        'description' => 'Contactez l\'administrateur. Erreur: ' . $e3->getMessage(),
-                        'region_id' => null,
-                        'region_name' => '',
-                        'altitude' => 0,
-                        'routes_count' => 0
-                    ]];
+                    // VERSION 4: Données factices pour éviter un crash complet
+                    $mockSectors = [
+                        [
+                            'id' => 1,
+                            'name' => 'Secteur indisponible',
+                            'code' => 'ERROR001',
+                            'region_id' => 1,
+                            'region_name' => 'Base de données défaillante',
+                            'description' => 'Erreur de structure de base de données détectée',
+                            'altitude' => 0,
+                            'coordinates_lat' => null,
+                            'coordinates_lng' => null,
+                            'active' => 1,
+                            'routes_count' => 0
+                        ]
+                    ];
                     
-                    return new \TopoclimbCH\Core\Pagination\SimplePaginator($fakeSectors, 1, 1, 1);
+                    return new \TopoclimbCH\Core\Pagination\SimplePaginator($mockSectors, 1, 50, 1);
                 }
             }
         }
-    }
+        }
 }
