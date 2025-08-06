@@ -54,11 +54,37 @@ php test_sectors_production_ready.php  # 🚀 Test final production
 - ✅ **SectorService** - getPaginatedSectors() fonctionnel
 - ✅ **Données complètes** - ID, nom, code, région, nombre de voies
 
-### ⏭️ Prochaines Actions Requises
-- [ ] **Déployer corrections** sur serveur production  
-- [ ] **Tester URL debug** : https://site.ch/sectors?debug_sectors=allow
-- [ ] **Vérifier logs production** - Niveau fallback et erreurs
-- [ ] **Configurer authentification** correcte (utilisateurs test disponibles)
+### 🚨 **PROBLÈME IDENTIFIÉ 14:02 - LOGS PRODUCTION**
+
+**ERREUR DANS LOGS :**
+```
+✅ SectorService: Query with 'code' column succeeded - 26 results
+❌ SectorIndex Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'code' in 'field list'
+```
+
+**CAUSE RACINE CONFIRMÉE :**
+- Le **système de fallback n'est PAS déployé** en production
+- La production utilise encore l'**ancien SectorService.php** 
+- L'erreur vient de **SectorService.php ligne 464** qui SELECT la colonne 'code' inexistante
+- **26 secteurs trouvés** mais requête échoue sur colonne manquante
+
+**ANALYSE COMPLÈTE GEMINI CLI :**
+- **7 emplacements** utilisent la colonne 'code' dans le code
+- **SectorService.php** principal responsable de l'erreur
+- **RegionController.php**, **SectorFilter.php**, **Models** aussi concernés
+- **Production MySQL** n'a PAS la colonne 'code'
+- **Développement SQLite** A la colonne 'code'
+
+### ✅ **SOLUTION URGENTE CRÉÉE**
+- Script `fix_production_sectors_urgent.php` pour diagnostic immédiat
+- Test des 4 niveaux de fallback en production
+- Recommandations SQL pour ajouter colonne manquante
+
+### ⏭️ Actions Urgentes (MAINTENANT)
+- [ ] **DÉPLOYER git pull** sur serveur production (version avec fallbacks)
+- [ ] **Exécuter** `php fix_production_sectors_urgent.php` 
+- [ ] **Ajouter colonne code** : `ALTER TABLE climbing_sectors ADD COLUMN code VARCHAR(50) DEFAULT '';`
+- [ ] **Tester URL** : https://site.ch/sectors?debug_sectors=allow
 - [ ] **Retirer bypass debug** après validation
 
 ---
