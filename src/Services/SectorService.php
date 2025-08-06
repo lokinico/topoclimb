@@ -460,7 +460,7 @@ class SectorService
             $simpleSectors = $this->db->fetchAll("
                 SELECT s.*, COUNT(rt.id) as routes_count, r.name as region_name
                 FROM climbing_sectors s
-                LEFT JOIN climbing_routes rt ON s.id = rt.sector_id AND rt.active = 1
+                LEFT JOIN climbing_routes rt ON s.id = rt.sector_id
                 LEFT JOIN climbing_regions r ON s.region_id = r.id
                 WHERE s.active = 1
                 GROUP BY s.id
