@@ -924,6 +924,106 @@ php debug_quick.php
 
 **🔍 LEÇON APPRISE :** Le problème d'affichage des secteurs était causé par une différence de structure entre la base SQLite locale (12 colonnes) et MySQL production (24 colonnes). Les colonnes `active`, `code`, `book_id` manquaient en local.
 
+## 🚨 STATUT ACTUEL (5 Août 2025 17:26)
+
+### ❌ **PROBLÈME EN COURS**
+**Les secteurs ne s'affichent TOUJOURS PAS en production malgré les corrections.**
+
+**Erreur persistante :**
+```
+SectorIndex Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'code' in 'field list'
+```
+
+### 🔍 **DIAGNOSTIC FINAL**
+1. **✅ Corrections développées** : Code local fonctionne parfaitement (4 secteurs)
+2. **❌ Déploiement incomplet** : Les commits correctifs ne sont pas appliqués en production
+3. **❌ Structure DB différente** : Production MySQL ≠ Développement SQLite
+
+### 🎯 **VRAIE CAUSE RACINE IDENTIFIÉE**
+**HYPOTHÈSE FINALE :** La base MySQL de production n'a PAS la colonne `code` contrairement à ce que montre `STRUCTURE_DB_PRODUCTION.md`.
+
+**Explication :**
+- `STRUCTURE_DB_PRODUCTION.md` montre une structure THÉORIQUE
+- La base MySQL RÉELLE n'a peut-être pas toutes les colonnes
+- Les logs montrent "Unknown column 'code'" = Cette colonne n'existe PAS
+
+### 🔧 **PROCHAINES ACTIONS REQUISES**
+
+#### 1. Vérifier structure RÉELLE MySQL production
+```sql
+-- Sur votre serveur MySQL :
+DESCRIBE climbing_sectors;
+SHOW CREATE TABLE climbing_sectors;
+```
+
+#### 2. Si colonne 'code' manque, ajouter :
+```sql
+ALTER TABLE climbing_sectors ADD COLUMN code VARCHAR(50) DEFAULT '';
+ALTER TABLE climbing_sectors ADD COLUMN active TINYINT(1) DEFAULT 1;
+-- + autres colonnes manquantes
+```
+
+#### 3. Alternative : Corriger le code pour MySQL réel
+Si vous ne pouvez pas modifier la DB, utiliser mes premières corrections qui supprimaient les colonnes inexistantes.
+
+### 📋 **COMMITS DISPONIBLES**
+- **`c5a4e15`** - Supprime références colonne 'active' 
+- **`46eb8bf`** - Supprime références colonne 'code'
+- **`91f9fa5`** - Version pour structure complète (24 colonnes)
+
+**CHOISIR :** Structure DB complète OU code adapté à structure limitée.
+
+### 🎯 **RECOMMANDATION**
+**Option A (Recommandée) :** Ajouter colonnes manquantes à MySQL production
+**Option B :** Utiliser commits qui suppriment références aux colonnes manquantes
+
+### 📊 **RÉSUMÉ COMPLET DE L'INVESTIGATION**
+
+#### ✅ **CE QUI A ÉTÉ RÉSOLU EN LOCAL**
+- Structure SQLite créée avec 24 colonnes identiques à STRUCTURE_DB_PRODUCTION.md
+- SectorService fonctionne parfaitement : retourne 4 secteurs
+- SimplePaginator::getItems() retourne correctement les données
+- Template Twig prêt à recevoir les données
+- Tous les tests passent : `php test_sectors_final.php`
+
+#### ❌ **CE QUI BLOQUE EN PRODUCTION**
+- Erreur persistante : "Unknown column 'code' in 'field list'"
+- Les corrections déployées ne résolvent pas le problème
+- Contradiction : STRUCTURE_DB_PRODUCTION.md montre `code` mais MySQL réel l'a pas
+
+#### 🔍 **INVESTIGATION MENÉE**
+1. **Analysé avec Gemini CLI** : Structure complète de STRUCTURE_DB_PRODUCTION.md
+2. **Créé structure locale identique** : 24 colonnes MySQL → SQLite
+3. **Testé exhaustivement** : SectorService + SimplePaginator + Template
+4. **Corrigé tous les problèmes SQL** : active, code, book_id, etc.
+5. **Documenté outils développement** : Scripts diagnostic et sync DB
+
+#### 🎯 **PROCHAINE ÉTAPE CRITIQUE**
+**VOUS DEVEZ :** Vérifier structure RÉELLE de votre MySQL production :
+
+```sql
+-- Dans phpMyAdmin ou console MySQL :
+USE votre_base_de_donnees;
+DESCRIBE climbing_sectors;
+```
+
+**Si colonne `code` manque → Ajouter :**
+```sql
+ALTER TABLE climbing_sectors ADD COLUMN code VARCHAR(50) NOT NULL DEFAULT '';
+UPDATE climbing_sectors SET code = CONCAT('SEC', LPAD(id, 3, '0')) WHERE code = '';
+```
+
+**Si colonne `active` manque → Ajouter :**
+```sql
+ALTER TABLE climbing_sectors ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1;
+```
+
+#### 💡 **ALTERNATIVE SI IMPOSSIBLE DE MODIFIER LA DB**
+Utiliser mes commits `c5a4e15` et `46eb8bf` qui adaptent le code à une structure MySQL limitée sans les colonnes problématiques.
+
+### 🚀 **APRÈS RÉSOLUTION**
+Une fois la structure DB corrigée, les secteurs devraient s'afficher immédiatement sur /sectors car tout le reste est fonctionnel.
+
 ## Commandes utiles rapides
 
 ### Avec Gemini CLI (analyse - PRIORITÉ)
