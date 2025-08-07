@@ -10,6 +10,7 @@ use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\Pagination\Paginator;
 
 class RouteController extends BaseController
 {
@@ -51,6 +52,7 @@ class RouteController extends BaseController
                 'regions' => [],
                 'filters' => [],
                 'stats' => ['total_routes' => 0, 'avg_difficulty' => null],
+                'paginator' => null,
                 'error' => 'Impossible de charger les voies actuellement.'
             ]);
         }
@@ -70,7 +72,9 @@ class RouteController extends BaseController
             'length_max' => $request->query->get('length_max', ''),
             'search' => $request->query->get('search', ''),
             'sort' => $request->query->get('sort', 'name'),
-            'order' => $request->query->get('order', 'asc')
+            'order' => $request->query->get('order', 'asc'),
+            'page' => $request->query->get('page', 1),
+            'per_page' => $request->query->get('per_page', 15)
         ];
 
         // Validation des paramètres numériques
@@ -86,6 +90,10 @@ class RouteController extends BaseController
         if ($filters['length_max'] && !is_numeric($filters['length_max'])) {
             $filters['length_max'] = '';
         }
+
+        // Validation de la pagination
+        $filters['page'] = max(1, (int)$filters['page']);
+        $filters['per_page'] = Paginator::validatePerPage((int)$filters['per_page']);
 
         // Limiter la recherche textuelle
         if (strlen($filters['search']) > 100) {
@@ -116,23 +124,79 @@ class RouteController extends BaseController
 
         $cleanFilters = array_filter($filters, fn($value) => $value !== '' && $value !== null);
         
-        // Assurer des valeurs par défaut pour le tri
+        // Assurer des valeurs par défaut pour le tri et la pagination
         if (!isset($cleanFilters['sort'])) {
             $cleanFilters['sort'] = 'r.name';
         }
         if (!isset($cleanFilters['order'])) {
             $cleanFilters['order'] = 'asc';
         }
+        if (!isset($cleanFilters['page'])) {
+            $cleanFilters['page'] = 1;
+        }
+        if (!isset($cleanFilters['per_page'])) {
+            $cleanFilters['per_page'] = 15;
+        }
         
         return $cleanFilters;
     }
 
     /**
-     * Récupération sécurisée des données voies
+     * Récupération sécurisée des données voies avec pagination
      */
     private function getRoutesData(array $filters): array
     {
-        // Construction sécurisée de la requête
+        // Construction sécurisée de la requête de comptage
+        $countSql = "SELECT COUNT(*) as total
+                     FROM climbing_routes r 
+                     LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
+                     LEFT JOIN climbing_regions re ON s.region_id = re.id
+                     WHERE 1=1";
+        $params = [];
+
+        // Conditions de filtrage
+        if (isset($filters['sector_id'])) {
+            $countSql .= " AND r.sector_id = ?";
+            $params[] = (int)$filters['sector_id'];
+        }
+
+        if (isset($filters['region_id'])) {
+            $countSql .= " AND re.id = ?";
+            $params[] = (int)$filters['region_id'];
+        }
+
+        if (isset($filters['difficulty_min'])) {
+            $countSql .= " AND r.difficulty >= ?";
+            $params[] = $filters['difficulty_min'];
+        }
+
+        if (isset($filters['difficulty_max'])) {
+            $countSql .= " AND r.difficulty <= ?";
+            $params[] = $filters['difficulty_max'];
+        }
+
+        if (isset($filters['length_min'])) {
+            $countSql .= " AND r.length >= ?";
+            $params[] = (int)$filters['length_min'];
+        }
+
+        if (isset($filters['length_max'])) {
+            $countSql .= " AND r.length <= ?";
+            $params[] = (int)$filters['length_max'];
+        }
+
+        if (isset($filters['search'])) {
+            $countSql .= " AND (r.name LIKE ? OR r.description LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        // Compter le total
+        $totalResult = $this->db->fetchOne($countSql, $params);
+        $total = (int)($totalResult['total'] ?? 0);
+
+        // Construction de la requête principale
         $sql = "SELECT r.id, r.name, r.description, r.difficulty, r.length, r.beauty_rating, 
                        r.danger_rating, r.grade_value, r.created_at,
                        s.name as sector_name, s.id as sector_id,
@@ -141,46 +205,25 @@ class RouteController extends BaseController
                 LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
                 LEFT JOIN climbing_regions re ON s.region_id = re.id
                 WHERE 1=1";
-        $params = [];
 
-        if (isset($filters['sector_id'])) {
-            $sql .= " AND r.sector_id = ?";
-            $params[] = (int)$filters['sector_id'];
-        }
-
-        if (isset($filters['region_id'])) {
-            $sql .= " AND re.id = ?";
-            $params[] = (int)$filters['region_id'];
-        }
-
-        if (isset($filters['length_min'])) {
-            $sql .= " AND r.length >= ?";
-            $params[] = (int)$filters['length_min'];
-        }
-
-        if (isset($filters['length_max'])) {
-            $sql .= " AND r.length <= ?";
-            $params[] = (int)$filters['length_max'];
-        }
-
-        if (isset($filters['search'])) {
-            $sql .= " AND (r.name LIKE ? OR r.description LIKE ?)";
-            $searchTerm = '%' . $filters['search'] . '%';
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-        }
+        // Même conditions de filtrage
+        $mainParams = $params;
 
         $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);
-        $sql .= " LIMIT 500"; // Limite de sécurité
 
-        $routes = $this->db->fetchAll($sql, $params);
+        // Calcul de l'offset et limite
+        $offset = ($filters['page'] - 1) * $filters['per_page'];
+        $sql .= " LIMIT ? OFFSET ?";
+        $mainParams[] = $filters['per_page'];
+        $mainParams[] = $offset;
 
-        // Récupération des secteurs pour les filtres
+        $routes = $this->db->fetchAll($sql, $mainParams);
+
+        // Récupération des données pour les filtres
         $sectors = $this->db->fetchAll(
             "SELECT * FROM climbing_sectors WHERE 1=1 ORDER BY name ASC"
         );
 
-        // Récupération des régions pour les filtres
         $regions = $this->db->fetchAll(
             "SELECT * FROM climbing_regions WHERE 1=1 ORDER BY name ASC"
         );
@@ -188,12 +231,20 @@ class RouteController extends BaseController
         // Calcul des statistiques
         $stats = $this->calculateStats();
 
+        // Création de la pagination
+        $queryParams = array_filter($filters, function($key) {
+            return !in_array($key, ['page', 'per_page']);
+        }, ARRAY_FILTER_USE_KEY);
+
+        $paginator = new Paginator($routes, $total, $filters['per_page'], $filters['page'], $queryParams);
+
         return [
             'routes' => $routes,
             'sectors' => $sectors,
             'regions' => $regions,
             'filters' => $filters,
-            'stats' => $stats
+            'stats' => $stats,
+            'paginator' => $paginator
         ];
     }
 

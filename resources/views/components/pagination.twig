@@ -53,17 +53,122 @@
     {% endif %}
 {% endmacro %}
 
-{# Macro pour sélecteur de nombre d'éléments par page #}
-{% macro perPageSelector(currentPerPage, currentUrl, options = [15, 30, 50, 100]) %}
+{# Macro pour sélecteur de nombre d'éléments par page avec options 15, 30, 60 #}
+{% macro perPageSelector(currentPerPage, filters = {}) %}
     <div class="d-flex align-items-center gap-2">
-        <label for="perPageSelect" class="form-label mb-0 text-nowrap">Afficher :</label>
-        <select id="perPageSelect" class="form-select form-select-sm" style="width: auto;" onchange="window.location.href=this.value">
+        <label for="perPageSelect" class="form-label mb-0 text-nowrap text-muted">
+            <i class="fas fa-list-ul me-1"></i>Afficher :
+        </label>
+        <select id="perPageSelect" class="form-select form-select-sm border-primary" style="width: auto;">
+            {% set options = [15, 30, 60] %}
             {% for option in options %}
-                <option value="{{ currentUrl }}?{{ app.request.query|merge({'per_page': option})|url_encode }}" 
-                        {% if currentPerPage == option %}selected{% endif %}>
-                    {{ option }} par page
+                <option value="{{ option }}" {% if currentPerPage == option %}selected{% endif %}>
+                    {{ option }} éléments
                 </option>
             {% endfor %}
         </select>
     </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const perPageSelect = document.getElementById('perPageSelect');
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function() {
+                const url = new URL(window.location);
+                url.searchParams.set('per_page', this.value);
+                url.searchParams.set('page', '1'); // Reset à la première page
+                window.location.href = url.toString();
+            });
+        }
+    });
+    </script>
+{% endmacro %}
+
+{# Macro pour pagination complète avec sélecteur intégré #}
+{% macro renderWithSelector(paginator, filters = {}, options = {}) %}
+    {% set showInfo = options.showInfo|default(true) %}
+    {% set size = options.size|default('') %}
+    {% set align = options.align|default('between') %}
+    
+    {% if paginator.getTotal() > 0 %}
+        <nav aria-label="Navigation par pagination" class="mt-4">
+            <div class="d-flex justify-content-{{ align }} align-items-center flex-wrap gap-3">
+                {# Sélecteur d'éléments par page à gauche #}
+                <div class="pagination-controls">
+                    {{ _self.perPageSelector(paginator.getPerPage(), filters) }}
+                </div>
+                
+                {# Informations au centre (si affichage justify-between) #}
+                {% if showInfo %}
+                    <div class="pagination-info">
+                        <div class="text-muted small d-none d-sm-block">
+                            <strong>{{ paginator.getInfo().from }}</strong> - 
+                            <strong>{{ paginator.getInfo().to }}</strong> sur 
+                            <strong>{{ paginator.getTotal() }}</strong> résultats
+                        </div>
+                        <div class="text-muted small d-block d-sm-none">
+                            <strong>{{ paginator.getInfo().to }}</strong>/<strong>{{ paginator.getTotal() }}</strong>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {# Pagination à droite #}
+                {% if paginator.hasPages() %}
+                    <div class="pagination-nav">
+                        <ul class="pagination {{ size ? 'pagination-' ~ size : '' }} mb-0">
+                            {% for link in paginator.getLinks() %}
+                                {% if link.label == '«' %}
+                                    <li class="page-item {{ link.disabled ? 'disabled' : '' }}">
+                                        <a class="page-link" href="{{ link.disabled ? '#' : link.url }}" 
+                                           {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }} 
+                                           aria-label="Première page">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+                                {% elseif link.label == '‹' %}
+                                    <li class="page-item {{ link.disabled ? 'disabled' : '' }}">
+                                        <a class="page-link" href="{{ link.disabled ? '#' : link.url }}" 
+                                           {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }} 
+                                           aria-label="Page précédente">
+                                            <i class="fas fa-angle-left"></i>
+                                            <span class="d-none d-md-inline ms-1">Préc</span>
+                                        </a>
+                                    </li>
+                                {% elseif link.label == '›' %}
+                                    <li class="page-item {{ link.disabled ? 'disabled' : '' }}">
+                                        <a class="page-link" href="{{ link.disabled ? '#' : link.url }}" 
+                                           {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }} 
+                                           aria-label="Page suivante">
+                                            <span class="d-none d-md-inline me-1">Suiv</span>
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                {% elseif link.label == '»' %}
+                                    <li class="page-item {{ link.disabled ? 'disabled' : '' }}">
+                                        <a class="page-link" href="{{ link.disabled ? '#' : link.url }}" 
+                                           {{ link.disabled ? 'tabindex="-1" aria-disabled="true"' : '' }} 
+                                           aria-label="Dernière page">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </a>
+                                    </li>
+                                {% elseif link.label == '...' %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">…</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item {{ link.active ? 'active' : '' }}">
+                                        {% if link.active %}
+                                            <span class="page-link fw-bold" aria-current="page">{{ link.label }}</span>
+                                        {% else %}
+                                            <a class="page-link" href="{{ link.url }}">{{ link.label }}</a>
+                                        {% endif %}
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </nav>
+    {% endif %}
 {% endmacro %}

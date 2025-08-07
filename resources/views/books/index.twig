@@ -1,10 +1,13 @@
 {% extends "layouts/app.twig" %}
 
+{% import "components/pagination.twig" as pagination %}
+
 {% block body_class %} books-index-page{% endblock %}
 
 {% block head %}
     <link rel="stylesheet" href="/css/pages-common.css">
     <link rel="stylesheet" href="/css/view-modes.css">
+    <link rel="stylesheet" href="/css/pagination.css">
 {% endblock %}
 
 {% block title %}Guides et topos d'escalade - TopoclimbCH{% endblock %}
@@ -102,6 +105,11 @@
                     <i class="fas fa-search"></i> Filtrer
                 </button>
             </div>
+            
+            <!-- Conserver les paramètres de pagination -->
+            {% if filters.per_page %}
+                <input type="hidden" name="per_page" value="{{ filters.per_page }}">
+            {% endif %}
         </form>
     </div>
     
@@ -289,11 +297,17 @@
             </div>
         </div>
     </div>
+    
+    <!-- Pagination -->
+    {% if paginator %}
+        {{ pagination.renderWithSelector(paginator, filters) }}
+    {% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script src="/js/pages-common.js"></script>
 <script src="/js/view-manager.js"></script>
+<script src="/js/pagination.js"></script>
 <script>
 // JavaScript pour la gestion des vues et des actions
 document.addEventListener('DOMContentLoaded', function() {

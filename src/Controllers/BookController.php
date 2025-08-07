@@ -10,6 +10,7 @@ use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\Pagination\Paginator;
 
 class BookController extends BaseController
 {
@@ -50,6 +51,7 @@ class BookController extends BaseController
                 'regions' => [],
                 'filters' => [],
                 'stats' => ['total_books' => 0, 'avg_price' => null],
+                'paginator' => null,
                 'error' => 'Impossible de charger les guides actuellement.'
             ]);
         }
@@ -69,7 +71,9 @@ class BookController extends BaseController
             'price_max' => $request->query->get('price_max', ''),
             'search' => $request->query->get('search', ''),
             'sort' => $request->query->get('sort', 'title'),
-            'order' => $request->query->get('order', 'asc')
+            'order' => $request->query->get('order', 'asc'),
+            'page' => $request->query->get('page', 1),
+            'per_page' => $request->query->get('per_page', 15)
         ];
 
         // Validation des paramètres numériques
@@ -85,6 +89,10 @@ class BookController extends BaseController
         if ($filters['price_max'] && !is_numeric($filters['price_max'])) {
             $filters['price_max'] = '';
         }
+
+        // Validation de la pagination
+        $filters['page'] = max(1, (int)$filters['page']);
+        $filters['per_page'] = Paginator::validatePerPage((int)$filters['per_page']);
 
         // Limiter la recherche textuelle
         if (strlen($filters['search']) > 100) {
@@ -120,79 +128,111 @@ class BookController extends BaseController
 
         $cleanFilters = array_filter($filters, fn($value) => $value !== '' && $value !== null);
         
-        // Assurer des valeurs par défaut pour le tri
+        // Assurer des valeurs par défaut pour le tri et la pagination
         if (!isset($cleanFilters['sort'])) {
             $cleanFilters['sort'] = 'b.title';
         }
         if (!isset($cleanFilters['order'])) {
             $cleanFilters['order'] = 'asc';
         }
+        if (!isset($cleanFilters['page'])) {
+            $cleanFilters['page'] = 1;
+        }
+        if (!isset($cleanFilters['per_page'])) {
+            $cleanFilters['per_page'] = 15;
+        }
         
         return $cleanFilters;
     }
 
     /**
-     * Récupération sécurisée des données guides
+     * Récupération sécurisée des données guides avec pagination
      */
     private function getBooksData(array $filters): array
     {
-        // Construction sécurisée de la requête
-        $sql = "SELECT b.id, b.title, b.description, b.author, b.publisher, 
-                       b.publication_year, b.isbn, b.price, b.created_at
-                FROM climbing_books b 
-                WHERE 1=1";
+        // Construction sécurisée de la requête de comptage
+        $countSql = "SELECT COUNT(*) as total
+                     FROM climbing_books b 
+                     WHERE 1=1";
         $params = [];
 
+        // Conditions de filtrage
         if (isset($filters['author'])) {
-            $sql .= " AND b.author LIKE ?";
+            $countSql .= " AND b.author LIKE ?";
             $params[] = '%' . $filters['author'] . '%';
         }
 
         if (isset($filters['publisher'])) {
-            $sql .= " AND b.publisher LIKE ?";
+            $countSql .= " AND b.publisher LIKE ?";
             $params[] = '%' . $filters['publisher'] . '%';
         }
 
         if (isset($filters['year_min'])) {
-            $sql .= " AND b.publication_year >= ?";
+            $countSql .= " AND b.publication_year >= ?";
             $params[] = (int)$filters['year_min'];
         }
 
         if (isset($filters['year_max'])) {
-            $sql .= " AND b.publication_year <= ?";
+            $countSql .= " AND b.publication_year <= ?";
             $params[] = (int)$filters['year_max'];
         }
 
         if (isset($filters['price_min'])) {
-            $sql .= " AND b.price >= ?";
+            $countSql .= " AND b.price >= ?";
             $params[] = (float)$filters['price_min'];
         }
 
         if (isset($filters['price_max'])) {
-            $sql .= " AND b.price <= ?";
+            $countSql .= " AND b.price <= ?";
             $params[] = (float)$filters['price_max'];
         }
 
         if (isset($filters['search'])) {
-            $sql .= " AND (b.title LIKE ? OR b.description LIKE ? OR b.author LIKE ?)";
+            $countSql .= " AND (b.title LIKE ? OR b.description LIKE ? OR b.author LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
             $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
 
-        $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);
-        $sql .= " LIMIT 500"; // Limite de sécurité
+        // Compter le total
+        $totalResult = $this->db->fetchOne($countSql, $params);
+        $total = (int)($totalResult['total'] ?? 0);
 
-        $books = $this->db->fetchAll($sql, $params);
+        // Construction de la requête principale
+        $sql = "SELECT b.id, b.title, b.description, b.author, b.publisher, 
+                       b.publication_year, b.isbn, b.price, b.created_at
+                FROM climbing_books b 
+                WHERE 1=1";
+
+        // Même conditions de filtrage
+        $mainParams = $params;
+
+        $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);
+
+        // Calcul de l'offset et limite
+        $offset = ($filters['page'] - 1) * $filters['per_page'];
+        $sql .= " LIMIT ? OFFSET ?";
+        $mainParams[] = $filters['per_page'];
+        $mainParams[] = $offset;
+
+        $books = $this->db->fetchAll($sql, $mainParams);
 
         // Calcul des statistiques
         $stats = $this->calculateStats();
 
+        // Création de la pagination
+        $queryParams = array_filter($filters, function($key) {
+            return !in_array($key, ['page', 'per_page']);
+        }, ARRAY_FILTER_USE_KEY);
+
+        $paginator = new Paginator($books, $total, $filters['per_page'], $filters['page'], $queryParams);
+
         return [
             'books' => $books,
             'filters' => $filters,
-            'stats' => $stats
+            'stats' => $stats,
+            'paginator' => $paginator
         ];
     }
 

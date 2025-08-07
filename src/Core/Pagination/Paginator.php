@@ -75,9 +75,10 @@ class Paginator
     protected function getBaseUrl(): string
     {
         // Obtenir l'URL courante sans paramètres
-        $url = strtok($_SERVER['REQUEST_URI'], '?');
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+        $url = strtok($requestUri, '?');
         
-        return $url;
+        return $url ?: '/';
     }
     
     /**
@@ -259,6 +260,23 @@ class Paginator
     }
     
     /**
+     * Options autorisées pour le nombre d'éléments par page
+     */
+    public const ALLOWED_PER_PAGE = [15, 30, 60];
+    
+    /**
+     * Valider et nettoyer le nombre d'éléments par page
+     */
+    public static function validatePerPage(?int $perPage): int
+    {
+        if ($perPage === null || !in_array($perPage, self::ALLOWED_PER_PAGE)) {
+            return self::ALLOWED_PER_PAGE[0]; // Par défaut 15
+        }
+        
+        return $perPage;
+    }
+    
+    /**
      * Méthode statique pour paginer des résultats
      *
      * @param array $query Résultats de requête à paginer
@@ -269,6 +287,7 @@ class Paginator
      */
     public static function paginate(array $query, int $page = 1, int $perPage = 15, array $queryParams = []): self
     {
+        $perPage = self::validatePerPage($perPage);
         $total = count($query);
         $offset = ($page - 1) * $perPage;
         $items = array_slice($query, $offset, $perPage);

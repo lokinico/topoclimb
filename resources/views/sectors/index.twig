@@ -1,10 +1,13 @@
 {% extends "layouts/app.twig" %}
 
+{% import "components/pagination.twig" as pagination %}
+
 {% block body_class %} sectors-index-page{% endblock %}
 
 {% block head %}
     <link rel="stylesheet" href="/css/pages-common.css">
     <link rel="stylesheet" href="/css/view-modes.css">
+    <link rel="stylesheet" href="/css/pagination.css">
 {% endblock %}
 
 {% block title %}Secteurs d'escalade - TopoclimbCH{% endblock %}
@@ -51,10 +54,10 @@
         </div>
     </div>
     
-    <!-- Filtres simples -->
+    <!-- Filtres étendus avec pagination -->
     <div class="filters mb-4">
         <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="region_id" class="form-label">Région</label>
                 <select name="region_id" id="region_id" class="form-select">
                     <option value="">Toutes les régions</option>
@@ -66,7 +69,7 @@
                 </select>
             </div>
             
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="site_id" class="form-label">Site</label>
                 <select name="site_id" id="site_id" class="form-select">
                     <option value="">Tous les sites</option>
@@ -76,6 +79,18 @@
                         </option>
                     {% endfor %}
                 </select>
+            </div>
+            
+            <div class="col-md-1">
+                <label for="altitude_min" class="form-label">Alt. min</label>
+                <input type="number" name="altitude_min" id="altitude_min" class="form-control" 
+                       placeholder="500" min="0" max="5000" value="{{ filters.altitude_min ?? '' }}">
+            </div>
+            
+            <div class="col-md-1">
+                <label for="altitude_max" class="form-label">Alt. max</label>
+                <input type="number" name="altitude_max" id="altitude_max" class="form-control" 
+                       placeholder="3000" min="0" max="5000" value="{{ filters.altitude_max ?? '' }}">
             </div>
             
             <div class="col-md-4">
@@ -89,6 +104,11 @@
                     <i class="fas fa-search"></i> Filtrer
                 </button>
             </div>
+            
+            <!-- Conserver les paramètres de pagination -->
+            {% if filters.per_page %}
+                <input type="hidden" name="per_page" value="{{ filters.per_page }}">
+            {% endif %}
         </form>
     </div>
     
@@ -281,11 +301,17 @@
             </div>
         </div>
     </div>
+    
+    <!-- Pagination -->
+    {% if paginator %}
+        {{ pagination.renderWithSelector(paginator, filters) }}
+    {% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script src="/js/pages-common.js"></script>
 <script src="/js/view-manager.js"></script>
+<script src="/js/pagination.js"></script>
 <script>
 // JavaScript simple pour la gestion des vues
 document.addEventListener('DOMContentLoaded', function() {

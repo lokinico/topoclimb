@@ -10,6 +10,7 @@ use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\Pagination\Paginator;
 
 class SectorController extends BaseController
 {
@@ -25,36 +26,25 @@ class SectorController extends BaseController
     }
 
     /**
-     * Test simple de la page sectors
+     * Affichage de la liste des secteurs avec pagination
      */
     public function index(Request $request): Response
     {
         try {
-            // Récupération simple des secteurs
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, s.description, s.altitude, s.created_at,
-                        r.name as region_name, si.name as site_name
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 LEFT JOIN climbing_sites si ON s.site_id = si.id
-                 WHERE s.active = 1
-                 ORDER BY s.name ASC 
-                 LIMIT 100"
-            );
+            // Validation et nettoyage des filtres
+            $filters = $this->validateAndSanitizeFilters($request);
 
-            // Récupération des régions et sites pour les filtres
-            $regions = $this->db->fetchAll("SELECT * FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-            $sites = $this->db->fetchAll("SELECT * FROM climbing_sites WHERE active = 1 ORDER BY name ASC");
+            // Récupération sécurisée des données
+            $data = $this->executeInTransaction(function () use ($filters) {
+                return $this->getSectorsData($filters);
+            });
 
-            return $this->render('sectors/index', [
-                'sectors' => $sectors,
-                'regions' => $regions,
-                'sites' => $sites,
-                'filters' => [],
-                'stats' => ['total_sectors' => count($sectors), 'total_routes' => 0]
-            ]);
+            // Log de l'action
+            $this->logAction('view_sectors_list', ['filters' => $filters]);
+            
+            return $this->render('sectors/index', $data);
         } catch (\Exception $e) {
-            error_log("SectorController::index - Erreur: " . $e->getMessage());
+            $this->handleError($e, 'Erreur lors du chargement des secteurs');
 
             return $this->render('sectors/index', [
                 'sectors' => [],
@@ -62,8 +52,210 @@ class SectorController extends BaseController
                 'sites' => [],
                 'filters' => [],
                 'stats' => ['total_sectors' => 0, 'total_routes' => 0],
+                'paginator' => null,
                 'error' => 'Impossible de charger les secteurs actuellement.'
             ]);
+        }
+    }
+
+    /**
+     * Validation et nettoyage des filtres
+     */
+    private function validateAndSanitizeFilters(Request $request): array
+    {
+        $filters = [
+            'region_id' => $request->query->get('region_id', ''),
+            'site_id' => $request->query->get('site_id', ''),
+            'altitude_min' => $request->query->get('altitude_min', ''),
+            'altitude_max' => $request->query->get('altitude_max', ''),
+            'search' => $request->query->get('search', ''),
+            'sort' => $request->query->get('sort', 'name'),
+            'order' => $request->query->get('order', 'asc'),
+            'page' => $request->query->get('page', 1),
+            'per_page' => $request->query->get('per_page', 15)
+        ];
+
+        // Validation des paramètres numériques
+        if ($filters['region_id'] && !is_numeric($filters['region_id'])) {
+            $filters['region_id'] = '';
+        }
+        if ($filters['site_id'] && !is_numeric($filters['site_id'])) {
+            $filters['site_id'] = '';
+        }
+        if ($filters['altitude_min'] && !is_numeric($filters['altitude_min'])) {
+            $filters['altitude_min'] = '';
+        }
+        if ($filters['altitude_max'] && !is_numeric($filters['altitude_max'])) {
+            $filters['altitude_max'] = '';
+        }
+
+        // Validation de la pagination
+        $filters['page'] = max(1, (int)$filters['page']);
+        $filters['per_page'] = Paginator::validatePerPage((int)$filters['per_page']);
+
+        // Limiter la recherche textuelle
+        if (strlen($filters['search']) > 100) {
+            $filters['search'] = substr($filters['search'], 0, 100);
+        }
+
+        // Valider les colonnes de tri autorisées
+        $allowedSorts = ['name', 'altitude', 'region_name', 'site_name', 'created_at'];
+        if (!in_array($filters['sort'], $allowedSorts)) {
+            $filters['sort'] = 'name';
+        }
+        
+        // Mapper les colonnes de tri vers les colonnes avec préfixes de table
+        $sortMapping = [
+            'name' => 's.name',
+            'altitude' => 's.altitude',
+            'region_name' => 'r.name',
+            'site_name' => 'si.name',
+            'created_at' => 's.created_at'
+        ];
+        $filters['sort'] = $sortMapping[$filters['sort']];
+
+        // Valider l'ordre de tri
+        if (!in_array(strtolower($filters['order']), ['asc', 'desc'])) {
+            $filters['order'] = 'asc';
+        }
+
+        $cleanFilters = array_filter($filters, fn($value) => $value !== '' && $value !== null);
+        
+        // Assurer des valeurs par défaut pour le tri et la pagination
+        if (!isset($cleanFilters['sort'])) {
+            $cleanFilters['sort'] = 's.name';
+        }
+        if (!isset($cleanFilters['order'])) {
+            $cleanFilters['order'] = 'asc';
+        }
+        if (!isset($cleanFilters['page'])) {
+            $cleanFilters['page'] = 1;
+        }
+        if (!isset($cleanFilters['per_page'])) {
+            $cleanFilters['per_page'] = 15;
+        }
+        
+        return $cleanFilters;
+    }
+
+    /**
+     * Récupération sécurisée des données secteurs avec pagination
+     */
+    private function getSectorsData(array $filters): array
+    {
+        // Construction sécurisée de la requête de comptage
+        $countSql = "SELECT COUNT(*) as total
+                     FROM climbing_sectors s 
+                     LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                     LEFT JOIN climbing_sites si ON s.site_id = si.id
+                     WHERE s.active = 1";
+        $params = [];
+
+        // Conditions de filtrage
+        if (isset($filters['region_id'])) {
+            $countSql .= " AND s.region_id = ?";
+            $params[] = (int)$filters['region_id'];
+        }
+
+        if (isset($filters['site_id'])) {
+            $countSql .= " AND s.site_id = ?";
+            $params[] = (int)$filters['site_id'];
+        }
+
+        if (isset($filters['altitude_min'])) {
+            $countSql .= " AND s.altitude >= ?";
+            $params[] = (int)$filters['altitude_min'];
+        }
+
+        if (isset($filters['altitude_max'])) {
+            $countSql .= " AND s.altitude <= ?";
+            $params[] = (int)$filters['altitude_max'];
+        }
+
+        if (isset($filters['search'])) {
+            $countSql .= " AND (s.name LIKE ? OR s.description LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        // Compter le total
+        $totalResult = $this->db->fetchOne($countSql, $params);
+        $total = (int)($totalResult['total'] ?? 0);
+
+        // Construction de la requête principale
+        $sql = "SELECT s.id, s.name, s.description, s.altitude, s.created_at,
+                       r.name as region_name, si.name as site_name
+                FROM climbing_sectors s 
+                LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                LEFT JOIN climbing_sites si ON s.site_id = si.id
+                WHERE s.active = 1";
+
+        // Même conditions de filtrage
+        $mainParams = $params;
+
+        $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);
+
+        // Calcul de l'offset et limite
+        $offset = ($filters['page'] - 1) * $filters['per_page'];
+        $sql .= " LIMIT ? OFFSET ?";
+        $mainParams[] = $filters['per_page'];
+        $mainParams[] = $offset;
+
+        $sectors = $this->db->fetchAll($sql, $mainParams);
+
+        // Récupération des données pour les filtres
+        $regions = $this->db->fetchAll("SELECT * FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
+        $sites = $this->db->fetchAll("SELECT * FROM climbing_sites WHERE active = 1 ORDER BY name ASC");
+
+        // Calcul des statistiques
+        $stats = $this->calculateStats();
+
+        // Création de la pagination
+        $queryParams = array_filter($filters, function($key) {
+            return !in_array($key, ['page', 'per_page']);
+        }, ARRAY_FILTER_USE_KEY);
+
+        $paginator = new Paginator($sectors, $total, $filters['per_page'], $filters['page'], $queryParams);
+
+        return [
+            'sectors' => $sectors,
+            'regions' => $regions,
+            'sites' => $sites,
+            'filters' => $filters,
+            'stats' => $stats,
+            'paginator' => $paginator
+        ];
+    }
+
+    /**
+     * Calcul sécurisé des statistiques générales
+     */
+    private function calculateStats(): array
+    {
+        try {
+            $stats = $this->db->fetchOne(
+                "SELECT 
+                    COUNT(*) as total_sectors,
+                    AVG(altitude) as avg_altitude,
+                    MIN(altitude) as min_altitude,
+                    MAX(altitude) as max_altitude,
+                    (SELECT COUNT(*) FROM climbing_routes r 
+                     JOIN climbing_sectors s ON r.sector_id = s.id 
+                     WHERE s.active = 1) as total_routes
+                 FROM climbing_sectors WHERE active = 1"
+            );
+
+            return [
+                'total_sectors' => (int)($stats['total_sectors'] ?? 0),
+                'total_routes' => (int)($stats['total_routes'] ?? 0),
+                'avg_altitude' => $stats['avg_altitude'] ? round($stats['avg_altitude']) : null,
+                'min_altitude' => (int)($stats['min_altitude'] ?? 0),
+                'max_altitude' => (int)($stats['max_altitude'] ?? 0)
+            ];
+        } catch (\Exception $e) {
+            error_log('Erreur calcul stats sectors: ' . $e->getMessage());
+            return ['total_sectors' => 0, 'total_routes' => 0, 'avg_altitude' => null, 'min_altitude' => 0, 'max_altitude' => 0];
         }
     }
 

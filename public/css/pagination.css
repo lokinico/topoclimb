@@ -1,0 +1,222 @@
+/* Styles pour la pagination TopoclimbCH */
+
+/* Conteneur principal de pagination */
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 150px;
+}
+
+.pagination-nav {
+    display: flex;
+    align-items: center;
+}
+
+/* Style pour le sélecteur de per_page */
+#perPageSelect {
+    min-width: 120px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#perPageSelect:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Amélioration de la pagination Bootstrap */
+.pagination {
+    margin-bottom: 0;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.pagination .page-link {
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.pagination .page-link:hover:not(.disabled) {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    color: #495057;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #adb5bd;
+    background-color: #fff;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Styles responsifs pour la pagination */
+@media (max-width: 768px) {
+    .pagination-controls {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .pagination-info {
+        text-align: center;
+        min-width: auto;
+    }
+    
+    .pagination-nav {
+        justify-content: center;
+    }
+    
+    .pagination {
+        justify-content: center;
+        gap: 0.125rem;
+    }
+    
+    .pagination .page-link {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Cacher certains éléments sur mobile */
+    .pagination-info .d-none.d-sm-block {
+        display: none !important;
+    }
+    
+    .pagination-info .d-block.d-sm-none {
+        display: block !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .pagination .page-link {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.8rem;
+    }
+    
+    #perPageSelect {
+        font-size: 0.875rem;
+    }
+    
+    /* Simplifier l'affichage sur très petits écrans */
+    .pagination-info .text-muted {
+        font-size: 0.8rem;
+    }
+}
+
+/* Animation pour les changements de page */
+.pagination-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* Style pour le feedback de chargement */
+.pagination-controls.loading {
+    position: relative;
+}
+
+.pagination-controls.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--bs-primary);
+    border-radius: 50%;
+    animation: pagination-spin 1s linear infinite;
+}
+
+@keyframes pagination-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Styles pour l'alignement justifié */
+.pagination-nav .pagination {
+    flex-wrap: nowrap;
+}
+
+/* Amélioration des tooltips de pagination */
+.pagination .page-link[title] {
+    position: relative;
+}
+
+/* Style pour les icônes Font Awesome dans la pagination */
+.pagination .page-link i {
+    font-size: 0.875rem;
+}
+
+.pagination .page-link i.fa-angle-double-left,
+.pagination .page-link i.fa-angle-double-right {
+    font-size: 0.8rem;
+}
+
+/* Style pour les badges d'information */
+.pagination-info .badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+}
+
+/* Styles pour l'état focus accessible */
+.pagination .page-link:focus {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.pagination .page-link:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+/* Couleurs personnalisées pour TopoclimbCH */
+:root {
+    --pagination-primary: #0d6efd;
+    --pagination-secondary: #6c757d;
+    --pagination-hover: #e9ecef;
+    --pagination-border: #dee2e6;
+}
+
+/* Theme sombre (optionnel) */
+@media (prefers-color-scheme: dark) {
+    .pagination .page-link {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .pagination .page-link:hover:not(.disabled) {
+        background-color: #4a5568;
+        border-color: #718096;
+        color: #f7fafc;
+    }
+    
+    .pagination .page-item.disabled .page-link {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #718096;
+    }
+}
