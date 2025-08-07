@@ -608,7 +608,8 @@ class SiteController extends BaseController
 
         try {
             $site = $this->db->fetchOne(
-                "SELECT s.*, r.name as region_name, r.id as region_id
+                "SELECT s.id, s.name, s.description, s.region_id, s.coordinates_lat, s.coordinates_lng, 
+                        s.altitude, s.access_time, s.created_at, r.name as region_name
                  FROM climbing_sites s
                  LEFT JOIN climbing_regions r ON s.region_id = r.id
                  WHERE s.id = ? AND s.active = 1",
@@ -659,7 +660,8 @@ class SiteController extends BaseController
 
             $whereClause = implode(' AND ', $whereConditions);
 
-            $sql = "SELECT s.*, r.name as region_name
+            $sql = "SELECT s.id, s.name, s.description, s.region_id, s.coordinates_lat, s.coordinates_lng, 
+                           s.altitude, s.access_time, s.created_at, r.name as region_name
                     FROM climbing_sites s
                     LEFT JOIN climbing_regions r ON s.region_id = r.id
                     WHERE {$whereClause}

@@ -812,9 +812,8 @@ class RegionController extends BaseController
                 return new JsonResponse(['error' => 'ID pays invalide'], 400);
             }
 
-            $sql = "SELECT r.id, r.name, r.coordinates_lat, r.coordinates_lng, c.name as country_name
+            $sql = "SELECT r.id, r.name, r.coordinates_lat, r.coordinates_lng, r.description
                     FROM climbing_regions r 
-                    LEFT JOIN climbing_countries c ON r.country_id = c.id 
                     WHERE r.active = 1";
             $params = [];
 
@@ -916,10 +915,8 @@ class RegionController extends BaseController
 
             $region = $this->db->fetchOne(
                 "SELECT r.id, r.name, r.description, r.coordinates_lat, r.coordinates_lng, 
-                        r.altitude, r.best_season, r.access_info, r.parking_info, r.created_at,
-                        c.name as country_name, c.code as country_code
+                        r.altitude, r.created_at
                  FROM climbing_regions r 
-                 LEFT JOIN climbing_countries c ON r.country_id = c.id 
                  WHERE r.id = ? AND r.active = 1",
                 [$id]
             );
@@ -944,13 +941,6 @@ class RegionController extends BaseController
                     'lng' => $region['coordinates_lng'] ? (float)$region['coordinates_lng'] : null
                 ],
                 'altitude' => $region['altitude'] ? (int)$region['altitude'] : null,
-                'best_season' => $region['best_season'],
-                'access_info' => $region['access_info'],
-                'parking_info' => $region['parking_info'],
-                'country' => [
-                    'name' => $region['country_name'],
-                    'code' => $region['country_code']
-                ],
                 'stats' => $stats,
                 'created_at' => $region['created_at']
             ];

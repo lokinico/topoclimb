@@ -289,7 +289,7 @@ class BookController extends BaseController
             $author = $request->query->get('author', '');
             $limit = min((int)$request->query->get('limit', 100), 500);
 
-            $sql = "SELECT b.id, b.title, b.author
+            $sql = "SELECT b.id, b.name as title
                     FROM climbing_books b 
                     WHERE 1=1";
             $params = [];
@@ -299,21 +299,13 @@ class BookController extends BaseController
                 if (strlen($search) > 100) {
                     $search = substr($search, 0, 100);
                 }
-                $sql .= " AND (b.title LIKE ? OR b.author LIKE ?)";
-                $params[] = '%' . $search . '%';
+                $sql .= " AND b.name LIKE ?";
                 $params[] = '%' . $search . '%';
             }
 
-            if ($author) {
-                $author = trim(strip_tags($author));
-                if (strlen($author) > 100) {
-                    $author = substr($author, 0, 100);
-                }
-                $sql .= " AND b.author LIKE ?";
-                $params[] = '%' . $author . '%';
-            }
+            // Author filter removed as column may not exist
 
-            $sql .= " ORDER BY b.title ASC LIMIT ?";
+            $sql .= " ORDER BY b.name ASC LIMIT ?";
             $params[] = $limit;
 
             $books = $this->db->fetchAll($sql, $params);
@@ -339,7 +331,7 @@ class BookController extends BaseController
             $id = $this->validateId($request->attributes->get('id'), 'ID de guide');
 
             $book = $this->db->fetchOne(
-                "SELECT * FROM climbing_books WHERE id = ?",
+                "SELECT id, name, description, created_at FROM climbing_books WHERE id = ?",
                 [$id]
             );
 
@@ -353,13 +345,8 @@ class BookController extends BaseController
             // Formatage sécurisé des données
             $data = [
                 'id' => (int)$book['id'],
-                'title' => $book['title'],
+                'title' => $book['name'],
                 'description' => $book['description'],
-                'author' => $book['author'],
-                'publisher' => $book['publisher'],
-                'publication_year' => $book['publication_year'] ? (int)$book['publication_year'] : null,
-                'isbn' => $book['isbn'],
-                'price' => $book['price'] ? (float)$book['price'] : null,
                 'created_at' => $book['created_at']
             ];
 
