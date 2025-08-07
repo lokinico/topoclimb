@@ -183,17 +183,20 @@ class SectorController extends BaseController
         $totalResult = $this->db->fetchOne($countSql, $params);
         $total = (int)($totalResult['total'] ?? 0);
 
-        // Construction de la requête principale
+        // Construction de la requête principale avec comptage des voies
         $sql = "SELECT s.id, s.name, s.description, s.altitude, s.created_at,
-                       r.name as region_name, si.name as site_name
+                       r.name as region_name, si.name as site_name,
+                       COUNT(routes.id) as routes_count
                 FROM climbing_sectors s 
                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
                 LEFT JOIN climbing_sites si ON s.site_id = si.id
+                LEFT JOIN climbing_routes routes ON s.id = routes.sector_id
                 WHERE s.active = 1";
 
         // Même conditions de filtrage
         $mainParams = $params;
 
+        $sql .= " GROUP BY s.id, s.name, s.description, s.altitude, s.created_at, r.name, si.name";
         $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);
 
         // Calcul de l'offset et limite
@@ -292,11 +295,11 @@ class SectorController extends BaseController
 
             // Récupération des voies du secteur
             $routes = $this->db->fetchAll(
-                "SELECT r.id, r.name, r.number, r.difficulty, r.length, r.beauty_rating, 
-                        r.style, r.equipment, r.comment
+                "SELECT r.id, r.name, r.difficulty, r.length, r.beauty_rating, 
+                        r.danger_rating, r.grade_value, r.description, r.created_at
                  FROM climbing_routes r 
                  WHERE r.sector_id = ?
-                 ORDER BY r.number ASC, r.name ASC 
+                 ORDER BY r.name ASC 
                  LIMIT 200",
                 [$id]
             );
