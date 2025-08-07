@@ -101,7 +101,7 @@ class RouteController extends BaseController
         }
 
         // Valider les colonnes de tri autorisées
-        $allowedSorts = ['name', 'difficulty', 'length', 'beauty_rating', 'created_at', 'sector_name'];
+        $allowedSorts = ['name', 'difficulty', 'length', 'created_at', 'sector_name'];
         if (!in_array($filters['sort'], $allowedSorts)) {
             $filters['sort'] = 'name';
         }
@@ -111,7 +111,6 @@ class RouteController extends BaseController
             'name' => 'r.name',
             'difficulty' => 'r.difficulty',
             'length' => 'r.length',
-            'beauty_rating' => 'r.beauty_rating',
             'created_at' => 'r.created_at',
             'sector_name' => 's.name'
         ];
@@ -186,9 +185,8 @@ class RouteController extends BaseController
         }
 
         if (isset($filters['search'])) {
-            $countSql .= " AND (r.name LIKE ? OR r.description LIKE ?)";
+            $countSql .= " AND r.name LIKE ?";
             $searchTerm = '%' . $filters['search'] . '%';
-            $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
 
@@ -278,9 +276,10 @@ class RouteController extends BaseController
      */
     private function getRouteDetails(int $id): array
     {
-        // Récupération de base de la voie
+        // Récupération de base de la voie (colonnes explicites compatibles)
         $route = $this->db->fetchOne(
-            "SELECT r.*, s.name as sector_name, s.id as sector_id,
+            "SELECT r.id, r.name, r.difficulty, r.length, r.created_at, r.sector_id,
+                    s.name as sector_name, s.id as sector_id_alias,
                     re.name as region_name, re.id as region_id
              FROM climbing_routes r 
              LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
@@ -291,11 +290,11 @@ class RouteController extends BaseController
 
         $this->requireEntity($route, 'Voie non trouvée');
 
-        // Récupération des autres voies du même secteur
+        // Récupération des autres voies du même secteur (colonnes compatibles)
         $relatedRoutes = [];
         if ($route['sector_id']) {
             $relatedRoutes = $this->db->fetchAll(
-                "SELECT r.id, r.name, r.difficulty, r.length, r.beauty_rating
+                "SELECT r.id, r.name, r.difficulty, r.length
                  FROM climbing_routes r 
                  WHERE r.sector_id = ? AND r.id != ?
                  ORDER BY r.name ASC 
@@ -331,7 +330,7 @@ class RouteController extends BaseController
                 return new JsonResponse(['error' => 'ID région invalide'], 400);
             }
 
-            $sql = "SELECT r.id, r.name, r.difficulty, r.length, r.beauty_rating, 
+            $sql = "SELECT r.id, r.name, r.difficulty, r.length, 
                            s.name as sector_name, re.name as region_name
                     FROM climbing_routes r 
                     LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
@@ -384,9 +383,8 @@ class RouteController extends BaseController
             $id = $this->validateId($request->attributes->get('id'), 'ID de voie');
 
             $route = $this->db->fetchOne(
-                "SELECT r.id, r.name, r.description, r.difficulty, r.length, 
-                        r.beauty_rating, r.danger_rating, r.grade_value, r.created_at,
-                        s.name as sector_name, s.id as sector_id,
+                "SELECT r.id, r.name, r.difficulty, r.length, r.created_at, r.sector_id,
+                        s.name as sector_name,
                         re.name as region_name, re.id as region_id
                  FROM climbing_routes r 
                  LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
@@ -402,16 +400,12 @@ class RouteController extends BaseController
                 ], 404);
             }
 
-            // Formatage sécurisé des données
+            // Formatage sécurisé des données (colonnes compatibles)
             $data = [
                 'id' => (int)$route['id'],
                 'name' => $route['name'],
-                'description' => $route['description'],
                 'difficulty' => $route['difficulty'],
                 'length' => $route['length'] ? (int)$route['length'] : null,
-                'beauty_rating' => $route['beauty_rating'] ? (int)$route['beauty_rating'] : null,
-                'danger_rating' => $route['danger_rating'] ? (int)$route['danger_rating'] : null,
-                'grade_value' => $route['grade_value'] ? (int)$route['grade_value'] : null,
                 'sector' => [
                     'id' => (int)$route['sector_id'],
                     'name' => $route['sector_name']
@@ -444,8 +438,7 @@ class RouteController extends BaseController
                     COUNT(*) as total_routes,
                     AVG(length) as avg_length,
                     MIN(length) as min_length,
-                    MAX(length) as max_length,
-                    AVG(beauty_rating) as avg_beauty
+                    MAX(length) as max_length
                  FROM climbing_routes WHERE length IS NOT NULL"
             );
 
@@ -453,12 +446,11 @@ class RouteController extends BaseController
                 'total_routes' => (int)($stats['total_routes'] ?? 0),
                 'avg_length' => $stats['avg_length'] ? round($stats['avg_length'], 1) : null,
                 'min_length' => (int)($stats['min_length'] ?? 0),
-                'max_length' => (int)($stats['max_length'] ?? 0),
-                'avg_beauty' => $stats['avg_beauty'] ? round($stats['avg_beauty'], 1) : null
+                'max_length' => (int)($stats['max_length'] ?? 0)
             ];
         } catch (\Exception $e) {
             error_log('Erreur calcul stats routes: ' . $e->getMessage());
-            return ['total_routes' => 0, 'avg_length' => null, 'min_length' => 0, 'max_length' => 0, 'avg_beauty' => null];
+            return ['total_routes' => 0, 'avg_length' => null, 'min_length' => 0, 'max_length' => 0];
         }
     }
 }
