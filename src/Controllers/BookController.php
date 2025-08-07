@@ -188,9 +188,8 @@ class BookController extends BaseController
         }
 
         if (isset($filters['search'])) {
-            $countSql .= " AND (b.title LIKE ? OR b.description LIKE ? OR b.author LIKE ?)";
+            $countSql .= " AND (b.title LIKE ? OR b.author LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
-            $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
@@ -199,9 +198,8 @@ class BookController extends BaseController
         $totalResult = $this->db->fetchOne($countSql, $params);
         $total = (int)($totalResult['total'] ?? 0);
 
-        // Construction de la requête principale
-        $sql = "SELECT b.id, b.title, b.description, b.author, b.publisher, 
-                       b.publication_year, b.isbn, b.price, b.created_at
+        // Construction de la requête principale (colonnes minimales compatibles)
+        $sql = "SELECT b.id, b.title, b.author, b.created_at
                 FROM climbing_books b 
                 WHERE 1=1";
 
@@ -291,8 +289,7 @@ class BookController extends BaseController
             $author = $request->query->get('author', '');
             $limit = min((int)$request->query->get('limit', 100), 500);
 
-            $sql = "SELECT b.id, b.title, b.author, b.publisher, 
-                           b.publication_year, b.price
+            $sql = "SELECT b.id, b.title, b.author
                     FROM climbing_books b 
                     WHERE 1=1";
             $params = [];

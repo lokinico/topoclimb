@@ -196,9 +196,8 @@ class RouteController extends BaseController
         $totalResult = $this->db->fetchOne($countSql, $params);
         $total = (int)($totalResult['total'] ?? 0);
 
-        // Construction de la requête principale
-        $sql = "SELECT r.id, r.name, r.description, r.difficulty, r.length, r.beauty_rating, 
-                       r.danger_rating, r.grade_value, r.created_at,
+        // Construction de la requête principale (colonnes minimales compatibles)
+        $sql = "SELECT r.id, r.name, r.difficulty, r.length, r.created_at,
                        s.name as sector_name, s.id as sector_id,
                        re.name as region_name, re.id as region_id
                 FROM climbing_routes r 

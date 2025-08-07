@@ -293,10 +293,9 @@ class SectorController extends BaseController
                 return $this->redirect('/sectors');
             }
 
-            // Récupération des voies du secteur
+            // Récupération des voies du secteur (colonnes minimales compatibles)
             $routes = $this->db->fetchAll(
-                "SELECT r.id, r.name, r.difficulty, r.length, r.beauty_rating, 
-                        r.danger_rating, r.grade_value, r.description, r.created_at
+                "SELECT r.id, r.name, r.difficulty, r.length, r.created_at
                  FROM climbing_routes r 
                  WHERE r.sector_id = ?
                  ORDER BY r.name ASC 
