@@ -996,6 +996,16 @@ return array (
   87 => 
   array (
     'method' => 'GET',
+    'path' => '/api/sectors/{id}',
+    'controller' => 'TopoclimbCH\\Controllers\\SectorController',
+    'action' => 'apiShow',
+    'middlewares' => 
+    array (
+    ),
+  ),
+  88 => 
+  array (
+    'method' => 'GET',
     'path' => '/api/sectors/search',
     'controller' => 'TopoclimbCH\\Controllers\\SectorController',
     'action' => 'apiSearch',
@@ -1014,6 +1024,16 @@ return array (
     ),
   ),
   89 => 
+  array (
+    'method' => 'GET',
+    'path' => '/api/routes/{id}',
+    'controller' => 'TopoclimbCH\\Controllers\\RouteController',
+    'action' => 'apiShow',
+    'middlewares' => 
+    array (
+    ),
+  ),
+  90 => 
   array (
     'method' => 'GET',
     'path' => '/api/routes/search',

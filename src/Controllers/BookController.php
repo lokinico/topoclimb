@@ -289,7 +289,7 @@ class BookController extends BaseController
             $author = $request->query->get('author', '');
             $limit = min((int)$request->query->get('limit', 100), 500);
 
-            $sql = "SELECT b.id, b.name as title
+            $sql = "SELECT b.id, b.title, b.author, b.publisher, b.publication_year
                     FROM climbing_books b 
                     WHERE 1=1";
             $params = [];
@@ -299,13 +299,21 @@ class BookController extends BaseController
                 if (strlen($search) > 100) {
                     $search = substr($search, 0, 100);
                 }
-                $sql .= " AND b.name LIKE ?";
+                $sql .= " AND b.title LIKE ?";
                 $params[] = '%' . $search . '%';
             }
 
-            // Author filter removed as column may not exist
+            // Author filter now works since column exists
+            if ($author) {
+                $author = trim(strip_tags($author));
+                if (strlen($author) > 100) {
+                    $author = substr($author, 0, 100);
+                }
+                $sql .= " AND b.author LIKE ?";
+                $params[] = '%' . $author . '%';
+            }
 
-            $sql .= " ORDER BY b.name ASC LIMIT ?";
+            $sql .= " ORDER BY b.title ASC LIMIT ?";
             $params[] = $limit;
 
             $books = $this->db->fetchAll($sql, $params);
@@ -331,7 +339,7 @@ class BookController extends BaseController
             $id = $this->validateId($request->attributes->get('id'), 'ID de guide');
 
             $book = $this->db->fetchOne(
-                "SELECT id, name, description, created_at FROM climbing_books WHERE id = ?",
+                "SELECT id, title, description, author, publisher, publication_year, created_at FROM climbing_books WHERE id = ?",
                 [$id]
             );
 
@@ -345,8 +353,11 @@ class BookController extends BaseController
             // Formatage sécurisé des données
             $data = [
                 'id' => (int)$book['id'],
-                'title' => $book['name'],
+                'title' => $book['title'],
                 'description' => $book['description'],
+                'author' => $book['author'],
+                'publisher' => $book['publisher'],
+                'publication_year' => $book['publication_year'] ? (int)$book['publication_year'] : null,
                 'created_at' => $book['created_at']
             ];
 
