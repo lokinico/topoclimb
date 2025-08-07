@@ -3,926 +3,367 @@
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
-use TopoclimbCH\Core\Auth;
-use TopoclimbCH\Models\Book;
-use TopoclimbCH\Models\Region;
-use TopoclimbCH\Models\Sector;
-use TopoclimbCH\Models\Site;
-use TopoclimbCH\Services\MediaService;
 use TopoclimbCH\Core\Security\CsrfManager;
 
 class BookController extends BaseController
 {
-
-    private MediaService $mediaService;
-
     public function __construct(
         View $view,
         Session $session,
-        Database $db,
-        MediaService $mediaService,
         CsrfManager $csrfManager,
+        Database $db,
         ?Auth $auth = null
     ) {
         parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->db = $db;
-        $this->mediaService = $mediaService;
     }
 
     /**
-     * Liste tous les guides/topos
+     * Affichage de la liste des guides/topos
      */
     public function index(Request $request): Response
     {
         try {
-            $page = (int) $request->query->get('page', 1);
-            $perPage = (int) $request->query->get('per_page', 20);
-            $search = $request->query->get('search');
-            $regionId = $request->query->get('region_id');
+            // Validation et nettoyage des filtres
+            $filters = $this->validateAndSanitizeFilters($request);
 
-            // Construction de la requête
-            $whereConditions = ['b.active = 1'];
-            $params = [];
+            // Récupération sécurisée des données
+            $data = $this->executeInTransaction(function () use ($filters) {
+                return $this->getBooksData($filters);
+            });
 
-            if ($search) {
-                $whereConditions[] = '(b.name LIKE ? OR b.code LIKE ? OR b.publisher LIKE ?)';
-                $searchTerm = '%' . $search . '%';
-                $params[] = $searchTerm;
-                $params[] = $searchTerm;
-                $params[] = $searchTerm;
-            }
-
-            if ($regionId) {
-                $whereConditions[] = 'b.region_id = ?';
-                $params[] = (int)$regionId;
-            }
-
-            $whereClause = implode(' AND ', $whereConditions);
-            $offset = ($page - 1) * $perPage;
-
-            // Compter le total
-            $countSql = "SELECT COUNT(*) as total FROM climbing_books b WHERE {$whereClause}";
-            $totalResult = $this->db->fetchOne($countSql, $params);
-            $total = $totalResult['total'];
-
-            // Récupérer les books avec statistiques
-            $sql = "SELECT 
-                        b.*,
-                        r.name as region_name,
-                        COUNT(DISTINCT bs.sector_id) as sectors_count,
-                        COUNT(DISTINCT sect.site_id) as sites_count,
-                        COUNT(DISTINCT rt.id) as routes_count
-                    FROM climbing_books b
-                    LEFT JOIN climbing_regions r ON b.region_id = r.id
-                    LEFT JOIN climbing_book_sectors bs ON b.id = bs.book_id
-                    LEFT JOIN climbing_sectors sect ON bs.sector_id = sect.id AND sect.active = 1
-                    LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
-                    WHERE {$whereClause}
-                    GROUP BY b.id
-                    ORDER BY b.name ASC
-                    LIMIT {$perPage} OFFSET {$offset}";
-
-            $books = $this->db->fetchAll($sql, $params);
-
-            // Pagination
-            $pagination = [
-                'current_page' => $page,
-                'per_page' => $perPage,
-                'total' => $total,
-                'last_page' => ceil($total / $perPage),
-                'from' => $offset + 1,
-                'to' => min($offset + $perPage, $total)
-            ];
-
-            // Données pour les filtres
-            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-
-            return $this->render('books/index', [
-                'title' => 'Guides d\'escalade',
-                'books' => $books,
-                'pagination' => $pagination,
-                'regions' => $regions,
-                'currentFilters' => [
-                    'search' => $search,
-                    'region_id' => $regionId
-                ]
-            ]);
+            // Log de l'action
+            $this->logAction('view_books_list', ['filters' => $filters]);
+            
+            return $this->render('books/index', $data);
         } catch (\Exception $e) {
-            $this->session->flash('error', 'Une erreur est survenue lors du chargement des guides: ' . $e->getMessage());
+            $this->handleError($e, 'Erreur lors du chargement des guides');
+
             return $this->render('books/index', [
                 'books' => [],
-                'error' => $e->getMessage()
+                'regions' => [],
+                'filters' => [],
+                'stats' => ['total_books' => 0, 'avg_price' => null],
+                'error' => 'Impossible de charger les guides actuellement.'
             ]);
         }
     }
 
     /**
-     * Affiche un guide spécifique avec ses secteurs
+     * Validation et nettoyage des filtres
+     */
+    private function validateAndSanitizeFilters(Request $request): array
+    {
+        $filters = [
+            'author' => $request->query->get('author', ''),
+            'publisher' => $request->query->get('publisher', ''),
+            'year_min' => $request->query->get('year_min', ''),
+            'year_max' => $request->query->get('year_max', ''),
+            'price_min' => $request->query->get('price_min', ''),
+            'price_max' => $request->query->get('price_max', ''),
+            'search' => $request->query->get('search', ''),
+            'sort' => $request->query->get('sort', 'title'),
+            'order' => $request->query->get('order', 'asc')
+        ];
+
+        // Validation des paramètres numériques
+        if ($filters['year_min'] && !is_numeric($filters['year_min'])) {
+            $filters['year_min'] = '';
+        }
+        if ($filters['year_max'] && !is_numeric($filters['year_max'])) {
+            $filters['year_max'] = '';
+        }
+        if ($filters['price_min'] && !is_numeric($filters['price_min'])) {
+            $filters['price_min'] = '';
+        }
+        if ($filters['price_max'] && !is_numeric($filters['price_max'])) {
+            $filters['price_max'] = '';
+        }
+
+        // Limiter la recherche textuelle
+        if (strlen($filters['search']) > 100) {
+            $filters['search'] = substr($filters['search'], 0, 100);
+        }
+        if (strlen($filters['author']) > 100) {
+            $filters['author'] = substr($filters['author'], 0, 100);
+        }
+        if (strlen($filters['publisher']) > 100) {
+            $filters['publisher'] = substr($filters['publisher'], 0, 100);
+        }
+
+        // Valider les colonnes de tri autorisées
+        $allowedSorts = ['title', 'author', 'publication_year', 'price', 'created_at'];
+        if (!in_array($filters['sort'], $allowedSorts)) {
+            $filters['sort'] = 'title';
+        }
+        
+        // Mapper les colonnes de tri vers les colonnes avec préfixes de table
+        $sortMapping = [
+            'title' => 'b.title',
+            'author' => 'b.author',
+            'publication_year' => 'b.publication_year',
+            'price' => 'b.price',
+            'created_at' => 'b.created_at'
+        ];
+        $filters['sort'] = $sortMapping[$filters['sort']];
+
+        // Valider l'ordre de tri
+        if (!in_array(strtolower($filters['order']), ['asc', 'desc'])) {
+            $filters['order'] = 'asc';
+        }
+
+        $cleanFilters = array_filter($filters, fn($value) => $value !== '' && $value !== null);
+        
+        // Assurer des valeurs par défaut pour le tri
+        if (!isset($cleanFilters['sort'])) {
+            $cleanFilters['sort'] = 'b.title';
+        }
+        if (!isset($cleanFilters['order'])) {
+            $cleanFilters['order'] = 'asc';
+        }
+        
+        return $cleanFilters;
+    }
+
+    /**
+     * Récupération sécurisée des données guides
+     */
+    private function getBooksData(array $filters): array
+    {
+        // Construction sécurisée de la requête
+        $sql = "SELECT b.id, b.title, b.description, b.author, b.publisher, 
+                       b.publication_year, b.isbn, b.price, b.created_at
+                FROM climbing_books b 
+                WHERE 1=1";
+        $params = [];
+
+        if (isset($filters['author'])) {
+            $sql .= " AND b.author LIKE ?";
+            $params[] = '%' . $filters['author'] . '%';
+        }
+
+        if (isset($filters['publisher'])) {
+            $sql .= " AND b.publisher LIKE ?";
+            $params[] = '%' . $filters['publisher'] . '%';
+        }
+
+        if (isset($filters['year_min'])) {
+            $sql .= " AND b.publication_year >= ?";
+            $params[] = (int)$filters['year_min'];
+        }
+
+        if (isset($filters['year_max'])) {
+            $sql .= " AND b.publication_year <= ?";
+            $params[] = (int)$filters['year_max'];
+        }
+
+        if (isset($filters['price_min'])) {
+            $sql .= " AND b.price >= ?";
+            $params[] = (float)$filters['price_min'];
+        }
+
+        if (isset($filters['price_max'])) {
+            $sql .= " AND b.price <= ?";
+            $params[] = (float)$filters['price_max'];
+        }
+
+        if (isset($filters['search'])) {
+            $sql .= " AND (b.title LIKE ? OR b.description LIKE ? OR b.author LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);
+        $sql .= " LIMIT 500"; // Limite de sécurité
+
+        $books = $this->db->fetchAll($sql, $params);
+
+        // Calcul des statistiques
+        $stats = $this->calculateStats();
+
+        return [
+            'books' => $books,
+            'filters' => $filters,
+            'stats' => $stats
+        ];
+    }
+
+    /**
+     * Affichage sécurisé d'un guide avec détails
      */
     public function show(Request $request): Response
     {
-        $id = $request->attributes->get('id');
-
-        if (!$id) {
-            $this->session->flash('error', 'ID du guide non spécifié');
-            return Response::redirect('/books');
-        }
-
-        try {
-            // Récupérer le book avec sa région
-            $book = $this->db->fetchOne(
-                "SELECT b.*, r.name as region_name 
-                 FROM climbing_books b
-                 LEFT JOIN climbing_regions r ON b.region_id = r.id
-                 WHERE b.id = ? AND b.active = 1",
-                [(int)$id]
-            );
-
-            if (!$book) {
-                $this->session->flash('error', 'Guide non trouvé');
-                return Response::redirect('/books');
-            }
-
-            // Récupérer les secteurs du guide avec leurs informations
-            $sectors = $this->db->fetchAll(
-                "SELECT 
-                    sect.*,
-                    si.name as site_name,
-                    si.code as site_code,
-                    r.name as region_name,
-                    bs.page_number,
-                    bs.sort_order,
-                    bs.notes as book_notes,
-                    COUNT(rt.id) as routes_count
-                 FROM climbing_sectors sect
-                 JOIN climbing_book_sectors bs ON sect.id = bs.sector_id
-                 LEFT JOIN climbing_sites si ON sect.site_id = si.id
-                 LEFT JOIN climbing_regions reg ON si.region_id = reg.id
-                 LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
-                 WHERE bs.book_id = ? AND sect.active = 1
-                 GROUP BY sect.id
-                 ORDER BY bs.sort_order ASC, sect.name ASC",
-                [(int)$id]
-            );
-
-            // Récupérer toutes les régions couvertes
-            $coveredRegions = $this->db->fetchAll(
-                "SELECT DISTINCT r.id, r.name
-                 FROM climbing_regions r
-                 JOIN climbing_sites si ON r.id = si.region_id
-                 JOIN climbing_sectors sect ON si.id = sect.site_id
-                 JOIN climbing_book_sectors bs ON sect.id = bs.sector_id
-                 WHERE bs.book_id = ?
-                 ORDER BY r.name",
-                [(int)$id]
-            );
-
-            // Calculer les statistiques
-            $stats = [
-                'sectors_count' => count($sectors),
-                'sites_count' => count(array_unique(array_column($sectors, 'site_id'))),
-                'regions_count' => count($coveredRegions),
-                'routes_count' => array_sum(array_column($sectors, 'routes_count')),
-                'difficulties' => [],
-                'page_range' => null
-            ];
-
-            // Plage de pages
-            $pageNumbers = array_filter(array_column($sectors, 'page_number'));
-            if (!empty($pageNumbers)) {
-                $stats['page_range'] = [
-                    'min' => min($pageNumbers),
-                    'max' => max($pageNumbers)
-                ];
-            }
-
-            // Récupérer les difficultés
-            if ($stats['routes_count'] > 0) {
-                $difficulties = $this->db->fetchAll(
-                    "SELECT DISTINCT rt.difficulty, COUNT(*) as count
-                     FROM climbing_routes rt
-                     JOIN climbing_sectors sect ON rt.sector_id = sect.id
-                     JOIN climbing_book_sectors bs ON sect.id = bs.sector_id
-                     WHERE bs.book_id = ? AND rt.active = 1 AND rt.difficulty IS NOT NULL
-                     GROUP BY rt.difficulty
-                     ORDER BY rt.difficulty",
-                    [(int)$id]
-                );
-                $stats['difficulties'] = $difficulties;
-            }
-
-            return $this->render('books/show', [
-                'title' => $book['name'],
-                'book' => $book,
-                'sectors' => $sectors,
-                'coveredRegions' => $coveredRegions,
-                'stats' => $stats
-            ]);
-        } catch (\Exception $e) {
-            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/books');
-        }
-    }
-
-    /**
-     * Formulaire de création/édition d'un guide
-     */
-    public function form(Request $request): Response
-    {
-        $id = $request->attributes->get('id');
-        $isEdit = !is_null($id);
-
-        try {
-            $book = null;
-            if ($isEdit) {
-                $book = $this->db->fetchOne(
-                    "SELECT * FROM climbing_books WHERE id = ? AND active = 1",
-                    [(int)$id]
-                );
-
-                if (!$book) {
-                    $this->session->flash('error', 'Guide non trouvé');
-                    return Response::redirect('/books');
-                }
-            }
-
-            // Données pour le formulaire
-            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-
-            return $this->render('books/form', [
-                'title' => $isEdit ? 'Modifier le guide ' . $book['name'] : 'Créer un nouveau guide',
-                'book' => $book,
-                'regions' => $regions,
-                'csrf_token' => $this->createCsrfToken()
-            ]);
-        } catch (\Exception $e) {
-            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/books');
-        }
-    }
-
-    /**
-     * Formulaire de création de guide (version test sans authentification)
-     */
-    public function testCreate(Request $request): Response
-    {
-        error_log("BookController::testCreate called");
-        // Version fallback avec formulaire HTML simple (forcé pour le test)
-        $html = '<form method="post">
-            <input type="hidden" name="csrf_token" value="test">
-            <input type="text" name="name" placeholder="Nom du guide" required>
-            <textarea name="description" placeholder="Description"></textarea>
-            <input type="text" name="author" placeholder="Auteur">
-            <input type="number" name="year" placeholder="Année" min="1900" max="2099">
-            <input type="text" name="publisher" placeholder="Éditeur">
-            <input type="text" name="isbn" placeholder="ISBN">
-            <input type="text" name="language" placeholder="Langue">
-            <input type="checkbox" name="active" value="1" checked>
-            <button type="submit">Créer</button>
-        </form>';
-        return new Response($html, 200, ['Content-Type' => 'text/html']);
-    }
-
-    /**
-     * Création d'un nouveau guide
-     */
-    public function store(Request $request): Response
-    {
-        if (!$this->validateCsrfToken($request)) {
-            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
-            return Response::redirect('/books/create');
-        }
-
-        $data = $request->request->all();
-
-        // Validation basique
-        if (empty($data['name'])) {
-            $this->session->flash('error', 'Le nom du guide est obligatoire');
-            return Response::redirect('/books/create');
-        }
-
-        try {
-            $data['created_by'] = $_SESSION['auth_user_id'] ?? 1;
-
-            // Vérifier l'unicité du code si fourni
-            if (!empty($data['code'])) {
-                $existingCode = $this->db->fetchOne(
-                    "SELECT id FROM climbing_books WHERE code = ? AND active = 1",
-                    [$data['code']]
-                );
-
-                if ($existingCode) {
-                    $this->session->flash('error', 'Le code "' . $data['code'] . '" est déjà utilisé');
-                    return Response::redirect('/books/create');
-                }
-            }
-
-            // Préparer les données
-            $bookData = [
-                'name' => $data['name'],
-                'code' => $data['code'] ?? null,
-                'region_id' => !empty($data['region_id']) ? (int)$data['region_id'] : null,
-                'year' => !empty($data['year']) ? (int)$data['year'] : null,
-                'publisher' => $data['publisher'] ?? null,
-                'isbn' => $data['isbn'] ?? null,
-                'active' => 1,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            $bookId = $this->db->insert('climbing_books', $bookData);
-
-            if (!$bookId) {
-                $this->session->flash('error', 'Erreur lors de la création du guide');
-                return Response::redirect('/books/create');
-            }
-
-            $this->session->flash('success', 'Guide créé avec succès');
-            return Response::redirect('/books/' . $bookId);
-        } catch (\Exception $e) {
-            $this->session->flash('error', 'Erreur lors de la création du guide: ' . $e->getMessage());
-            return Response::redirect('/books/create');
-        }
-    }
-
-    /**
-     * Mise à jour d'un guide existant
-     */
-    public function update(Request $request): Response
-    {
-        $id = $request->attributes->get('id');
-
-        if (!$id) {
-            $this->session->flash('error', 'ID du guide non spécifié');
-            return Response::redirect('/books');
-        }
-
-        if (!$this->validateCsrfToken($request)) {
-            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
-            return Response::redirect('/books/' . $id . '/edit');
-        }
-
-        $data = $request->request->all();
-
-        // Validation basique
-        if (empty($data['name'])) {
-            $this->session->flash('error', 'Le nom du guide est obligatoire');
-            return Response::redirect('/books/' . $id . '/edit');
-        }
-
-        try {
-            // Vérifier l'unicité du code si fourni (excluant le guide actuel)
-            if (!empty($data['code'])) {
-                $existingCode = $this->db->fetchOne(
-                    "SELECT id FROM climbing_books WHERE code = ? AND active = 1 AND id != ?",
-                    [$data['code'], (int)$id]
-                );
-
-                if ($existingCode) {
-                    $this->session->flash('error', 'Le code "' . $data['code'] . '" est déjà utilisé');
-                    return Response::redirect('/books/' . $id . '/edit');
-                }
-            }
-
-            // Préparer les données de mise à jour
-            $updateData = [
-                'name' => $data['name'],
-                'code' => $data['code'] ?? null,
-                'region_id' => !empty($data['region_id']) ? (int)$data['region_id'] : null,
-                'year' => !empty($data['year']) ? (int)$data['year'] : null,
-                'publisher' => $data['publisher'] ?? null,
-                'isbn' => $data['isbn'] ?? null,
-                'active' => isset($data['active']) ? 1 : 0,
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            $success = $this->db->update('climbing_books', $updateData, 'id = ?', [(int)$id]);
-
-            if (!$success) {
-                throw new \Exception("Échec de la mise à jour du guide");
-            }
-
-            $this->session->flash('success', 'Guide mis à jour avec succès');
-            return Response::redirect('/books/' . $id);
-        } catch (\Exception $e) {
-            $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
-            return Response::redirect('/books/' . $id . '/edit');
-        }
-    }
-
-    /**
-     * Ajouter un secteur au guide
-     */
-    public function addSector(Request $request): Response
-    {
-        $bookId = $request->attributes->get('id');
-
-        if (!$bookId) {
-            return Response::json([
-                'success' => false,
-                'error' => 'ID du guide non spécifié'
-            ], 400);
-        }
-
-        if (!$this->validateCsrfToken($request)) {
-            return Response::json([
-                'success' => false,
-                'error' => 'Token de sécurité invalide'
-            ], 403);
-        }
-
-        $data = $request->request->all();
-
-        if (empty($data['sector_id'])) {
-            return Response::json([
-                'success' => false,
-                'error' => 'ID du secteur requis'
-            ], 400);
-        }
-
-        try {
-            // Vérifier que le secteur existe
-            $sector = $this->db->fetchOne(
-                "SELECT id, name FROM climbing_sectors WHERE id = ? AND active = 1",
-                [(int)$data['sector_id']]
-            );
-
-            if (!$sector) {
-                return Response::json([
-                    'success' => false,
-                    'error' => 'Secteur non trouvé'
-                ], 404);
-            }
-
-            // Vérifier que la relation n'existe pas déjà
-            $existing = $this->db->fetchOne(
-                "SELECT id FROM climbing_book_sectors WHERE book_id = ? AND sector_id = ?",
-                [(int)$bookId, (int)$data['sector_id']]
-            );
-
-            if ($existing) {
-                return Response::json([
-                    'success' => false,
-                    'error' => 'Ce secteur est déjà dans le guide'
-                ], 409);
-            }
-
-            // Ajouter la relation
-            $relationData = [
-                'book_id' => (int)$bookId,
-                'sector_id' => (int)$data['sector_id'],
-                'page_number' => !empty($data['page_number']) ? (int)$data['page_number'] : null,
-                'sort_order' => !empty($data['sort_order']) ? (int)$data['sort_order'] : 0,
-                'notes' => $data['notes'] ?? null,
-                'created_at' => date('Y-m-d H:i:s')
-            ];
-
-            $relationId = $this->db->insert('climbing_book_sectors', $relationData);
-
-            if (!$relationId) {
-                return Response::json([
-                    'success' => false,
-                    'error' => 'Erreur lors de l\'ajout du secteur'
-                ], 500);
-            }
-
-            return Response::json([
-                'success' => true,
-                'message' => 'Secteur ajouté au guide avec succès',
-                'data' => [
-                    'relation_id' => $relationId,
-                    'sector_name' => $sector['name']
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return Response::json([
-                'success' => false,
-                'error' => 'Erreur lors de l\'ajout du secteur'
-            ], 500);
-        }
-    }
-
-    /**
-     * Supprimer un secteur du guide
-     */
-    public function removeSector(Request $request): Response
-    {
-        $bookId = $request->attributes->get('id');
-        $sectorId = $request->request->get('sector_id');
-
-        if (!$bookId || !$sectorId) {
-            return Response::json([
-                'success' => false,
-                'error' => 'IDs manquants'
-            ], 400);
-        }
-
-        if (!$this->validateCsrfToken($request)) {
-            return Response::json([
-                'success' => false,
-                'error' => 'Token de sécurité invalide'
-            ], 403);
-        }
-
-        try {
-            $success = $this->db->delete(
-                'climbing_book_sectors',
-                'book_id = ? AND sector_id = ?',
-                [(int)$bookId, (int)$sectorId]
-            );
-
-            if ($success) {
-                return Response::json([
-                    'success' => true,
-                    'message' => 'Secteur retiré du guide'
-                ]);
-            } else {
-                return Response::json([
-                    'success' => false,
-                    'error' => 'Relation non trouvée'
-                ], 404);
-            }
-        } catch (\Exception $e) {
-            return Response::json([
-                'success' => false,
-                'error' => 'Erreur lors de la suppression'
-            ], 500);
-        }
-    }
-
-    /**
-     * Sélecteur de secteurs pour ajouter au guide
-     */
-    public function sectorSelector(Request $request): Response
-    {
-        $bookId = $request->attributes->get('id');
-        $search = $request->query->get('search', '');
-        $regionId = $request->query->get('region_id');
-
-        if (!$bookId) {
-            $this->session->flash('error', 'ID du guide non spécifié');
-            return Response::redirect('/books');
-        }
-
-        try {
-            // Récupérer le guide
-            $book = $this->db->fetchOne(
-                "SELECT * FROM climbing_books WHERE id = ? AND active = 1",
-                [(int)$bookId]
-            );
-
-            if (!$book) {
-                $this->session->flash('error', 'Guide non trouvé');
-                return Response::redirect('/books');
-            }
-
-            // Construire la requête pour les secteurs disponibles
-            $whereConditions = ['sect.active = 1'];
-            $params = [];
-
-            // Exclure les secteurs déjà dans le guide
-            $whereConditions[] = 'sect.id NOT IN (
-                SELECT sector_id FROM climbing_book_sectors WHERE book_id = ?
-            )';
-            $params[] = (int)$bookId;
-
-            if ($search) {
-                $whereConditions[] = '(sect.name LIKE ? OR sect.code LIKE ?)';
-                $searchTerm = '%' . $search . '%';
-                $params[] = $searchTerm;
-                $params[] = $searchTerm;
-            }
-
-            if ($regionId) {
-                $whereConditions[] = 'si.region_id = ?';
-                $params[] = (int)$regionId;
-            }
-
-            $whereClause = implode(' AND ', $whereConditions);
-
-            // Récupérer les secteurs disponibles
-            $availableSectors = $this->db->fetchAll(
-                "SELECT 
-                    sect.*,
-                    si.name as site_name,
-                    si.code as site_code,
-                    r.name as region_name,
-                    COUNT(rt.id) as routes_count
-                 FROM climbing_sectors sect
-                 LEFT JOIN climbing_sites si ON sect.site_id = si.id
-                 LEFT JOIN climbing_regions r ON si.region_id = r.id
-                 LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
-                 WHERE {$whereClause}
-                 GROUP BY sect.id
-                 ORDER BY r.name, si.name, sect.name
-                 LIMIT 50",
-                $params
-            );
-
-            // Récupérer les régions pour le filtre
-            $regions = $this->db->fetchAll("SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC");
-
-            return $this->render('books/sector-selector', [
-                'title' => 'Ajouter secteurs au guide ' . $book['name'],
-                'book' => $book,
-                'availableSectors' => $availableSectors,
-                'regions' => $regions,
-                'currentFilters' => [
-                    'search' => $search,
-                    'region_id' => $regionId
-                ],
-                'csrf_token' => $this->createCsrfToken()
-            ]);
-        } catch (\Exception $e) {
-            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
-            return Response::redirect('/books/' . $bookId);
-        }
-    }
-
-    /**
-     * API: Liste des guides avec pagination
-     */
-    public function apiIndex(Request $request): Response
-    {
-        try {
-            $limit = min((int)($request->query->get('limit') ?? 50), 200);
-            $offset = (int)($request->query->get('offset') ?? 0);
-            $regionId = $request->query->get('region_id');
-            
-            $sql = "SELECT b.id, b.created_at, r.name as region_name, r.id as region_id,
-                           COUNT(DISTINCT bs.sector_id) as sectors_count,
-                           COUNT(DISTINCT rt.id) as routes_count
-                    FROM climbing_books b
-                    LEFT JOIN climbing_regions r ON b.region_id = r.id
-                    LEFT JOIN climbing_book_sectors bs ON b.id = bs.book_id
-                    LEFT JOIN climbing_sectors sect ON bs.sector_id = sect.id AND sect.active = 1
-                    LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
-                    WHERE b.active = 1";
-            
-            $params = [];
-            
-            if ($regionId) {
-                $sql .= " AND b.region_id = ?";
-                $params[] = (int)$regionId;
-            }
-            
-            $sql .= " GROUP BY b.id ORDER BY b.id ASC LIMIT ? OFFSET ?";
-            $params[] = $limit;
-            $params[] = $offset;
-            
-            $books = $this->db->fetchAll($sql, $params);
-            
-            // Compter le total pour la pagination
-            $countSql = "SELECT COUNT(*) as total FROM climbing_books b WHERE b.active = 1";
-            $countParams = [];
-            
-            if ($regionId) {
-                $countSql .= " AND b.region_id = ?";
-                $countParams[] = (int)$regionId;
-            }
-            
-            $total = $this->db->fetchOne($countSql, $countParams)['total'] ?? 0;
-            
-            return Response::json([
-                'success' => true,
-                'data' => $books,
-                'pagination' => [
-                    'total' => (int)$total,
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'has_more' => ($offset + $limit) < $total
-                ]
-            ]);
-        } catch (\Exception $e) {
-            error_log('BookController::apiIndex error: ' . $e->getMessage());
-            return Response::json([
-                'success' => false,
-                'error' => 'Erreur lors du chargement des guides'
-            ], 500);
-        }
-    }
-
-    /**
-     * API: Recherche de guides
-     */
-    public function apiSearch(Request $request): Response
-    {
-        $query = $request->query->get('q', '');
-        $limit = min((int)$request->query->get('limit', 10), 50);
-
-        if (strlen($query) < 2) {
-            return Response::json([
-                'success' => true,
-                'data' => []
-            ]);
-        }
-
-        try {
-            $searchTerm = '%' . $query . '%';
-            $books = $this->db->fetchAll(
-                "SELECT b.*, r.name as region_name
-                 FROM climbing_books b
-                 LEFT JOIN climbing_regions r ON b.region_id = r.id
-                 WHERE b.active = 1 
-                 AND (b.name LIKE ? OR b.code LIKE ? OR b.publisher LIKE ?)
-                 ORDER BY b.name ASC
-                 LIMIT ?",
-                [$searchTerm, $searchTerm, $searchTerm, $limit]
-            );
-
-            return Response::json([
-                'success' => true,
-                'data' => $books
-            ]);
-        } catch (\Exception $e) {
-            return Response::json([
-                'success' => false,
-                'error' => 'Erreur lors de la recherche'
-            ], 500);
-        }
-    }
-
-    /**
-     * API: Récupère les secteurs d'un guide
-     */
-    public function apiSectors(Request $request): Response
-    {
         try {
             $id = $request->attributes->get('id');
-            if (!$id) {
-                return Response::json([
-                    'success' => false,
-                    'error' => 'ID du guide non spécifié'
-                ], 400);
+            
+            if (!$id || !is_numeric($id)) {
+                $this->flash('error', 'ID de guide invalide');
+                return $this->redirect('/books');
+            }
+            
+            $id = (int) $id;
+
+            // Récupération des données
+            $data = $this->getBookDetails($id);
+
+            return $this->render('books/show', $data);
+        } catch (\Exception $e) {
+            error_log("BookController::show - Erreur: " . $e->getMessage());
+            $this->flash('error', 'Erreur lors du chargement du guide');
+            return $this->redirect('/books');
+        }
+    }
+
+    /**
+     * Récupération des détails d'un guide
+     */
+    private function getBookDetails(int $id): array
+    {
+        // Récupération de base du guide
+        $book = $this->db->fetchOne(
+            "SELECT * FROM climbing_books WHERE id = ?",
+            [$id]
+        );
+
+        $this->requireEntity($book, 'Guide non trouvé');
+
+        return [
+            'title' => $book['title'],
+            'book' => $book
+        ];
+    }
+
+    /**
+     * API publique avec rate limiting
+     */
+    public function apiIndex(Request $request): JsonResponse
+    {
+        try {
+            $search = $request->query->get('search', '');
+            $author = $request->query->get('author', '');
+            $limit = min((int)$request->query->get('limit', 100), 500);
+
+            $sql = "SELECT b.id, b.title, b.author, b.publisher, 
+                           b.publication_year, b.price
+                    FROM climbing_books b 
+                    WHERE 1=1";
+            $params = [];
+
+            if ($search) {
+                $search = trim(strip_tags($search));
+                if (strlen($search) > 100) {
+                    $search = substr($search, 0, 100);
+                }
+                $sql .= " AND (b.title LIKE ? OR b.author LIKE ?)";
+                $params[] = '%' . $search . '%';
+                $params[] = '%' . $search . '%';
             }
 
-            // Vérifier que le guide existe
-            $book = $this->db->fetchOne(
-                "SELECT id, name FROM climbing_books WHERE id = ? AND active = 1",
-                [(int)$id]
-            );
-
-            if (!$book) {
-                return Response::json([
-                    'success' => false,
-                    'error' => 'Guide non trouvé'
-                ], 404);
+            if ($author) {
+                $author = trim(strip_tags($author));
+                if (strlen($author) > 100) {
+                    $author = substr($author, 0, 100);
+                }
+                $sql .= " AND b.author LIKE ?";
+                $params[] = '%' . $author . '%';
             }
 
-            // Vérifier si la table de liaison existe
-            $tableExists = false;
-            try {
-                $this->db->query("SELECT 1 FROM climbing_book_sectors LIMIT 1");
-                $tableExists = true;
-            } catch (\Exception $e) {
-                error_log('Table climbing_book_sectors non trouvée: ' . $e->getMessage());
-            }
+            $sql .= " ORDER BY b.title ASC LIMIT ?";
+            $params[] = $limit;
 
-            if ($tableExists) {
-                // Récupérer les secteurs via la table de liaison
-                $sectors = $this->db->fetchAll(
-                    "SELECT 
-                        sect.id,
-                        sect.name,
-                        sect.code,
-                        sect.altitude,
-                        sect.coordinates_lat,
-                        sect.coordinates_lng,
-                        si.name as site_name,
-                        r.name as region_name,
-                        bs.page_number,
-                        bs.sort_order,
-                        bs.notes as book_notes,
-                        COUNT(rt.id) as routes_count
-                     FROM climbing_sectors sect
-                     JOIN climbing_book_sectors bs ON sect.id = bs.sector_id
-                     LEFT JOIN climbing_sites si ON sect.site_id = si.id
-                     LEFT JOIN climbing_regions r ON si.region_id = r.id OR sect.region_id = r.id
-                     LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
-                     WHERE bs.book_id = ? AND sect.active = 1
-                     GROUP BY sect.id
-                     ORDER BY bs.sort_order ASC, sect.name ASC",
-                    [(int)$id]
-                );
-            } else {
-                // Mode fallback : retourner tous les secteurs (pour les tests)
-                $sectors = $this->db->fetchAll(
-                    "SELECT 
-                        sect.id,
-                        sect.name,
-                        sect.code,
-                        sect.altitude,
-                        sect.coordinates_lat,
-                        sect.coordinates_lng,
-                        si.name as site_name,
-                        r.name as region_name,
-                        NULL as page_number,
-                        NULL as sort_order,
-                        'Guide non configuré' as book_notes,
-                        COUNT(rt.id) as routes_count
-                     FROM climbing_sectors sect
-                     LEFT JOIN climbing_sites si ON sect.site_id = si.id
-                     LEFT JOIN climbing_regions r ON si.region_id = r.id OR sect.region_id = r.id
-                     LEFT JOIN climbing_routes rt ON sect.id = rt.sector_id AND rt.active = 1
-                     WHERE sect.active = 1
-                     GROUP BY sect.id
-                     ORDER BY sect.name ASC
-                     LIMIT 10",
-                    []
-                );
-            }
+            $books = $this->db->fetchAll($sql, $params);
 
-            return Response::json([
+            return new JsonResponse([
                 'success' => true,
-                'data' => $sectors,
-                'book' => [
-                    'id' => (int)$book['id'],
-                    'name' => $book['name']
-                ],
-                'count' => count($sectors)
+                'data' => $books,
+                'count' => count($books),
+                'limit' => $limit
             ]);
         } catch (\Exception $e) {
-            error_log('BookController::apiSectors error: ' . $e->getMessage());
-            return Response::json([
-                'success' => false,
-                'error' => 'Erreur lors de la récupération des secteurs'
-            ], 500);
+            $this->handleError($e, 'Erreur API');
+            return new JsonResponse(['error' => 'Erreur de service'], 500);
         }
     }
 
     /**
      * API Show - détails d'un guide spécifique
      */
-    public function apiShow(Request $request): Response
+    public function apiShow(Request $request): JsonResponse
     {
         try {
-            $id = $request->attributes->get('id');
-            if (!$id || !is_numeric($id)) {
-                return Response::json([
-                    'success' => false,
-                    'error' => 'ID du guide invalide'
-                ], 400);
-            }
+            $id = $this->validateId($request->attributes->get('id'), 'ID de guide');
 
             $book = $this->db->fetchOne(
-                "SELECT b.id, b.name, b.description, b.author, b.publisher, 
-                        b.publication_date, b.isbn, b.language, b.pages_count, 
-                        b.created_at, b.updated_at
-                 FROM climbing_books b 
-                 WHERE b.id = ? AND b.active = 1",
-                [(int)$id]
+                "SELECT * FROM climbing_books WHERE id = ?",
+                [$id]
             );
 
             if (!$book) {
-                return Response::json([
+                return new JsonResponse([
                     'success' => false,
                     'error' => 'Guide non trouvé'
                 ], 404);
             }
 
-            // Compter les secteurs associés (si la table de liaison existe)
-            $sectorsCount = 0;
-            try {
-                $result = $this->db->fetchOne(
-                    "SELECT COUNT(*) as count FROM climbing_book_sectors WHERE book_id = ?",
-                    [(int)$id]
-                );
-                $sectorsCount = (int)($result['count'] ?? 0);
-            } catch (\Exception $e) {
-                // Table de liaison n'existe pas - mode fallback
-                $sectorsCount = 0;
-            }
-
             // Formatage sécurisé des données
             $data = [
                 'id' => (int)$book['id'],
-                'name' => $book['name'],
+                'title' => $book['title'],
                 'description' => $book['description'],
                 'author' => $book['author'],
                 'publisher' => $book['publisher'],
-                'publication_date' => $book['publication_date'],
+                'publication_year' => $book['publication_year'] ? (int)$book['publication_year'] : null,
                 'isbn' => $book['isbn'],
-                'language' => $book['language'],
-                'pages_count' => $book['pages_count'] ? (int)$book['pages_count'] : null,
-                'sectors_count' => $sectorsCount,
-                'created_at' => $book['created_at'],
-                'updated_at' => $book['updated_at']
+                'price' => $book['price'] ? (float)$book['price'] : null,
+                'created_at' => $book['created_at']
             ];
 
-            return Response::json([
+            return new JsonResponse([
                 'success' => true,
                 'data' => $data
             ]);
         } catch (\Exception $e) {
-            error_log('BookController::apiShow error: ' . $e->getMessage());
-            return Response::json([
-                'success' => false,
-                'error' => 'Erreur lors de la récupération du guide'
-            ], 500);
+            $this->handleError($e, 'Erreur récupération guide');
+            return new JsonResponse(['error' => 'Erreur de service'], 500);
+        }
+    }
+
+    /**
+     * Calcul sécurisé des statistiques générales
+     */
+    private function calculateStats(): array
+    {
+        try {
+            $stats = $this->db->fetchOne(
+                "SELECT 
+                    COUNT(*) as total_books,
+                    AVG(price) as avg_price,
+                    MIN(price) as min_price,
+                    MAX(price) as max_price,
+                    MIN(publication_year) as oldest_year,
+                    MAX(publication_year) as newest_year
+                 FROM climbing_books WHERE price IS NOT NULL"
+            );
+
+            return [
+                'total_books' => (int)($stats['total_books'] ?? 0),
+                'avg_price' => $stats['avg_price'] ? round($stats['avg_price'], 2) : null,
+                'min_price' => $stats['min_price'] ? (float)$stats['min_price'] : null,
+                'max_price' => $stats['max_price'] ? (float)$stats['max_price'] : null,
+                'oldest_year' => (int)($stats['oldest_year'] ?? 0),
+                'newest_year' => (int)($stats['newest_year'] ?? 0)
+            ];
+        } catch (\Exception $e) {
+            error_log('Erreur calcul stats books: ' . $e->getMessage());
+            return ['total_books' => 0, 'avg_price' => null, 'min_price' => null, 'max_price' => null, 'oldest_year' => 0, 'newest_year' => 0];
         }
     }
 }

@@ -7,9 +7,6 @@
     <link rel="stylesheet" href="/css/view-modes.css">
 {% endblock %}
 
-{% import 'components/pagination.twig' as pagination %}
-{% import 'components/route-filter.twig' as routeFilter %}
-
 {% block title %}Voies d'escalade - TopoclimbCH{% endblock %}
 
 {% block content %}
@@ -18,186 +15,221 @@
             <h1>Voies d'escalade</h1>
             
             <div class="actions">
-                <a href="{{ url('/routes/create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Ajouter une voie
-                </a>
+                {% if user and user.autorisation in ['0', '1', '2'] %}
+                    <a href="/routes/create" class="btn btn-primary">
+                        <i class="fa fa-plus"></i> Ajouter une voie
+                    </a>
+                {% endif %}
             </div>
         </div>
         
         <!-- Controls d'affichage et statistiques -->
         <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
-                <span class="text-muted">
-                    {% if routes.getTotal is defined %}
-                        {{ routes.getTotal() }} voie(s) trouvée(s)
-                    {% else %}
-                        {{ routes|length }} voie(s) trouvée(s)
-                    {% endif %}
-                </span>
+                <span class="text-muted">{{ routes|length }} voie(s) trouvée(s)</span>
+                {% if stats %}
+                    <span class="text-muted ms-3">
+                        Total: {{ stats.total_routes ?? 0 }} voies
+                        {% if stats.avg_length %} | Longueur moy.: {{ stats.avg_length }}m{% endif %}
+                    </span>
+                {% endif %}
             </div>
             
             <!-- Controls d'affichage -->
             <div class="view-controls">
                 <div class="btn-group" role="group" aria-label="Mode d'affichage">
-                    <button type="button" 
-                            class="btn btn-outline-primary active" 
-                            data-view="grid"
-                            aria-pressed="true"
-                            aria-controls="routes-grid"
-                            title="Affichage en cartes">
-                        <i class="fas fa-th" aria-hidden="true"></i> 
-                        <span>Cartes</span>
-                        <span class="sr-only">Affichage en mode cartes</span>
+                    <button type="button" class="btn btn-outline-primary active" data-view="grid">
+                        <i class="fas fa-th"></i> Cartes
                     </button>
-                    <button type="button" 
-                            class="btn btn-outline-primary" 
-                            data-view="list"
-                            aria-pressed="false"
-                            aria-controls="routes-list"
-                            title="Affichage en liste">
-                        <i class="fas fa-list" aria-hidden="true"></i> 
-                        <span>Liste</span>
-                        <span class="sr-only">Affichage en mode liste</span>
+                    <button type="button" class="btn btn-outline-primary" data-view="list">
+                        <i class="fas fa-list"></i> Liste
                     </button>
-                    <button type="button" 
-                            class="btn btn-outline-primary" 
-                            data-view="compact"
-                            aria-pressed="false"
-                            aria-controls="routes-compact"
-                            title="Affichage compact">
-                        <i class="fas fa-bars" aria-hidden="true"></i> 
-                        <span>Compact</span>
-                        <span class="sr-only">Affichage en mode compact</span>
+                    <button type="button" class="btn btn-outline-primary" data-view="compact">
+                        <i class="fas fa-bars"></i> Compact
                     </button>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Filtres avancés unifiés -->
-    {% include 'components/advanced-filters.twig' with {
-        'entity': 'routes',
-        'currentFilters': {
-            'search': '',
-            'difficulty_min': '',
-            'difficulty_max': '',
-            'style': '',
-            'sector_id': '',
-            'sort_by': 'name',
-            'sort_dir': 'ASC'
-        },
-        'regions': regions|default([]),
-        'sites': sites|default([]),
-        'sectors': sectors|default([])
-    } %}
+    <!-- Filtres avancés pour les voies -->
+    <div class="filters mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label for="region_id" class="form-label">Région</label>
+                <select name="region_id" id="region_id" class="form-select">
+                    <option value="">Toutes les régions</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id }}" {% if filters.region_id == region.id %}selected{% endif %}>
+                            {{ region.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="sector_id" class="form-label">Secteur</label>
+                <select name="sector_id" id="sector_id" class="form-select">
+                    <option value="">Tous les secteurs</option>
+                    {% for sector in sectors %}
+                        <option value="{{ sector.id }}" {% if filters.sector_id == sector.id %}selected{% endif %}>
+                            {{ sector.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="length_min" class="form-label">Longueur min</label>
+                <input type="number" name="length_min" id="length_min" class="form-control" 
+                       placeholder="10" min="1" max="1000" value="{{ filters.length_min ?? '' }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="length_max" class="form-label">Longueur max</label>
+                <input type="number" name="length_max" id="length_max" class="form-control" 
+                       placeholder="100" min="1" max="1000" value="{{ filters.length_max ?? '' }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="search" class="form-label">Rechercher</label>
+                <input type="search" name="search" id="search" class="form-control" 
+                       placeholder="Nom de voie..." value="{{ filters.search ?? '' }}">
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
     
     <!-- Conteneur principal -->
     <div class="routes-container entities-container" id="routes-container">
-        {% set routeItems = routes.getItems is defined ? routes.getItems() : routes %}
-        
         <!-- Vue grille (cartes) -->
-        <div class="routes-grid entities-grid view-grid active" id="routes-grid" tabindex="-1" aria-label="Affichage en cartes des voies d'escalade">
-            {% if routeItems %}
-                {% for route in routeItems %}
-                    <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-1">
-                                        <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
-                                    </h5>
-                                    <div class="route-actions">
-                                        <button class="btn btn-sm btn-outline-secondary quick-favorite" 
-                                                title="Favoris" data-action="favorite" data-id="{{ route.id }}">
-                                            <i class="far fa-heart"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-secondary quick-share" 
-                                                title="Partager" data-action="share" data-id="{{ route.id }}">
-                                            <i class="fas fa-share-alt"></i>
-                                        </button>
+        <div class="routes-grid entities-grid view-grid active" id="routes-grid">
+            {% if routes|length > 0 %}
+                <div class="row g-3">
+                    {% for route in routes %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-1">
+                                            <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
+                                        </h5>
+                                        <div class="route-actions">
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    title="Favoris" data-action="favorite" data-id="{{ route.id }}">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                <div class="route-meta text-muted small mb-2">
-                                    <span class="difficulty-badge badge bg-primary me-2">{{ route.difficulty|default('N/A') }}</span>
-                                    {% if route.sector %}
-                                        <span class="me-2">📍 {{ route.sector.name }}</span>
-                                    {% endif %}
-                                    {% if route.length %}
-                                        <span class="me-2">📏 {{ route.length }}m</span>
-                                    {% endif %}
-                                </div>
-                                
-                                {% if route.comment %}
-                                    <p class="card-text">{{ route.comment|slice(0, 100) ~ (route.comment|length > 100 ? '...' : '') }}</p>
-                                {% endif %}
-                                
-                                {% if route.beauty %}
-                                    <div class="route-rating mt-2">
-                                        {% for i in 1..route.beauty %}★{% endfor %}
+                                    
+                                    <div class="route-meta text-muted small mb-2">
+                                        {% if route.difficulty %}
+                                            <span class="badge bg-primary me-2">{{ route.difficulty }}</span>
+                                        {% endif %}
+                                        {% if route.length %}
+                                            <span class="me-2">📏 {{ route.length }}m</span>
+                                        {% endif %}
+                                        {% if route.beauty_rating %}
+                                            <span class="me-2">⭐ {{ route.beauty_rating }}/5</span>
+                                        {% endif %}
                                     </div>
-                                {% endif %}
-                                
-                                <div class="route-footer mt-3">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <a href="/routes/{{ route.id }}" class="btn btn-sm btn-outline-primary">
-                                            Voir détails
-                                        </a>
-                                        <small class="text-muted">{{ route.style|default('-') }}</small>
+                                    
+                                    <div class="route-location text-muted small mb-2">
+                                        {% if route.sector_name %}
+                                            <span class="me-2">📍 {{ route.sector_name }}</span>
+                                        {% endif %}
+                                        {% if route.region_name %}
+                                            <span class="me-2">🏔️ {{ route.region_name }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if route.description %}
+                                        <p class="card-text">{{ route.description|slice(0, 120) ~ (route.description|length > 120 ? '...' : '') }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="route-stats mt-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                {% if route.created_at %}
+                                                    Créé {{ route.created_at|date('d/m/Y') }}
+                                                {% endif %}
+                                            </small>
+                                            {% if route.danger_rating %}
+                                                <span class="badge bg-warning">
+                                                    Danger: {{ route.danger_rating }}/5
+                                                </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state text-center py-5">
+                    <div class="empty-icon mb-3">
+                        <i class="fas fa-route fa-3x text-muted"></i>
                     </div>
-                {% endfor %}
-                {% else %}
-                <div class="col-12">
-                    <div class="empty-state text-center py-5">
-                        <div class="empty-icon mb-3">
-                            <i class="fas fa-route fa-3x text-muted"></i>
-                        </div>
-                        <h4 class="text-muted">Aucune voie trouvée</h4>
-                        <p class="text-muted">Essayez de modifier vos critères de recherche</p>
-                        <button class="btn btn-outline-primary" id="reset-filters-fallback">
-                            Réinitialiser les filtres
-                        </button>
-                    </div>
+                    <h4 class="text-muted">Aucune voie trouvée</h4>
+                    <p class="text-muted">
+                        {% if error %}
+                            {{ error }}
+                        {% else %}
+                            Essayez de modifier vos critères de recherche
+                        {% endif %}
+                    </p>
+                    <a href="/routes" class="btn btn-outline-primary">
+                        Réinitialiser les filtres
+                    </a>
                 </div>
             {% endif %}
         </div>
         
         <!-- Vue Liste -->
-        <div class="routes-list entities-list view-list" id="routes-list" tabindex="-1" aria-label="Affichage en liste des voies d'escalade">
-            {% if routeItems and routeItems|length > 0 %}
-                {% for route in routeItems %}
+        <div class="routes-list entities-list view-list" id="routes-list">
+            {% if routes|length > 0 %}
+                {% for route in routes %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-route-id="{{ route.id }}">
                         <div class="flex-grow-1">
-                            <h5 class="mb-1">
-                                <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
-                                <span class="difficulty-badge badge bg-primary ms-2">{{ route.difficulty|default('N/A') }}</span>
-                            </h5>
+                            <div class="d-flex align-items-start justify-content-between mb-1">
+                                <h5 class="mb-0">
+                                    <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
+                                </h5>
+                                <div class="route-badges">
+                                    {% if route.difficulty %}
+                                        <span class="badge bg-primary">{{ route.difficulty }}</span>
+                                    {% endif %}
+                                    {% if route.beauty_rating %}
+                                        <span class="badge bg-success">⭐ {{ route.beauty_rating }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
                             <div class="text-muted small mb-1">
-                                {% if route.sector %}
-                                    📍 {{ route.sector.name }}
+                                {% if route.sector_name %}
+                                    📍 {{ route.sector_name }}
+                                {% endif %}
+                                {% if route.region_name %}
+                                    - 🏔️ {{ route.region_name }}
                                 {% endif %}
                                 {% if route.length %} - 📏 {{ route.length }}m{% endif %}
                             </div>
-                            {% if route.comment %}
-                                <p class="mb-1 text-muted">{{ route.comment|slice(0, 120) }}{{ route.comment|length > 120 ? '...' : '' }}</p>
+                            
+                            {% if route.description %}
+                                <p class="mb-1 text-muted">{{ route.description|slice(0, 150) }}{{ route.description|length > 150 ? '...' : '' }}</p>
                             {% endif %}
-                            <small class="text-muted">
-                                {{ route.style|default('-') }}
-                                {% if route.beauty %} | {% for i in 1..route.beauty %}★{% endfor %}{% endif %}
-                            </small>
                         </div>
+                        
                         <div class="ms-3">
-                            <div class="btn-group-vertical">
-                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Favoris" data-action="favorite" data-id="{{ route.id }}">
-                                    <i class="far fa-heart"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary" title="Partager" data-action="share" data-id="{{ route.id }}">
-                                    <i class="fas fa-share-alt"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ route.id }}">
+                                <i class="far fa-heart"></i>
+                            </button>
                         </div>
                     </div>
                 {% endfor %}
@@ -213,64 +245,67 @@
         </div>
         
         <!-- Vue Compacte -->
-        <div class="routes-compact entities-compact view-compact" id="routes-compact" tabindex="-1" aria-label="Affichage en tableau compact des voies d'escalade">
-            {% if routeItems %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Nom</th>
-                                <th>Difficulté</th>
-                                <th>Secteur</th>
-                                <th>Longueur</th>
-                                <th>Style</th>
-                                <th>Beauté</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for route in routeItems %}
+        <div class="routes-compact entities-compact view-compact" id="routes-compact">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nom</th>
+                            <th>Difficulté</th>
+                            <th>Longueur</th>
+                            <th>Secteur</th>
+                            <th>Région</th>
+                            <th>Beauté</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if routes|length > 0 %}
+                            {% for route in routes %}
                                 <tr data-route-id="{{ route.id }}">
                                     <td>
                                         <a href="/routes/{{ route.id }}" class="text-decoration-none fw-medium">{{ route.name }}</a>
                                     </td>
-                                    <td><span class="difficulty-badge badge bg-primary">{{ route.difficulty|default('N/A') }}</span></td>
-                                    <td class="text-muted">{{ route.sector ? route.sector.name : '-' }}</td>
-                                    <td class="text-muted">{{ route.length ? route.length ~ 'm' : '-' }}</td>
-                                    <td class="text-muted">{{ route.style|default('-') }}</td>
-                                    <td class="text-muted">{{ route.beauty ? (range(1, route.beauty)|map(v => '★')|join('')) : '-' }}</td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ route.id }}">
-                                                <i class="far fa-heart"></i>
-                                            </button>
-                                            <button class="btn btn-outline-secondary" title="Partager" data-action="share" data-id="{{ route.id }}">
-                                                <i class="fas fa-share-alt"></i>
-                                            </button>
-                                        </div>
+                                        {% if route.difficulty %}
+                                            <span class="badge bg-primary">{{ route.difficulty }}</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted">{{ route.length|default('-') }}m</td>
+                                    <td class="text-muted">{{ route.sector_name|default('-') }}</td>
+                                    <td class="text-muted">{{ route.region_name|default('-') }}</td>
+                                    <td class="text-center">
+                                        {% if route.beauty_rating %}
+                                            <span class="text-warning">
+                                                {% for i in 1..route.beauty_rating %}⭐{% endfor %}
+                                            </span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ route.id }}">
+                                            <i class="far fa-heart"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
-        </div>
-        
-        <!-- Pagination -->
-        {% if routeItems %}
-            <div class="pagination-container mt-4">
-                {% if routes.render is defined %}
-                    {{ routes.render() }}
-                {% else %}
-                    <div class="d-flex justify-content-center">
-                        <div class="text-muted">
-                            {{ routeItems|length }} voies trouvées
-                        </div>
-                    </div>
-                {% endif %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="empty-state">
+                                        <i class="fas fa-route fa-2x text-muted mb-2"></i>
+                                        <div class="text-muted">Aucune voie trouvée</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
-        {% endif %}
+        </div>
     </div>
 {% endblock %}
 
@@ -278,39 +313,54 @@
 <script src="/js/pages-common.js"></script>
 <script src="/js/view-manager.js"></script>
 <script>
-// Exposer les données des voies pour les composants JavaScript modernes
-window.routesData = {
-    routes: [
-        {% for route in routeItems %}
-        {
-            id: {{ route.id }},
-            name: {{ route.name|json_encode|raw }},
-            difficulty: {{ route.difficulty|default('')|json_encode|raw }},
-            style: {{ route.style|default('')|json_encode|raw }},
-            beauty: {{ route.beauty|default(0) }},
-            length: {{ route.length|default(0) }},
-            comment: {{ route.comment|default('')|json_encode|raw }},
-            sector: {
-                id: {{ route.sector.id|default('null') }},
-                name: {{ route.sector.name|default('')|json_encode|raw }}
-            }
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ],
-    pagination: {
-        currentPage: {% if routes.getCurrentPage is defined %}{{ routes.getCurrentPage() }}{% else %}1{% endif %},
-        totalPages: {% if routes.getTotalPages is defined %}{{ routes.getTotalPages() }}{% else %}1{% endif %},
-        total: {% if routes.getTotal is defined %}{{ routes.getTotal() }}{% else %}{{ routeItems|length }}{% endif %},
-        perPage: {% if routes.getPerPage is defined %}{{ routes.getPerPage() }}{% else %}20{% endif %}
-    }
-};
-
-// Reset filters fallback
+// JavaScript pour la gestion des vues et des actions
 document.addEventListener('DOMContentLoaded', function() {
-    const resetBtn = document.getElementById('reset-filters-fallback');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function() {
-            window.location.href = '/routes';
+    // Gestion des onglets de vue
+    const viewButtons = document.querySelectorAll('[data-view]');
+    const viewContainers = document.querySelectorAll('.view-grid, .view-list, .view-compact');
+    
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetView = this.getAttribute('data-view');
+            
+            // Mettre à jour les boutons
+            viewButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Mettre à jour les vues
+            viewContainers.forEach(container => {
+                container.classList.remove('active');
+                if (container.classList.contains('view-' + targetView)) {
+                    container.classList.add('active');
+                }
+            });
+        });
+    });
+    
+    // Actions des voies
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('[data-action]')) {
+            const button = e.target.closest('[data-action]');
+            const action = button.getAttribute('data-action');
+            const routeId = button.getAttribute('data-id');
+            
+            switch(action) {
+                case 'favorite':
+                    alert('Fonctionnalité favoris à implémenter pour la voie ' + routeId);
+                    break;
+            }
+        }
+    });
+    
+    // Filtrage dynamique des secteurs selon la région
+    const regionSelect = document.getElementById('region_id');
+    const sectorSelect = document.getElementById('sector_id');
+    
+    if (regionSelect && sectorSelect) {
+        regionSelect.addEventListener('change', function() {
+            const regionId = this.value;
+            // TODO: Implémenter le filtrage AJAX des secteurs
+            console.log('Filtrer secteurs pour région:', regionId);
         });
     }
 });
@@ -326,11 +376,6 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.route-card.elevated {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
 .route-actions .btn {
     margin-left: 0.25rem;
 }
@@ -339,11 +384,16 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-left: 0;
 }
 
-.filters {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
+.route-badges .badge {
+    margin-left: 0.25rem;
+}
+
+.route-badges .badge:first-child {
+    margin-left: 0;
+}
+
+.results-info {
+    font-size: 0.9rem;
 }
 
 .empty-state {
@@ -352,19 +402,23 @@ document.addEventListener('DOMContentLoaded', function() {
     border: 2px dashed #dee2e6;
 }
 
-.fade-in-up {
-    animation: fadeInUp 0.6s ease-out both;
+.filters {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* Vue management */
+.view-list, .view-compact {
+    display: none;
+}
+
+.view-list.active, .view-compact.active {
+    display: block;
+}
+
+.view-grid.active {
+    display: block;
 }
 
 @media (max-width: 768px) {

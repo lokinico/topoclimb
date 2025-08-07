@@ -7,16 +7,16 @@
     <link rel="stylesheet" href="/css/view-modes.css">
 {% endblock %}
 
-{% block title %}Guides d'escalade - TopoclimbCH{% endblock %}
+{% block title %}Guides et topos d'escalade - TopoclimbCH{% endblock %}
 
 {% block content %}
     <div class="page-header">
         <div class="d-flex justify-content-between align-items-center">
-            <h1>Guides d'escalade</h1>
+            <h1>Guides et topos d'escalade</h1>
             
             <div class="actions">
                 {% if user and user.autorisation in ['0', '1', '2'] %}
-                    <a href="{{ url('/books/create') }}" class="btn btn-primary">
+                    <a href="/books/create" class="btn btn-primary">
                         <i class="fa fa-plus"></i> Ajouter un guide
                     </a>
                 {% endif %}
@@ -26,7 +26,13 @@
         <!-- Controls d'affichage et statistiques -->
         <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
             <div class="results-info">
-                <span class="text-muted">{{ pagination.total|default(books|length) }} guide(s) trouvé(s)</span>
+                <span class="text-muted">{{ books|length }} guide(s) trouvé(s)</span>
+                {% if stats %}
+                    <span class="text-muted ms-3">
+                        Total: {{ stats.total_books ?? 0 }} guides
+                        {% if stats.avg_price %} | Prix moy.: {{ stats.avg_price }}€{% endif %}
+                    </span>
+                {% endif %}
             </div>
             
             <!-- Controls d'affichage -->
@@ -45,126 +51,177 @@
             </div>
         </div>
     </div>
-
-    <!-- Filtres avancés unifiés -->
-    {% include 'components/advanced-filters.twig' with {
-        'entity': 'books',
-        'currentFilters': currentFilters|default({}),
-        'regions': regions|default([])
-    } %}
-
+    
+    <!-- Filtres spécialisés pour les guides -->
+    <div class="filters mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label for="author" class="form-label">Auteur</label>
+                <input type="text" name="author" id="author" class="form-control" 
+                       placeholder="Nom d'auteur" value="{{ filters.author ?? '' }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="publisher" class="form-label">Éditeur</label>
+                <input type="text" name="publisher" id="publisher" class="form-control" 
+                       placeholder="Nom d'éditeur" value="{{ filters.publisher ?? '' }}">
+            </div>
+            
+            <div class="col-md-1">
+                <label for="year_min" class="form-label">Année min</label>
+                <input type="number" name="year_min" id="year_min" class="form-control" 
+                       placeholder="1990" min="1900" max="2030" value="{{ filters.year_min ?? '' }}">
+            </div>
+            
+            <div class="col-md-1">
+                <label for="year_max" class="form-label">Année max</label>
+                <input type="number" name="year_max" id="year_max" class="form-control" 
+                       placeholder="2025" min="1900" max="2030" value="{{ filters.year_max ?? '' }}">
+            </div>
+            
+            <div class="col-md-1">
+                <label for="price_min" class="form-label">Prix min €</label>
+                <input type="number" name="price_min" id="price_min" class="form-control" 
+                       placeholder="10" min="0" step="0.01" value="{{ filters.price_min ?? '' }}">
+            </div>
+            
+            <div class="col-md-1">
+                <label for="price_max" class="form-label">Prix max €</label>
+                <input type="number" name="price_max" id="price_max" class="form-control" 
+                       placeholder="100" min="0" step="0.01" value="{{ filters.price_max ?? '' }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="search" class="form-label">Rechercher</label>
+                <input type="search" name="search" id="search" class="form-control" 
+                       placeholder="Titre, auteur..." value="{{ filters.search ?? '' }}">
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+    
     <!-- Conteneur principal -->
     <div class="books-container entities-container" id="books-container">
         <!-- Vue grille (cartes) -->
         <div class="books-grid entities-grid view-grid active" id="books-grid">
-            {% if books is defined %}
-                {% for book in books %}
-                    <div class="book-card entity-card card h-100" data-book-id="{{ book.id }}">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-1">
-                                    <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.name }}</a>
-                                </h5>
-                                <div class="book-actions">
-                                    <button class="btn btn-sm btn-outline-secondary quick-favorite" 
-                                            title="Favoris" data-action="favorite" data-id="{{ book.id }}">
-                                        <i class="far fa-heart"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary quick-share" 
-                                            title="Partager" data-action="share" data-id="{{ book.id }}">
-                                        <i class="fas fa-share-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="book-meta text-muted small mb-2">
-                                {% if book.code %}
-                                    <span class="me-2">📝 {{ book.code }}</span>
-                                {% endif %}
-                                {% if book.publisher %}
-                                    <span class="me-2">🏢 {{ book.publisher }}</span>
-                                {% endif %}
-                                {% if book.year %}
-                                    <span class="me-2">📅 {{ book.year }}</span>
-                                {% endif %}
-                            </div>
-                            
-                            {% if book.region_name %}
-                                <div class="text-primary small mb-2">
-                                    🏔️ {{ book.region_name }}
-                                </div>
-                            {% endif %}
-                            
-                            <div class="book-stats row text-center mt-3">
-                                <div class="col-4">
-                                    <div class="stat-value h6 mb-0">{{ book.sectors_count|default(0) }}</div>
-                                    <div class="stat-label small text-muted">Secteurs</div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="stat-value h6 mb-0">{{ book.routes_count|default(0) }}</div>
-                                    <div class="stat-label small text-muted">Voies</div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="stat-value h6 mb-0">
-                                        {% if book.isbn %}
-                                            ✓
-                                        {% else %}
-                                            -
+            {% if books|length > 0 %}
+                <div class="row g-3">
+                    {% for book in books %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="book-card entity-card card h-100" data-book-id="{{ book.id }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-1">
+                                            <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.title }}</a>
+                                        </h5>
+                                        <div class="book-actions">
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    title="Favoris" data-action="favorite" data-id="{{ book.id }}">
+                                                <i class="far fa-heart"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="book-meta text-muted small mb-2">
+                                        {% if book.author %}
+                                            <span class="me-2">✍️ {{ book.author }}</span>
+                                        {% endif %}
+                                        {% if book.publication_year %}
+                                            <span class="me-2">📅 {{ book.publication_year }}</span>
                                         {% endif %}
                                     </div>
-                                    <div class="stat-label small text-muted">ISBN</div>
+                                    
+                                    <div class="book-details text-muted small mb-2">
+                                        {% if book.publisher %}
+                                            <span class="me-2">🏢 {{ book.publisher }}</span>
+                                        {% endif %}
+                                        {% if book.isbn %}
+                                            <span class="me-2">📚 ISBN: {{ book.isbn }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if book.description %}
+                                        <p class="card-text">{{ book.description|slice(0, 150) ~ (book.description|length > 150 ? '...' : '') }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="book-stats mt-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                {% if book.created_at %}
+                                                    Ajouté {{ book.created_at|date('d/m/Y') }}
+                                                {% endif %}
+                                            </small>
+                                            {% if book.price %}
+                                                <span class="badge bg-success fs-6">
+                                                    {{ book.price }}€
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
             {% else %}
-                <div class="col-12">
-                    <div class="empty-state text-center py-5">
-                        <div class="empty-icon mb-3">
-                            <i class="fas fa-book fa-3x text-muted"></i>
-                        </div>
-                        <h4 class="text-muted">Aucun guide trouvé</h4>
-                        <p class="text-muted">Essayez de modifier vos critères de recherche</p>
-                        <button class="btn btn-outline-primary" id="reset-filters-fallback">
-                            Réinitialiser les filtres
-                        </button>
+                <div class="empty-state text-center py-5">
+                    <div class="empty-icon mb-3">
+                        <i class="fas fa-book fa-3x text-muted"></i>
                     </div>
+                    <h4 class="text-muted">Aucun guide trouvé</h4>
+                    <p class="text-muted">
+                        {% if error %}
+                            {{ error }}
+                        {% else %}
+                            La base de données ne contient pas encore de guides d'escalade.
+                        {% endif %}
+                    </p>
+                    <a href="/books" class="btn btn-outline-primary">
+                        Réinitialiser les filtres
+                    </a>
                 </div>
             {% endif %}
         </div>
         
         <!-- Vue Liste -->
         <div class="books-list entities-list view-list" id="books-list">
-            {% if books is defined and books|length > 0 %}
-                {% for book in books %>
+            {% if books|length > 0 %}
+                {% for book in books %}
                     <div class="list-item d-flex align-items-center p-3 mb-2 bg-white rounded shadow-sm" data-book-id="{{ book.id }}">
                         <div class="flex-grow-1">
-                            <h5 class="mb-1">
-                                <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.name }}</a>
-                            </h5>
+                            <div class="d-flex align-items-start justify-content-between mb-1">
+                                <h5 class="mb-0">
+                                    <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.title }}</a>
+                                </h5>
+                                {% if book.price %}
+                                    <span class="badge bg-success">{{ book.price }}€</span>
+                                {% endif %}
+                            </div>
+                            
                             <div class="text-muted small mb-1">
-                                {% if book.code %}📝 {{ book.code }}{% endif %}
-                                {% if book.publisher %} - 🏢 {{ book.publisher }}{% endif %}
-                                {% if book.year %} (📅 {{ book.year }}){% endif %}
+                                {% if book.author %}
+                                    ✍️ {{ book.author }}
+                                {% endif %}
+                                {% if book.publisher %}
+                                    - 🏢 {{ book.publisher }}
+                                {% endif %}
+                                {% if book.publication_year %} - 📅 {{ book.publication_year }}{% endif %}
                             </div>
-                            {% if book.region_name %}
-                                <p class="mb-1 text-primary small">🏔️ {{ book.region_name }}</p>
+                            
+                            {% if book.description %}
+                                <p class="mb-1 text-muted">{{ book.description|slice(0, 200) }}{{ book.description|length > 200 ? '...' : '' }}</p>
                             {% endif %}
-                            <small class="text-muted">
-                                {{ book.sectors_count|default(0) }} secteurs | {{ book.routes_count|default(0) }} voies
-                                {% if book.isbn %} | ISBN disponible{% endif %}
-                            </small>
                         </div>
+                        
                         <div class="ms-3">
-                            <div class="btn-group-vertical">
-                                <button class="btn btn-sm btn-outline-secondary mb-1" title="Favoris" data-action="favorite" data-id="{{ book.id }}">
-                                    <i class="far fa-heart"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary" title="Partager" data-action="share" data-id="{{ book.id }}">
-                                    <i class="fas fa-share-alt"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ book.id }}">
+                                <i class="far fa-heart"></i>
+                            </button>
                         </div>
                     </div>
                 {% endfor %}
@@ -174,95 +231,63 @@
                         <i class="fas fa-book fa-3x text-muted"></i>
                     </div>
                     <h4 class="text-muted">Aucun guide trouvé</h4>
-                    <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                    <p class="text-muted">La base de données ne contient pas encore de guides.</p>
                 </div>
             {% endif %}
         </div>
         
         <!-- Vue Compacte -->
         <div class="books-compact entities-compact view-compact" id="books-compact">
-            {% if books is defined and books|length > 0 %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Nom</th>
-                                <th>Code</th>
-                                <th>Éditeur</th>
-                                <th>Année</th>
-                                <th>Région</th>
-                                <th>Secteurs</th>
-                                <th>Voies</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Titre</th>
+                            <th>Auteur</th>
+                            <th>Éditeur</th>
+                            <th>Année</th>
+                            <th>Prix</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if books|length > 0 %}
                             {% for book in books %}
                                 <tr data-book-id="{{ book.id }}">
                                     <td>
-                                        <a href="/books/{{ book.id }}" class="text-decoration-none fw-medium">{{ book.name }}</a>
+                                        <a href="/books/{{ book.id }}" class="text-decoration-none fw-medium">{{ book.title }}</a>
                                     </td>
-                                    <td class="text-muted">{{ book.code|default('-') }}</td>
+                                    <td class="text-muted">{{ book.author|default('-') }}</td>
                                     <td class="text-muted">{{ book.publisher|default('-') }}</td>
-                                    <td class="text-muted">{{ book.year|default('-') }}</td>
-                                    <td class="text-muted">{{ book.region_name|default('-') }}</td>
-                                    <td class="text-muted">{{ book.sectors_count|default(0) }}</td>
-                                    <td class="text-muted">{{ book.routes_count|default(0) }}</td>
+                                    <td class="text-muted">{{ book.publication_year|default('-') }}</td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ book.id }}">
-                                                <i class="far fa-heart"></i>
-                                            </button>
-                                            <button class="btn btn-outline-secondary" title="Partager" data-action="share" data-id="{{ book.id }}">
-                                                <i class="fas fa-share-alt"></i>
-                                            </button>
-                                        </div>
+                                        {% if book.price %}
+                                            <span class="badge bg-success">{{ book.price }}€</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" title="Favoris" data-action="favorite" data-id="{{ book.id }}">
+                                            <i class="far fa-heart"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-light">
+                        {% else %}
                             <tr>
-                                <th>Nom</th>
-                                <th>Code</th>
-                                <th>Éditeur</th>
-                                <th>Année</th>
-                                <th>Région</th>
-                                <th>Secteurs</th>
-                                <th>Voies</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="6" class="text-center py-4">
                                     <div class="empty-state">
                                         <i class="fas fa-book fa-2x text-muted mb-2"></i>
                                         <div class="text-muted">Aucun guide trouvé</div>
                                     </div>
                                 </td>
                             </tr>
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
-        </div>
-        
-        <!-- Pagination -->
-        {% if books|length > 0 %}
-            <div class="pagination-container mt-4">
-                <div class="d-flex justify-content-center">
-                    <div class="text-muted">
-                        {{ pagination.total|default(books|length) }} guides trouvés
-                    </div>
-                </div>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
-        {% endif %}
+        </div>
     </div>
 {% endblock %}
 
@@ -270,46 +295,141 @@
 <script src="/js/pages-common.js"></script>
 <script src="/js/view-manager.js"></script>
 <script>
-// Exposer les données des guides pour les composants JavaScript modernes
-window.booksData = {
-    books: [
-        {% for book in books %}
-        {
-            id: {{ book.id }},
-            name: {{ book.name|json_encode|raw }},
-            code: {{ book.code|default('')|json_encode|raw }},
-            publisher: {{ book.publisher|default('')|json_encode|raw }},
-            year: {{ book.year|default('null') }},
-            isbn: {{ book.isbn|default('')|json_encode|raw }},
-            region_name: {{ book.region_name|default('')|json_encode|raw }},
-            sectors_count: {{ book.sectors_count|default(0) }},
-            routes_count: {{ book.routes_count|default(0) }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ],
-    regions: [
-        {% for region in regions|default([]) %}
-        {
-            id: {{ region.id }},
-            name: {{ region.name|json_encode|raw }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ],
-    pagination: {
-        currentPage: {{ pagination.current_page|default(1) }},
-        totalPages: {{ pagination.last_page|default(1) }},
-        total: {{ pagination.total|default(books|length) }}
-    }
-};
-
-// Reset filters fallback
+// JavaScript pour la gestion des vues et des actions
 document.addEventListener('DOMContentLoaded', function() {
-    const resetBtn = document.getElementById('reset-filters-fallback');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function() {
-            window.location.href = '/books';
+    // Gestion des onglets de vue
+    const viewButtons = document.querySelectorAll('[data-view]');
+    const viewContainers = document.querySelectorAll('.view-grid, .view-list, .view-compact');
+    
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetView = this.getAttribute('data-view');
+            
+            // Mettre à jour les boutons
+            viewButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Mettre à jour les vues
+            viewContainers.forEach(container => {
+                container.classList.remove('active');
+                if (container.classList.contains('view-' + targetView)) {
+                    container.classList.add('active');
+                }
+            });
         });
-    }
+    });
+    
+    // Actions des guides
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('[data-action]')) {
+            const button = e.target.closest('[data-action]');
+            const action = button.getAttribute('data-action');
+            const bookId = button.getAttribute('data-id');
+            
+            switch(action) {
+                case 'favorite':
+                    alert('Fonctionnalité favoris à implémenter pour le guide ' + bookId);
+                    break;
+            }
+        }
+    });
+    
+    // Validation des prix en temps réel
+    const priceInputs = document.querySelectorAll('input[name^="price_"]');
+    priceInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            if (value < 0) {
+                this.value = '';
+            }
+        });
+    });
+    
+    // Validation des années
+    const yearInputs = document.querySelectorAll('input[name^="year_"]');
+    yearInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const value = parseInt(this.value);
+            if (value < 1900 || value > 2030) {
+                this.setCustomValidity('Année doit être entre 1900 et 2030');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    });
 });
 </script>
+
+<style>
+.book-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.book-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.book-actions .btn {
+    margin-left: 0.25rem;
+}
+
+.book-actions .btn:first-child {
+    margin-left: 0;
+}
+
+.results-info {
+    font-size: 0.9rem;
+}
+
+.empty-state {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border: 2px dashed #dee2e6;
+}
+
+.filters {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+/* Vue management */
+.view-list, .view-compact {
+    display: none;
+}
+
+.view-list.active, .view-compact.active {
+    display: block;
+}
+
+.view-grid.active {
+    display: block;
+}
+
+/* Style spécifique aux guides */
+.book-meta, .book-details {
+    line-height: 1.4;
+}
+
+.book-stats .badge {
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .book-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .book-actions .btn {
+        margin-left: 0;
+        font-size: 0.75rem;
+    }
+    
+    .filters .row > * {
+        margin-bottom: 1rem;
+    }
+}
+</style>
 {% endblock %}
