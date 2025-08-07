@@ -19,9 +19,9 @@ use TopoclimbCH\Exceptions\SecurityException;
 
 class RegionController extends BaseController
 {
-    private RegionService $regionService;
-    private MediaService $mediaService;
-    private WeatherService $weatherService;
+    private ?RegionService $regionService;
+    private ?MediaService $mediaService;
+    private ?WeatherService $weatherService;
 
     // Constantes de sécurité pour la Suisse
     private const SWISS_BOUNDS = [
@@ -44,11 +44,11 @@ class RegionController extends BaseController
         View $view,
         Session $session,
         CsrfManager $csrfManager,
-        RegionService $regionService,
-        MediaService $mediaService,
-        WeatherService $weatherService,
         Database $db,
-        ?Auth $auth = null
+        ?Auth $auth = null,
+        ?RegionService $regionService = null,
+        ?MediaService $mediaService = null,
+        ?WeatherService $weatherService = null
     ) {
         parent::__construct($view, $session, $csrfManager, $db, $auth);
         $this->regionService = $regionService;

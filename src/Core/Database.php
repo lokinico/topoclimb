@@ -27,12 +27,22 @@ class Database
     public function __construct(?array $config = null)
     {
         if ($config === null) {
-            // Auto-détection: SQLite si fichier existe, sinon MySQL
-            if (file_exists('climbing_sqlite.db')) {
+            // Auto-détection: SQLite si fichier existe, sinon MySQL  
+            $sqliteDbPath = 'climbing_sqlite.db';
+            if (!file_exists($sqliteDbPath)) {
+                // Try parent directory (for HTTP context from public/)
+                $sqliteDbPath = '../climbing_sqlite.db';
+            }
+            if (!file_exists($sqliteDbPath)) {
+                // Try storage directory
+                $sqliteDbPath = '../storage/climbing_sqlite.db';
+            }
+            
+            if (file_exists($sqliteDbPath)) {
                 // Configuration SQLite
                 $this->config = [
                     'driver' => 'sqlite',
-                    'database' => 'climbing_sqlite.db',
+                    'database' => $sqliteDbPath,
                     'options' => [
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
