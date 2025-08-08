@@ -53,9 +53,32 @@ class AuthMiddleware
     {
         $currentPath = $request->getPathInfo();
         
-        // Bypass en développement local avec auto-login
-        if (isset($_SESSION['dev_auto_login']) && $_SESSION['dev_auto_login'] === true) {
-            error_log("AuthMiddleware: Development auto-login detected, bypassing auth check");
+        // Bypass COMPLET en développement local
+        $isLocalDev = isset($_SERVER['SERVER_NAME']) && 
+                      ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') &&
+                      isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '8000';
+        
+        if ($isLocalDev) {
+            error_log("AuthMiddleware: Development server detected (localhost:8000), bypassing ALL auth checks");
+            
+            // Forcer session dev si pas encore créée
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
+            if (!isset($_SESSION['dev_auto_login'])) {
+                $_SESSION['user_id'] = 1;
+                $_SESSION['username'] = 'dev-admin';
+                $_SESSION['email'] = 'dev@localhost';
+                $_SESSION['access_level'] = 5;
+                $_SESSION['logged_in'] = true;
+                $_SESSION['login_type'] = 'development';
+                $_SESSION['dev_auto_login'] = true;
+                $_SESSION['auth_user_id'] = 1;
+                $_SESSION['is_authenticated'] = true;
+                error_log("AuthMiddleware: Development session force-created");
+            }
+            
             return $next($request);
         }
 
