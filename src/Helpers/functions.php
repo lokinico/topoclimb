@@ -24,7 +24,16 @@ function env(string $key, mixed $default = null): mixed
  */
 function url(string $path = ''): string
 {
-    $baseUrl = rtrim(env('APP_URL', 'http://localhost'), '/');
+    // Détection automatique du serveur local
+    if (isset($_SERVER['SERVER_NAME']) && 
+        ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') &&
+        isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '8000') {
+        
+        $baseUrl = 'http://localhost:8000';
+    } else {
+        $baseUrl = rtrim(env('APP_URL', 'http://localhost'), '/');
+    }
+    
     $path = ltrim($path, '/');
 
     return $baseUrl . ($path ? "/$path" : '');
@@ -153,8 +162,15 @@ function asset(string $path): string
     // Nettoyer le chemin
     $path = ltrim($path, '/');
 
-    // Construire l'URL de base
-    $baseUrl = rtrim(env('APP_URL', 'http://localhost'), '/');
+    // Détection automatique du serveur local
+    if (isset($_SERVER['SERVER_NAME']) && 
+        ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') &&
+        isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '8000') {
+        
+        $baseUrl = 'http://localhost:8000';
+    } else {
+        $baseUrl = rtrim(env('APP_URL', 'http://localhost'), '/');
+    }
 
     // En production, ajouter un hash pour le cache busting
     if (env('APP_ENV') === 'production') {
@@ -164,9 +180,11 @@ function asset(string $path): string
             $separator = strpos($path, '?') !== false ? '&' : '?';
             $path .= $separator . 'v=' . $version;
         }
+        return $baseUrl . '/public/' . $path;
     }
 
-    return $baseUrl . '/public/' . $path;
+    // En local, les assets sont servis directement
+    return $baseUrl . '/' . $path;
 }
 
 /**

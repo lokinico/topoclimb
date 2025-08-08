@@ -107,5 +107,33 @@ function app_log($message, $level = 'info') {
     file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
 }
 
+// Authentification automatique pour développement local
+if (isset($_SERVER['SERVER_NAME']) && 
+    ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') &&
+    isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '8000') {
+    
+    // Auto-login pour le développement local
+    if (!isset($_SESSION)) {
+        session_start();
+    }
+    
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in'])) {
+        // Variables pour notre système
+        $_SESSION['user_id'] = 1;
+        $_SESSION['username'] = 'dev-admin';
+        $_SESSION['email'] = 'dev@localhost';
+        $_SESSION['access_level'] = 5;
+        $_SESSION['logged_in'] = true;
+        $_SESSION['login_type'] = 'development';
+        $_SESSION['dev_auto_login'] = true;
+        
+        // Variables pour AuthMiddleware
+        $_SESSION['auth_user_id'] = 1;
+        $_SESSION['is_authenticated'] = true;
+        
+        app_log('Development auto-login activated for localhost:8000');
+    }
+}
+
 // Log du démarrage de l'application
 app_log('Application bootstrap completed');

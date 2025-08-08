@@ -52,6 +52,12 @@ class AuthMiddleware
     public function handle(Request $request, callable $next): SymfonyResponse
     {
         $currentPath = $request->getPathInfo();
+        
+        // Bypass en développement local avec auto-login
+        if (isset($_SESSION['dev_auto_login']) && $_SESSION['dev_auto_login'] === true) {
+            error_log("AuthMiddleware: Development auto-login detected, bypassing auth check");
+            return $next($request);
+        }
 
         // Vérifier si c'est une route publique
         if (in_array($currentPath, self::PUBLIC_ROUTES)) {
