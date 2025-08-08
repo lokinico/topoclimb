@@ -491,6 +491,47 @@ class SectorController extends BaseController
     }
 
     /**
+     * Enregistrement nouveau secteur
+     */
+    public function store(Request $request): Response
+    {
+        $this->requireAuth();
+        $this->requireRole([1, 2, 3]);
+        
+        try {
+            // Validation CSRF
+            if (!$this->validateCsrfToken($request->request->get('csrf_token'))) {
+                $this->addFlashMessage('error', 'Token de sécurité invalide');
+                return $this->redirect('/sectors/create');
+            }
+            
+            // Récupération et validation des données
+            $data = $this->validateSectorData($request);
+            
+            // Vérifier unicité du code
+            $existing = $this->db->fetchOne("SELECT id FROM climbing_sectors WHERE code = ?", [$data['code']]);
+            if ($existing) {
+                $this->addFlashMessage('error', 'Ce code de secteur existe déjà');
+                return $this->redirect('/sectors/create');
+            }
+            
+            // Insertion en base
+            $sectorId = $this->createSector($data);
+            
+            if ($sectorId) {
+                $this->addFlashMessage('success', 'Secteur créé avec succès');
+                return $this->redirect('/sectors/' . $sectorId);
+            } else {
+                throw new \Exception('Impossible de créer le secteur');
+            }
+            
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de la création du secteur');
+            return $this->redirect('/sectors/create');
+        }
+    }
+
+    /**
      * Page de création de secteur
      */
     public function create(Request $request): Response
@@ -546,5 +587,135 @@ class SectorController extends BaseController
             $this->handleError($e, 'Erreur lors du chargement du formulaire de création');
             return $this->redirect('/sectors');
         }
+    }
+
+    /**
+     * Validation des données de secteur
+     */
+    private function validateSectorData(Request $request): array
+    {
+        $data = [
+            'name' => trim($request->request->get('name', '')),
+            'code' => trim($request->request->get('code', '')),
+            'description' => trim($request->request->get('description', '')),
+            'region_id' => (int)$request->request->get('region_id', 0),
+            'site_id' => $request->request->get('site_id') ? (int)$request->request->get('site_id') : null,
+            'altitude' => $request->request->get('altitude') ? (int)$request->request->get('altitude') : null,
+            'height' => $request->request->get('height') ? (float)$request->request->get('height') : null,
+            'coordinates_lat' => $request->request->get('coordinates_lat') ? (float)$request->request->get('coordinates_lat') : null,
+            'coordinates_lng' => $request->request->get('coordinates_lng') ? (float)$request->request->get('coordinates_lng') : null,
+            'coordinates_swiss_e' => $request->request->get('coordinates_swiss_e') ?: null,
+            'coordinates_swiss_n' => $request->request->get('coordinates_swiss_n') ?: null,
+            'access_info' => trim($request->request->get('access_info', '')),
+            'access_time' => $request->request->get('access_time') ? (int)$request->request->get('access_time') : null,
+            'approach' => trim($request->request->get('approach', '')),
+            'parking_info' => trim($request->request->get('parking_info', '')),
+            'color' => $request->request->get('color', '#FF0000'),
+            'active' => (int)$request->request->get('active', 1)
+        ];
+
+        // Validation des champs obligatoires
+        if (empty($data['name'])) {
+            throw new \InvalidArgumentException('Le nom du secteur est obligatoire');
+        }
+
+        if (empty($data['code'])) {
+            throw new \InvalidArgumentException('Le code du secteur est obligatoire');
+        }
+
+        if ($data['region_id'] <= 0) {
+            throw new \InvalidArgumentException('Une région valide est obligatoire');
+        }
+
+        // Validation des contraintes
+        if (strlen($data['name']) > 255) {
+            throw new \InvalidArgumentException('Le nom ne peut pas dépasser 255 caractères');
+        }
+
+        if (strlen($data['code']) > 50) {
+            throw new \InvalidArgumentException('Le code ne peut pas dépasser 50 caractères');
+        }
+
+        if ($data['altitude'] !== null && ($data['altitude'] < 0 || $data['altitude'] > 9000)) {
+            throw new \InvalidArgumentException('L\'altitude doit être entre 0 et 9000 mètres');
+        }
+
+        if ($data['height'] !== null && ($data['height'] < 0 || $data['height'] > 2000)) {
+            throw new \InvalidArgumentException('La hauteur doit être entre 0 et 2000 mètres');
+        }
+
+        if ($data['access_time'] !== null && ($data['access_time'] < 0 || $data['access_time'] > 1440)) {
+            throw new \InvalidArgumentException('Le temps d\'accès doit être entre 0 et 1440 minutes (24h)');
+        }
+
+        // Validation coordonnées GPS
+        if ($data['coordinates_lat'] !== null && ($data['coordinates_lat'] < -90 || $data['coordinates_lat'] > 90)) {
+            throw new \InvalidArgumentException('La latitude doit être entre -90 et 90 degrés');
+        }
+
+        if ($data['coordinates_lng'] !== null && ($data['coordinates_lng'] < -180 || $data['coordinates_lng'] > 180)) {
+            throw new \InvalidArgumentException('La longitude doit être entre -180 et 180 degrés');
+        }
+
+        // Validation couleur hexadécimale
+        if (!preg_match('/^#[0-9A-F]{6}$/i', $data['color'])) {
+            throw new \InvalidArgumentException('La couleur doit être au format hexadécimal (#RRGGBB)');
+        }
+
+        return $data;
+    }
+
+    /**
+     * Création d'un secteur en base de données
+     */
+    private function createSector(array $data): int
+    {
+        // Déterminer le driver de base de données pour adapter la syntaxe
+        $isMySQL = $this->db->getConnection()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
+        $dateFunction = $isMySQL ? 'NOW()' : 'datetime(\'now\')';
+        
+        $query = "
+            INSERT INTO climbing_sectors (
+                name, code, description, region_id, site_id,
+                altitude, height, coordinates_lat, coordinates_lng,
+                coordinates_swiss_e, coordinates_swiss_n,
+                access_info, access_time, approach, parking_info,
+                color, active, created_at, updated_at
+            ) VALUES (
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, $dateFunction, $dateFunction
+            )
+        ";
+
+        $params = [
+            $data['name'],
+            $data['code'],
+            $data['description'],
+            $data['region_id'],
+            $data['site_id'],
+            $data['altitude'],
+            $data['height'],
+            $data['coordinates_lat'],
+            $data['coordinates_lng'],
+            $data['coordinates_swiss_e'],
+            $data['coordinates_swiss_n'],
+            $data['access_info'],
+            $data['access_time'],
+            $data['approach'],
+            $data['parking_info'],
+            $data['color'],
+            $data['active']
+        ];
+
+        $result = $this->db->query($query, $params);
+        
+        if ($result) {
+            return (int)$this->db->getConnection()->lastInsertId();
+        }
+        
+        return 0;
     }
 }
