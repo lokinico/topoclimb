@@ -127,16 +127,6 @@ abstract class BaseController
      */
     protected function requireAuth(string $message = 'Authentification requise'): void
     {
-        // Bypass en développement local
-        $isLocalDev = isset($_SERVER['SERVER_NAME']) && 
-                      ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') &&
-                      isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '8000';
-        
-        if ($isLocalDev) {
-            error_log("BaseController: Development server detected, bypassing requireAuth()");
-            return; // Skip auth check
-        }
-        
         if (!$this->auth || !$this->auth->check()) {
             $this->session->set('intended_url', $_SERVER['REQUEST_URI'] ?? '/');
             $this->flash('error', $message);
@@ -149,16 +139,6 @@ abstract class BaseController
      */
     protected function requireRole(array $allowedRoles, string $message = 'Permissions insuffisantes'): void
     {
-        // Bypass en développement local
-        $isLocalDev = isset($_SERVER['SERVER_NAME']) && 
-                      ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') &&
-                      isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '8000';
-        
-        if ($isLocalDev) {
-            error_log("BaseController: Development server detected, bypassing requireRole()");
-            return; // Skip role check
-        }
-        
         $this->requireAuth();
 
         $userRole = $this->auth->role();
