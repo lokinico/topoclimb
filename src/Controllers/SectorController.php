@@ -436,4 +436,115 @@ class SectorController extends BaseController
             return new JsonResponse(['error' => 'Erreur de service'], 500);
         }
     }
+
+    /**
+     * Page de création de secteur (version test sans authentification)
+     */
+    public function testCreate(Request $request): Response
+    {
+        try {
+            // Récupérer les régions
+            $regions = $this->db->fetchAll(
+                "SELECT * FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+
+            // Récupérer les sites avec leurs régions
+            $sites = $this->db->fetchAll(
+                "SELECT s.*, r.name as region_name 
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+
+            // Récupérer les expositions (avec fallback si table n'existe pas)
+            try {
+                $expositions = $this->db->fetchAll(
+                    "SELECT * FROM climbing_expositions ORDER BY name ASC"
+                );
+            } catch (\Exception $e) {
+                // Fallback si table expositions n'existe pas
+                $expositions = [
+                    (object)['id' => 1, 'name' => 'Nord', 'code' => 'N'],
+                    (object)['id' => 2, 'name' => 'Sud', 'code' => 'S'],
+                    (object)['id' => 3, 'name' => 'Est', 'code' => 'E'],
+                    (object)['id' => 4, 'name' => 'Ouest', 'code' => 'W']
+                ];
+            }
+
+            return $this->render('sectors/form', [
+                'sector' => (object)[],
+                'regions' => $regions ?? [],
+                'sites' => $sites ?? [],
+                'exposures' => $expositions ?? [],
+                'currentExposures' => [],
+                'primaryExposure' => null,
+                'media' => [],
+                'csrf_token' => 'test-token-' . bin2hex(random_bytes(16)),
+                'is_edit' => false,
+                'is_test' => true
+            ]);
+        } catch (\Exception $e) {
+            error_log('Erreur testCreate secteur: ' . $e->getMessage());
+            return new Response('Formulaire secteur - Test (Erreur: ' . $e->getMessage() . ')', 500);
+        }
+    }
+
+    /**
+     * Page de création de secteur
+     */
+    public function create(Request $request): Response
+    {
+        $this->requireAuth();
+        $this->requireRole([1, 2, 3]);
+
+        try {
+            // Récupérer les régions
+            $regions = $this->db->fetchAll(
+                "SELECT * FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+
+            // Récupérer les sites avec leurs régions
+            $sites = $this->db->fetchAll(
+                "SELECT s.*, r.name as region_name 
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+
+            // Récupérer les expositions (avec fallback si table n'existe pas)
+            try {
+                $expositions = $this->db->fetchAll(
+                    "SELECT * FROM climbing_expositions ORDER BY name ASC"
+                );
+            } catch (\Exception $e) {
+                // Fallback si table expositions n'existe pas
+                $expositions = [
+                    (object)['id' => 1, 'name' => 'Nord', 'code' => 'N'],
+                    (object)['id' => 2, 'name' => 'Sud', 'code' => 'S'],
+                    (object)['id' => 3, 'name' => 'Est', 'code' => 'E'],
+                    (object)['id' => 4, 'name' => 'Ouest', 'code' => 'W']
+                ];
+            }
+
+            // Pré-sélection site si fourni
+            $site_id = $request->query->get('site_id');
+            
+            return $this->render('sectors/form', [
+                'sector' => (object)['site_id' => $site_id],
+                'regions' => $regions,
+                'sites' => $sites,
+                'exposures' => $expositions ?? [],
+                'currentExposures' => [],
+                'primaryExposure' => null,
+                'media' => [],
+                'csrf_token' => $this->createCsrfToken(),
+                'is_edit' => false
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire de création');
+            return $this->redirect('/sectors');
+        }
+    }
 }
