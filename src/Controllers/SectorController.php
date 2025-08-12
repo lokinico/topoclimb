@@ -693,7 +693,7 @@ class SectorController extends BaseController
     }
 
     /**
-     * Création d'un secteur en base de données
+     * Création d'un secteur en base de données (compatible production)
      */
     private function createSector(array $data): int
     {
@@ -701,42 +701,51 @@ class SectorController extends BaseController
         $isMySQL = $this->db->getConnection()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
         $dateFunction = $isMySQL ? 'NOW()' : 'datetime(\'now\')';
         
-        $query = "
-            INSERT INTO climbing_sectors (
-                name, code, description, region_id, site_id,
-                altitude, height, coordinates_lat, coordinates_lng,
-                coordinates_swiss_e, coordinates_swiss_n,
-                access_info, access_time, approach, parking_info,
-                color, active, created_at, updated_at
-            ) VALUES (
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, $dateFunction, $dateFunction
-            )
-        ";
-
-        $params = [
+        // Récupérer la structure de la table pour compatibilité production
+        $availableColumns = $this->getAvailableColumns('climbing_sectors');
+        
+        // Colonnes de base obligatoires
+        $baseColumns = ['name', 'code', 'description', 'region_id', 'active', 'created_at', 'updated_at'];
+        $baseValues = ['?', '?', '?', '?', '?', $dateFunction, $dateFunction];
+        $baseParams = [
             $data['name'],
-            $data['code'],
+            $data['code'], 
             $data['description'],
             $data['region_id'],
-            $data['site_id'],
-            $data['altitude'],
-            $data['height'],
-            $data['coordinates_lat'],
-            $data['coordinates_lng'],
-            $data['coordinates_swiss_e'],
-            $data['coordinates_swiss_n'],
-            $data['access_info'],
-            $data['access_time'],
-            $data['approach'],
-            $data['parking_info'],
-            $data['color'],
             $data['active']
         ];
-
+        
+        // Colonnes optionnelles avec vérification existence
+        $optionalFields = [
+            'site_id' => $data['site_id'],
+            'altitude' => $data['altitude'],
+            'height' => $data['height'],
+            'coordinates_lat' => $data['coordinates_lat'],
+            'coordinates_lng' => $data['coordinates_lng'],
+            'coordinates_swiss_e' => $data['coordinates_swiss_e'],
+            'coordinates_swiss_n' => $data['coordinates_swiss_n'],
+            'access_info' => $data['access_info'],
+            'access_time' => $data['access_time'],
+            'approach' => $data['approach'],
+            'parking_info' => $data['parking_info'],
+            'color' => $data['color']
+        ];
+        
+        $columns = $baseColumns;
+        $values = $baseValues;
+        $params = $baseParams;
+        
+        // Ajouter les colonnes optionnelles si elles existent
+        foreach ($optionalFields as $column => $value) {
+            if (in_array($column, $availableColumns)) {
+                $columns[] = $column;
+                $values[] = '?';
+                $params[] = $value;
+            }
+        }
+        
+        $query = "INSERT INTO climbing_sectors (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ")";
+        
         $result = $this->db->query($query, $params);
         
         if ($result) {
@@ -744,5 +753,26 @@ class SectorController extends BaseController
         }
         
         return 0;
+    }
+
+    /**
+     * Récupère les colonnes disponibles dans une table (compatible SQLite/MySQL)
+     */
+    private function getAvailableColumns(string $tableName): array
+    {
+        try {
+            $isMySQL = $this->db->getConnection()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
+            
+            if ($isMySQL) {
+                $columns = $this->db->fetchAll("DESCRIBE {$tableName}");
+                return array_column($columns, 'Field');
+            } else {
+                $columns = $this->db->fetchAll("PRAGMA table_info({$tableName})");
+                return array_column($columns, 'name');
+            }
+        } catch (\Exception $e) {
+            error_log("Erreur récupération colonnes {$tableName}: " . $e->getMessage());
+            return ['id', 'name', 'code', 'description', 'region_id', 'active', 'created_at', 'updated_at'];
+        }
     }
 }

@@ -198,10 +198,21 @@ class BookController extends BaseController
         $totalResult = $this->db->fetchOne($countSql, $params);
         $total = (int)($totalResult['total'] ?? 0);
 
-        // Construction de la requête principale (colonnes minimales compatibles)
-        $sql = "SELECT b.id, b.title, b.author, b.created_at
-                FROM climbing_books b 
-                WHERE 1=1";
+        // Construction de la requête principale avec colonnes dynamiques
+        $availableColumns = $this->getAvailableColumns('climbing_books');
+        
+        // Colonnes de base obligatoires
+        $selectColumns = ['b.id'];
+        
+        // Colonnes optionnelles selon disponibilité
+        $optionalColumns = ['title', 'author', 'publisher', 'publication_year', 'price', 'created_at'];
+        foreach ($optionalColumns as $col) {
+            if (in_array($col, $availableColumns)) {
+                $selectColumns[] = 'b.' . $col;
+            }
+        }
+        
+        $sql = "SELECT " . implode(', ', $selectColumns) . " FROM climbing_books b WHERE 1=1";
 
         // Même conditions de filtrage
         $mainParams = $params;
@@ -377,28 +388,66 @@ class BookController extends BaseController
     private function calculateStats(): array
     {
         try {
-            $stats = $this->db->fetchOne(
-                "SELECT 
-                    COUNT(*) as total_books,
-                    AVG(price) as avg_price,
-                    MIN(price) as min_price,
-                    MAX(price) as max_price,
-                    MIN(publication_year) as oldest_year,
-                    MAX(publication_year) as newest_year
-                 FROM climbing_books WHERE price IS NOT NULL"
-            );
-
-            return [
+            // Vérifier colonnes disponibles pour calculs compatibles
+            $availableColumns = $this->getAvailableColumns('climbing_books');
+            
+            $stats = $this->db->fetchOne("SELECT COUNT(*) as total_books FROM climbing_books");
+            
+            $result = [
                 'total_books' => (int)($stats['total_books'] ?? 0),
-                'avg_price' => $stats['avg_price'] ? round($stats['avg_price'], 2) : null,
-                'min_price' => $stats['min_price'] ? (float)$stats['min_price'] : null,
-                'max_price' => $stats['max_price'] ? (float)$stats['max_price'] : null,
-                'oldest_year' => (int)($stats['oldest_year'] ?? 0),
-                'newest_year' => (int)($stats['newest_year'] ?? 0)
+                'avg_price' => null,
+                'min_price' => null,
+                'max_price' => null,
+                'oldest_year' => null,
+                'newest_year' => null
             ];
+            
+            // Calculer stats price si colonne existe
+            if (in_array('price', $availableColumns)) {
+                $priceStats = $this->db->fetchOne(
+                    "SELECT AVG(price) as avg_price, MIN(price) as min_price, MAX(price) as max_price 
+                     FROM climbing_books WHERE price IS NOT NULL"
+                );
+                $result['avg_price'] = $priceStats['avg_price'] ? round($priceStats['avg_price'], 2) : null;
+                $result['min_price'] = $priceStats['min_price'] ? (float)$priceStats['min_price'] : null;
+                $result['max_price'] = $priceStats['max_price'] ? (float)$priceStats['max_price'] : null;
+            }
+            
+            // Calculer stats année si colonne existe
+            if (in_array('publication_year', $availableColumns)) {
+                $yearStats = $this->db->fetchOne(
+                    "SELECT MIN(publication_year) as oldest_year, MAX(publication_year) as newest_year 
+                     FROM climbing_books WHERE publication_year IS NOT NULL"
+                );
+                $result['oldest_year'] = (int)($yearStats['oldest_year'] ?? 0);
+                $result['newest_year'] = (int)($yearStats['newest_year'] ?? 0);
+            }
+            
+            return $result;
         } catch (\Exception $e) {
             error_log('Erreur calcul stats books: ' . $e->getMessage());
             return ['total_books' => 0, 'avg_price' => null, 'min_price' => null, 'max_price' => null, 'oldest_year' => 0, 'newest_year' => 0];
+        }
+    }
+
+    /**
+     * Récupère les colonnes disponibles dans une table (compatible SQLite/MySQL)
+     */
+    private function getAvailableColumns(string $tableName): array
+    {
+        try {
+            $isMySQL = $this->db->getConnection()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
+            
+            if ($isMySQL) {
+                $columns = $this->db->fetchAll("DESCRIBE {$tableName}");
+                return array_column($columns, 'Field');
+            } else {
+                $columns = $this->db->fetchAll("PRAGMA table_info({$tableName})");
+                return array_column($columns, 'name');
+            }
+        } catch (\Exception $e) {
+            error_log("Erreur récupération colonnes {$tableName}: " . $e->getMessage());
+            return ['id', 'title', 'author', 'created_at'];
         }
     }
 }
