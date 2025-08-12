@@ -2424,4 +2424,34 @@ return array (
       1 => 'TopoclimbCH\\Middleware\\AdminMiddleware',
     ),
   ),
+  219 => 
+  array (
+    'method' => 'GET',
+    'path' => '/preview',
+    'controller' => 'TopoclimbCH\\Controllers\\PreviewController',
+    'action' => 'index',
+    'middlewares' => 
+    array (
+    ),
+  ),
+  220 => 
+  array (
+    'method' => 'GET',
+    'path' => '/preview/sectors',
+    'controller' => 'TopoclimbCH\\Controllers\\PreviewController',
+    'action' => 'sectorsPreview',
+    'middlewares' => 
+    array (
+    ),
+  ),
+  221 => 
+  array (
+    'method' => 'GET',
+    'path' => '/preview/routes',
+    'controller' => 'TopoclimbCH\\Controllers\\PreviewController',
+    'action' => 'routesPreview',
+    'middlewares' => 
+    array (
+    ),
+  ),
 );

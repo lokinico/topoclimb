@@ -1,0 +1,235 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Aperçu des secteurs - TopoclimbCH{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-4">
+    
+    <!-- Header avec call-to-action -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info d-flex align-items-center" role="alert">
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading">👀 Aperçu limité - Secteurs d'escalade</h5>
+                    <p class="mb-0">
+                        Vous voyez seulement quelques secteurs d'exemple. 
+                        <strong>{{ stats.total_sectors }}+ secteurs</strong> vous attendent !
+                    </p>
+                </div>
+                <div class="ms-3">
+                    <a href="{{ register_url }}" class="btn btn-success">✨ S'inscrire</a>
+                    <a href="{{ login_url }}" class="btn btn-outline-primary ms-2">🔑 Connexion</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics preview -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ stats.total_sectors }}</h4>
+                    <p class="text-muted">Secteurs total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">{{ stats.total_routes }}</h4>
+                    <p class="text-muted">Voies d'escalade</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ stats.total_regions }}</h4>
+                    <p class="text-muted">Régions couvertes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning-subtle">
+                <div class="card-body">
+                    <h4 class="text-warning">🔒</h4>
+                    <p class="text-muted">Accès complet</p>
+                    <small>Membres uniquement</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Secteurs d'aperçu -->
+    <div class="row">
+        {% if sectors %}
+            {% for sector in sectors %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 position-relative">
+                    {% if sector.is_preview %}
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <span class="badge bg-warning">👀 Aperçu</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            📍 {{ sector.name }}
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                📍 {{ sector.region_name or 'Région non spécifiée' }}
+                                {% if sector.altitude %}
+                                • ⛰️ {{ sector.altitude }}m
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        {% if sector.description %}
+                        <p class="card-text">{{ sector.description }}</p>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-success">
+                                🧗 {{ sector.routes_count or 0 }} voies
+                                {% if sector.hidden_routes and sector.hidden_routes > 0 %}
+                                <span class="text-muted">(+{{ sector.hidden_routes }} masquées)</span>
+                                {% endif %}
+                            </small>
+                            
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" disabled>
+                                    🗺️ Carte
+                                </button>
+                                <button class="btn btn-outline-secondary" disabled>
+                                    🌤️ Météo
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Fonctionnalités masquées -->
+                        <div class="mt-3 p-2 bg-light rounded">
+                            <small class="text-muted d-block">🔒 Contenu membre :</small>
+                            <small class="text-muted">
+                                • Coordonnées GPS exactes<br>
+                                • Accès détaillé et parking<br>
+                                • Météo temps réel<br>
+                                • Commentaires et évaluations
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" disabled>
+                                🔒 Voir les détails complets
+                            </button>
+                            <div class="text-center">
+                                <small>
+                                    <a href="{{ register_url }}" class="text-success fw-bold">
+                                        S'inscrire pour débloquer
+                                    </a>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Card d'incitation finale -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 border-success">
+                    <div class="card-body d-flex flex-column justify-content-center text-center">
+                        <div class="mb-4">
+                            <h1 class="text-success">🚀</h1>
+                            <h5 class="card-title">{{ stats.total_sectors }}+ secteurs vous attendent</h5>
+                            <p class="card-text">
+                                Découvrez tous les secteurs, avec coordonnées GPS, météo, 
+                                et bien plus encore.
+                            </p>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ register_url }}" class="btn btn-success">
+                                ✨ Inscription gratuite
+                            </a>
+                            <a href="{{ login_url }}" class="btn btn-outline-primary">
+                                🔑 J'ai déjà un compte
+                            </a>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                ⚡ Accès immédiat • 🆓 Gratuit • 🚫 Aucune carte requise
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        {% else %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5>Aucun secteur disponible pour l'aperçu</h5>
+                        {% if error %}
+                        <p class="text-muted">{{ error }}</p>
+                        {% endif %}
+                        <a href="{{ register_url }}" class="btn btn-primary">
+                            S'inscrire pour voir le contenu complet
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Footer call-to-action -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card bg-primary text-white text-center">
+                <div class="card-body">
+                    <h4>🏔️ Prêt à explorer toute la Suisse ?</h4>
+                    <p class="mb-3">
+                        Rejoignez des milliers de grimpeurs qui utilisent TopoclimbCH 
+                        pour découvrir de nouveaux secteurs chaque jour.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{{ register_url }}" class="btn btn-light btn-lg">
+                            ✨ Commencer maintenant
+                        </a>
+                        <a href="/preview/routes" class="btn btn-outline-light">
+                            Aperçu des voies →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.card.position-relative .badge {
+    z-index: 10;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+}
+
+.bg-light.rounded {
+    border-left: 3px solid #ffc107;
+}
+
+.card.border-success {
+    border-width: 2px !important;
+}
+</style>
+{% endblock %}

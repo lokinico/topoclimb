@@ -1,0 +1,177 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}TopoclimbCH - Découvrez l'escalade en Suisse{% endblock %}
+
+{% block body %}
+<div class="preview-hero bg-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold">🏔️ Découvrez l'escalade en Suisse</h1>
+                <p class="lead mb-4">
+                    Accédez à la plus grande base de données d'escalade suisse. 
+                    Des secteurs emblématiques aux voies secrètes, explorez tout ce que la Suisse a à offrir.
+                </p>
+                
+                {% if stats %}
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center text-dark">
+                                <h3 class="card-title text-primary">{{ stats.sectors }}</h3>
+                                <p class="card-text">Secteurs référencés</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center text-dark">
+                                <h3 class="card-title text-success">{{ stats.routes }}</h3>
+                                <p class="card-text">Voies détaillées</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center text-dark">
+                                <h3 class="card-title text-info">{{ stats.regions }}</h3>
+                                <p class="card-text">Couvertes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="/register" class="btn btn-success btn-lg">
+                        ✨ S'inscrire gratuitement
+                    </a>
+                    <a href="/login" class="btn btn-outline-light btn-lg">
+                        🔑 Se connecter
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🎁 Aperçu gratuit</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if featured_sectors %}
+                        <h6>Secteurs à découvrir :</h6>
+                        <ul class="list-unstyled">
+                            {% for sector in featured_sectors %}
+                            <li class="mb-2">
+                                📍 <strong>{{ sector.name }}</strong><br>
+                                <small class="text-muted">{{ sector.region_name }} • {{ sector.altitude }}m</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        
+                        <div class="text-center">
+                            <a href="/preview/sectors" class="btn btn-outline-primary btn-sm">
+                                Voir l'aperçu des secteurs →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-6">
+            <h2>🚀 Pourquoi rejoindre TopoclimbCH ?</h2>
+            
+            {% if benefits %}
+            <ul class="list-group list-group-flush">
+                {% for benefit in benefits %}
+                <li class="list-group-item d-flex align-items-center">
+                    <span class="badge bg-success me-3">✓</span>
+                    {{ benefit }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            <div class="mt-4">
+                <h4>🆓 Inscription gratuite</h4>
+                <p>Commencez dès maintenant, aucune carte de crédit requise.</p>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <h2>👀 Ce que vous manquez...</h2>
+            
+            <div class="card mb-3">
+                <div class="card-body position-relative">
+                    <h5 class="card-title">Secteurs complets</h5>
+                    <p class="card-text">Descriptions détaillées, accès, météo en temps réel...</p>
+                    
+                    <div class="preview-overlay position-absolute top-0 start-0 w-100 h-100 
+                                d-flex align-items-center justify-content-center bg-light bg-opacity-75">
+                        <div class="text-center">
+                            <h6>🔒 Contenu membres</h6>
+                            <a href="/register" class="btn btn-success btn-sm">S'inscrire</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body position-relative">
+                    <h5 class="card-title">Coordonnées GPS précises</h5>
+                    <p class="card-text">Navigation directe vers chaque secteur et voie...</p>
+                    
+                    <div class="preview-overlay position-absolute top-0 start-0 w-100 h-100 
+                                d-flex align-items-center justify-content-center bg-light bg-opacity-75">
+                        <div class="text-center">
+                            <h6>🔒 Membres uniquement</h6>
+                            <a href="/login" class="btn btn-outline-primary btn-sm">Se connecter</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p><strong>Et bien plus encore...</strong></p>
+                <a href="/preview/routes" class="btn btn-info">Aperçu des voies</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="container">
+    <div class="alert alert-warning">
+        {{ error }}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block styles %}
+<style>
+.preview-hero {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.preview-overlay {
+    backdrop-filter: blur(2px);
+    border-radius: 0.375rem;
+}
+
+.preview-overlay h6 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.card-body.position-relative {
+    min-height: 120px;
+}
+</style>
+{% endblock %}
