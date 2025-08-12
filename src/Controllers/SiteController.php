@@ -190,8 +190,18 @@ class SiteController extends BaseController
                 [(int)$id]
             );
 
-            // Récupérer les médias du site
-            $media = $this->mediaService->getMediaForEntity('site', (int)$id);
+            // Récupérer les médias du site (structure directe)
+            $media = [];
+            try {
+                $media = $this->db->fetchAll(
+                    "SELECT * FROM climbing_media 
+                     WHERE entity_type = 'site' AND entity_id = ? AND active = 1
+                     ORDER BY display_order ASC, created_at ASC",
+                    [(int)$id]
+                );
+            } catch (\Exception $e) {
+                error_log("Erreur récupération médias site {$id}: " . $e->getMessage());
+            }
 
             // Calculer les statistiques
             $stats = [

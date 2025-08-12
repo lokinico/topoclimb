@@ -98,6 +98,57 @@ try {
     echo "\n✅ Table climbing_media opérationnelle\n";
     echo "📊 Médias actuels: {$count}\n";
     
+    // 6. Créer table climbing_media_relationships
+    echo "\n6. Création table climbing_media_relationships...\n";
+    
+    if ($isMySQL) {
+        // Version MySQL/MariaDB
+        $createRelationshipsSQL = "
+            CREATE TABLE IF NOT EXISTS climbing_media_relationships (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                media_id INT NOT NULL,
+                entity_type VARCHAR(50) NOT NULL,
+                entity_id INT NOT NULL,
+                relationship_type VARCHAR(50) NOT NULL DEFAULT 'gallery',
+                sort_order INT DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                
+                INDEX idx_media_id (media_id),
+                INDEX idx_entity (entity_type, entity_id),
+                INDEX idx_relationship (relationship_type),
+                UNIQUE KEY unique_media_entity (media_id, entity_type, entity_id, relationship_type)
+            )
+        ";
+    } else {
+        // Version SQLite
+        $createRelationshipsSQL = "
+            CREATE TABLE IF NOT EXISTS climbing_media_relationships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                media_id INTEGER NOT NULL,
+                entity_type VARCHAR(50) NOT NULL,
+                entity_id INTEGER NOT NULL,
+                relationship_type VARCHAR(50) NOT NULL DEFAULT 'gallery',
+                sort_order INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                
+                UNIQUE(media_id, entity_type, entity_id, relationship_type)
+            )
+        ";
+    }
+    
+    $db->query($createRelationshipsSQL);
+    echo "✅ Table climbing_media_relationships créée\n";
+    
+    // Créer index pour SQLite
+    if (!$isMySQL) {
+        $db->query("CREATE INDEX IF NOT EXISTS idx_media_id ON climbing_media_relationships(media_id)");
+        $db->query("CREATE INDEX IF NOT EXISTS idx_entity ON climbing_media_relationships(entity_type, entity_id)");
+        $db->query("CREATE INDEX IF NOT EXISTS idx_relationship ON climbing_media_relationships(relationship_type)");
+        echo "✅ Index créés pour climbing_media_relationships\n";
+    }
+
     echo "\n🎉 MIGRATION MÉDIAS TERMINÉE !\n";
     
 } catch (Exception $e) {
