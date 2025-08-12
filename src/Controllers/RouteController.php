@@ -303,10 +303,25 @@ class RouteController extends BaseController
             );
         }
 
+        // Récupération des médias associés à la voie
+        $media = [];
+        try {
+            $media = $this->db->fetchAll(
+                "SELECT m.id, m.title, m.file_path, m.file_type, m.created_at
+                 FROM climbing_media m 
+                 WHERE m.entity_type = 'route' AND m.entity_id = ? AND m.active = 1
+                 ORDER BY m.display_order ASC, m.created_at ASC",
+                [$id]
+            );
+        } catch (\Exception $e) {
+            error_log("Erreur récupération médias route {$id}: " . $e->getMessage());
+        }
+
         return [
             'title' => $route['name'],
             'route' => $route,
-            'related_routes' => $relatedRoutes
+            'related_routes' => $relatedRoutes,
+            'media' => $media
         ];
     }
 

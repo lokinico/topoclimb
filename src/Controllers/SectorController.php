@@ -330,6 +330,20 @@ class SectorController extends BaseController
                 [$id]
             );
 
+            // Récupération des médias associés au secteur
+            $media = [];
+            try {
+                $media = $this->db->fetchAll(
+                    "SELECT m.id, m.title, m.file_path, m.file_type, m.created_at
+                     FROM climbing_media m 
+                     WHERE m.entity_type = 'sector' AND m.entity_id = ? AND m.active = 1
+                     ORDER BY m.display_order ASC, m.created_at ASC",
+                    [$id]
+                );
+            } catch (\Exception $e) {
+                error_log("Erreur récupération médias secteur {$id}: " . $e->getMessage());
+            }
+
             $stats = [
                 'routes_count' => count($routes),
                 'min_difficulty' => null,
@@ -355,6 +369,7 @@ class SectorController extends BaseController
                 'title' => $sector['name'],
                 'sector' => $sector,
                 'routes' => $routes,
+                'media' => $media,
                 'stats' => $stats
             ]);
         } catch (\Exception $e) {
