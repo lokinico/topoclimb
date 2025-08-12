@@ -193,8 +193,35 @@ class SectorController extends BaseController
                 LEFT JOIN climbing_routes routes ON s.id = routes.sector_id
                 WHERE s.active = 1";
 
-        // Même conditions de filtrage
-        $mainParams = $params;
+        // Reconstruire les mêmes conditions de filtrage pour la requête principale
+        $mainParams = [];
+        
+        if (isset($filters['region_id'])) {
+            $sql .= " AND s.region_id = ?";
+            $mainParams[] = (int)$filters['region_id'];
+        }
+
+        if (isset($filters['site_id'])) {
+            $sql .= " AND s.site_id = ?";
+            $mainParams[] = (int)$filters['site_id'];
+        }
+
+        if (isset($filters['altitude_min'])) {
+            $sql .= " AND s.altitude >= ?";
+            $mainParams[] = (int)$filters['altitude_min'];
+        }
+
+        if (isset($filters['altitude_max'])) {
+            $sql .= " AND s.altitude <= ?";
+            $mainParams[] = (int)$filters['altitude_max'];
+        }
+
+        if (isset($filters['search'])) {
+            $sql .= " AND (s.name LIKE ? OR s.description LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $mainParams[] = $searchTerm;
+            $mainParams[] = $searchTerm;
+        }
 
         $sql .= " GROUP BY s.id, s.name, s.description, s.altitude, s.created_at, r.name, si.name";
         $sql .= " ORDER BY " . $filters['sort'] . " " . strtoupper($filters['order']);

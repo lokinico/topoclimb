@@ -4,6 +4,7 @@
 namespace TopoclimbCH\Services;
 
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Pagination\Paginator;
 use TopoclimbCH\Exceptions\ServiceException;
 use PDOException;
 
@@ -453,9 +454,26 @@ class SectorService
      * @param \TopoclimbCH\Core\Filtering\SectorFilter $filter
      * @return \TopoclimbCH\Core\Pagination\Paginator
      */
-    public function getPaginatedSectors($filter)
+    public function getPaginatedSectors($filter, int $page = 1, int $perPage = 15, array $queryParams = [])
     {
+        // Valider et nettoyer les paramètres
+        $perPage = Paginator::validatePerPage($perPage);
+        $page = max(1, $page);
+        
         try {
+            // D'abord, compter le total pour la pagination
+            $countSql = "
+                SELECT COUNT(DISTINCT s.id)
+                FROM climbing_sectors s
+                LEFT JOIN climbing_regions r ON s.region_id = r.id
+                WHERE s.active = 1
+            ";
+            
+            $totalSectors = (int) $this->db->fetchOne($countSql)['COUNT(DISTINCT s.id)'];
+            
+            // Calculer offset pour la pagination
+            $offset = ($page - 1) * $perPage;
+            
             // VERSION 1: Tenter avec la colonne 'code'
             $simpleSectors = $this->db->fetchAll("
                 SELECT s.*, COUNT(rt.id) as routes_count, r.name as region_name
@@ -465,11 +483,11 @@ class SectorService
                 WHERE s.active = 1
                 GROUP BY s.id
                 ORDER BY s.name ASC
-                LIMIT 50
+                LIMIT {$perPage} OFFSET {$offset}
             ");
             
-            error_log("SectorService: Query succeeded - " . count($simpleSectors) . " results");
-            return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+            error_log("SectorService: Query succeeded - " . count($simpleSectors) . " results (page {$page}, {$perPage} per page, {$totalSectors} total)");
+            return new Paginator($simpleSectors, $totalSectors, $perPage, $page, $queryParams);
             
         } catch (\Exception $e) {
             error_log("SectorService::getPaginatedSectors Error: " . $e->getMessage());
@@ -497,7 +515,8 @@ class SectorService
                 ");
                 
                 error_log("SectorService: Fallback query without 'code' succeeded - " . count($simpleSectors) . " results");
-                return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+                $totalCount = $this->db->fetchOne("SELECT COUNT(*) as total FROM climbing_sectors WHERE active = 1")['total'] ?? count($simpleSectors);
+                return new Paginator($simpleSectors, $totalCount, $perPage, $page, $queryParams);
                 
             } catch (\Exception $e2) {
                 error_log("SectorService: Fallback query also failed - " . $e2->getMessage());
@@ -524,7 +543,7 @@ class SectorService
                     ");
                     
                     error_log("SectorService: Ultra-minimal query succeeded - " . count($simpleSectors) . " results");
-                    return new \TopoclimbCH\Core\Pagination\SimplePaginator($simpleSectors, 1, 50, count($simpleSectors));
+                    return new Paginator($simpleSectors, count($simpleSectors), $perPage, $page, $queryParams);
                     
                 } catch (\Exception $e3) {
                     error_log("SectorService: ALL QUERIES FAILED - " . $e3->getMessage());
@@ -546,7 +565,7 @@ class SectorService
                         ]
                     ];
                     
-                    return new \TopoclimbCH\Core\Pagination\SimplePaginator($mockSectors, 1, 50, 1);
+                    return new Paginator($mockSectors, 1, $perPage, $page, $queryParams);
                 }
             }
         }
