@@ -1634,7 +1634,17 @@ return array (
     'method' => 'GET',
     'path' => '/test/sites/create',
     'controller' => 'TopoclimbCH\\Controllers\\SiteController',
-    'action' => 'form',
+    'action' => 'testCreate',
+    'middlewares' => 
+    array (
+    ),
+  ),
+  145.1 => 
+  array (
+    'method' => 'POST',
+    'path' => '/test/sites/store',
+    'controller' => 'TopoclimbCH\\Controllers\\SiteController',
+    'action' => 'testStore',
     'middlewares' => 
     array (
     ),
