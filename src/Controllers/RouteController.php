@@ -443,6 +443,185 @@ class RouteController extends BaseController
     }
 
     /**
+     * Page de création de voie
+     */
+    public function create(Request $request): Response
+    {
+        $this->requireAuth();
+        $this->requireRole([0, 1, 2]);
+
+        try {
+            // Récupérer les secteurs disponibles
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name 
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+
+            // Pré-sélection secteur si fourni
+            $sectorId = $request->query->get('sector_id');
+            
+            return $this->render('routes/form', [
+                'route' => (object)['sector_id' => $sectorId],
+                'sectors' => $sectors,
+                'csrf_token' => $this->createCsrfToken(),
+                'is_edit' => false
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire de création');
+            return $this->redirect('/routes');
+        }
+    }
+
+    /**
+     * Enregistrement d'une nouvelle voie
+     */
+    public function store(Request $request): Response
+    {
+        $this->requireAuth();
+        $this->requireRole([0, 1, 2]);
+        
+        try {
+            // Validation CSRF
+            if (!$this->validateCsrfToken($request->request->get('csrf_token'))) {
+                $this->addFlashMessage('error', 'Token de sécurité invalide');
+                return $this->redirect('/routes/create');
+            }
+            
+            // Récupération et validation des données
+            $data = $this->validateRouteData($request);
+            
+            // Insertion en base
+            $routeId = $this->createRoute($data);
+            
+            if ($routeId) {
+                $this->addFlashMessage('success', 'Voie créée avec succès');
+                return $this->redirect('/routes/' . $routeId);
+            } else {
+                throw new \Exception('Impossible de créer la voie');
+            }
+            
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors de la création de la voie');
+            return $this->redirect('/routes/create');
+        }
+    }
+
+    /**
+     * Validation des données de voie
+     */
+    private function validateRouteData(Request $request): array
+    {
+        $data = [
+            'name' => trim($request->request->get('name', '')),
+            'difficulty' => trim($request->request->get('difficulty', '')),
+            'length' => $request->request->get('length') ? (int)$request->request->get('length') : null,
+            'sector_id' => (int)$request->request->get('sector_id', 0),
+            'description' => trim($request->request->get('description', '')),
+            'active' => (int)$request->request->get('active', 1)
+        ];
+
+        // Validation des champs obligatoires
+        if (empty($data['name'])) {
+            throw new \InvalidArgumentException('Le nom de la voie est obligatoire');
+        }
+
+        if (empty($data['difficulty'])) {
+            throw new \InvalidArgumentException('La difficulté est obligatoire');
+        }
+
+        if ($data['sector_id'] <= 0) {
+            throw new \InvalidArgumentException('Un secteur valide est obligatoire');
+        }
+
+        // Validation des contraintes
+        if (strlen($data['name']) > 255) {
+            throw new \InvalidArgumentException('Le nom ne peut pas dépasser 255 caractères');
+        }
+
+        if ($data['length'] !== null && ($data['length'] < 0 || $data['length'] > 2000)) {
+            throw new \InvalidArgumentException('La longueur doit être entre 0 et 2000 mètres');
+        }
+
+        return $data;
+    }
+
+    /**
+     * Création d'une voie en base de données (compatible production)
+     */
+    private function createRoute(array $data): int
+    {
+        // Déterminer le driver de base de données pour adapter la syntaxe
+        $isMySQL = $this->db->getConnection()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
+        $dateFunction = $isMySQL ? 'NOW()' : 'datetime(\'now\')';
+        
+        // Récupérer la structure de la table pour compatibilité production
+        $availableColumns = $this->getAvailableColumns('climbing_routes');
+        
+        // Colonnes de base obligatoires
+        $baseColumns = ['name', 'difficulty', 'sector_id', 'active', 'created_at', 'updated_at'];
+        $baseValues = ['?', '?', '?', '?', $dateFunction, $dateFunction];
+        $baseParams = [
+            $data['name'],
+            $data['difficulty'],
+            $data['sector_id'],
+            $data['active']
+        ];
+        
+        // Colonnes optionnelles avec vérification existence
+        $optionalFields = [
+            'length' => $data['length'],
+            'description' => $data['description']
+        ];
+        
+        $columns = $baseColumns;
+        $values = $baseValues;
+        $params = $baseParams;
+        
+        // Ajouter les colonnes optionnelles si elles existent
+        foreach ($optionalFields as $column => $value) {
+            if (in_array($column, $availableColumns)) {
+                $columns[] = $column;
+                $values[] = '?';
+                $params[] = $value;
+            }
+        }
+        
+        $query = "INSERT INTO climbing_routes (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ")";
+        
+        $result = $this->db->query($query, $params);
+        
+        if ($result) {
+            return (int)$this->db->getConnection()->lastInsertId();
+        }
+        
+        return 0;
+    }
+
+    /**
+     * Récupère les colonnes disponibles dans une table (compatible SQLite/MySQL)
+     */
+    private function getAvailableColumns(string $tableName): array
+    {
+        try {
+            $isMySQL = $this->db->getConnection()->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
+            
+            if ($isMySQL) {
+                $columns = $this->db->fetchAll("DESCRIBE {$tableName}");
+                return array_column($columns, 'Field');
+            } else {
+                $columns = $this->db->fetchAll("PRAGMA table_info({$tableName})");
+                return array_column($columns, 'name');
+            }
+        } catch (\Exception $e) {
+            error_log("Erreur récupération colonnes {$tableName}: " . $e->getMessage());
+            return ['id', 'name', 'difficulty', 'sector_id', 'active', 'created_at', 'updated_at'];
+        }
+    }
+
+    /**
      * Calcul sécurisé des statistiques générales
      */
     private function calculateStats(): array

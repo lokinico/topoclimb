@@ -538,7 +538,7 @@ class SectorController extends BaseController
     public function store(Request $request): Response
     {
         $this->requireAuth();
-        $this->requireRole([1, 2, 3]);
+        $this->requireRole([0, 1, 2]);
         
         try {
             // Validation CSRF
@@ -579,7 +579,7 @@ class SectorController extends BaseController
     public function create(Request $request): Response
     {
         $this->requireAuth();
-        $this->requireRole([1, 2, 3]);
+        $this->requireRole([0, 1, 2]);
 
         try {
             // Récupérer les régions
