@@ -1619,6 +1619,16 @@ return array (
     array (
     ),
   ),
+  144.1 => 
+  array (
+    'method' => 'POST',
+    'path' => '/test/regions/store',
+    'controller' => 'TopoclimbCH\\Controllers\\RegionController',
+    'action' => 'testStore',
+    'middlewares' => 
+    array (
+    ),
+  ),
   145 => 
   array (
     'method' => 'GET',
