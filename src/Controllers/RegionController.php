@@ -441,9 +441,8 @@ class RegionController extends BaseController
             // Vérification des permissions (admin, modérateur, éditeur)
             $this->requireRole([0, 1, 2], 'Permissions insuffisantes pour créer une région');
 
-            $countries = $this->db->fetchAll(
-                "SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC"
-            );
+            // Essayer de récupérer les pays, créer table si nécessaire
+            $countries = $this->getOrCreateCountries();
 
             return $this->render('regions/form', [
                 'region' => (object)[],
@@ -467,9 +466,8 @@ class RegionController extends BaseController
     public function testCreate(Request $request): Response
     {
         try {
-            $countries = $this->db->fetchAll(
-                "SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC"
-            );
+            // Utiliser la même logique de récupération/création des pays
+            $countries = $this->getOrCreateCountries();
 
             return $this->render('regions/form', [
                 'region' => (object)[],
@@ -567,6 +565,7 @@ class RegionController extends BaseController
      */
     private function createRegionWithoutAuth(array $data): int
     {
+        // Structure de base compatible avec production (sans colonnes étendues)
         $regionData = [
             'country_id' => (int)$data['country_id'],
             'name' => $data['name'],
@@ -574,14 +573,40 @@ class RegionController extends BaseController
             'coordinates_lat' => isset($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
             'coordinates_lng' => isset($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
             'altitude' => isset($data['altitude']) ? (int)$data['altitude'] : null,
-            'best_season' => $data['best_season'] ?? null,
-            'access_info' => $data['access_info'] ?? null,
-            'parking_info' => $data['parking_info'] ?? null,
             'active' => 1,
-            'created_by' => 1, // Simuler un utilisateur admin
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s')
         ];
+        
+        // Ajouter les colonnes étendues seulement si elles existent
+        try {
+            // Compatible SQLite et MySQL - détection automatique
+            try {
+                // Essayer d'abord PRAGMA (SQLite)
+                $columns = $this->db->fetchAll("PRAGMA table_info(climbing_regions)");
+                $existingColumns = array_column($columns, 'name');
+            } catch (\Exception $pragmaError) {
+                // Si PRAGMA échoue, utiliser DESCRIBE (MySQL/MariaDB)
+                $columns = $this->db->fetchAll("DESCRIBE climbing_regions");
+                $existingColumns = array_column($columns, 'Field');
+            }
+            
+            // Ajouter les colonnes optionnelles si elles existent
+            if (in_array('best_season', $existingColumns)) {
+                $regionData['best_season'] = $data['best_season'] ?? null;
+            }
+            if (in_array('access_info', $existingColumns)) {
+                $regionData['access_info'] = $data['access_info'] ?? null;
+            }
+            if (in_array('parking_info', $existingColumns)) {
+                $regionData['parking_info'] = $data['parking_info'] ?? null;
+            }
+            if (in_array('created_by', $existingColumns)) {
+                $regionData['created_by'] = 1; // Simuler un utilisateur admin
+            }
+        } catch (\Exception $e) {
+            error_log("RegionController: Impossible de vérifier les colonnes (test) - " . $e->getMessage());
+        }
 
         $regionId = $this->db->insert('climbing_regions', $regionData);
 
@@ -590,6 +615,63 @@ class RegionController extends BaseController
         }
 
         return $regionId;
+    }
+
+    /**
+     * Récupère les pays ou crée la table si nécessaire (compatible production)
+     */
+    private function getOrCreateCountries(): array
+    {
+        try {
+            // Essayer de récupérer les pays existants
+            return $this->db->fetchAll(
+                "SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC"
+            );
+        } catch (\Exception $e) {
+            // La table n'existe probablement pas, créer une version minimale
+            try {
+                $this->db->query("
+                    CREATE TABLE IF NOT EXISTS climbing_countries (
+                        id INT PRIMARY KEY AUTO_INCREMENT,
+                        name VARCHAR(255) NOT NULL,
+                        code VARCHAR(3) NOT NULL UNIQUE,
+                        continent VARCHAR(100),
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        active TINYINT(1) DEFAULT 1
+                    )
+                ");
+
+                // Insérer quelques pays de base
+                $countries = [
+                    ['Suisse', 'CH', 'Europe'],
+                    ['France', 'FR', 'Europe'],
+                    ['Italie', 'IT', 'Europe'],
+                    ['Autriche', 'AT', 'Europe']
+                ];
+
+                foreach ($countries as $country) {
+                    $existing = $this->db->fetchOne("SELECT id FROM climbing_countries WHERE code = ?", [$country[1]]);
+                    if (!$existing) {
+                        $this->db->query(
+                            "INSERT INTO climbing_countries (name, code, continent) VALUES (?, ?, ?)",
+                            $country
+                        );
+                    }
+                }
+
+                // Retourner les pays créés
+                return $this->db->fetchAll(
+                    "SELECT * FROM climbing_countries WHERE active = 1 ORDER BY name ASC"
+                );
+            } catch (\Exception $e2) {
+                // Si même la création échoue, retourner un pays par défaut
+                error_log("RegionController: Impossible de créer climbing_countries - " . $e2->getMessage());
+                return [
+                    ['id' => 1, 'name' => 'Suisse', 'code' => 'CH', 'continent' => 'Europe']
+                ];
+            }
+        }
     }
 
     /**
@@ -672,6 +754,7 @@ class RegionController extends BaseController
      */
     private function createRegion(array $data): int
     {
+        // Structure de base compatible avec production (sans colonnes étendues)
         $regionData = [
             'country_id' => (int)$data['country_id'],
             'name' => $data['name'],
@@ -679,14 +762,41 @@ class RegionController extends BaseController
             'coordinates_lat' => isset($data['coordinates_lat']) ? (float)$data['coordinates_lat'] : null,
             'coordinates_lng' => isset($data['coordinates_lng']) ? (float)$data['coordinates_lng'] : null,
             'altitude' => isset($data['altitude']) ? (int)$data['altitude'] : null,
-            'best_season' => $data['best_season'] ?? null,
-            'access_info' => $data['access_info'] ?? null,
-            'parking_info' => $data['parking_info'] ?? null,
             'active' => 1,
-            'created_by' => $this->auth->id(),
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s')
         ];
+        
+        // Ajouter les colonnes étendues seulement si elles existent
+        try {
+            // Compatible SQLite et MySQL - détection automatique
+            try {
+                // Essayer d'abord PRAGMA (SQLite)
+                $columns = $this->db->fetchAll("PRAGMA table_info(climbing_regions)");
+                $existingColumns = array_column($columns, 'name');
+            } catch (\Exception $pragmaError) {
+                // Si PRAGMA échoue, utiliser DESCRIBE (MySQL/MariaDB)
+                $columns = $this->db->fetchAll("DESCRIBE climbing_regions");
+                $existingColumns = array_column($columns, 'Field');
+            }
+            
+            // Ajouter les colonnes optionnelles si elles existent
+            if (in_array('best_season', $existingColumns)) {
+                $regionData['best_season'] = $data['best_season'] ?? null;
+            }
+            if (in_array('access_info', $existingColumns)) {
+                $regionData['access_info'] = $data['access_info'] ?? null;
+            }
+            if (in_array('parking_info', $existingColumns)) {
+                $regionData['parking_info'] = $data['parking_info'] ?? null;
+            }
+            if (in_array('created_by', $existingColumns)) {
+                $regionData['created_by'] = $this->auth->id();
+            }
+        } catch (\Exception $e) {
+            // Si impossible de vérifier les colonnes, utiliser seulement les colonnes de base
+            error_log("RegionController: Impossible de vérifier les colonnes - " . $e->getMessage());
+        }
 
         $regionId = $this->db->insert('climbing_regions', $regionData);
 
