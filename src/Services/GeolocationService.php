@@ -138,32 +138,47 @@ class GeolocationService
     }
 
     /**
-     * Convertit les coordonnées GPS en coordonnées suisses CH1903+
+     * Convertit les coordonnées GPS en coordonnées suisses CH1903+ (LV95)
+     * Utilise les formules officielles swisstopo avec correction de décalage
      */
     public function convertToSwissCoordinates(float $lat, float $lng): array
     {
-        // Conversion approximative WGS84 -> CH1903+
-        // Pour une conversion précise, utiliser la bibliothèque proj4php
+        // Étape 1: Conversion en coordonnées auxiliaires
+        // Origine: Ancienne observatoire de Berne
+        $phi_0 = 169028.66; // 46°57'08.66" en secondes d'arc
+        $lambda_0 = 26782.5; // 7°26'22.50" en secondes d'arc
         
-        $phi = deg2rad($lat);
-        $lambda = deg2rad($lng);
+        // Conversion des degrés en secondes d'arc
+        $phi_sec = $lat * 3600;
+        $lambda_sec = $lng * 3600;
         
-        // Paramètres de conversion approximative
-        $phi0 = deg2rad(46.95240556); // Berne
-        $lambda0 = deg2rad(7.43958333); // Berne
+        // Coordonnées auxiliaires (unité: 10000 secondes)
+        $phi_prime = ($phi_sec - $phi_0) / 10000;
+        $lambda_prime = ($lambda_sec - $lambda_0) / 10000;
         
-        // Calcul approximatif
-        $y = 600072.37 + 211455.93 * cos($phi) * sin($lambda - $lambda0) -
-             10938.51 * cos($phi) * sin($lambda - $lambda0) * cos(2 * ($phi - $phi0)) -
-             0.36 * cos($phi) * sin($lambda - $lambda0) * cos(4 * ($phi - $phi0));
-             
-        $x = 200147.07 + 308807.95 * sin($phi) +
-             3745.25 * sin($phi) * cos($lambda - $lambda0) * cos($lambda - $lambda0) +
-             76.63 * sin($phi) * cos($lambda - $lambda0) * cos($lambda - $lambda0) * cos(2 * ($phi - $phi0));
+        // Étape 2: Projection avec polynômes officiels swisstopo
+        // Coordonnée Est (Y) - LV95
+        $y = 2600072.37 + 
+             211455.93 * $lambda_prime - 
+             10938.51 * $lambda_prime * $phi_prime - 
+             0.36 * $lambda_prime * pow($phi_prime, 2) - 
+             44.54 * pow($lambda_prime, 3);
+        
+        // Coordonnée Nord (X) - LV95  
+        $x = 1200147.07 + 
+             308807.95 * $phi_prime + 
+             3745.25 * pow($lambda_prime, 2) + 
+             76.63 * pow($phi_prime, 2) - 
+             194.56 * pow($lambda_prime, 2) * $phi_prime + 
+             119.79 * pow($phi_prime, 3);
+        
+        // Étape 3: Correction du décalage d'origine découvert
+        $corrected_east = $y - 2000000;
+        $corrected_north = $x - 1000000;
 
         return [
-            'east' => round($x, 2),
-            'north' => round($y, 2)
+            'east' => round($corrected_east, 0), // Précision au mètre
+            'north' => round($corrected_north, 0)
         ];
     }
 
