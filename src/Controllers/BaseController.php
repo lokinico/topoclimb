@@ -123,19 +123,22 @@ abstract class BaseController
     }
 
     /**
-     * Vérification sécurisée des permissions
+     * Vérification sécurisée des permissions avec redirection
      */
     protected function requireAuth(string $message = 'Authentification requise'): void
     {
         if (!$this->auth || !$this->auth->check()) {
             $this->session->set('intended_url', $_SERVER['REQUEST_URI'] ?? '/');
             $this->flash('error', $message);
-            throw new AuthorizationException($message);
+            
+            // Rediriger vers la page de connexion au lieu de lancer une exception
+            header('Location: /login', true, 302);
+            exit;
         }
     }
 
     /**
-     * Vérification des rôles utilisateur
+     * Vérification des rôles utilisateur avec redirection vers page permissions
      */
     protected function requireRole(array $allowedRoles, string $message = 'Permissions insuffisantes'): void
     {
@@ -144,8 +147,13 @@ abstract class BaseController
         $userRole = $this->auth->role();
 
         if (!in_array($userRole, $allowedRoles)) {
-            $this->flash('error', $message);
-            throw new AuthorizationException($message);
+            // Rediriger vers la page d'erreur permissions au lieu de lancer une exception
+            $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+            $errorUrl = '/errors/permissions?message=' . urlencode($message) . '&return=' . urlencode($currentUrl);
+            
+            // Utiliser une redirection HTTP au lieu d'une exception
+            header('Location: ' . $errorUrl, true, 403);
+            exit;
         }
     }
 
@@ -287,19 +295,89 @@ abstract class BaseController
     }
 
     /**
-     * Headers de sécurité
+     * Headers de sécurité améliorés
      */
     protected function setSecurityHeaders(Response $response): void
     {
+        // Headers de base
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-        if (env('APP_ENV') === 'production') {
-            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        // HTTPS et sécurité renforcée
+        $isSecure = $this->isHttpsRequest();
+        $forceHttps = env('FORCE_HTTPS', false);
+        
+        if ($isSecure || $forceHttps) {
+            // Strict Transport Security pour HTTPS
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+            
+            // Content Security Policy plus strict pour formulaires sécurisés
+            $csp = "default-src 'self'; " .
+                   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 'nonce-" . $this->generateCspNonce() . "'; " .
+                   "style-src 'self' 'unsafe-inline' https:; " .
+                   "img-src 'self' data: https:; " .
+                   "font-src 'self' https:; " .
+                   "connect-src 'self' https:; " .
+                   "form-action 'self' https:; " .
+                   "upgrade-insecure-requests;";
+            
+            $response->headers->set('Content-Security-Policy', $csp);
         }
+        
+        // Permissions Policy
+        $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        
+        // Cache headers pour formulaires
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
     }
+    
+    /**
+     * Vérifier si la requête utilise HTTPS
+     */
+    protected function isHttpsRequest(): bool
+    {
+        // Vérifier HTTPS standard
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+        
+        // Vérifier port 443
+        if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
+            return true;
+        }
+        
+        // Vérifier headers de proxy
+        $httpsHeaders = [
+            'HTTP_X_FORWARDED_PROTO' => 'https',
+            'HTTP_X_FORWARDED_SSL' => 'on',
+            'HTTP_CLOUDFRONT_FORWARDED_PROTO' => 'https'
+        ];
+        
+        foreach ($httpsHeaders as $header => $value) {
+            if (isset($_SERVER[$header]) && stripos($_SERVER[$header], $value) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Générer nonce pour CSP
+     */
+    protected function generateCspNonce(): string
+    {
+        if (!isset($this->cspNonce)) {
+            $this->cspNonce = base64_encode(random_bytes(16));
+        }
+        return $this->cspNonce;
+    }
+    
+    private ?string $cspNonce = null;
 
     /**
      * Redirection sécurisée
@@ -409,12 +487,14 @@ abstract class BaseController
     }
 
     /**
-     * Validation stricte des permissions
+     * Validation stricte des permissions avec redirection
      */
     protected function authorize(string $ability, $model = null): void
     {
         if (!$this->auth || !$this->auth->check()) {
-            throw new AuthorizationException("Authentification requise");
+            $this->session->set('intended_url', $_SERVER['REQUEST_URI'] ?? '/');
+            header('Location: /login', true, 302);
+            exit;
         }
 
         // Ajouter ici la logique de permissions spécifique à votre application
@@ -431,7 +511,12 @@ abstract class BaseController
         ];
 
         if (!isset($permissions[$ability]) || !in_array($userRole, $permissions[$ability])) {
-            throw new AuthorizationException("Action non autorisée: $ability");
+            $message = "Action non autorisée: $ability";
+            $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+            $errorUrl = '/errors/permissions?message=' . urlencode($message) . '&return=' . urlencode($currentUrl);
+            
+            header('Location: ' . $errorUrl, true, 403);
+            exit;
         }
     }
 

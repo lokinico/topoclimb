@@ -81,4 +81,40 @@ class ErrorController extends BaseController
 
         return $response;
     }
+
+    /**
+     * Permissions insuffisantes page
+     *
+     * @param Request $request
+     * @return Response
+     */
+    public function permissions(Request $request): Response
+    {
+        $errorMessage = $request->query->get('message', 'Vous n\'avez pas les permissions nécessaires pour accéder à cette page.');
+        $returnUrl = $request->query->get('return', '/');
+
+        // Récupérer l'utilisateur connecté pour l'affichage
+        $authUser = null;
+        if ($this->session->has('auth_user_id')) {
+            // Simuler les données utilisateur basiques pour l'affichage
+            $authUser = [
+                'username' => $this->session->get('auth_username', 'Utilisateur'),
+                'autorisation' => $this->session->get('auth_user_role', '5')
+            ];
+        }
+
+        $response = new Response();
+        $response->setStatusCode(Response::HTTP_FORBIDDEN);
+        
+        $data = [
+            'error_message' => $errorMessage,
+            'return_url' => $returnUrl,
+            'auth_user' => $authUser
+        ];
+        
+        $content = $this->view->render('errors/permissions.twig', $data);
+        $response->setContent($content);
+
+        return $response;
+    }
 }

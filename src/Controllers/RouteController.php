@@ -486,7 +486,7 @@ class RouteController extends BaseController
         try {
             // Validation CSRF
             if (!$this->validateCsrfToken($request->request->get('csrf_token'))) {
-                $this->addFlashMessage('error', 'Token de sécurité invalide');
+                $this->flash('error', 'Token de sécurité invalide');
                 return $this->redirect('/routes/create');
             }
             
@@ -497,7 +497,7 @@ class RouteController extends BaseController
             $routeId = $this->createRoute($data);
             
             if ($routeId) {
-                $this->addFlashMessage('success', 'Voie créée avec succès');
+                $this->flash('success', 'Voie créée avec succès');
                 return $this->redirect('/routes/' . $routeId);
             } else {
                 throw new \Exception('Impossible de créer la voie');

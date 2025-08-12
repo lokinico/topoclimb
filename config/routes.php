@@ -1459,6 +1459,13 @@ return array (
     'controller' => 'TopoclimbCH\\Controllers\\ErrorController',
     'action' => 'forbidden',
   ),
+  128.1 => 
+  array (
+    'method' => 'GET',
+    'path' => '/errors/permissions',
+    'controller' => 'TopoclimbCH\\Controllers\\ErrorController',
+    'action' => 'permissions',
+  ),
   129 => 
   array (
     'method' => 'GET',

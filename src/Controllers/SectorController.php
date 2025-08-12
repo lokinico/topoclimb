@@ -543,7 +543,7 @@ class SectorController extends BaseController
         try {
             // Validation CSRF
             if (!$this->validateCsrfToken($request->request->get('csrf_token'))) {
-                $this->addFlashMessage('error', 'Token de sécurité invalide');
+                $this->flash('error', 'Token de sécurité invalide');
                 return $this->redirect('/sectors/create');
             }
             
@@ -553,7 +553,7 @@ class SectorController extends BaseController
             // Vérifier unicité du code
             $existing = $this->db->fetchOne("SELECT id FROM climbing_sectors WHERE code = ?", [$data['code']]);
             if ($existing) {
-                $this->addFlashMessage('error', 'Ce code de secteur existe déjà');
+                $this->flash('error', 'Ce code de secteur existe déjà');
                 return $this->redirect('/sectors/create');
             }
             
@@ -561,7 +561,7 @@ class SectorController extends BaseController
             $sectorId = $this->createSector($data);
             
             if ($sectorId) {
-                $this->addFlashMessage('success', 'Secteur créé avec succès');
+                $this->flash('success', 'Secteur créé avec succès');
                 return $this->redirect('/sectors/' . $sectorId);
             } else {
                 throw new \Exception('Impossible de créer le secteur');
