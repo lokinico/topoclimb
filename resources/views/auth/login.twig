@@ -11,7 +11,7 @@
                 <div class="card-body">
                     {% include 'partials/flash.twig' %}
                     
-                    <form method="POST" action="/login" autocomplete="on">
+                    <form method="POST" action="{{ url('/login') }}" autocomplete="off">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         
                         <div class="mb-3">

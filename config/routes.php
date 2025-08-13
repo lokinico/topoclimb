@@ -145,6 +145,7 @@ return [
         'path' => '/sectors/create',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'store',
+        'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -203,6 +204,7 @@ return [
         'path' => '/routes/create',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'store',
+        'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
     ],
     [
         'method' => 'GET',

@@ -40,7 +40,7 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-body">
-                    <form method="post" action="{{ route.id ? url('/routes/' ~ route.id ~ '/edit') : url('/routes') }}" enctype="multipart/form-data" id="route-form" autocomplete="on">
+                    <form method="post" action="{{ route.id ? url('/routes/' ~ route.id ~ '/edit') : url('/routes') }}" enctype="multipart/form-data" id="route-form" autocomplete="off">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         {% if not sector %}
                             <!-- SÉLECTEUR CASCADE RÉGION → SECTEUR -->
