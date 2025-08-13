@@ -139,9 +139,69 @@ class GeolocationService
 
     /**
      * Convertit les coordonnées GPS en coordonnées suisses CH1903+ (LV95)
-     * Utilise les formules officielles swisstopo avec correction de décalage
+     * Utilise l'API officielle swisstopo avec fallback sur algorithme local
      */
     public function convertToSwissCoordinates(float $lat, float $lng): array
+    {
+        // Tentative avec l'API officielle swisstopo (précision maximale)
+        $apiResult = $this->convertViaSwisstopoAPI($lat, $lng);
+        
+        if ($apiResult !== null) {
+            return $apiResult;
+        }
+        
+        // Fallback: Algorithme local avec formules officielles swisstopo
+        return $this->convertLocalAlgorithm($lat, $lng);
+    }
+
+    /**
+     * Conversion via API officielle swisstopo REFRAME
+     * @return array|null Coordonnées LV95 ou null en cas d'échec
+     */
+    private function convertViaSwisstopoAPI(float $lat, float $lng): ?array
+    {
+        $url = "https://geodesy.geo.admin.ch/reframe/wgs84tolv95?easting={$lng}&northing={$lat}&format=json";
+        
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => [
+                    'User-Agent: TopoclimbCH/1.0 (climbing app)',
+                    'Accept: application/json'
+                ],
+                'timeout' => 5 // Timeout court pour ne pas ralentir l'app
+            ]
+        ]);
+        
+        $response = @file_get_contents($url, false, $context);
+        
+        if ($response === false) {
+            return null; // Échec réseau
+        }
+        
+        $json = json_decode($response, true);
+        
+        if (!$json || !isset($json['easting']) || !isset($json['northing'])) {
+            return null; // Réponse invalide
+        }
+        
+        // L'API retourne les coordonnées LV95 complètes avec décalages d'origine
+        // Soustraire les décalages pour obtenir les coordonnées usuelles
+        $east = floatval($json['easting']) - 2000000;
+        $north = floatval($json['northing']) - 1000000;
+        
+        return [
+            'east' => round($east, 0),
+            'north' => round($north, 0),
+            'source' => 'swisstopo_api'
+        ];
+    }
+
+    /**
+     * Conversion avec algorithme local (fallback)
+     * Utilise les formules officielles swisstopo
+     */
+    private function convertLocalAlgorithm(float $lat, float $lng): array
     {
         // Étape 1: Conversion en coordonnées auxiliaires
         // Origine: Ancienne observatoire de Berne
@@ -172,13 +232,14 @@ class GeolocationService
              194.56 * pow($lambda_prime, 2) * $phi_prime + 
              119.79 * pow($phi_prime, 3);
         
-        // Étape 3: Correction du décalage d'origine découvert
+        // Étape 3: Correction du décalage d'origine
         $corrected_east = $y - 2000000;
         $corrected_north = $x - 1000000;
 
         return [
-            'east' => round($corrected_east, 0), // Précision au mètre
-            'north' => round($corrected_north, 0)
+            'east' => round($corrected_east, 0),
+            'north' => round($corrected_north, 0),
+            'source' => 'local_algorithm'
         ];
     }
 
