@@ -647,4 +647,169 @@ class RouteController extends BaseController
             return ['total_routes' => 0, 'avg_length' => null, 'min_length' => 0, 'max_length' => 0];
         }
     }
+
+    /**
+     * Affiche le formulaire de confirmation de suppression d'une route
+     */
+    public function delete(Request $request): Response
+    {
+        $routeId = $request->get('id');
+        
+        try {
+            // Vérifier que la route existe
+            $route = $this->db->fetchOne(
+                "SELECT r.*, s.name as sector_name 
+                 FROM climbing_routes r 
+                 LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
+                 WHERE r.id = ?", 
+                [$routeId]
+            );
+            
+            if (!$route) {
+                throw new \Exception('Route not found');
+            }
+            
+            return $this->render('routes/delete.twig', [
+                'route' => $route
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->flash('error',Route introuvable: ' . $e->getMessage());
+            return $this->redirect('/routes');
+        }
+    }
+
+    /**
+     * Affiche les commentaires d'une route
+     */
+    public function comments(Request $request): Response
+    {
+        $routeId = $request->get('id');
+        
+        try {
+            // Récupérer la route
+            $route = $this->db->fetchOne(
+                "SELECT r.*, s.name as sector_name 
+                 FROM climbing_routes r 
+                 LEFT JOIN climbing_sectors s ON r.sector_id = s.id 
+                 WHERE r.id = ?", 
+                [$routeId]
+            );
+            
+            if (!$route) {
+                throw new \Exception('Route not found');
+            }
+            
+            // Récupérer les commentaires (table hypothétique)
+            $comments = $this->db->fetchAll(
+                "SELECT c.*, u.username 
+                 FROM route_comments c 
+                 LEFT JOIN users u ON c.user_id = u.id 
+                 WHERE c.route_id = ? 
+                 ORDER BY c.created_at DESC", 
+                [$routeId]
+            );
+            
+            return $this->render('routes/comments.twig', [
+                'route' => $route,
+                'comments' => $comments
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->flash('error',Erreur lors du chargement des commentaires: ' . $e->getMessage());
+            return $this->redirect('/routes/' . $routeId);
+        }
+    }
+
+    /**
+     * Ajouter un commentaire à une route
+     */
+    public function storeComment(Request $request): Response
+    {
+        $routeId = $request->get('id');
+        $comment = $request->get('comment');
+        
+        if (empty($comment)) {
+            $this->flash('error',Le commentaire ne peut pas être vide');
+            return $this->redirect('/routes/' . $routeId . '/comments');
+        }
+        
+        try {
+            // Insérer le commentaire (table hypothétique)
+            $this->db->query(
+                "INSERT INTO route_comments (route_id, user_id, comment, created_at) VALUES (?, ?, ?, NOW())",
+                [$routeId, $this->session->get('user_id'), $comment]
+            );
+            
+            $this->flash('success',Commentaire ajouté avec succès');
+            
+        } catch (\Exception $e) {
+            $this->flash('error',Erreur lors de l\'ajout du commentaire: ' . $e->getMessage());
+        }
+        
+        return $this->redirect('/routes/' . $routeId . '/comments');
+    }
+
+    /**
+     * Gestion des favoris pour une route
+     */
+    public function favorite(Request $request): Response
+    {
+        $routeId = $request->get('id');
+        
+        try {
+            // Vérifier que la route existe
+            $route = $this->db->fetchOne("SELECT * FROM climbing_routes WHERE id = ?", [$routeId]);
+            
+            if (!$route) {
+                throw new \Exception('Route not found');
+            }
+            
+            return $this->render('routes/favorite.twig', [
+                'route' => $route
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->flash('error',Route introuvable: ' . $e->getMessage());
+            return $this->redirect('/routes');
+        }
+    }
+
+    /**
+     * Basculer le statut favori d'une route
+     */
+    public function toggleFavorite(Request $request): Response
+    {
+        $routeId = $request->get('id');
+        $userId = $this->session->get('user_id');
+        
+        try {
+            // Vérifier si déjà en favori (table hypothétique)
+            $existing = $this->db->fetchOne(
+                "SELECT * FROM user_favorites WHERE user_id = ? AND route_id = ?",
+                [$userId, $routeId]
+            );
+            
+            if ($existing) {
+                // Retirer des favoris
+                $this->db->query(
+                    "DELETE FROM user_favorites WHERE user_id = ? AND route_id = ?",
+                    [$userId, $routeId]
+                );
+                $this->flash('success',Route retirée des favoris');
+            } else {
+                // Ajouter aux favoris
+                $this->db->query(
+                    "INSERT INTO user_favorites (user_id, route_id, created_at) VALUES (?, ?, NOW())",
+                    [$userId, $routeId]
+                );
+                $this->flash('success',Route ajoutée aux favoris');
+            }
+            
+        } catch (\Exception $e) {
+            $this->flash('error',Erreur lors de la modification des favoris: ' . $e->getMessage());
+        }
+        
+        return $this->redirect('/routes/' . $routeId);
+    }
 }

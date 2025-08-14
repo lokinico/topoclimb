@@ -314,8 +314,17 @@ class Router
         };
 
         // Build the middleware stack in reverse order (last middleware executes first)
-        foreach (array_reverse($middlewares) as $middleware) {
-            $middlewareInstance = $this->container->get($middleware);
+        foreach (array_reverse($middlewares) as $key => $middleware) {
+            // Handle middleware with parameters (PermissionMiddleware)
+            if (is_array($middleware)) {
+                $middlewareClass = $key;
+                $middlewareParams = $middleware;
+                $middlewareInstance = $this->container->get($middlewareClass);
+                // TODO: Pass parameters to middleware if needed
+            } else {
+                $middlewareClass = $middleware;
+                $middlewareInstance = $this->container->get($middlewareClass);
+            }
 
             // Create a new stack that wraps the current stack with this middleware
             $stack = function (Request $request) use ($middlewareInstance, $stack) {

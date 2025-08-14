@@ -457,5 +457,180 @@ return [
         'action' => 'weatherTest'
     ],
 
+    // ===== ROUTES MANQUANTES AJOUTÉES =====
+
+    // Routes pour les sites (edit manquant)
+    [
+        'method' => 'GET',
+        'path' => '/sites/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'edit',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/sites/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'update',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+
+    // Routes pour les guides d'escalade (books)
+    [
+        'method' => 'GET',
+        'path' => '/books',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'index'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/books/{id}',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'show'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/books/create',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'create',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/books/create',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'store',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/books/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'edit',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/books/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'update',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/books/{id}/add-sector',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'addSector',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/books/{id}/add-sector',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'storeSector',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/books/{id}/remove-sector',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'removeSector',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/books/{id}/remove-sector',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'destroySector',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+
+    // Routes pour les commentaires et favoris des routes
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/comments',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'comments'
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/comments',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'storeComment',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/favorite',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'favorite',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/favorite',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'toggleFavorite',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+
+    // Routes pour les alertes
+    [
+        'method' => 'GET',
+        'path' => '/alerts',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'index'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/alerts/create',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'create',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/alerts/create',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'store',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/alerts/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'edit',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/alerts/{id}/edit',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'update',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/alerts/{id}/confirm',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'confirm',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/alerts/{id}/confirm',
+        'controller' => \TopoclimbCH\Controllers\AlertController::class,
+        'action' => 'processConfirm',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+
+    // Route d'administration
+    [
+        'method' => 'GET',
+        'path' => '/admin',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
 
 ];
