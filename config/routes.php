@@ -633,4 +633,428 @@ return [
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\AdminMiddleware::class]
     ],
 
+    // ===== ROUTES ESSENTIELLES MANQUANTES POUR APPLICATION D'ESCALADE COMPLÈTE =====
+
+    // **1. PROFILS UTILISATEURS ET SOCIAL**
+    // Pages développement futur : Profils grimpeurs détaillés, statistiques personnelles, followers
+    [
+        'method' => 'GET',
+        'path' => '/users',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'index'  // Liste publique des grimpeurs actifs
+    ],
+    [
+        'method' => 'GET', 
+        'path' => '/users/{id}',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'show'  // Profil public : stats, ascensions récentes, photos
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/users/{id}/ascents',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'ascents'  // Carnet d'ascensions détaillé avec filtres
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/users/{id}/photos',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'photos'  // Galerie photos du grimpeur
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/users/{id}/statistics',
+        'controller' => \TopoclimbCH\Controllers\UserController::class,
+        'action' => 'statistics'  // Statistiques avancées : grades, types, régions
+    ],
+
+    // **2. CARNETS D'ASCENSIONS (LOGBOOK)**
+    // Pages développement futur : Import/export carnets, analyse progression, objectifs
+    [
+        'method' => 'GET',
+        'path' => '/logbook',
+        'controller' => \TopoclimbCH\Controllers\LogbookController::class,
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Mon carnet personnel
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/logbook/import',
+        'controller' => \TopoclimbCH\Controllers\LogbookController::class,
+        'action' => 'import',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Import GPS, fichiers
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/logbook/export',
+        'controller' => \TopoclimbCH\Controllers\LogbookController::class,
+        'action' => 'export',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Export PDF, Excel
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/logbook/analytics',
+        'controller' => \TopoclimbCH\Controllers\LogbookController::class,
+        'action' => 'analytics',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Graphiques progression
+    ],
+
+    // **3. GALERIES PHOTOS ET MÉDIAS**
+    // Pages développement futur : Upload batch, reconnaissance IA, géolocalisation
+    [
+        'method' => 'GET',
+        'path' => '/photos',
+        'controller' => \TopoclimbCH\Controllers\PhotoController::class,
+        'action' => 'index'  // Galerie publique communautaire
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/photos/upload',
+        'controller' => \TopoclimbCH\Controllers\PhotoController::class,
+        'action' => 'upload',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Upload avec tags auto
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/photos/{id}',
+        'controller' => \TopoclimbCH\Controllers\PhotoController::class,
+        'action' => 'show'  // Vue détaillée avec EXIF, commentaires
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/photos/routes/{routeId}',
+        'controller' => \TopoclimbCH\Controllers\PhotoController::class,
+        'action' => 'byRoute'  // Photos spécifiques à une voie
+    ],
+
+    // **4. SYSTÈME D'ÉVALUATION ET REVIEWS**  
+    // Pages développement futur : Notes détaillées, critères multiples, modération
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}/reviews',
+        'controller' => \TopoclimbCH\Controllers\ReviewController::class,
+        'action' => 'index'  // Avis et notes communautaires
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/routes/{id}/reviews',
+        'controller' => \TopoclimbCH\Controllers\ReviewController::class,
+        'action' => 'store',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Ajouter note/avis
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}/reviews',
+        'controller' => \TopoclimbCH\Controllers\ReviewController::class,
+        'action' => 'sectorReviews'  // Avis sur secteur complet
+    ],
+
+    // **5. PLANIFICATION ET ÉVÉNEMENTS**
+    // Pages développement futur : Calendrier intégré, météo prédictive, groupes
+    [
+        'method' => 'GET',
+        'path' => '/events',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'index'  // Événements escalade communautaires
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/events/create',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'create',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Organiser sortie
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/events/create',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'store',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/events/{id}/join',
+        'controller' => \TopoclimbCH\Controllers\EventController::class,
+        'action' => 'join',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Participer événement
+    ],
+
+    // **6. MÉTÉO ET CONDITIONS**
+    // Pages développement futur : Prévisions spécialisées, conditions rocher, webcams
+    [
+        'method' => 'GET',
+        'path' => '/weather',
+        'controller' => \TopoclimbCH\Controllers\WeatherController::class,
+        'action' => 'index'  // Météo générale Suisse escalade
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/weather/regions/{id}',
+        'controller' => \TopoclimbCH\Controllers\WeatherController::class,
+        'action' => 'region'  // Météo spécifique région
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/conditions',
+        'controller' => \TopoclimbCH\Controllers\ConditionsController::class,
+        'action' => 'index'  // État des sites (sec, humide, équipé)
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/conditions/{siteId}/report',
+        'controller' => \TopoclimbCH\Controllers\ConditionsController::class,
+        'action' => 'report',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Signaler conditions
+    ],
+
+    // **7. ÉQUIPEMENT ET MATÉRIEL**
+    // Pages développement futur : Comparateur prix, tests matériel, recommandations IA
+    [
+        'method' => 'GET',
+        'path' => '/gear',
+        'controller' => \TopoclimbCH\Controllers\GearController::class,
+        'action' => 'index'  // Catalogue équipement escalade
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/gear/routes/{id}/required',
+        'controller' => \TopoclimbCH\Controllers\GearController::class,
+        'action' => 'routeRequirements'  // Matériel requis par voie
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/gear/calculator',
+        'controller' => \TopoclimbCH\Controllers\GearController::class,
+        'action' => 'calculator'  // Calculateur matériel pour sortie
+    ],
+
+    // **8. FORMATIONS ET SÉCURITÉ**
+    // Pages développement futur : Cours en ligne, certifications, quiz sécurité
+    [
+        'method' => 'GET',
+        'path' => '/training',
+        'controller' => \TopoclimbCH\Controllers\TrainingController::class,
+        'action' => 'index'  // Formations escalade disponibles
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/safety',
+        'controller' => \TopoclimbCH\Controllers\SafetyController::class,
+        'action' => 'index'  // Guide sécurité escalade
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/safety/emergency',
+        'controller' => \TopoclimbCH\Controllers\SafetyController::class,
+        'action' => 'emergency'  // Procédures urgence, contacts secours
+    ],
+
+    // **9. DÉCOUVERTE ET EXPLORATION**
+    // Pages développement futur : Algorithme recommandation, quiz préférences
+    [
+        'method' => 'GET',
+        'path' => '/discover',
+        'controller' => \TopoclimbCH\Controllers\DiscoverController::class,
+        'action' => 'index'  // Découverte personnalisée sites/voies
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/discover/random',
+        'controller' => \TopoclimbCH\Controllers\DiscoverController::class,
+        'action' => 'random'  // Voie/secteur aléatoire
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/discover/nearby',
+        'controller' => \TopoclimbCH\Controllers\DiscoverController::class,
+        'action' => 'nearby',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Sites proches géoloc
+    ],
+
+    // **10. STATISTIQUES ET CLASSEMENTS**
+    // Pages développement futur : Leaderboards, défis mensuels, badges
+    [
+        'method' => 'GET',
+        'path' => '/stats',
+        'controller' => \TopoclimbCH\Controllers\StatsController::class,
+        'action' => 'index'  // Statistiques globales plateforme
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/leaderboards',
+        'controller' => \TopoclimbCH\Controllers\LeaderboardController::class,
+        'action' => 'index'  // Classements grimpeurs par catégorie
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/achievements',
+        'controller' => \TopoclimbCH\Controllers\AchievementController::class,
+        'action' => 'index'  // Système badges et réussites
+    ],
+
+    // **11. RECHERCHE AVANCÉE ET FILTRES**
+    // Pages développement futur : Recherche visuelle, filtres IA, sauvegarde recherches
+    [
+        'method' => 'GET',
+        'path' => '/search',
+        'controller' => \TopoclimbCH\Controllers\SearchController::class,
+        'action' => 'index'  // Recherche avancée multi-critères
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/search',
+        'controller' => \TopoclimbCH\Controllers\SearchController::class,
+        'action' => 'results'  // Résultats recherche avec pagination
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/search/saved',
+        'controller' => \TopoclimbCH\Controllers\SearchController::class,
+        'action' => 'saved',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Recherches sauvegardées
+    ],
+
+    // **12. API MOBILE ET INTÉGRATIONS**
+    // Pages développement futur : App mobile, widgets, API publique
+    [
+        'method' => 'GET',
+        'path' => '/api/mobile/sync',
+        'controller' => \TopoclimbCH\Controllers\ApiController::class,
+        'action' => 'mobileSync',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]  // Sync données offline
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/public/routes/popular',
+        'controller' => \TopoclimbCH\Controllers\ApiController::class,
+        'action' => 'popularRoutes'  // API publique voies populaires
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/widgets',
+        'controller' => \TopoclimbCH\Controllers\WidgetController::class,
+        'action' => 'index'  // Widgets intégrables sites web
+    ],
+
+    // **13. ADMINISTRATION ÉTENDUE**
+    // Pages développement futur : Modération contenu, analytics détaillées, gestion communauté
+    [
+        'method' => 'GET',
+        'path' => '/admin/users',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'users',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/moderation',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'moderation',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/admin/analytics',
+        'controller' => \TopoclimbCH\Controllers\AdminController::class,
+        'action' => 'analytics',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\AdminMiddleware::class]
+    ],
+
+    // **14. PAGES LÉGALES ET SUPPORT**
+    // Pages développement futur : Chat support, FAQ interactive, documentation API
+    [
+        'method' => 'GET',
+        'path' => '/about',
+        'controller' => \TopoclimbCH\Controllers\PageController::class,
+        'action' => 'about'  // À propos plateforme
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/terms',
+        'controller' => \TopoclimbCH\Controllers\PageController::class,
+        'action' => 'terms'  // Conditions utilisation
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/privacy',
+        'controller' => \TopoclimbCH\Controllers\PageController::class,
+        'action' => 'privacy'  // Politique confidentialité
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/contact',
+        'controller' => \TopoclimbCH\Controllers\ContactController::class,
+        'action' => 'index'  // Formulaire contact
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/contact',
+        'controller' => \TopoclimbCH\Controllers\ContactController::class,
+        'action' => 'send',
+        'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/help',
+        'controller' => \TopoclimbCH\Controllers\HelpController::class,
+        'action' => 'index'  // Centre aide et FAQ
+    ],
+
 ];
+
+/*
+==============================================================================
+PLAN DE DÉVELOPPEMENT FUTUR - FONCTIONNALITÉS AVANCÉES TOPOCLIMB CH
+==============================================================================
+
+**PHASE 1 - CORE FONCTIONNEL (ACTUEL)**
+✅ Gestion base : regions, sites, secteurs, voies
+✅ Authentification et autorisation  
+✅ Recherche basique et navigation
+⚠️ En cours : Formulaires création/édition complets
+
+**PHASE 2 - SOCIAL ET COMMUNAUTÉ (3-6 mois)**
+🎯 Profils utilisateurs détaillés avec statistiques
+🎯 Carnets d'ascensions (logbook) avec import/export  
+🎯 Système avis et notes collaboratif
+🎯 Galerie photos communautaire avec géolocalisation
+🎯 Événements et organisation sorties groupe
+
+**PHASE 3 - INTELLIGENCE ET PERSONNALISATION (6-12 mois)**
+🎯 Recommandations IA basées historique utilisateur
+🎯 Prédictions météo spécialisées escalade
+🎯 Conditions temps réel (crowdsourcing)
+🎯 Calculateurs matériel et planification
+🎯 Découverte personnalisée (algorithme matching)
+
+**PHASE 4 - MOBILE ET OFFLINE (12-18 mois)**  
+🎯 Application mobile native (iOS/Android)
+🎯 Mode hors ligne avec synchronisation
+🎯 GPS et navigation sur site
+🎯 Réalité augmentée pour identification voies
+🎯 Intégration wearables (montres, capteurs)
+
+**PHASE 5 - ADVANCED FEATURES (18+ mois)**
+🎯 Marketplace équipement et services
+🎯 Formations en ligne certifiantes
+🎯 Compétitions virtuelles et défis
+🎯 Analytics comportementaux avancés
+🎯 API publique pour développeurs tiers
+
+**CONSIDÉRATIONS TECHNIQUES FUTURES:**
+- Architecture microservices pour scalabilité
+- Cache distribué (Redis) pour performance  
+- CDN global pour médias et assets
+- Machine Learning pour recommandations
+- WebRTC pour chat vidéo temps réel
+- Progressive Web App (PWA) capabilities
+- Elasticsearch pour recherche avancée full-text
+- Queue system (RabbitMQ) pour tâches asynchrones
+
+**MONÉTISATION POSSIBLE:**
+- Abonnements premium (météo avancée, stats détaillées)
+- Marketplace commissions équipement
+- Formations payantes certifiantes
+- API commerciale pour guides/applications
+- Partenariats fabricants équipement
+*/
