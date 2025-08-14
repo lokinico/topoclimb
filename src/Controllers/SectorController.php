@@ -68,6 +68,9 @@ class SectorController extends BaseController
             'site_id' => $request->query->get('site_id', ''),
             'altitude_min' => $request->query->get('altitude_min', ''),
             'altitude_max' => $request->query->get('altitude_max', ''),
+            'exposition' => $request->query->get('exposition', ''),
+            'best_months' => $request->query->get('best_months', ''),
+            'difficulty_range' => $request->query->get('difficulty_range', ''),
             'search' => $request->query->get('search', ''),
             'sort' => $request->query->get('sort', 'name'),
             'order' => $request->query->get('order', 'asc'),
@@ -87,6 +90,22 @@ class SectorController extends BaseController
         }
         if ($filters['altitude_max'] && !is_numeric($filters['altitude_max'])) {
             $filters['altitude_max'] = '';
+        }
+        
+        // Validation exposition (N, NE, E, SE, S, SW, W, NW)
+        $validExpositions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        if ($filters['exposition'] && !in_array($filters['exposition'], $validExpositions)) {
+            $filters['exposition'] = '';
+        }
+        
+        // Validation mois (format: "1,2,3" ou "12")
+        if ($filters['best_months'] && !preg_match('/^[0-9,]+$/', $filters['best_months'])) {
+            $filters['best_months'] = '';
+        }
+        
+        // Validation difficulté (format: "3,4" ou "5")
+        if ($filters['difficulty_range'] && !preg_match('/^[0-9,]+$/', $filters['difficulty_range'])) {
+            $filters['difficulty_range'] = '';
         }
 
         // Validation de la pagination

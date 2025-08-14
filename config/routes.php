@@ -795,6 +795,12 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/api/weather/current',
+        'controller' => \TopoclimbCH\Controllers\WeatherController::class,
+        'action' => 'apiCurrent'  // API météo pour secteurs
+    ],
+    [
+        'method' => 'GET',
         'path' => '/conditions',
         'controller' => \TopoclimbCH\Controllers\ConditionsController::class,
         'action' => 'index'  // État des sites (sec, humide, équipé)
@@ -1000,6 +1006,28 @@ return [
         'action' => 'index'  // Centre aide et FAQ
     ],
 
+    // **FAVORIS - Système de favoris utilisateur**
+    [
+        'method' => 'GET',
+        'path' => '/favorites',
+        'controller' => \TopoclimbCH\Controllers\FavoriteController::class,
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Core\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
+        'path' => '/api/favorites/toggle',
+        'controller' => \TopoclimbCH\Controllers\FavoriteController::class,
+        'action' => 'apiToggle',
+        'middlewares' => [\TopoclimbCH\Core\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/favorites/status',
+        'controller' => \TopoclimbCH\Controllers\FavoriteController::class,
+        'action' => 'apiStatus',
+        'middlewares' => [\TopoclimbCH\Core\Middleware\AuthMiddleware::class]
+    ],
 ];
 
 /*

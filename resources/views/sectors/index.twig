@@ -57,6 +57,7 @@
     <!-- Filtres étendus avec pagination -->
     <div class="filters mb-4">
         <form method="GET" class="row g-3 align-items-end">
+            <!-- Première ligne de filtres -->
             <div class="col-md-2">
                 <label for="region_id" class="form-label">Région</label>
                 <select name="region_id" id="region_id" class="form-select">
@@ -81,6 +82,45 @@
                 </select>
             </div>
             
+            <div class="col-md-2">
+                <label for="exposition" class="form-label">Exposition</label>
+                <select name="exposition" id="exposition" class="form-select">
+                    <option value="">Toutes expositions</option>
+                    <option value="N" {% if filters.exposition == 'N' %}selected{% endif %}>Nord</option>
+                    <option value="NE" {% if filters.exposition == 'NE' %}selected{% endif %}>Nord-Est</option>
+                    <option value="E" {% if filters.exposition == 'E' %}selected{% endif %}>Est</option>
+                    <option value="SE" {% if filters.exposition == 'SE' %}selected{% endif %}>Sud-Est</option>
+                    <option value="S" {% if filters.exposition == 'S' %}selected{% endif %}>Sud</option>
+                    <option value="SW" {% if filters.exposition == 'SW' %}selected{% endif %}>Sud-Ouest</option>
+                    <option value="W" {% if filters.exposition == 'W' %}selected{% endif %}>Ouest</option>
+                    <option value="NW" {% if filters.exposition == 'NW' %}selected{% endif %}>Nord-Ouest</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="best_months" class="form-label">Meilleure période</label>
+                <select name="best_months" id="best_months" class="form-select">
+                    <option value="">Tous les mois</option>
+                    <option value="1,2,12" {% if filters.best_months == '1,2,12' %}selected{% endif %}>Hiver (Déc-Fév)</option>
+                    <option value="3,4,5" {% if filters.best_months == '3,4,5' %}selected{% endif %}>Printemps (Mar-Mai)</option>
+                    <option value="6,7,8" {% if filters.best_months == '6,7,8' %}selected{% endif %}>Été (Juin-Août)</option>
+                    <option value="9,10,11" {% if filters.best_months == '9,10,11' %}selected{% endif %}>Automne (Sep-Nov)</option>
+                    <option value="4,5,9,10" {% if filters.best_months == '4,5,9,10' %}selected{% endif %}>Mi-saison (Avr-Mai, Sep-Oct)</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="difficulty_range" class="form-label">Difficulté</label>
+                <select name="difficulty_range" id="difficulty_range" class="form-select">
+                    <option value="">Toutes difficultés</option>
+                    <option value="3,4" {% if filters.difficulty_range == '3,4' %}selected{% endif %}>Facile (3-4)</option>
+                    <option value="5" {% if filters.difficulty_range == '5' %}selected{% endif %}>Moyen (5)</option>
+                    <option value="6" {% if filters.difficulty_range == '6' %}selected{% endif %}>Difficile (6)</option>
+                    <option value="7,8,9" {% if filters.difficulty_range == '7,8,9' %}selected{% endif %}>Expert (7-9)</option>
+                </select>
+            </div>
+            
+            <!-- Deuxième ligne de filtres -->
             <div class="col-md-1">
                 <label for="altitude_min" class="form-label">Alt. min</label>
                 <input type="number" name="altitude_min" id="altitude_min" class="form-control" 
@@ -93,16 +133,22 @@
                        placeholder="3000" min="0" max="5000" value="{{ filters.altitude_max ?? '' }}">
             </div>
             
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="search" class="form-label">Rechercher</label>
                 <input type="search" name="search" id="search" class="form-control" 
                        placeholder="Nom de secteur..." value="{{ filters.search ?? '' }}">
             </div>
             
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <button type="submit" class="btn btn-primary w-100">
                     <i class="fas fa-search"></i> Filtrer
                 </button>
+            </div>
+            
+            <div class="col-md-1">
+                <a href="/sectors" class="btn btn-outline-secondary w-100" title="Réinitialiser les filtres">
+                    <i class="fas fa-times"></i> Reset
+                </a>
             </div>
             
             <!-- Conserver les paramètres de pagination -->
@@ -127,7 +173,13 @@
                                 <div class="sector-actions">
                                     {% if sector.coordinates_lat and sector.coordinates_lng %}
                                         <button class="btn btn-sm btn-outline-secondary" 
-                                                title="Navigation GPS" data-action="gps" data-id="{{ sector.id }}">
+                                                title="Météo" data-action="weather" data-id="{{ sector.id }}"
+                                                data-lat="{{ sector.coordinates_lat }}" data-lng="{{ sector.coordinates_lng }}">
+                                            <i class="fas fa-cloud-sun"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                title="Navigation GPS" data-action="gps" data-id="{{ sector.id }}"
+                                                data-lat="{{ sector.coordinates_lat }}" data-lng="{{ sector.coordinates_lng }}">
                                             <i class="fas fa-map-marker-alt"></i>
                                         </button>
                                     {% endif %}
@@ -341,17 +393,244 @@ document.addEventListener('DOMContentLoaded', function() {
             const sectorId = button.getAttribute('data-id');
             
             switch(action) {
+                case 'weather':
+                    handleWeatherAction(button, sectorId);
+                    break;
                 case 'gps':
                 case 'map':
-                    alert('Fonctionnalité GPS à implémenter pour le secteur ' + sectorId);
+                    handleGpsAction(button, sectorId);
                     break;
                 case 'favorite':
-                    alert('Fonctionnalité favoris à implémenter pour le secteur ' + sectorId);
+                    handleFavoriteAction(button, sectorId);
                     break;
             }
         }
     });
 });
+
+// Fonction pour gérer l'action météo
+async function handleWeatherAction(button, sectorId) {
+    const lat = button.getAttribute('data-lat');
+    const lng = button.getAttribute('data-lng');
+    
+    if (!lat || !lng) {
+        alert('Coordonnées du secteur non disponibles');
+        return;
+    }
+    
+    // Afficher un indicateur de chargement
+    const originalIcon = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`/api/weather/current?sector_id=${sectorId}&lat=${lat}&lng=${lng}`);
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            showWeatherModal(data.data, sectorId);
+        } else {
+            alert('Impossible de récupérer les données météo: ' + (data.error || 'Erreur inconnue'));
+        }
+    } catch (error) {
+        console.error('Erreur météo:', error);
+        alert('Erreur lors de la récupération des données météo');
+    } finally {
+        // Restaurer le bouton
+        button.innerHTML = originalIcon;
+        button.disabled = false;
+    }
+}
+
+// Fonction pour gérer l'action GPS
+function handleGpsAction(button, sectorId) {
+    const lat = button.getAttribute('data-lat');
+    const lng = button.getAttribute('data-lng');
+    
+    if (!lat || !lng) {
+        alert('Coordonnées du secteur non disponibles');
+        return;
+    }
+    
+    // Ouvrir Google Maps avec les coordonnées
+    const url = `https://www.google.com/maps?q=${lat},${lng}&zoom=15`;
+    window.open(url, '_blank');
+}
+
+// Fonction pour gérer les favoris
+async function handleFavoriteAction(button, sectorId) {
+    try {
+        // Afficher un indicateur de chargement
+        const originalIcon = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        const response = await fetch('/api/favorites/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `entity_type=sector&entity_id=${sectorId}`
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Mettre à jour l'icône
+            const icon = button.querySelector('i');
+            if (data.is_favorite) {
+                icon.className = 'fas fa-heart text-danger';
+                button.title = 'Retirer des favoris';
+            } else {
+                icon.className = 'far fa-heart';
+                button.title = 'Ajouter aux favoris';
+            }
+            
+            // Afficher une notification
+            showNotification(data.message, 'success');
+        } else {
+            showNotification(data.error || 'Erreur lors de la mise à jour des favoris', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Erreur favoris:', error);
+        showNotification('Erreur de connexion', 'error');
+    } finally {
+        // Restaurer le bouton (en gardant la nouvelle icône)
+        button.disabled = false;
+        if (button.innerHTML.includes('fa-spinner')) {
+            button.innerHTML = '<i class="far fa-heart"></i>';
+        }
+    }
+}
+
+// Fonction pour afficher une notification
+function showNotification(message, type = 'info') {
+    // Créer une notification toast
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto-supprimer après 3 secondes
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 3000);
+}
+
+// Fonction pour afficher le modal météo
+function showWeatherModal(weatherData, sectorId) {
+    // Créer le modal météo dynamiquement
+    const modalHtml = `
+        <div class="modal fade" id="weatherModal" tabindex="-1" aria-labelledby="weatherModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="weatherModalLabel">
+                            <i class="fas fa-cloud-sun me-2"></i>Météo du Secteur
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-thermometer-half me-2"></i>Conditions actuelles</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Température:</strong> ${weatherData.temperature || 'N/A'}°C</li>
+                                    <li><strong>Ressenti:</strong> ${weatherData.feels_like || 'N/A'}°C</li>
+                                    <li><strong>Humidité:</strong> ${weatherData.humidity || 'N/A'}%</li>
+                                    <li><strong>Vent:</strong> ${weatherData.wind_speed || 'N/A'} km/h</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-eye me-2"></i>Conditions d'escalade</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Description:</strong> ${weatherData.description || 'N/A'}</li>
+                                    <li><strong>Visibilité:</strong> ${weatherData.visibility ? (weatherData.visibility/1000) + ' km' : 'N/A'}</li>
+                                    <li><strong>Pression:</strong> ${weatherData.pressure || 'N/A'} hPa</li>
+                                    <li><strong>Point de rosée:</strong> ${weatherData.dew_point || 'N/A'}°C</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert ${getWeatherAlert(weatherData)} alert-dismissible" role="alert">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Conseil escalade:</strong> ${getClimbingAdvice(weatherData)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <small class="text-muted me-auto">Données: ${weatherData.source || 'API météo'} - Mise à jour: ${new Date().toLocaleTimeString()}</small>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Supprimer le modal existant s'il y en a un
+    const existingModal = document.getElementById('weatherModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter le nouveau modal au DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Afficher le modal
+    const modal = new bootstrap.Modal(document.getElementById('weatherModal'));
+    modal.show();
+    
+    // Nettoyer le modal quand il est fermé
+    document.getElementById('weatherModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+// Fonction pour déterminer l'alerte météo
+function getWeatherAlert(weatherData) {
+    const temp = parseFloat(weatherData.temperature || 0);
+    const wind = parseFloat(weatherData.wind_speed || 0);
+    const humidity = parseFloat(weatherData.humidity || 0);
+    
+    if (temp < 5 || wind > 30 || humidity > 85) {
+        return 'alert-warning';
+    } else if (temp > 10 && temp < 25 && wind < 15 && humidity < 70) {
+        return 'alert-success';
+    }
+    return 'alert-info';
+}
+
+// Fonction pour donner des conseils d'escalade
+function getClimbingAdvice(weatherData) {
+    const temp = parseFloat(weatherData.temperature || 0);
+    const wind = parseFloat(weatherData.wind_speed || 0);
+    const humidity = parseFloat(weatherData.humidity || 0);
+    
+    if (temp < 5) {
+        return 'Températures froides, attention au gel. Échauffement prolongé recommandé.';
+    } else if (temp > 25) {
+        return 'Températures élevées, commencer tôt le matin ou grimper à l\'ombre.';
+    } else if (wind > 30) {
+        return 'Vent fort, choisir des secteurs abrités. Attention à la stabilité.';
+    } else if (humidity > 85) {
+        return 'Humidité élevée, le rocher peut être glissant. Vérifier l\'adhérence.';
+    } else if (temp >= 10 && temp <= 25 && wind < 15) {
+        return 'Conditions idéales pour l\'escalade ! Profitez-en.';
+    }
+    return 'Conditions correctes, vérifiez les spécificités locales du secteur.';
+}
 </script>
 
 <style>

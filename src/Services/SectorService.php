@@ -454,39 +454,83 @@ class SectorService
      * @param \TopoclimbCH\Core\Filtering\SectorFilter $filter
      * @return \TopoclimbCH\Core\Pagination\Paginator
      */
-    public function getPaginatedSectors($filter, int $page = 1, int $perPage = 15, array $queryParams = [])
+    public function getPaginatedSectors($filters, int $page = 1, int $perPage = 15, array $queryParams = [])
     {
         // Valider et nettoyer les paramètres
         $perPage = Paginator::validatePerPage($perPage);
         $page = max(1, $page);
         
         try {
-            // D'abord, compter le total pour la pagination
+            // Construire les conditions WHERE et les paramètres
+            $whereConditions = ['s.active = 1'];
+            $whereParams = [];
+            
+            // Appliquer les filtres
+            if (!empty($filters['region_id'])) {
+                $whereConditions[] = 's.region_id = ?';
+                $whereParams[] = (int)$filters['region_id'];
+            }
+            
+            if (!empty($filters['site_id'])) {
+                $whereConditions[] = 's.site_id = ?';
+                $whereParams[] = (int)$filters['site_id'];
+            }
+            
+            if (!empty($filters['altitude_min'])) {
+                $whereConditions[] = 's.altitude >= ?';
+                $whereParams[] = (int)$filters['altitude_min'];
+            }
+            
+            if (!empty($filters['altitude_max'])) {
+                $whereConditions[] = 's.altitude <= ?';
+                $whereParams[] = (int)$filters['altitude_max'];
+            }
+            
+            if (!empty($filters['exposition'])) {
+                $whereConditions[] = 's.exposition = ?';
+                $whereParams[] = $filters['exposition'];
+            }
+            
+            if (!empty($filters['search'])) {
+                $whereConditions[] = 's.name LIKE ?';
+                $whereParams[] = '%' . $filters['search'] . '%';
+            }
+            
+            // Construire la clause WHERE
+            $whereClause = implode(' AND ', $whereConditions);
+            
+            // Compter le total pour la pagination
             $countSql = "
                 SELECT COUNT(DISTINCT s.id)
                 FROM climbing_sectors s
                 LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.active = 1
+                LEFT JOIN climbing_sites si ON s.site_id = si.id
+                WHERE {$whereClause}
             ";
             
-            $totalSectors = (int) $this->db->fetchOne($countSql)['COUNT(DISTINCT s.id)'];
+            $totalSectors = (int) $this->db->fetchOne($countSql, $whereParams)['COUNT(DISTINCT s.id)'];
             
             // Calculer offset pour la pagination
             $offset = ($page - 1) * $perPage;
             
-            // VERSION 1: Tenter avec la colonne 'code'
+            // Déterminer l'ordre de tri
+            $orderBy = isset($filters['sort']) ? $filters['sort'] : 's.name';
+            $orderDirection = isset($filters['order']) ? strtoupper($filters['order']) : 'ASC';
+            
+            // VERSION 1: Tenter avec toutes les colonnes
             $simpleSectors = $this->db->fetchAll("
-                SELECT s.*, COUNT(rt.id) as routes_count, r.name as region_name
+                SELECT s.*, COUNT(rt.id) as routes_count, r.name as region_name, si.name as site_name
                 FROM climbing_sectors s
                 LEFT JOIN climbing_routes rt ON s.id = rt.sector_id
                 LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.active = 1
+                LEFT JOIN climbing_sites si ON s.site_id = si.id
+                WHERE {$whereClause}
                 GROUP BY s.id
-                ORDER BY s.name ASC
+                ORDER BY {$orderBy} {$orderDirection}
                 LIMIT {$perPage} OFFSET {$offset}
-            ");
+            ", $whereParams);
             
-            error_log("SectorService: Query succeeded - " . count($simpleSectors) . " results (page {$page}, {$perPage} per page, {$totalSectors} total)");
+            error_log("SectorService: Query succeeded with filters - " . count($simpleSectors) . " results (page {$page}, {$perPage} per page, {$totalSectors} total)");
             return new Paginator($simpleSectors, $totalSectors, $perPage, $page, $queryParams);
             
         } catch (\Exception $e) {
