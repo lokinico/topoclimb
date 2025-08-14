@@ -674,7 +674,7 @@ class RouteController extends BaseController
             ]);
             
         } catch (\Exception $e) {
-            $this->flash('error',Route introuvable: ' . $e->getMessage());
+            $this->flash('error', 'Route introuvable: ' . $e->getMessage());
             return $this->redirect('/routes');
         }
     }
@@ -716,7 +716,7 @@ class RouteController extends BaseController
             ]);
             
         } catch (\Exception $e) {
-            $this->flash('error',Erreur lors du chargement des commentaires: ' . $e->getMessage());
+            $this->flash('error', 'Erreur lors du chargement des commentaires: ' . $e->getMessage());
             return $this->redirect('/routes/' . $routeId);
         }
     }
@@ -730,7 +730,7 @@ class RouteController extends BaseController
         $comment = $request->get('comment');
         
         if (empty($comment)) {
-            $this->flash('error',Le commentaire ne peut pas être vide');
+            $this->flash('error', 'Le commentaire ne peut pas être vide');
             return $this->redirect('/routes/' . $routeId . '/comments');
         }
         
@@ -741,10 +741,10 @@ class RouteController extends BaseController
                 [$routeId, $this->session->get('user_id'), $comment]
             );
             
-            $this->flash('success',Commentaire ajouté avec succès');
+            $this->flash('success', 'Commentaire ajouté avec succès');
             
         } catch (\Exception $e) {
-            $this->flash('error',Erreur lors de l\'ajout du commentaire: ' . $e->getMessage());
+            $this->flash('error', 'Erreur lors de l\'ajout du commentaire: ' . $e->getMessage());
         }
         
         return $this->redirect('/routes/' . $routeId . '/comments');
@@ -770,7 +770,7 @@ class RouteController extends BaseController
             ]);
             
         } catch (\Exception $e) {
-            $this->flash('error',Route introuvable: ' . $e->getMessage());
+            $this->flash('error', 'Route introuvable: ' . $e->getMessage());
             return $this->redirect('/routes');
         }
     }
@@ -796,18 +796,18 @@ class RouteController extends BaseController
                     "DELETE FROM user_favorites WHERE user_id = ? AND route_id = ?",
                     [$userId, $routeId]
                 );
-                $this->flash('success',Route retirée des favoris');
+                $this->flash('success', 'Route retirée des favoris');
             } else {
                 // Ajouter aux favoris
                 $this->db->query(
                     "INSERT INTO user_favorites (user_id, route_id, created_at) VALUES (?, ?, NOW())",
                     [$userId, $routeId]
                 );
-                $this->flash('success',Route ajoutée aux favoris');
+                $this->flash('success', 'Route ajoutée aux favoris');
             }
             
         } catch (\Exception $e) {
-            $this->flash('error',Erreur lors de la modification des favoris: ' . $e->getMessage());
+            $this->flash('error', 'Erreur lors de la modification des favoris: ' . $e->getMessage());
         }
         
         return $this->redirect('/routes/' . $routeId);
