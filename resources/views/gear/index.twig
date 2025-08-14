@@ -1,0 +1,198 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-mountain me-2"></i>{{ page_title }}</h1>
+                <a href="{{ url('/gear/calculator') }}" class="btn btn-primary">
+                    <i class="fas fa-calculator me-1"></i>Calculateur d'équipement
+                </a>
+            </div>
+            <p class="lead text-muted">Guide complet du matériel d'escalade et recommandations par discipline</p>
+        </div>
+    </div>
+    
+    {% if coming_soon %}
+    <div class="alert alert-info text-center py-5">
+        <div class="mb-3">
+            <i class="fas fa-tools fa-4x text-muted"></i>
+        </div>
+        <h4>Guide Matériel - En Développement</h4>
+        <p class="mb-0">
+            Le guide complet du matériel d'escalade sera bientôt disponible.<br>
+            Recommandations détaillées par discipline et calculateur d'équipement !
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Calculateur rapide -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center py-4">
+                    <h3><i class="fas fa-calculator me-2"></i>Calculateur d'Équipement</h3>
+                    <p class="mb-3">Obtenez la liste d'équipement personnalisée pour votre voie</p>
+                    <a href="{{ url('/gear/calculator') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-arrow-right me-1"></i>Utiliser le calculateur
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommandations par discipline -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-list-alt me-2"></i>Recommandations par Discipline</h2>
+            <p class="text-muted mb-4">Équipement essentiel selon votre style d'escalade</p>
+        </div>
+        
+        {% for key, rec in recommendations %}
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card h-100 discipline-card">
+                <div class="card-header bg-{{ key == 'sport' ? 'success' : (key == 'trad' ? 'warning' : (key == 'multi' ? 'info' : 'danger')) }}">
+                    <h5 class="text-white mb-0">{{ rec.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">{{ rec.description }}</p>
+                    
+                    <h6 class="mt-3 mb-2">Matériel essentiel :</h6>
+                    <ul class="list-unstyled small">
+                        {% for gear in rec.essential_gear %}
+                        <li><i class="fas fa-check text-success me-1"></i>{{ gear }}</li>
+                        {% endfor %}
+                    </ul>
+                    
+                    {% if rec.optional_gear %}
+                    <h6 class="mt-3 mb-2">Matériel optionnel :</h6>
+                    <ul class="list-unstyled small">
+                        {% for gear in rec.optional_gear %}
+                        <li><i class="fas fa-plus text-muted me-1"></i>{{ gear }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">
+                        <i class="fas fa-coins me-1"></i>
+                        Budget : {{ rec.budget_estimate }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Catégories d'équipement -->
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-boxes me-2"></i>Catégories d'Équipement</h2>
+            <p class="text-muted mb-4">Guide détaillé par type de matériel</p>
+        </div>
+        
+        {% for key, category in gear_categories %}
+        <div class="col-md-6 mb-4">
+            <div class="card gear-category">
+                <div class="card-header d-flex align-items-center">
+                    <i class="fas {{ category.icon }} fa-2x text-primary me-3"></i>
+                    <h4 class="mb-0">{{ category.name }}</h4>
+                </div>
+                <div class="card-body">
+                    {% for item_name, item in category.items %}
+                    <div class="gear-item mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    {{ item_name }}
+                                    {% if item.essential %}
+                                        <span class="badge bg-danger ms-1">Essentiel</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="small text-muted mb-1">{{ item.description }}</p>
+                                <small class="text-success">
+                                    <i class="fas fa-tag me-1"></i>{{ item.price_range }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not loop.last %}<hr>{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Conseils et sécurité -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Conseils de Sécurité</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Vérifications essentielles :</h5>
+                            <ul>
+                                <li><strong>Matériel certifié :</strong> Toujours CE/UIAA</li>
+                                <li><strong>État du matériel :</strong> Inspection régulière</li>
+                                <li><strong>Date de fabrication :</strong> Respecter les durées de vie</li>
+                                <li><strong>Conditions de stockage :</strong> Éviter UV et humidité</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Budgétisation :</h5>
+                            <ul>
+                                <li><strong>Kit débutant :</strong> 400-600 CHF</li>
+                                <li><strong>Kit intermédiaire :</strong> 800-1200 CHF</li>
+                                <li><strong>Kit expert :</strong> 1500+ CHF</li>
+                                <li><strong>Renouvellement :</strong> Budget annuel 200 CHF</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<style>
+.discipline-card {
+    transition: transform 0.2s ease;
+}
+
+.discipline-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.gear-category {
+    transition: box-shadow 0.2s ease;
+}
+
+.gear-category:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.gear-item {
+    padding: 10px 0;
+}
+
+.gear-item:last-child {
+    padding-bottom: 0;
+}
+
+.card-header i {
+    width: 50px;
+    text-align: center;
+}
+</style>
+{% endblock %}

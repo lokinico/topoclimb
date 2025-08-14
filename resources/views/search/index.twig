@@ -1,0 +1,413 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- En-tête de recherche -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="fas fa-search me-2"></i>{{ page_title }}</h1>
+            
+            <!-- Formulaire de recherche principal -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="get" action="{{ url('/search') }}">
+                        <div class="row g-3">
+                            <!-- Recherche textuelle -->
+                            <div class="col-md-6">
+                                <label class="form-label">Rechercher</label>
+                                <div class="position-relative">
+                                    <input type="text" 
+                                           class="form-control form-control-lg" 
+                                           name="q" 
+                                           value="{{ query }}" 
+                                           placeholder="Nom de voie, secteur, site..."
+                                           id="searchInput"
+                                           autocomplete="off">
+                                    <div id="searchSuggestions" class="search-suggestions"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Type -->
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" name="type">
+                                    <option value="">Tout</option>
+                                    <option value="route" {{ type == 'route' ? 'selected' : '' }}>Voies</option>
+                                    <option value="sector" {{ type == 'sector' ? 'selected' : '' }}>Secteurs</option>
+                                    <option value="site" {{ type == 'site' ? 'selected' : '' }}>Sites</option>
+                                    <option value="region" {{ type == 'region' ? 'selected' : '' }}>Régions</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Filtres avancés -->
+                        <div class="row g-3 mt-2">
+                            <!-- Difficulté -->
+                            <div class="col-md-3">
+                                <label class="form-label">Difficulté</label>
+                                <select class="form-select" name="difficulty">
+                                    <option value="">Toutes</option>
+                                    {% for diff in search_options.difficulties %}
+                                        <option value="{{ diff }}" {{ difficulty == diff ? 'selected' : '' }}>{{ diff }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <!-- Région -->
+                            <div class="col-md-3">
+                                <label class="form-label">Région</label>
+                                <select class="form-select" name="region">
+                                    <option value="">Toutes</option>
+                                    {% for reg in search_options.regions %}
+                                        <option value="{{ reg.id }}" {{ region == reg.id ? 'selected' : '' }}>{{ reg.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <!-- Style -->
+                            <div class="col-md-3">
+                                <label class="form-label">Style</label>
+                                <select class="form-select" name="style">
+                                    <option value="">Tous</option>
+                                    {% for key, name in search_options.styles %}
+                                        <option value="{{ key }}" {{ style == key ? 'selected' : '' }}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <!-- Bouton recherche -->
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-1"></i>Rechercher
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Résultats -->
+    {% if query %}
+    <div class="row">
+        <div class="col-12">
+            <!-- Statistiques -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Résultats pour "{{ query }}"</h3>
+                <div class="search-stats">
+                    <span class="badge bg-primary">{{ stats.total }} résultats</span>
+                    {% if stats.routes > 0 %}<span class="badge bg-success">{{ stats.routes }} voies</span>{% endif %}
+                    {% if stats.sectors > 0 %}<span class="badge bg-info">{{ stats.sectors }} secteurs</span>{% endif %}
+                    {% if stats.sites > 0 %}<span class="badge bg-warning">{{ stats.sites }} sites</span>{% endif %}
+                    {% if stats.regions > 0 %}<span class="badge bg-secondary">{{ stats.regions }} régions</span>{% endif %}
+                </div>
+            </div>
+            
+            {% if stats.total > 0 %}
+                <!-- Voies -->
+                {% if results.routes|length > 0 %}
+                <div class="result-section mb-4">
+                    <h4 class="section-title"><i class="fas fa-route me-2 text-success"></i>Voies ({{ results.routes|length }})</h4>
+                    <div class="row g-3">
+                        {% for route in results.routes %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card result-card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ route.name }}</h6>
+                                    <div class="route-details">
+                                        {% if route.difficulty %}
+                                            <span class="badge bg-success">{{ route.difficulty }}</span>
+                                        {% endif %}
+                                        {% if route.style %}
+                                            <span class="badge bg-secondary">{{ route.style }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if route.sector_name %}
+                                        <p class="text-muted small mt-2 mb-1">
+                                            <i class="fas fa-location-dot me-1"></i>{{ route.sector_name }}
+                                            {% if route.region_name %} - {{ route.region_name }}{% endif %}
+                                        </p>
+                                    {% endif %}
+                                    <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Voir détails
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Secteurs -->
+                {% if results.sectors|length > 0 %}
+                <div class="result-section mb-4">
+                    <h4 class="section-title"><i class="fas fa-location-dot me-2 text-info"></i>Secteurs ({{ results.sectors|length }})</h4>
+                    <div class="row g-3">
+                        {% for sector in results.sectors %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card result-card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ sector.name }}</h6>
+                                    {% if sector.description %}
+                                        <p class="text-muted small">{{ sector.description|slice(0, 100) }}{% if sector.description|length > 100 %}...{% endif %}</p>
+                                    {% endif %}
+                                    {% if sector.region_name %}
+                                        <p class="text-muted small">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ sector.region_name }}
+                                        </p>
+                                    {% endif %}
+                                    {% if sector.routes_count %}
+                                        <span class="badge bg-primary">{{ sector.routes_count }} voies</span>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>Voir secteur
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Sites -->
+                {% if results.sites|length > 0 %}
+                <div class="result-section mb-4">
+                    <h4 class="section-title"><i class="fas fa-mountain me-2 text-warning"></i>Sites ({{ results.sites|length }})</h4>
+                    <div class="row g-3">
+                        {% for site in results.sites %}
+                        <div class="col-md-6">
+                            <div class="card result-card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ site.name }}</h6>
+                                    {% if site.description %}
+                                        <p class="text-muted small">{{ site.description|slice(0, 150) }}{% if site.description|length > 150 %}...{% endif %}</p>
+                                    {% endif %}
+                                    {% if site.region_name %}
+                                        <p class="text-muted small">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ site.region_name }}
+                                        </p>
+                                    {% endif %}
+                                    <a href="{{ url('/sites/' ~ site.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Voir site
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Régions -->
+                {% if results.regions|length > 0 %}
+                <div class="result-section mb-4">
+                    <h4 class="section-title"><i class="fas fa-map me-2 text-secondary"></i>Régions ({{ results.regions|length }})</h4>
+                    <div class="row g-3">
+                        {% for region in results.regions %}
+                        <div class="col-md-6">
+                            <div class="card result-card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ region.name }}</h6>
+                                    {% if region.description %}
+                                        <p class="text-muted small">{{ region.description|slice(0, 150) }}{% if region.description|length > 150 %}...{% endif %}</p>
+                                    {% endif %}
+                                    <a href="{{ url('/regions/' ~ region.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Voir région
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+            {% else %}
+                <!-- Aucun résultat -->
+                <div class="alert alert-info text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4>Aucun résultat trouvé</h4>
+                    <p class="mb-3">Votre recherche "{{ query }}" n'a donné aucun résultat.</p>
+                    <div class="suggestions">
+                        <p class="mb-2"><strong>Suggestions :</strong></p>
+                        <ul class="list-unstyled">
+                            <li>Vérifiez l'orthographe</li>
+                            <li>Utilisez des termes plus généraux</li>
+                            <li>Essayez avec moins de filtres</li>
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+        <!-- Page d'accueil recherche -->
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                    <h3>Recherchez voies, secteurs et sites d'escalade</h3>
+                    <p class="text-muted mb-4">Utilisez les filtres avancés pour affiner vos résultats</p>
+                    
+                    <!-- Recherches populaires -->
+                    <div class="popular-searches">
+                        <h5>Recherches populaires :</h5>
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <a href="{{ url('/search?q=Jura') }}" class="badge bg-secondary text-decoration-none">Jura</a>
+                            <a href="{{ url('/search?q=Valais') }}" class="badge bg-secondary text-decoration-none">Valais</a>
+                            <a href="{{ url('/search?q=5c') }}" class="badge bg-secondary text-decoration-none">5c</a>
+                            <a href="{{ url('/search?q=dalle') }}" class="badge bg-secondary text-decoration-none">Dalle</a>
+                            <a href="{{ url('/search?q=devers') }}" class="badge bg-secondary text-decoration-none">Dévers</a>
+                            <a href="{{ url('/search?q=Bataille') }}" class="badge bg-secondary text-decoration-none">Bataille</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.suggestion-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.suggestion-item:hover {
+    background-color: #f8f9fa;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.result-card {
+    transition: transform 0.2s ease;
+}
+
+.result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.section-title {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.route-details .badge {
+    margin-right: 5px;
+}
+
+.popular-searches .badge {
+    margin: 2px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+.search-stats .badge {
+    margin-left: 5px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const suggestionsDiv = document.getElementById('searchSuggestions');
+    let searchTimeout;
+    
+    if (searchInput && suggestionsDiv) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            if (query.length < 2) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetchSuggestions(query);
+            }, 300);
+        });
+        
+        // Cacher les suggestions en cliquant ailleurs
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+    }
+    
+    function fetchSuggestions(query) {
+        fetch(`{{ url('/search/api') }}?q=${encodeURIComponent(query)}&limit=8`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.suggestions.length > 0) {
+                    showSuggestions(data.suggestions);
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Erreur suggestions:', error);
+                suggestionsDiv.style.display = 'none';
+            });
+    }
+    
+    function showSuggestions(suggestions) {
+        suggestionsDiv.innerHTML = '';
+        
+        suggestions.forEach(suggestion => {
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${suggestion.name}</strong>
+                        ${suggestion.subtitle ? `<br><small class="text-muted">${suggestion.subtitle}</small>` : ''}
+                    </div>
+                    <span class="badge bg-${suggestion.type === 'route' ? 'success' : 'info'}">${suggestion.type}</span>
+                </div>
+            `;
+            
+            div.addEventListener('click', function() {
+                window.location.href = suggestion.url;
+            });
+            
+            suggestionsDiv.appendChild(div);
+        });
+        
+        suggestionsDiv.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

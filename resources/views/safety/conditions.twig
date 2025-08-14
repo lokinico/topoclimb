@@ -1,0 +1,315 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-cloud-sun me-2 text-primary"></i>{{ page_title }}</h1>
+                <div>
+                    <a href="{{ url('/safety') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-shield-alt me-1"></i>Sécurité
+                    </a>
+                    <a href="{{ url('/weather') }}" class="btn btn-success">
+                        <i class="fas fa-mountain me-1"></i>Météo Escalade
+                    </a>
+                </div>
+            </div>
+            <p class="lead text-muted">Évaluation des conditions actuelles pour une escalade sécurisée</p>
+        </div>
+    </div>
+    
+    {% if coming_soon %}
+    <div class="alert alert-info text-center py-5">
+        <div class="mb-3">
+            <i class="fas fa-cloud-sun fa-4x text-info"></i>
+        </div>
+        <h4>Évaluation des Conditions - En Développement</h4>
+        <p class="mb-0">
+            Le système d'évaluation des conditions sera bientôt disponible.<br>
+            Météo en temps réel et recommandations de sécurité !
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Sélecteur secteur et date -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-search me-2"></i>Évaluer un Secteur</h4>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="sector" class="form-label">Secteur d'escalade</label>
+                            <select name="sector" id="sector" class="form-select" required>
+                                <option value="">Sélectionnez un secteur</option>
+                                {% for sector in sectors %}
+                                <option value="{{ sector.id }}" {{ selected_sector == sector.id ? 'selected' : '' }}>
+                                    {{ sector.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date" class="form-label">Date</label>
+                            <input type="date" name="date" id="date" class="form-control" 
+                                   value="{{ selected_date }}" min="{{ 'now'|date('Y-m-d') }}" 
+                                   max="{{ ('now + 7 days')|date('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <div class="d-grid">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i>Évaluer
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Résultats évaluation -->
+    {% if conditions_data %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-{{ conditions_data.overall_rating == 'good' ? 'success' : (conditions_data.overall_rating == 'warning' ? 'warning' : 'danger') }}">
+                <div class="card-header bg-{{ conditions_data.overall_rating == 'good' ? 'success' : (conditions_data.overall_rating == 'warning' ? 'warning' : 'danger') }} text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">
+                            <i class="fas fa-{{ conditions_data.overall_rating == 'good' ? 'check-circle' : (conditions_data.overall_rating == 'warning' ? 'exclamation-triangle' : 'times-circle') }} me-2"></i>
+                            {{ conditions_data.sector.name }}
+                        </h3>
+                        <div class="text-end">
+                            <div class="fs-4">{{ conditions_data.date|date('d/m/Y') }}</div>
+                            <small>
+                                Conditions : 
+                                {% if conditions_data.overall_rating == 'good' %}Favorables
+                                {% elseif conditions_data.overall_rating == 'warning' %}À surveiller
+                                {% else %}Défavorables{% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            {% if conditions_data.sector.region_name %}
+                                <p class="mb-2">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    <strong>Région :</strong> {{ conditions_data.sector.region_name }}
+                                </p>
+                            {% endif %}
+                            {% if conditions_data.sector.description %}
+                                <p class="text-muted">{{ conditions_data.sector.description }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <a href="{{ url('/sectors/' ~ conditions_data.sector.id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Voir le secteur
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Détails des facteurs -->
+    {% if conditions_data.factors|length > 0 %}
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-clipboard-list me-2"></i>Analyse Détaillée</h2>
+            <p class="text-muted mb-4">Facteurs pris en compte pour l'évaluation</p>
+        </div>
+        
+        {% for factor in conditions_data.factors %}
+        <div class="col-md-4 mb-4">
+            <div class="card factor-card h-100 border-{{ factor.rating == 'good' ? 'success' : (factor.rating == 'warning' ? 'warning' : 'danger') }}">
+                <div class="card-header bg-{{ factor.rating == 'good' ? 'success' : (factor.rating == 'warning' ? 'warning' : 'danger') }} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-{{ factor.type == 'weather' ? 'cloud-sun' : (factor.type == 'seasonal' ? 'calendar' : 'road') }} me-2"></i>
+                        {{ factor.title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for sub_factor in factor.factors %}
+                    <div class="factor-item mb-2 pb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ sub_factor.name }}:</strong>
+                                <div class="small text-muted">{{ sub_factor.value }}</div>
+                            </div>
+                            <div>
+                                <i class="fas fa-circle text-{{ sub_factor.status == 'good' ? 'success' : (sub_factor.status == 'warning' ? 'warning' : (sub_factor.status == 'danger' ? 'danger' : 'info')) }}"></i>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not loop.last %}<hr>{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% endif %}
+    
+    <!-- Recommandations générales -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2><i class="fas fa-lightbulb me-2 text-warning"></i>Recommandations Générales</h2>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Avant le Départ</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Consulter météo locale détaillée</li>
+                        <li>Vérifier conditions d'accès</li>
+                        <li>Informer quelqu'un de l'itinéraire</li>
+                        <li>Adapter matériel aux conditions</li>
+                        <li>Prévoir plan B en cas de problème</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Sur Site</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Réévaluer conditions locales</li>
+                        <li>Observer évolution météo</li>
+                        <li>Tester qualité du rocher</li>
+                        <li>Vérifier stabilité approche</li>
+                        <li>Être prêt à faire demi-tour</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-ban me-2"></i>Éviter Si</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Risque orageux dans les 2h</li>
+                        <li>Vent fort (> 30 km/h)</li>
+                        <li>Rocher humide ou gelé</li>
+                        <li>Visibilité réduite</li>
+                        <li>Conditions au-dessus niveau</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liens utiles -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h4><i class="fas fa-link me-2"></i>Ressources Météo Suisse</h4>
+                    <div class="row justify-content-center mt-3">
+                        <div class="col-md-3">
+                            <a href="https://www.meteosuiss.admin.ch" target="_blank" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-cloud me-1"></i>MétéoSuisse
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="https://www.slf.ch" target="_blank" class="btn btn-outline-info w-100 mb-2">
+                                <i class="fas fa-mountain me-1"></i>Bulletin Avalanches
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="https://app.rega.ch" target="_blank" class="btn btn-outline-danger w-100 mb-2">
+                                <i class="fas fa-helicopter me-1"></i>App Rega
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url('/weather') }}" class="btn btn-success w-100 mb-2">
+                                <i class="fas fa-thermometer-half me-1"></i>Météo Locale
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<style>
+.factor-card {
+    transition: transform 0.2s ease;
+}
+
+.factor-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.factor-item {
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.factor-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.card.border-success {
+    border-width: 3px !important;
+}
+
+.card.border-warning {
+    border-width: 3px !important;
+}
+
+.card.border-danger {
+    border-width: 3px !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-actualisation si date = aujourd'hui
+    const dateInput = document.getElementById('date');
+    const selectedDate = dateInput.value;
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (selectedDate === today) {
+        // Actualiser toutes les 10 minutes
+        setTimeout(() => {
+            if (document.querySelector('[name="sector"]').value) {
+                window.location.reload();
+            }
+        }, 600000); // 10 minutes
+    }
+    
+    // Focus sur sélecteur secteur si vide
+    const sectorSelect = document.getElementById('sector');
+    if (!sectorSelect.value) {
+        sectorSelect.focus();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,518 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-calculator me-2 text-primary"></i>{{ page_title }}</h1>
+                <a href="{{ url('/gear') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-1"></i>Retour Matériel
+                </a>
+            </div>
+            <p class="lead text-muted">Calculez l'équipement optimal pour votre voie d'escalade</p>
+        </div>
+    </div>
+    
+    {% if coming_soon %}
+    <div class="alert alert-info text-center py-5">
+        <div class="mb-3">
+            <i class="fas fa-calculator fa-4x text-primary"></i>
+        </div>
+        <h4>Calculateur d'Équipement - En Développement</h4>
+        <p class="mb-0">
+            Le calculateur personnalisé d'équipement sera bientôt disponible.<br>
+            Recommandations précises selon la voie et les conditions !
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Formulaire de calcul -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Paramètres de Calcul</h4>
+                </div>
+                <div class="card-body">
+                    <form id="gearCalculatorForm">
+                        <div class="row g-4">
+                            <!-- Sélection voie -->
+                            <div class="col-md-6">
+                                <label for="route_id" class="form-label">Voie d'escalade (optionnel)</label>
+                                <select name="route_id" id="route_id" class="form-select">
+                                    <option value="">Calcul manuel personnalisé</option>
+                                    {% if routes %}
+                                        {% for route in routes %}
+                                        <option value="{{ route.id }}" data-difficulty="{{ route.difficulty }}" data-style="{{ route.style }}">
+                                            {{ route.name }} - {{ route.difficulty }} {{ route.style }}
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                            
+                            <!-- Style d'escalade -->
+                            <div class="col-md-6">
+                                <label for="climbing_style" class="form-label">Style d'escalade</label>
+                                <select name="climbing_style" id="climbing_style" class="form-select" required>
+                                    <option value="">Sélectionnez un style</option>
+                                    <option value="sport">Escalade sportive</option>
+                                    <option value="trad">Escalade traditionnelle</option>
+                                    <option value="multi">Grande voie</option>
+                                    <option value="alpine">Alpinisme</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Difficulté -->
+                            <div class="col-md-4">
+                                <label for="difficulty" class="form-label">Difficulté</label>
+                                <select name="difficulty" id="difficulty" class="form-select" required>
+                                    <option value="">Sélectionnez</option>
+                                    <option value="3">3a-3c (Débutant)</option>
+                                    <option value="4">4a-4c (Facile)</option>
+                                    <option value="5">5a-5c (Modéré)</option>
+                                    <option value="6">6a-6c (Difficile)</option>
+                                    <option value="7">7a-7c (Très difficile)</option>
+                                    <option value="8">8a+ (Expert)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Longueur -->
+                            <div class="col-md-4">
+                                <label for="length" class="form-label">Longueur de la voie</label>
+                                <select name="length" id="length" class="form-select" required>
+                                    <option value="">Sélectionnez</option>
+                                    <option value="short">Courte (< 20m)</option>
+                                    <option value="medium">Moyenne (20-40m)</option>
+                                    <option value="long">Longue (40m+)</option>
+                                    <option value="multi">Plusieurs longueurs</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Conditions -->
+                            <div class="col-md-4">
+                                <label for="conditions" class="form-label">Conditions</label>
+                                <select name="conditions" id="conditions" class="form-select">
+                                    <option value="normal">Conditions normales</option>
+                                    <option value="wet">Risque d'humidité</option>
+                                    <option value="cold">Conditions froides</option>
+                                    <option value="alpine">Conditions alpines</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Expérience -->
+                            <div class="col-md-6">
+                                <label for="experience" class="form-label">Niveau d'expérience</label>
+                                <select name="experience" id="experience" class="form-select">
+                                    <option value="beginner">Débutant</option>
+                                    <option value="intermediate">Intermédiaire</option>
+                                    <option value="advanced">Avancé</option>
+                                    <option value="expert">Expert</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Nombre de personnes -->
+                            <div class="col-md-6">
+                                <label for="team_size" class="form-label">Nombre de personnes</label>
+                                <select name="team_size" id="team_size" class="form-select">
+                                    <option value="2">2 personnes</option>
+                                    <option value="3">3 personnes</option>
+                                    <option value="4">4+ personnes</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-calculator me-2"></i>Calculer l'équipement
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Résultats du calcul -->
+    <div class="row" id="calculationResults" style="display: none;">
+        <div class="col-12">
+            <h2><i class="fas fa-list-check me-2"></i>Liste d'Équipement Recommandée</h2>
+            <p class="text-muted mb-4">Matériel calculé selon vos paramètres</p>
+        </div>
+        
+        <!-- Équipement essentiel -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Équipement Essentiel</h4>
+                </div>
+                <div class="card-body" id="essentialGear">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Équipement recommandé -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Équipement Recommandé</h4>
+                </div>
+                <div class="card-body" id="recommendedGear">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Équipement optionnel -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Équipement Optionnel</h4>
+                </div>
+                <div class="card-body" id="optionalGear">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Récapitulatif -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Récapitulatif</h4>
+                </div>
+                <div class="card-body" id="gearSummary">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Checklist à imprimer -->
+    <div class="row mt-4" id="printableChecklist" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-print me-2"></i>Checklist Imprimable</h4>
+                    <button class="btn btn-outline-primary" onclick="printChecklist()">
+                        <i class="fas fa-print me-1"></i>Imprimer
+                    </button>
+                </div>
+                <div class="card-body" id="checklistContent">
+                    <!-- Checklist générée dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<style>
+.gear-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.gear-item:last-child {
+    border-bottom: none;
+}
+
+.gear-item i {
+    width: 20px;
+    margin-right: 10px;
+}
+
+.gear-quantity {
+    background: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    margin-left: auto;
+}
+
+#calculationResults {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    
+    #printableChecklist, #printableChecklist * {
+        visibility: visible;
+    }
+    
+    #printableChecklist {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('gearCalculatorForm');
+    const routeSelect = document.getElementById('route_id');
+    const styleSelect = document.getElementById('climbing_style');
+    const difficultySelect = document.getElementById('difficulty');
+    
+    // Auto-remplissage si voie sélectionnée
+    routeSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+            const difficulty = selectedOption.dataset.difficulty;
+            const style = selectedOption.dataset.style;
+            
+            if (style) {
+                styleSelect.value = style.toLowerCase();
+            }
+            if (difficulty) {
+                const difficultyLevel = difficulty.charAt(0);
+                difficultySelect.value = difficultyLevel;
+            }
+        }
+    });
+    
+    // Soumission formulaire
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        calculateGear();
+    });
+    
+    function calculateGear() {
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        // Simulation du calcul d'équipement
+        const gearRecommendation = generateGearRecommendation(data);
+        displayResults(gearRecommendation);
+    }
+    
+    function generateGearRecommendation(data) {
+        const style = data.climbing_style;
+        const difficulty = data.difficulty;
+        const length = data.length;
+        const experience = data.experience;
+        
+        let recommendation = {
+            essential: [],
+            recommended: [],
+            optional: [],
+            summary: {}
+        };
+        
+        // Équipement de base toujours nécessaire
+        recommendation.essential = [
+            { item: 'Casque', quantity: data.team_size || '2', icon: 'fa-hard-hat' },
+            { item: 'Baudrier', quantity: data.team_size || '2', icon: 'fa-circle' },
+            { item: 'Chaussons d\'escalade', quantity: data.team_size || '2', icon: 'fa-shoe-prints' },
+            { item: 'Corde dynamique', quantity: '1', icon: 'fa-circle-nodes' }
+        ];
+        
+        // Équipement selon le style
+        if (style === 'sport') {
+            recommendation.essential.push(
+                { item: 'Dégaines', quantity: '12-15', icon: 'fa-link' },
+                { item: 'Assureur', quantity: '1', icon: 'fa-circle-dot' }
+            );
+        } else if (style === 'trad') {
+            recommendation.essential.push(
+                { item: 'Jeu de coinceurs', quantity: '1', icon: 'fa-cube' },
+                { item: 'Jeu de friends', quantity: '1', icon: 'fa-circle-notch' },
+                { item: 'Sangles variées', quantity: '8-12', icon: 'fa-minus' }
+            );
+        } else if (style === 'multi') {
+            recommendation.essential.push(
+                { item: 'Matériel de relais', quantity: '1 set', icon: 'fa-anchor' },
+                { item: 'Corde à double', quantity: '2×60m', icon: 'fa-circle-nodes' }
+            );
+        }
+        
+        // Équipement selon difficulté
+        if (parseInt(difficulty) >= 6) {
+            recommendation.recommended.push(
+                { item: 'Magnésie', quantity: '1', icon: 'fa-cube' },
+                { item: 'Sac à magnésie', quantity: '2', icon: 'fa-square' }
+            );
+        }
+        
+        // Équipement selon expérience
+        if (experience === 'beginner') {
+            recommendation.recommended.push(
+                { item: 'Guide technique', quantity: '1', icon: 'fa-book' },
+                { item: 'Trousse premiers secours', quantity: '1', icon: 'fa-medkit' }
+            );
+        }
+        
+        // Équipement optionnel
+        recommendation.optional = [
+            { item: 'Sac à dos d\'escalade', quantity: '1-2', icon: 'fa-backpack' },
+            { item: 'Gants d\'assurage', quantity: '2', icon: 'fa-mitten' },
+            { item: 'Lampe frontale', quantity: data.team_size || '2', icon: 'fa-lightbulb' },
+            { item: 'Couverture de survie', quantity: '1', icon: 'fa-square' }
+        ];
+        
+        // Calcul du récapitulatif
+        const totalItems = recommendation.essential.length + recommendation.recommended.length + recommendation.optional.length;
+        const estimatedWeight = calculateWeight(recommendation);
+        const estimatedCost = calculateCost(recommendation);
+        
+        recommendation.summary = {
+            totalItems: totalItems,
+            weight: estimatedWeight,
+            cost: estimatedCost,
+            style: getStyleName(style),
+            difficulty: difficulty
+        };
+        
+        return recommendation;
+    }
+    
+    function displayResults(recommendation) {
+        document.getElementById('calculationResults').style.display = 'block';
+        
+        // Remplir les sections
+        displayGearList('essentialGear', recommendation.essential);
+        displayGearList('recommendedGear', recommendation.recommended);
+        displayGearList('optionalGear', recommendation.optional);
+        
+        // Afficher le récapitulatif
+        const summaryHTML = `
+            <div class="row text-center">
+                <div class="col-6 mb-3">
+                    <div class="fs-3 fw-bold text-primary">${recommendation.summary.totalItems}</div>
+                    <div class="small text-muted">Articles au total</div>
+                </div>
+                <div class="col-6 mb-3">
+                    <div class="fs-3 fw-bold text-success">${recommendation.summary.weight} kg</div>
+                    <div class="small text-muted">Poids estimé</div>
+                </div>
+                <div class="col-12">
+                    <div class="fs-4 fw-bold text-info">${recommendation.summary.cost} CHF</div>
+                    <div class="small text-muted">Budget estimé</div>
+                </div>
+            </div>
+            <hr>
+            <div class="small">
+                <strong>Style :</strong> ${recommendation.summary.style}<br>
+                <strong>Difficulté :</strong> ${recommendation.summary.difficulty}
+            </div>
+        `;
+        document.getElementById('gearSummary').innerHTML = summaryHTML;
+        
+        // Générer checklist imprimable
+        generatePrintableChecklist(recommendation);
+        document.getElementById('printableChecklist').style.display = 'block';
+        
+        // Scroll vers les résultats
+        document.getElementById('calculationResults').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+    }
+    
+    function displayGearList(containerId, gearList) {
+        const container = document.getElementById(containerId);
+        if (gearList.length === 0) {
+            container.innerHTML = '<p class="text-muted">Aucun équipement dans cette catégorie</p>';
+            return;
+        }
+        
+        const html = gearList.map(gear => `
+            <div class="gear-item">
+                <i class="fas ${gear.icon} text-muted"></i>
+                <span class="flex-grow-1">${gear.item}</span>
+                <span class="gear-quantity">${gear.quantity}</span>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+    
+    function generatePrintableChecklist(recommendation) {
+        const allGear = [
+            ...recommendation.essential.map(g => ({...g, category: 'Essentiel'})),
+            ...recommendation.recommended.map(g => ({...g, category: 'Recommandé'})),
+            ...recommendation.optional.map(g => ({...g, category: 'Optionnel'}))
+        ];
+        
+        const checklistHTML = `
+            <div class="printable-header">
+                <h3>Checklist Équipement d'Escalade</h3>
+                <p><strong>Style :</strong> ${recommendation.summary.style} | <strong>Difficulté :</strong> ${recommendation.summary.difficulty}</p>
+                <p><strong>Date :</strong> ${new Date().toLocaleDateString('fr-CH')}</p>
+                <hr>
+            </div>
+            
+            ${allGear.map(gear => `
+                <div style="display: flex; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee;">
+                    <input type="checkbox" style="margin-right: 15px;">
+                    <span style="flex-grow: 1;">${gear.item}</span>
+                    <span style="margin-left: 10px; color: #666;">(${gear.quantity})</span>
+                    <span style="margin-left: 10px; font-size: 0.8em; color: #999;">[${gear.category}]</span>
+                </div>
+            `).join('')}
+            
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #333;">
+                <p><strong>Récapitulatif :</strong> ${recommendation.summary.totalItems} articles | ${recommendation.summary.weight} kg | ${recommendation.summary.cost} CHF</p>
+            </div>
+        `;
+        
+        document.getElementById('checklistContent').innerHTML = checklistHTML;
+    }
+    
+    function calculateWeight(recommendation) {
+        // Simulation simple du calcul de poids
+        const baseWeight = recommendation.essential.length * 0.5;
+        const additionalWeight = (recommendation.recommended.length + recommendation.optional.length) * 0.3;
+        return Math.round((baseWeight + additionalWeight) * 10) / 10;
+    }
+    
+    function calculateCost(recommendation) {
+        // Simulation simple du calcul de coût
+        const essentialCost = recommendation.essential.length * 80;
+        const recommendedCost = recommendation.recommended.length * 50;
+        const optionalCost = recommendation.optional.length * 30;
+        return essentialCost + recommendedCost + optionalCost;
+    }
+    
+    function getStyleName(style) {
+        const styles = {
+            'sport': 'Escalade sportive',
+            'trad': 'Escalade traditionnelle',
+            'multi': 'Grande voie',
+            'alpine': 'Alpinisme'
+        };
+        return styles[style] || style;
+    }
+    
+    window.printChecklist = function() {
+        window.print();
+    };
+});
+</script>
+{% endblock %}

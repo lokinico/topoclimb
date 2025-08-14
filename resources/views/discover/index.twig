@@ -1,0 +1,449 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-compass me-2 text-primary"></i>{{ page_title }}</h1>
+                <a href="{{ url('/discover/random') }}" class="btn btn-success">
+                    <i class="fas fa-dice me-1"></i>Découverte Aléatoire
+                </a>
+            </div>
+            <p class="lead text-muted">Explorez de nouveaux sites d'escalade et trouvez votre prochaine aventure</p>
+        </div>
+    </div>
+    
+    {% if coming_soon %}
+    <div class="alert alert-info text-center py-5">
+        <div class="mb-3">
+            <i class="fas fa-compass fa-4x text-primary"></i>
+        </div>
+        <h4>Système de Découverte - Bientôt Disponible</h4>
+        <p class="mb-0">
+            Le système de recommandations personnalisées sera bientôt disponible.<br>
+            Découvertes aléatoires, suggestions basées sur vos goûts et nouveautés !
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Découverte rapide -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white">
+                <div class="card-body text-center py-4">
+                    <h3><i class="fas fa-dice me-2"></i>Découverte Aléatoire</h3>
+                    <p class="mb-3">Laissez-vous surprendre par une voie, un secteur ou un site choisi au hasard</p>
+                    <div class="row justify-content-center">
+                        <div class="col-md-2">
+                            <button class="btn btn-light btn-lg w-100 random-discovery" data-type="route">
+                                <i class="fas fa-route d-block mb-1"></i>
+                                Voie<br>Aléatoire
+                            </button>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-light btn-lg w-100 random-discovery" data-type="sector">
+                                <i class="fas fa-location-dot d-block mb-1"></i>
+                                Secteur<br>Aléatoire
+                            </button>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-light btn-lg w-100 random-discovery" data-type="site">
+                                <i class="fas fa-mountain d-block mb-1"></i>
+                                Site<br>Aléatoire
+                            </button>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-warning btn-lg w-100 random-discovery" data-type="any">
+                                <i class="fas fa-surprise d-block mb-1"></i>
+                                Surprise<br>Totale
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Zone résultat découverte aléatoire -->
+    <div class="row mb-5" id="randomResult" style="display: none;">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-star me-2"></i>Votre Découverte</h5>
+                </div>
+                <div class="card-body" id="randomResultContent">
+                    <!-- Contenu ajouté dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommandations personnalisées -->
+    {% if recommendations|length > 0 %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-user-check me-2"></i>Recommandations pour Vous</h2>
+            <p class="text-muted mb-4">Basées sur vos favoris et votre historique</p>
+        </div>
+        
+        {% for rec in recommendations %}
+        <div class="col-12 mb-4">
+            <div class="card recommendation-section">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ rec.title }}</h5>
+                        <small class="text-muted">{{ rec.description }}</small>
+                    </div>
+                    <span class="badge bg-primary">{{ rec.items|length }} suggestions</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for item in rec.items %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card recommendation-item h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ item.name }}</h6>
+                                    {% if item.difficulty %}
+                                        <span class="badge bg-success me-2">{{ item.difficulty }}</span>
+                                    {% endif %}
+                                    {% if item.style %}
+                                        <span class="badge bg-secondary">{{ item.style }}</span>
+                                    {% endif %}
+                                    {% if item.sector_name %}
+                                        <p class="text-muted small mt-2">
+                                            <i class="fas fa-location-dot me-1"></i>{{ item.sector_name }}
+                                            {% if item.region_name %} - {{ item.region_name }}{% endif %}
+                                        </p>
+                                    {% endif %}
+                                    <a href="{{ url('/routes/' ~ item.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>Voir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Voies populaires -->
+    {% if popular_routes|length > 0 %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-fire me-2 text-danger"></i>Voies Populaires</h2>
+            <p class="text-muted mb-4">Les voies les plus appréciées par la communauté</p>
+        </div>
+        <div class="col-12">
+            <div class="row g-3">
+                {% for route in popular_routes %}
+                <div class="col-md-6 col-lg-3">
+                    <div class="card popular-route h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title">{{ route.name }}</h6>
+                                <div class="popularity-indicator">
+                                    <i class="fas fa-heart text-danger"></i>
+                                    <span class="small">{{ route.favorites_count|default(0) }}</span>
+                                </div>
+                            </div>
+                            {% if route.difficulty %}
+                                <span class="badge bg-success me-1">{{ route.difficulty }}</span>
+                            {% endif %}
+                            {% if route.style %}
+                                <span class="badge bg-secondary">{{ route.style }}</span>
+                            {% endif %}
+                            {% if route.sector_name %}
+                                <p class="text-muted small mt-2 mb-2">
+                                    <i class="fas fa-location-dot me-1"></i>{{ route.sector_name }}
+                                    {% if route.region_name %} - {{ route.region_name }}{% endif %}
+                                </p>
+                            {% endif %}
+                            <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>Découvrir
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Nouvelles voies -->
+    {% if new_routes|length > 0 %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-plus-circle me-2 text-success"></i>Nouvelles Voies</h2>
+            <p class="text-muted mb-4">Derniers ajouts à la base de données</p>
+        </div>
+        <div class="col-12">
+            <div class="row g-3">
+                {% for route in new_routes %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card new-route h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title">{{ route.name }}</h6>
+                                <span class="badge bg-success">Nouveau</span>
+                            </div>
+                            {% if route.difficulty %}
+                                <span class="badge bg-info me-1">{{ route.difficulty }}</span>
+                            {% endif %}
+                            {% if route.style %}
+                                <span class="badge bg-secondary">{{ route.style }}</span>
+                            {% endif %}
+                            {% if route.sector_name %}
+                                <p class="text-muted small mt-2 mb-2">
+                                    <i class="fas fa-location-dot me-1"></i>{{ route.sector_name }}
+                                    {% if route.region_name %} - {{ route.region_name }}{% endif %}
+                                </p>
+                            {% endif %}
+                            <small class="text-muted">
+                                <i class="fas fa-calendar-plus me-1"></i>
+                                Ajouté {{ route.created_at|date('d/m/Y') }}
+                            </small>
+                            <div class="mt-2">
+                                <a href="{{ url('/routes/' ~ route.id) }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-eye me-1"></i>Explorer
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Secteurs recommandés -->
+    {% if recommended_sectors|length > 0 %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-map-marked-alt me-2 text-info"></i>Secteurs à Explorer</h2>
+            <p class="text-muted mb-4">Secteurs riches en voies d'escalade</p>
+        </div>
+        <div class="col-12">
+            <div class="row g-3">
+                {% for sector in recommended_sectors %}
+                <div class="col-md-6">
+                    <div class="card recommended-sector h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="card-title">{{ sector.name }}</h6>
+                                    {% if sector.description %}
+                                        <p class="text-muted small">{{ sector.description|slice(0, 100) }}{% if sector.description|length > 100 %}...{% endif %}</p>
+                                    {% endif %}
+                                    {% if sector.region_name %}
+                                        <p class="text-muted small">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ sector.region_name }}
+                                        </p>
+                                    {% endif %}
+                                </div>
+                                <div class="text-center">
+                                    <span class="badge bg-primary">{{ sector.routes_count }} voies</span>
+                                </div>
+                            </div>
+                            <a href="{{ url('/sectors/' ~ sector.id) }}" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-compass me-1"></i>Explorer secteur
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% endif %}
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.recommendation-item,
+.popular-route,
+.new-route,
+.recommended-sector {
+    transition: transform 0.2s ease;
+}
+
+.recommendation-item:hover,
+.popular-route:hover,
+.new-route:hover,
+.recommended-sector:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.popularity-indicator {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.recommendation-section {
+    border-left: 4px solid #007bff;
+}
+
+.random-discovery {
+    margin-bottom: 10px;
+    min-height: 80px;
+}
+
+#randomResult {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion découverte aléatoire
+    document.querySelectorAll('.random-discovery').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.dataset.type;
+            const originalContent = this.innerHTML;
+            
+            // Animation loading
+            this.disabled = true;
+            this.innerHTML = '<div class="spinner-border spinner-border-sm me-1"></div>Recherche...';
+            
+            // Appel API
+            fetch(`{{ url('/discover/api/random') }}?type=${type}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showRandomResult(data);
+                    } else {
+                        showFlashMessage('warning', data.error || 'Aucun résultat trouvé');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    showFlashMessage('error', 'Erreur lors de la recherche');
+                })
+                .finally(() => {
+                    // Restaurer bouton
+                    this.disabled = false;
+                    this.innerHTML = originalContent;
+                });
+        });
+    });
+    
+    function showRandomResult(data) {
+        const resultDiv = document.getElementById('randomResult');
+        const contentDiv = document.getElementById('randomResultContent');
+        
+        const typeNames = {
+            'route': 'Voie',
+            'sector': 'Secteur', 
+            'site': 'Site'
+        };
+        
+        const item = data.item;
+        const typeName = typeNames[data.type] || 'Élément';
+        
+        let content = `
+            <div class="row">
+                <div class="col-md-8">
+                    <h4><i class="fas fa-star text-warning me-2"></i>${item.name}</h4>
+        `;
+        
+        // Informations selon le type
+        if (data.type === 'route') {
+            content += `
+                <div class="mb-2">
+                    ${item.difficulty ? `<span class="badge bg-success me-2">${item.difficulty}</span>` : ''}
+                    ${item.style ? `<span class="badge bg-secondary">${item.style}</span>` : ''}
+                </div>
+            `;
+            if (item.sector_name) {
+                content += `<p class="text-muted"><i class="fas fa-location-dot me-1"></i>${item.sector_name}</p>`;
+            }
+        } else if (data.type === 'sector') {
+            content += `<p class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>${item.region_name || 'Région inconnue'}</p>`;
+            if (item.routes_count) {
+                content += `<p><span class="badge bg-info">${item.routes_count} voies</span></p>`;
+            }
+        }
+        
+        if (item.description) {
+            content += `<p>${item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description}</p>`;
+        }
+        
+        content += `
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="d-grid gap-2">
+                        <a href="${data.url}" class="btn btn-success btn-lg">
+                            <i class="fas fa-eye me-1"></i>Découvrir ce ${typeName.toLowerCase()}
+                        </a>
+                        <button class="btn btn-outline-primary random-discovery" data-type="${data.type}">
+                            <i class="fas fa-dice me-1"></i>Autre ${typeName.toLowerCase()}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        contentDiv.innerHTML = content;
+        resultDiv.style.display = 'block';
+        
+        // Scroll vers le résultat
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Réattacher les event listeners pour les nouveaux boutons
+        contentDiv.querySelectorAll('.random-discovery').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const type = this.dataset.type;
+                const originalContent = this.innerHTML;
+                
+                this.disabled = true;
+                this.innerHTML = '<div class="spinner-border spinner-border-sm me-1"></div>Recherche...';
+                
+                fetch(`{{ url('/discover/api/random') }}?type=${type}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showRandomResult(data);
+                        }
+                    })
+                    .finally(() => {
+                        this.disabled = false;
+                        this.innerHTML = originalContent;
+                    });
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

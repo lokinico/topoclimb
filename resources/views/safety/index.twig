@@ -1,0 +1,287 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-shield-alt me-2 text-danger"></i>{{ page_title }}</h1>
+                <div>
+                    <a href="{{ url('/safety/emergency') }}" class="btn btn-danger me-2">
+                        <i class="fas fa-ambulance me-1"></i>Urgences
+                    </a>
+                    <a href="{{ url('/conditions') }}" class="btn btn-warning">
+                        <i class="fas fa-cloud-sun me-1"></i>Conditions
+                    </a>
+                </div>
+            </div>
+            <p class="lead text-muted">Guides, conseils et procédures pour une escalade en sécurité</p>
+        </div>
+    </div>
+    
+    {% if coming_soon %}
+    <div class="alert alert-warning text-center py-5">
+        <div class="mb-3">
+            <i class="fas fa-hard-hat fa-4x text-warning"></i>
+        </div>
+        <h4>Guide Sécurité - En Développement</h4>
+        <p class="mb-0">
+            Le guide complet de sécurité en escalade sera bientôt disponible.<br>
+            Procédures d'urgence, premiers secours et évaluation des conditions !
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Urgences - Section prioritaire -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="alert alert-danger">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h4><i class="fas fa-exclamation-triangle me-2"></i>En Cas d'Urgence</h4>
+                        <p class="mb-2">
+                            <strong>112</strong> - Numéro d'urgence européen (toujours disponible)<br>
+                            <strong>144</strong> - Ambulance/SMUR<br>
+                            <strong>1414</strong> - Rega (secours héliporté)
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="{{ url('/safety/emergency') }}" class="btn btn-light btn-lg">
+                            <i class="fas fa-ambulance me-1"></i>Guide Urgences
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sujets de sécurité -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-list-check me-2"></i>Domaines de Sécurité</h2>
+            <p class="text-muted mb-4">Points essentiels à maîtriser pour une escalade sécurisée</p>
+        </div>
+        
+        {% for key, topic in safety_topics %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card safety-topic h-100 border-{{ topic.priority == 'high' ? 'danger' : (topic.priority == 'medium' ? 'warning' : 'secondary') }}">
+                <div class="card-header bg-{{ topic.priority == 'high' ? 'danger' : (topic.priority == 'medium' ? 'warning' : 'secondary') }} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas {{ topic.icon }} me-2"></i>{{ topic.title }}
+                        {% if topic.priority == 'high' %}
+                            <span class="badge bg-light text-danger ms-2">Critique</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for item in topic.items %}
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <small>{{ item }}</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Checklist de sécurité -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-clipboard-check me-2"></i>Checklist de Sécurité</h2>
+            <p class="text-muted mb-4">Points de contrôle essentiels à chaque sortie</p>
+        </div>
+        
+        {% for key, checklist in checklist_items %}
+        <div class="col-md-4 mb-4">
+            <div class="card checklist-card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ checklist.title }}</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for item in checklist.items %}
+                        <div class="list-group-item d-flex align-items-start">
+                            <div class="form-check me-3">
+                                <input class="form-check-input" type="checkbox" id="check_{{ key }}_{{ loop.index }}">
+                            </div>
+                            <div class="flex-grow-1">
+                                <label class="form-check-label small {{ item.critical ? 'fw-bold' : '' }}" for="check_{{ key }}_{{ loop.index }}">
+                                    {{ item.text }}
+                                    {% if item.critical %}
+                                        <i class="fas fa-exclamation-triangle text-warning ms-1" title="Critique"></i>
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Contacts d'urgence -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-phone me-2"></i>Contacts d'Urgence Suisse</h2>
+        </div>
+        
+        {% for key, contact_group in emergency_contacts %}
+        <div class="col-md-4 mb-4">
+            <div class="card emergency-contacts">
+                <div class="card-header bg-{{ key == 'primary' ? 'danger' : (key == 'mountain' ? 'warning' : 'info') }} text-white">
+                    <h5 class="mb-0">{{ contact_group.title }}</h5>
+                </div>
+                <div class="card-body">
+                    {% for number, description in contact_group.contacts %}
+                    <div class="contact-item mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-{{ key == 'primary' ? 'danger' : 'primary' }}">{{ number }}</strong>
+                                <br><small class="text-muted">{{ description }}</small>
+                            </div>
+                            <a href="tel:{{ number }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-phone"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% if not loop.last %}<hr class="my-2">{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Actions rapides -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body text-center py-4">
+                    <h3><i class="fas fa-tools me-2"></i>Outils Sécurité</h3>
+                    <p class="text-muted mb-4">Accès rapide aux outils et informations essentiels</p>
+                    <div class="row justify-content-center">
+                        <div class="col-md-3">
+                            <a href="{{ url('/safety/emergency') }}" class="btn btn-danger btn-lg w-100 mb-2">
+                                <i class="fas fa-ambulance d-block mb-1"></i>
+                                Procédures<br>Urgence
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url('/conditions') }}" class="btn btn-warning btn-lg w-100 mb-2">
+                                <i class="fas fa-cloud-sun d-block mb-1"></i>
+                                Conditions<br>Actuelles
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url('/gear') }}" class="btn btn-info btn-lg w-100 mb-2">
+                                <i class="fas fa-tools d-block mb-1"></i>
+                                Vérif.<br>Matériel
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url('/weather') }}" class="btn btn-success btn-lg w-100 mb-2">
+                                <i class="fas fa-mountain d-block mb-1"></i>
+                                Météo<br>Escalade
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<style>
+.safety-topic {
+    transition: transform 0.2s ease;
+}
+
+.safety-topic:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.checklist-card .form-check-input:checked + .form-check-label {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.emergency-contacts .contact-item {
+    padding: 8px 0;
+}
+
+.contact-item:last-child {
+    padding-bottom: 0;
+}
+
+.card-header.bg-danger,
+.card-header.bg-warning,
+.card-header.bg-info,
+.card-header.bg-primary {
+    color: white !important;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sauvegarder état checklist dans localStorage
+    const checkboxes = document.querySelectorAll('.checklist-card .form-check-input');
+    
+    // Charger état sauvegardé
+    checkboxes.forEach(checkbox => {
+        const saved = localStorage.getItem(`safety_${checkbox.id}`);
+        if (saved === 'true') {
+            checkbox.checked = true;
+        }
+    });
+    
+    // Sauvegarder changements
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            localStorage.setItem(`safety_${this.id}`, this.checked);
+        });
+    });
+    
+    // Bouton reset checklist
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn btn-outline-secondary btn-sm mt-3';
+    resetBtn.innerHTML = '<i class="fas fa-undo me-1"></i>Reset Checklist';
+    resetBtn.onclick = function() {
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+            localStorage.removeItem(`safety_${cb.id}`);
+        });
+    };
+    
+    const checklistSection = document.querySelector('.checklist-card').parentElement.parentElement;
+    const resetContainer = document.createElement('div');
+    resetContainer.className = 'col-12 text-center';
+    resetContainer.appendChild(resetBtn);
+    checklistSection.appendChild(resetContainer);
+});
+</script>
+{% endblock %}

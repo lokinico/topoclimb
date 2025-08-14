@@ -1,0 +1,256 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}{{ page_title }} - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- En-tête urgence -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-danger">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h1 class="alert-heading"><i class="fas fa-ambulance me-2"></i>{{ page_title }}</h1>
+                        <p class="mb-2">
+                            <strong class="fs-4">112</strong> - Numéro d'urgence européen<br>
+                            <strong class="fs-4">144</strong> - Ambulance SMUR<br>
+                            <strong class="fs-4">1414</strong> - Rega (secours aérien)
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="tel:112" class="btn btn-light btn-lg mb-2 w-100">
+                            <i class="fas fa-phone me-1"></i>Appeler 112
+                        </a>
+                        <a href="{{ url('/safety') }}" class="btn btn-outline-light w-100">
+                            <i class="fas fa-arrow-left me-1"></i>Retour Sécurité
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if coming_soon %}
+    <div class="alert alert-warning text-center py-5">
+        <div class="mb-3">
+            <i class="fas fa-first-aid fa-4x text-warning"></i>
+        </div>
+        <h4>Guide Urgences - En Développement</h4>
+        <p class="mb-0">
+            Le guide complet des procédures d'urgence sera bientôt disponible.<br>
+            Premiers secours, évacuation et protocoles de sécurité !
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Procédures d'urgence -->
+    {% if emergency_procedures|length > 0 %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-list-ol me-2"></i>Procédures d'Urgence</h2>
+            <p class="text-muted mb-4">Étapes à suivre en cas d'accident d'escalade</p>
+        </div>
+        
+        {% for key, procedure in emergency_procedures %}
+        <div class="col-md-6 mb-4">
+            <div class="card procedure-card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">{{ procedure.title }}</h4>
+                    <small>Durée estimée: {{ procedure.duration }}</small>
+                </div>
+                <div class="card-body">
+                    <ol class="procedure-steps">
+                        {% for step in procedure.steps %}
+                        <li class="mb-2">{{ step }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Premiers secours -->
+    {% if first_aid_basics|length > 0 %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-medkit me-2"></i>Premiers Secours</h2>
+            <p class="text-muted mb-4">Gestes de base selon le type de blessure</p>
+        </div>
+        
+        {% for key, aid in first_aid_basics %}
+        <div class="col-lg-4 mb-4">
+            <div class="card first-aid-card h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">{{ aid.title }}</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-danger">Symptômes :</h6>
+                    <ul class="small mb-3">
+                        {% for symptom in aid.symptoms %}
+                        <li>{{ symptom }}</li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <h6 class="text-success">Actions :</h6>
+                    <ul class="small mb-3">
+                        {% for action in aid.actions %}
+                        <li>{{ action }}</li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <h6 class="text-danger">À éviter :</h6>
+                    <ul class="small text-danger">
+                        {% for avoid in aid.avoid %}
+                        <li>{{ avoid }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Techniques d'évacuation -->
+    {% if evacuation_techniques|length > 0 %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2><i class="fas fa-helicopter me-2"></i>Techniques d'Évacuation</h2>
+            <p class="text-muted mb-4">Méthodes pour évacuer une victime selon la situation</p>
+        </div>
+        
+        {% for key, technique in evacuation_techniques %}
+        <div class="col-md-4 mb-4">
+            <div class="card evacuation-card h-100">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ technique.title }}</h5>
+                    <span class="badge bg-light text-dark">{{ technique.difficulty }}</span>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">{{ technique.description }}</p>
+                    
+                    <h6>Matériel nécessaire :</h6>
+                    <ul class="small mb-3">
+                        {% for item in technique.equipment %}
+                        <li><i class="fas fa-check text-success me-1"></i>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <h6>Étapes :</h6>
+                    <ol class="small">
+                        {% for step in technique.steps %}
+                        <li>{{ step }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Informations importantes -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations Cruciales</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Informations à donner aux secours :</h5>
+                            <ul>
+                                <li><strong>Localisation précise</strong> (coordonnées GPS si possible)</li>
+                                <li><strong>Nature de l'accident</strong> (chute, pierre, etc.)</li>
+                                <li><strong>État de la victime</strong> (consciente, blessures visibles)</li>
+                                <li><strong>Nombre de personnes</strong> impliquées</li>
+                                <li><strong>Conditions météo</strong> et accessibilité</li>
+                                <li><strong>Votre numéro</strong> de téléphone</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Ne raccrochez jamais en premier :</h5>
+                            <p class="mb-3">Laissez toujours les secours raccrocher en premier. Ils peuvent avoir besoin d'informations supplémentaires.</p>
+                            
+                            <h5>Position GPS :</h5>
+                            <p class="mb-3">
+                                <button class="btn btn-sm btn-primary" onclick="getLocation()">
+                                    <i class="fas fa-crosshairs me-1"></i>Obtenir ma position
+                                </button>
+                                <span id="locationResult" class="ms-2 text-muted"></span>
+                            </p>
+                            
+                            <div class="alert alert-info">
+                                <strong>App Rega :</strong> Téléchargez l'application Rega pour un accès rapide aux secours avec position GPS automatique.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<style>
+.procedure-card {
+    border-left: 5px solid #dc3545;
+}
+
+.first-aid-card {
+    border-left: 5px solid #ffc107;
+}
+
+.evacuation-card {
+    border-left: 5px solid #0dcaf0;
+}
+
+.procedure-steps li {
+    padding: 5px 0;
+    font-weight: 500;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.alert-danger {
+    border: 3px solid #dc3545;
+}
+</style>
+
+<script>
+function getLocation() {
+    const resultSpan = document.getElementById('locationResult');
+    
+    if (navigator.geolocation) {
+        resultSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localisation...';
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude.toFixed(6);
+                const lng = position.coords.longitude.toFixed(6);
+                resultSpan.innerHTML = `<strong>${lat}, ${lng}</strong> <button class="btn btn-xs btn-outline-primary ms-1" onclick="copyLocation('${lat}, ${lng}')">Copier</button>`;
+            },
+            function(error) {
+                resultSpan.innerHTML = '<span class="text-danger">Impossible d\'obtenir la position</span>';
+            }
+        );
+    } else {
+        resultSpan.innerHTML = '<span class="text-danger">Géolocalisation non supportée</span>';
+    }
+}
+
+function copyLocation(coords) {
+    navigator.clipboard.writeText(coords).then(() => {
+        showFlashMessage('success', 'Position copiée dans le presse-papiers');
+    });
+}
+</script>
+{% endblock %}
