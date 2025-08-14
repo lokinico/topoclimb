@@ -1,157 +1,49 @@
 {% extends "layouts/app.twig" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Conditions d'Utilisation - TopoclimbCH{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg shadow-md p-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">Conditions d'Utilisation</h1>
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="display-4 mb-4">Conditions d'Utilisation - TopoclimbCH</h1>
             
-            <div class="prose max-w-none">
-                <p class="text-sm text-gray-600 mb-6">
-                    Dernière mise à jour : {{ "now"|date("d/m/Y") }}
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">1. Acceptation des Conditions</h2>
-                <p class="text-gray-700 mb-6">
-                    En accédant et en utilisant TopoclimbCH ("la Plateforme"), vous acceptez d'être lié par 
-                    ces conditions d'utilisation. Si vous n'acceptez pas ces conditions, 
-                    veuillez ne pas utiliser notre service.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">2. Description du Service</h2>
-                <p class="text-gray-700 mb-4">TopoclimbCH est une plateforme communautaire dédiée à l'escalade en Suisse qui offre :</p>
-                <ul class="list-disc pl-6 text-gray-700 mb-6">
-                    <li>Informations sur les sites et voies d'escalade</li>
-                    <li>Outils de planification et de suivi des ascensions</li>
-                    <li>Guides numériques et topos</li>
-                    <li>Prévisions météorologiques</li>
-                    <li>Fonctionnalités communautaires et de partage</li>
-                </ul>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">3. Inscription et Comptes</h2>
-                
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">3.1 Conditions d'inscription</h3>
-                <ul class="list-disc pl-6 text-gray-700 mb-4">
-                    <li>Vous devez être âgé d'au moins 16 ans</li>
-                    <li>Fournir des informations exactes et complètes</li>
-                    <li>Maintenir la confidentialité de votre mot de passe</li>
-                    <li>Un seul compte par personne</li>
-                </ul>
-
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">3.2 Responsabilité du compte</h3>
-                <p class="text-gray-700 mb-6">
-                    Vous êtes responsable de toutes les activités qui se déroulent sous votre compte. 
-                    Vous devez immédiatement nous notifier de toute utilisation non autorisée.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">4. Règles d'Utilisation</h2>
-                
-                <div class="bg-green-50 border-l-4 border-green-400 p-6 mb-6">
-                    <h3 class="text-lg font-semibold text-green-900 mb-3">✅ Utilisations Autorisées</h3>
-                    <ul class="list-disc pl-6 text-green-800">
-                        <li>Partager des informations précises sur l'escalade</li>
-                        <li>Contribuer à la communauté de manière constructive</li>
-                        <li>Utiliser la plateforme à des fins personnelles et non commerciales</li>
-                        <li>Respecter les droits d'auteur lors du partage de contenu</li>
-                    </ul>
-                </div>
-
-                <div class="bg-red-50 border-l-4 border-red-400 p-6 mb-6">
-                    <h3 class="text-lg font-semibold text-red-900 mb-3">❌ Utilisations Interdites</h3>
-                    <ul class="list-disc pl-6 text-red-800">
-                        <li>Publier du contenu illégal, offensant ou diffamatoire</li>
-                        <li>Harceler ou menacer d'autres utilisateurs</li>
-                        <li>Utiliser la plateforme à des fins commerciales sans autorisation</li>
-                        <li>Tenter de contourner les mesures de sécurité</li>
-                        <li>Créer de faux comptes ou usurper l'identité d'autrui</li>
-                        <li>Publier du spam ou du contenu non pertinent</li>
-                    </ul>
-                </div>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">5. Contenu et Propriété Intellectuelle</h2>
-                
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">5.1 Votre contenu</h3>
-                <p class="text-gray-700 mb-4">
-                    Vous conservez la propriété de tout contenu que vous publiez. En partageant du contenu, 
-                    vous nous accordez une licence non exclusive pour l'afficher, le distribuer et 
-                    l'utiliser dans le cadre du service.
-                </p>
-
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">5.2 Notre contenu</h3>
-                <p class="text-gray-700 mb-6">
-                    Tous les éléments de la plateforme (design, code, logos, textes) sont protégés 
-                    par le droit d'auteur et autres droits de propriété intellectuelle.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">6. Sécurité et Responsabilité</h2>
-                
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 mb-6">
-                    <h3 class="text-lg font-semibold text-yellow-900 mb-3">⚠️ Avertissement Important</h3>
-                    <p class="text-yellow-800 mb-3">
-                        <strong>L'escalade est une activité potentiellement dangereuse.</strong> 
-                        Les informations fournies sur cette plateforme sont données à titre indicatif uniquement.
-                    </p>
-                    <ul class="list-disc pl-6 text-yellow-800">
-                        <li>Vérifiez toujours les conditions sur site</li>
-                        <li>Utilisez un équipement approprié et en bon état</li>
-                        <li>Ne grimpez jamais seul</li>
-                        <li>Respectez les fermetures saisonnières et réglementations locales</li>
-                        <li>Consultez les prévisions météorologiques</li>
-                    </ul>
-                </div>
-
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">6.1 Limitation de responsabilité</h3>
-                <p class="text-gray-700 mb-6">
-                    TopoclimbCH ne peut être tenu responsable des accidents, blessures ou dommages 
-                    résultant de l'utilisation des informations fournies sur la plateforme. 
-                    Chaque utilisateur grimpe à ses propres risques.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">7. Modération et Sanctions</h2>
-                <p class="text-gray-700 mb-4">Nous nous réservons le droit de :</p>
-                <ul class="list-disc pl-6 text-gray-700 mb-6">
-                    <li>Modérer et supprimer du contenu inapproprié</li>
-                    <li>Suspendre ou supprimer des comptes en cas de violation</li>
-                    <li>Modifier ou interrompre le service</li>
-                    <li>Mettre à jour ces conditions d'utilisation</li>
-                </ul>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">8. Données Personnelles</h2>
-                <p class="text-gray-700 mb-6">
-                    Le traitement de vos données personnelles est régi par notre 
-                    <a href="/privacy" class="text-blue-600 hover:text-blue-800 underline">Politique de Confidentialité</a>.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">9. Modifications du Service</h2>
-                <p class="text-gray-700 mb-6">
-                    Nous pouvons modifier, suspendre ou interrompre tout ou partie du service 
-                    à tout moment, avec ou sans préavis. Nous ne serons pas responsables 
-                    envers vous ou des tiers de ces modifications.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">10. Résiliation</h2>
-                <p class="text-gray-700 mb-6">
-                    Vous pouvez fermer votre compte à tout moment. Nous pouvons suspendre ou 
-                    résilier votre accès en cas de violation de ces conditions.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">11. Droit Applicable</h2>
-                <p class="text-gray-700 mb-6">
-                    Ces conditions sont régies par le droit suisse. Tout litige sera soumis 
-                    à la juridiction exclusive des tribunaux suisses.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">12. Contact</h2>
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-6">
-                    <p class="text-blue-800 mb-2">
-                        Pour toute question concernant ces conditions d'utilisation :
-                    </p>
-                    <p class="text-blue-800">
-                        <strong>Email :</strong> legal@topoclimb.ch<br>
-                        <strong>Formulaire :</strong> <a href="/contact" class="underline">Page de contact</a>
-                    </p>
+            <div class="card">
+                <div class="card-body">
+                    <p class="lead">Conditions d'utilisation de la plateforme TopoclimbCH.</p>
+                    
+                    {% if page == 'about' %}
+                        <h3>Notre Mission</h3>
+                        <p>Faciliter la découverte et le partage des sites d'escalade suisses.</p>
+                        
+                        <h3>Fonctionnalités</h3>
+                        <ul>
+                            <li>Catalogue complet des secteurs d'escalade</li>
+                            <li>Informations détaillées sur les voies</li>
+                            <li>Système de favoris personnalisé</li>
+                            <li>Météo spécialisée escalade</li>
+                        </ul>
+                    {% elseif page == 'contact' %}
+                        <h3>Nous Contacter</h3>
+                        <p>Email: contact@topoclimb.ch</p>
+                        <p>Pour signaler un problème ou proposer une amélioration.</p>
+                    {% elseif page == 'help' %}
+                        <h3>Questions Fréquentes</h3>
+                        <div class="accordion" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        Comment créer un compte ?
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse show">
+                                    <div class="accordion-body">
+                                        Cliquez sur "S'inscrire" dans le menu principal.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

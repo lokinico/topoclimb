@@ -563,4 +563,131 @@ class UserController extends BaseController
 
         return $regions;
     }
+    
+    /**
+     * Liste publique des utilisateurs
+     */
+    public function index(): Response
+    {
+        try {
+            // Récupérer les utilisateurs publics actifs
+            $users = $this->db->query(
+                "SELECT u.id, u.username, u.nom, u.prenom, u.created_at
+                 FROM users u
+                 WHERE u.autorisation >= 1
+                 ORDER BY u.created_at DESC
+                 LIMIT 50"
+            )->fetchAll();
+            
+            return $this->render('users/index.twig', [
+                'users' => $users,
+                'page_title' => 'Communauté TopoclimbCH'
+            ]);
+        } catch (\Exception $e) {
+            return $this->render('users/index.twig', [
+                'users' => [],
+                'page_title' => 'Communauté TopoclimbCH',
+                'coming_soon' => true
+            ]);
+        }
+    }
+    
+    /**
+     * Profil public d'un utilisateur
+     */
+    public function show($id): Response
+    {
+        try {
+            $userId = (int)$id;
+            
+            // Récupérer l'utilisateur
+            $user = $this->db->query(
+                "SELECT u.id, u.username, u.nom, u.prenom, u.created_at
+                 FROM users u
+                 WHERE u.id = ? AND u.autorisation >= 1",
+                [$userId]
+            )->fetch();
+            
+            if (!$user) {
+                $this->flash('error', 'Utilisateur non trouvé');
+                return $this->redirect('/users');
+            }
+            
+            return $this->render('users/show.twig', [
+                'user_profile' => $user,
+                'page_title' => 'Profil - ' . $user['username']
+            ]);
+        } catch (\Exception $e) {
+            $this->flash('error', 'Erreur lors du chargement du profil');
+            return $this->redirect('/users');
+        }
+    }
+    
+    /**
+     * Statistiques d'un utilisateur
+     */
+    public function statistics($id): Response
+    {
+        try {
+            $userId = (int)$id;
+            
+            $user = $this->db->query(
+                "SELECT username FROM users WHERE id = ? AND autorisation >= 1",
+                [$userId]
+            )->fetch();
+            
+            if (!$user) {
+                $this->flash('error', 'Utilisateur non trouvé');
+                return $this->redirect('/users');
+            }
+            
+            // Statistiques de base
+            $stats = [
+                'total_ascents' => 0,
+                'favorite_grade' => 'N/A',
+                'total_favorites' => 0,
+                'regions_visited' => 0
+            ];
+            
+            return $this->render('users/statistics.twig', [
+                'user_profile' => $user,
+                'statistics' => $stats,
+                'page_title' => 'Statistiques - ' . $user['username'],
+                'coming_soon' => true
+            ]);
+        } catch (\Exception $e) {
+            $this->flash('error', 'Erreur lors du chargement des statistiques');
+            return $this->redirect('/users');
+        }
+    }
+    
+    /**
+     * Photos d'un utilisateur
+     */
+    public function photos($id): Response
+    {
+        try {
+            $userId = (int)$id;
+            
+            $user = $this->db->query(
+                "SELECT username FROM users WHERE id = ? AND autorisation >= 1",
+                [$userId]
+            )->fetch();
+            
+            if (!$user) {
+                $this->flash('error', 'Utilisateur non trouvé');
+                return $this->redirect('/users');
+            }
+            
+            return $this->render('users/photos.twig', [
+                'user_profile' => $user,
+                'photos' => [],
+                'page_title' => 'Photos - ' . $user['username'],
+                'coming_soon' => true
+            ]);
+        } catch (\Exception $e) {
+            $this->flash('error', 'Erreur lors du chargement des photos');
+            return $this->redirect('/users');
+        }
+    }
 }

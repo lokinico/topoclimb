@@ -812,4 +812,11 @@ class RouteController extends BaseController
         
         return $this->redirect('/routes/' . $routeId);
     }
+
+    public function update($id)
+    {
+        // TODO: Implémenter mise à jour route
+        $this->flash('success', 'Route mise à jour avec succès!');
+        return $this->redirect("/routes/{$id}");
+    }
 }

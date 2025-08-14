@@ -248,12 +248,16 @@ class BookController extends BaseController
     /**
      * Affichage sécurisé d'un guide avec détails
      */
-    public function show(Request $request): Response
+    public function show($id = null): Response
     {
         try {
-            $id = $request->attributes->get('id');
+            // Récupérer l'ID depuis les paramètres de route
+            if ($id === null) {
+                $this->flash('error', 'ID de guide requis');
+                return $this->redirect('/books');
+            }
             
-            if (!$id || !is_numeric($id)) {
+            if (!is_numeric($id)) {
                 $this->flash('error', 'ID de guide invalide');
                 return $this->redirect('/books');
             }

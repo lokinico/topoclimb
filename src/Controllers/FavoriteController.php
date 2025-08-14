@@ -30,7 +30,8 @@ class FavoriteController extends BaseController
         $this->requireAuth();
 
         try {
-            $userId = $this->auth->getUser()['id'];
+            $user = $this->auth->user();
+            $userId = $user->id;
             $entityType = $request->request->get('entity_type');
             $entityId = (int)$request->request->get('entity_id');
 
@@ -109,7 +110,8 @@ class FavoriteController extends BaseController
         $this->requireAuth();
 
         try {
-            $userId = $this->auth->getUser()['id'];
+            $user = $this->auth->user();
+            $userId = $user->id;
             $entityType = $request->query->get('entity_type');
             $entityIds = $request->query->get('entity_ids'); // Format: "1,2,3"
 
@@ -166,7 +168,8 @@ class FavoriteController extends BaseController
         $this->requireAuth();
 
         try {
-            $userId = $this->auth->getUser()['id'];
+            $user = $this->auth->user();
+            $userId = $user->id;
             $type = $request->query->get('type', 'all');
             
             // Construire la requête selon le type

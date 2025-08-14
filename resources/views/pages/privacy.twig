@@ -1,122 +1,49 @@
 {% extends "layouts/app.twig" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Politique de Confidentialité - TopoclimbCH{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg shadow-md p-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">Politique de Confidentialité</h1>
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="display-4 mb-4">Politique de Confidentialité - TopoclimbCH</h1>
             
-            <div class="prose max-w-none">
-                <p class="text-sm text-gray-600 mb-6">
-                    Dernière mise à jour : {{ "now"|date("d/m/Y") }}
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
-                <p class="text-gray-700 mb-6">
-                    TopoclimbCH ("nous", "notre", "nos") s'engage à protéger et respecter votre vie privée. 
-                    Cette politique de confidentialité explique comment nous collectons, utilisons et protégeons 
-                    vos informations personnelles lorsque vous utilisez notre plateforme.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">2. Informations que nous collectons</h2>
-                
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">2.1 Informations que vous nous fournissez</h3>
-                <ul class="list-disc pl-6 text-gray-700 mb-4">
-                    <li>Informations de compte (nom, email, mot de passe)</li>
-                    <li>Profil utilisateur (photo, description, préférences)</li>
-                    <li>Données d'escalade (ascensions, évaluations, commentaires)</li>
-                    <li>Photos et médias partagés</li>
-                    <li>Messages et communications</li>
-                </ul>
-
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">2.2 Informations collectées automatiquement</h3>
-                <ul class="list-disc pl-6 text-gray-700 mb-6">
-                    <li>Données de navigation (pages visitées, durée de session)</li>
-                    <li>Informations techniques (adresse IP, navigateur, appareil)</li>
-                    <li>Données de géolocalisation (avec votre consentement)</li>
-                    <li>Cookies et technologies similaires</li>
-                </ul>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">3. Comment nous utilisons vos informations</h2>
-                <ul class="list-disc pl-6 text-gray-700 mb-6">
-                    <li>Fournir et améliorer nos services</li>
-                    <li>Personnaliser votre expérience utilisateur</li>
-                    <li>Faciliter la communication avec d'autres utilisateurs</li>
-                    <li>Envoyer des notifications et mises à jour importantes</li>
-                    <li>Assurer la sécurité et prévenir les fraudes</li>
-                    <li>Analyser l'utilisation de la plateforme</li>
-                    <li>Respecter nos obligations légales</li>
-                </ul>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">4. Partage d'informations</h2>
-                <p class="text-gray-700 mb-4">Nous ne vendons jamais vos données personnelles. Nous pouvons partager vos informations dans les cas suivants :</p>
-                <ul class="list-disc pl-6 text-gray-700 mb-6">
-                    <li><strong>Avec votre consentement :</strong> Lorsque vous choisissez de rendre publiques certaines informations</li>
-                    <li><strong>Prestataires de services :</strong> Partenaires techniques nécessaires au fonctionnement de la plateforme</li>
-                    <li><strong>Obligations légales :</strong> Si requis par la loi ou pour protéger nos droits</li>
-                    <li><strong>Sécurité :</strong> Pour prévenir les fraudes ou protéger la sécurité des utilisateurs</li>
-                </ul>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">5. Vos droits</h2>
-                <p class="text-gray-700 mb-4">Conformément au RGPD et à la loi suisse sur la protection des données, vous disposez des droits suivants :</p>
-                <div class="grid md:grid-cols-2 gap-4 mb-6">
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-900 mb-2">✅ Droit d'accès</h4>
-                        <p class="text-sm text-gray-700">Consulter les données que nous détenons sur vous</p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-900 mb-2">✏️ Droit de rectification</h4>
-                        <p class="text-sm text-gray-700">Corriger des informations inexactes</p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-900 mb-2">🗑️ Droit d'effacement</h4>
-                        <p class="text-sm text-gray-700">Demander la suppression de vos données</p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-900 mb-2">📦 Droit à la portabilité</h4>
-                        <p class="text-sm text-gray-700">Récupérer vos données dans un format lisible</p>
-                    </div>
-                </div>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">6. Sécurité des données</h2>
-                <p class="text-gray-700 mb-6">
-                    Nous mettons en œuvre des mesures de sécurité techniques et organisationnelles appropriées 
-                    pour protéger vos données personnelles contre tout accès non autorisé, altération, 
-                    divulgation ou destruction. Cela inclut le chiffrement des données sensibles, 
-                    l'authentification à deux facteurs, et des audits de sécurité réguliers.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">7. Conservation des données</h2>
-                <p class="text-gray-700 mb-6">
-                    Nous conservons vos données personnelles aussi longtemps que nécessaire pour fournir 
-                    nos services et respecter nos obligations légales. Les comptes inactifs depuis plus 
-                    de 3 ans peuvent être supprimés après notification préalable.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">8. Cookies</h2>
-                <p class="text-gray-700 mb-6">
-                    Nous utilisons des cookies essentiels au fonctionnement du site et des cookies 
-                    d'analyse (avec votre consentement) pour améliorer nos services. Vous pouvez 
-                    gérer vos préférences de cookies dans les paramètres de votre navigateur.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">9. Modifications de cette politique</h2>
-                <p class="text-gray-700 mb-6">
-                    Nous pouvons mettre à jour cette politique de confidentialité périodiquement. 
-                    Les modifications importantes vous seront notifiées par email ou via la plateforme.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">10. Contact</h2>
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-6">
-                    <p class="text-blue-800 mb-2">
-                        Pour toute question concernant cette politique de confidentialité ou pour exercer vos droits :
-                    </p>
-                    <p class="text-blue-800">
-                        <strong>Email :</strong> privacy@topoclimb.ch<br>
-                        <strong>Adresse :</strong> TopoclimbCH, Protection des données, Suisse
-                    </p>
+            <div class="card">
+                <div class="card-body">
+                    <p class="lead">Votre vie privée est importante pour nous.</p>
+                    
+                    {% if page == 'about' %}
+                        <h3>Notre Mission</h3>
+                        <p>Faciliter la découverte et le partage des sites d'escalade suisses.</p>
+                        
+                        <h3>Fonctionnalités</h3>
+                        <ul>
+                            <li>Catalogue complet des secteurs d'escalade</li>
+                            <li>Informations détaillées sur les voies</li>
+                            <li>Système de favoris personnalisé</li>
+                            <li>Météo spécialisée escalade</li>
+                        </ul>
+                    {% elseif page == 'contact' %}
+                        <h3>Nous Contacter</h3>
+                        <p>Email: contact@topoclimb.ch</p>
+                        <p>Pour signaler un problème ou proposer une amélioration.</p>
+                    {% elseif page == 'help' %}
+                        <h3>Questions Fréquentes</h3>
+                        <div class="accordion" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        Comment créer un compte ?
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse show">
+                                    <div class="accordion-body">
+                                        Cliquez sur "S'inscrire" dans le menu principal.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

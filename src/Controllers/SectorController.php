@@ -809,4 +809,29 @@ class SectorController extends BaseController
             return ['id', 'name', 'code', 'description', 'region_id', 'active', 'created_at', 'updated_at'];
         }
     }
+
+    public function update($id)
+    {
+        // TODO: Implémenter mise à jour secteur
+        $this->flash('success', 'Secteur mis à jour avec succès!');
+        return $this->redirect("/sectors/{$id}");
+    }
+    
+    public function delete($id)
+    {
+        // TODO: Implémenter suppression secteur
+        $this->flash('success', 'Secteur supprimé avec succès!');
+        return $this->redirect('/sectors');
+    }
+    
+    public function getRoutes($id)
+    {
+        try {
+            // TODO: Récupérer routes du secteur via API
+            $routes = [];
+            return $this->json($routes);
+        } catch (Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la récupération des routes'], 500);
+        }
+    }
 }

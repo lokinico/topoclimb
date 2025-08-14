@@ -1,0 +1,242 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Mes Favoris - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <h1><i class="fas fa-heart text-danger me-2"></i>Mes Favoris</h1>
+            
+            <!-- Filtres par type -->
+            <div class="btn-group mb-4" role="group">
+                <a href="{{ url('/favorites') }}" 
+                   class="btn btn-{{ currentType == 'all' ? 'primary' : 'outline-primary' }}">
+                    Tous ({{ stats.total }})
+                </a>
+                <a href="{{ url('/favorites?type=route') }}" 
+                   class="btn btn-{{ currentType == 'route' ? 'primary' : 'outline-primary' }}">
+                    <i class="fas fa-route me-1"></i>Voies ({{ stats.routes }})
+                </a>
+                <a href="{{ url('/favorites?type=sector') }}" 
+                   class="btn btn-{{ currentType == 'sector' ? 'primary' : 'outline-primary' }}">
+                    <i class="fas fa-location-dot me-1"></i>Secteurs ({{ stats.sectors }})
+                </a>
+                <a href="{{ url('/favorites?type=site') }}" 
+                   class="btn btn-{{ currentType == 'site' ? 'primary' : 'outline-primary' }}">
+                    <i class="fas fa-mountain me-1"></i>Sites ({{ stats.sites }})
+                </a>
+                <a href="{{ url('/favorites?type=region') }}" 
+                   class="btn btn-{{ currentType == 'region' ? 'primary' : 'outline-primary' }}">
+                    <i class="fas fa-map me-1"></i>Régions ({{ stats.regions }})
+                </a>
+            </div>
+            
+            {% if favorites|length > 0 %}
+                <!-- Liste des favoris -->
+                <div class="row g-3">
+                    {% for favorite in favorites %}
+                    <div class="col-12">
+                        <div class="card favorite-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge bg-{{ favorite.entity_type == 'route' ? 'success' : (favorite.entity_type == 'sector' ? 'primary' : (favorite.entity_type == 'site' ? 'warning' : 'info')) }} me-2">
+                                                {% if favorite.entity_type == 'route' %}
+                                                    <i class="fas fa-route me-1"></i>Voie
+                                                {% elseif favorite.entity_type == 'sector' %}
+                                                    <i class="fas fa-location-dot me-1"></i>Secteur
+                                                {% elseif favorite.entity_type == 'site' %}
+                                                    <i class="fas fa-mountain me-1"></i>Site
+                                                {% else %}
+                                                    <i class="fas fa-map me-1"></i>Région
+                                                {% endif %}
+                                            </span>
+                                            <h5 class="mb-0">{{ favorite.entity_name|default('Nom non disponible') }}</h5>
+                                        </div>
+                                        
+                                        {% if favorite.region_name %}
+                                        <p class="text-muted mb-2">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ favorite.region_name }}
+                                        </p>
+                                        {% endif %}
+                                        
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            Ajouté le {{ favorite.created_at|date('d/m/Y à H:i') }}
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ url('/' ~ favorite.entity_type ~ 's/' ~ favorite.entity_id) }}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>Voir
+                                        </a>
+                                        <button class="btn btn-outline-danger btn-sm favorite-toggle" 
+                                                data-entity-type="{{ favorite.entity_type }}"
+                                                data-entity-id="{{ favorite.entity_id }}">
+                                            <i class="fas fa-heart"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center py-5">
+                    <i class="fas fa-heart fa-4x text-muted mb-3"></i>
+                    <h4>Aucun favori {{ currentType != 'all' ? 'de ce type' : '' }}</h4>
+                    <p class="mb-4">
+                        {% if currentType == 'all' %}
+                            Vous n'avez encore ajouté aucun élément à vos favoris.
+                        {% else %}
+                            Vous n'avez aucun {{ currentType == 'route' ? 'voie' : (currentType == 'sector' ? 'secteur' : (currentType == 'site' ? 'site' : 'région')) }} en favori.
+                        {% endif %}
+                    </p>
+                    <a href="{{ url('/') }}" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>Explorer les sites d'escalade
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar avec statistiques -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Mes Statistiques
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 text-center">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ stats.total }}</div>
+                                <div class="stat-label">Total</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number text-success">{{ stats.routes }}</div>
+                                <div class="stat-label">Voies</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number text-primary">{{ stats.sectors }}</div>
+                                <div class="stat-label">Secteurs</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number text-warning">{{ stats.sites }}</div>
+                                <div class="stat-label">Sites</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tips me-2"></i>Conseils
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="tip-item mb-3">
+                        <h6><i class="fas fa-heart text-danger me-2"></i>Organiser vos favoris</h6>
+                        <p class="small text-muted">Utilisez les filtres pour retrouver rapidement vos voies, secteurs ou sites préférés.</p>
+                    </div>
+                    <div class="tip-item mb-3">
+                        <h6><i class="fas fa-share text-primary me-2"></i>Partager vos découvertes</h6>
+                        <p class="small text-muted">Recommandez vos voies favorites à la communauté d'escalade.</p>
+                    </div>
+                    <div class="tip-item">
+                        <h6><i class="fas fa-map text-success me-2"></i>Planifier vos sorties</h6>
+                        <p class="small text-muted">Consultez la météo et les conditions pour vos secteurs favoris.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.favorite-card {
+    transition: transform 0.2s ease;
+}
+
+.favorite-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-item {
+    padding: 10px;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.tip-item h6 {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des boutons de suppression de favoris
+    document.querySelectorAll('.favorite-toggle').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const entityType = this.dataset.entityType;
+            const entityId = this.dataset.entityId;
+            
+            try {
+                const response = await fetch('{{ url("/api/favorites/toggle") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: `entity_type=${entityType}&entity_id=${entityId}&csrf_token={{ csrf_token }}`
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.action === 'removed') {
+                        // Supprimer la carte de la liste
+                        this.closest('.col-12').remove();
+                        
+                        // Afficher message de succès
+                        showFlashMessage('success', data.message);
+                        
+                        // Actualiser après 1 seconde pour mettre à jour les compteurs
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                } else {
+                    showFlashMessage('error', 'Erreur lors de la suppression du favori');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                showFlashMessage('error', 'Erreur de connexion');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

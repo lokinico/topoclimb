@@ -454,4 +454,86 @@ class WeatherController extends BaseController
 
         return $translations[$condition] ?? 'Conditions inconnues';
     }
+    
+    /**
+     * Page météo générale
+     */
+    public function index(): Response
+    {
+        try {
+            // Données météo pour les principales régions d'escalade
+            $mainRegions = [
+                ['name' => 'Valais', 'lat' => 46.2044, 'lng' => 7.7492],
+                ['name' => 'Oberland', 'lat' => 46.6863, 'lng' => 7.8632],
+                ['name' => 'Grisons', 'lat' => 46.8182, 'lng' => 9.8386],
+                ['name' => 'Jura', 'lat' => 47.0682, 'lng' => 6.8006],
+                ['name' => 'Tessin', 'lat' => 46.0037, 'lng' => 8.9511]
+            ];
+            
+            $weatherData = [];
+            foreach ($mainRegions as $region) {
+                $weather = $this->fetchWeatherData($region['lat'], $region['lng']);
+                if ($weather) {
+                    $weatherData[] = array_merge($region, $weather);
+                }
+            }
+            
+            return $this->render('weather/index.twig', [
+                'weather_regions' => $weatherData,
+                'page_title' => 'Météo Escalade Suisse'
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'WeatherController::index');
+            return $this->redirect('/');
+        }
+    }
+    
+    /**
+     * Météo spécifique à une région
+     */
+    public function region(int $regionId): Response
+    {
+        try {
+            // Récupérer les informations de la région
+            $region = $this->db->fetchOne(
+                "SELECT * FROM climbing_regions WHERE id = ? AND active = 1",
+                [$regionId]
+            );
+            
+            if (!$region) {
+                $this->flash('error', 'Région non trouvée');
+                return $this->redirect('/weather');
+            }
+            
+            // Météo pour cette région
+            $weather = null;
+            if ($region['coordinates_lat'] && $region['coordinates_lng']) {
+                $weather = $this->fetchWeatherData(
+                    (float)$region['coordinates_lat'],
+                    (float)$region['coordinates_lng']
+                );
+            }
+            
+            // Récupérer les secteurs de cette région pour la météo locale
+            $sectors = $this->db->fetchAll(
+                "SELECT id, name, coordinates_lat, coordinates_lng 
+                 FROM climbing_sectors 
+                 WHERE region_id = ? AND active = 1 
+                 AND coordinates_lat IS NOT NULL 
+                 AND coordinates_lng IS NOT NULL
+                 ORDER BY name",
+                [$regionId]
+            );
+            
+            return $this->render('weather/region.twig', [
+                'region' => $region,
+                'weather' => $weather,
+                'sectors' => $sectors,
+                'page_title' => 'Météo - ' . $region['name']
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'WeatherController::region');
+            return $this->redirect('/weather');
+        }
+    }
 }
