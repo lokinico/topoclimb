@@ -117,66 +117,62 @@
         <!-- Vue grille (cartes) -->
         <div class="sectors-grid entities-grid view-grid active" id="sectors-grid">
             {% if sectors|length > 0 %}
-                <div class="row g-3">
-                    {% for sector in sectors %}
-                        <div class="col-md-6 col-lg-4">
-                            <div class="sector-card entity-card card h-100" data-sector-id="{{ sector.id }}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h5 class="card-title mb-1">
-                                            <a href="/sectors/{{ sector.id }}" class="text-decoration-none">{{ sector.name }}</a>
-                                        </h5>
-                                        <div class="sector-actions">
-                                            {% if sector.coordinates_lat and sector.coordinates_lng %}
-                                                <button class="btn btn-sm btn-outline-secondary" 
-                                                        title="Navigation GPS" data-action="gps" data-id="{{ sector.id }}">
-                                                    <i class="fas fa-map-marker-alt"></i>
-                                                </button>
-                                            {% endif %}
-                                            <button class="btn btn-sm btn-outline-secondary" 
-                                                    title="Favoris" data-action="favorite" data-id="{{ sector.id }}">
-                                                <i class="far fa-heart"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="sector-meta text-muted small mb-2">
-                                        {% if sector.region_name %}
-                                            <span class="me-2">🏔️ {{ sector.region_name }}</span>
-                                        {% endif %}
-                                        {% if sector.site_name %}
-                                            <span class="me-2">📍 {{ sector.site_name }}</span>
-                                        {% endif %}
-                                        {% if sector.altitude %}
-                                            <span class="me-2">⛰️ {{ sector.altitude }}m</span>
-                                        {% endif %}
-                                    </div>
-                                    
-                                    {% if sector.description %}
-                                        <p class="card-text">{{ sector.description|slice(0, 100) ~ (sector.description|length > 100 ? '...' : '') }}</p>
+                {% for sector in sectors %}
+                    <div class="sector-card entity-card card h-100" data-sector-id="{{ sector.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-1">
+                                    <a href="/sectors/{{ sector.id }}" class="text-decoration-none">{{ sector.name }}</a>
+                                </h5>
+                                <div class="sector-actions">
+                                    {% if sector.coordinates_lat and sector.coordinates_lng %}
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                title="Navigation GPS" data-action="gps" data-id="{{ sector.id }}">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </button>
                                     {% endif %}
-                                    
-                                    <div class="sector-stats row text-center mt-3">
-                                        <div class="col-6">
-                                            <div class="stat-value h6 mb-0">{{ sector.routes_count|default(0) }}</div>
-                                            <div class="stat-label small text-muted">Voies</div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="stat-value h6 mb-0">
-                                                {% if sector.created_at %}
-                                                    {{ sector.created_at|date('Y') }}
-                                                {% else %}
-                                                    N/A
-                                                {% endif %}
-                                            </div>
-                                            <div class="stat-label small text-muted">Créé</div>
-                                        </div>
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            title="Favoris" data-action="favorite" data-id="{{ sector.id }}">
+                                        <i class="far fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="sector-meta text-muted small mb-2">
+                                {% if sector.region_name %}
+                                    <span class="me-2">🏔️ {{ sector.region_name }}</span>
+                                {% endif %}
+                                {% if sector.site_name %}
+                                    <span class="me-2">📍 {{ sector.site_name }}</span>
+                                {% endif %}
+                                {% if sector.altitude %}
+                                    <span class="me-2">⛰️ {{ sector.altitude }}m</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if sector.description %}
+                                <p class="card-text">{{ sector.description|slice(0, 100) ~ (sector.description|length > 100 ? '...' : '') }}</p>
+                            {% endif %}
+                            
+                            <div class="sector-stats row text-center mt-3">
+                                <div class="col-6">
+                                    <div class="stat-value h6 mb-0">{{ sector.routes_count|default(0) }}</div>
+                                    <div class="stat-label small text-muted">Voies</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-value h6 mb-0">
+                                        {% if sector.created_at %}
+                                            {{ sector.created_at|date('Y') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
                                     </div>
+                                    <div class="stat-label small text-muted">Créé</div>
                                 </div>
                             </div>
                         </div>
-                    {% endfor %}
-                </div>
+                    </div>
+                {% endfor %}
             {% else %}
                 <div class="empty-state text-center py-5">
                     <div class="empty-icon mb-3">

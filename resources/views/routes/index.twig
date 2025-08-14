@@ -118,22 +118,20 @@
         <!-- Vue grille (cartes) -->
         <div class="routes-grid entities-grid view-grid active" id="routes-grid">
             {% if routes|length > 0 %}
-                <div class="row g-3">
-                    {% for route in routes %}
-                        <div class="col-md-6 col-lg-4">
-                            <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h5 class="card-title mb-1">
-                                            <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
-                                        </h5>
-                                        <div class="route-actions">
-                                            <button class="btn btn-sm btn-outline-secondary" 
-                                                    title="Favoris" data-action="favorite" data-id="{{ route.id }}">
-                                                <i class="far fa-heart"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                {% for route in routes %}
+                    <div class="route-card entity-card card h-100" data-route-id="{{ route.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-1">
+                                    <a href="/routes/{{ route.id }}" class="text-decoration-none">{{ route.name }}</a>
+                                </h5>
+                                <div class="route-actions">
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            title="Favoris" data-action="favorite" data-id="{{ route.id }}">
+                                        <i class="far fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
                                     
                                     <div class="route-meta text-muted small mb-2">
                                         {% if route.difficulty %}
@@ -176,9 +174,8 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
-                </div>
+                    </div>
+                {% endfor %}
             {% else %}
                 <div class="empty-state text-center py-5">
                     <div class="empty-icon mb-3">

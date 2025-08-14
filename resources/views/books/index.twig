@@ -118,22 +118,20 @@
         <!-- Vue grille (cartes) -->
         <div class="books-grid entities-grid view-grid active" id="books-grid">
             {% if books|length > 0 %}
-                <div class="row g-3">
-                    {% for book in books %}
-                        <div class="col-md-6 col-lg-4">
-                            <div class="book-card entity-card card h-100" data-book-id="{{ book.id }}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h5 class="card-title mb-1">
-                                            <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.title }}</a>
-                                        </h5>
-                                        <div class="book-actions">
-                                            <button class="btn btn-sm btn-outline-secondary" 
-                                                    title="Favoris" data-action="favorite" data-id="{{ book.id }}">
-                                                <i class="far fa-heart"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                {% for book in books %}
+                    <div class="book-card entity-card card h-100" data-book-id="{{ book.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-1">
+                                    <a href="/books/{{ book.id }}" class="text-decoration-none">{{ book.title }}</a>
+                                </h5>
+                                <div class="book-actions">
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            title="Favoris" data-action="favorite" data-id="{{ book.id }}">
+                                        <i class="far fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
                                     
                                     <div class="book-meta text-muted small mb-2">
                                         {% if book.author %}
@@ -173,9 +171,8 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
-                </div>
+                    </div>
+                {% endfor %}
             {% else %}
                 <div class="empty-state text-center py-5">
                     <div class="empty-icon mb-3">
