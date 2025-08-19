@@ -50,7 +50,8 @@ class AccessControlMiddleware
         $request->attributes->set('access_display_info', $displayInfo);
         $request->attributes->set('access_control', $this->accessControl);
 
-        error_log("AccessControlMiddleware: Accès autorisé pour niveau: " . $level);
+        $currentLevel = $this->accessControl->getCurrentAccessLevel();
+        error_log("AccessControlMiddleware: Accès autorisé pour niveau: " . $currentLevel);
         
         return $next($request);
     }
