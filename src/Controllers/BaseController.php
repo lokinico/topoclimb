@@ -11,6 +11,7 @@ use TopoclimbCH\Core\Container;
 use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
+use TopoclimbCH\Core\DatabaseCompatibility;
 use TopoclimbCH\Core\Validation\Validator;
 use TopoclimbCH\Exceptions\ValidationException;
 use TopoclimbCH\Exceptions\AuthorizationException;
@@ -23,6 +24,7 @@ abstract class BaseController
     protected ?Auth $auth = null;
     protected CsrfManager $csrfManager;
     protected ?Database $db = null;
+    protected ?DatabaseCompatibility $dbCompat = null;
 
     public function __construct(
         View $view, 
@@ -36,6 +38,11 @@ abstract class BaseController
         $this->csrfManager = $csrfManager;
         $this->db = $db;
         $this->auth = $auth;
+
+        // Initialiser DatabaseCompatibility si DB disponible
+        if ($this->db) {
+            $this->dbCompat = new DatabaseCompatibility($this->db);
+        }
 
         // Fallback to Container if dependencies not injected (for backward compatibility)
         if (!$this->db || !$this->auth) {
@@ -535,5 +542,53 @@ abstract class BaseController
         ];
 
         error_log('ACTION_LOG: ' . json_encode($logData));
+    }
+
+    /**
+     * Exécute une requête avec gestion des colonnes manquantes (dev/prod)
+     */
+    protected function safeQuery(string $query, array $params = []): array
+    {
+        if (!$this->dbCompat) {
+            // Fallback sur requête normale si pas de compatibilité
+            return $this->db->fetchAll($query, $params);
+        }
+
+        // Fallbacks pour colonnes media couramment manquantes
+        $mediaFallbacks = [
+            'climbing_media' => [
+                'entity_type' => "'unknown'",
+                'file_type' => "'image'"
+            ],
+            'm' => [
+                'entity_type' => "'unknown'",
+                'file_type' => "'image'"
+            ]
+        ];
+
+        return $this->dbCompat->safeQuery($query, $params, $mediaFallbacks);
+    }
+
+    /**
+     * Version pour une seule ligne
+     */
+    protected function safeQueryOne(string $query, array $params = []): ?array
+    {
+        if (!$this->dbCompat) {
+            return $this->db->fetchOne($query, $params);
+        }
+
+        $mediaFallbacks = [
+            'climbing_media' => [
+                'entity_type' => "'unknown'",
+                'file_type' => "'image'"
+            ],
+            'm' => [
+                'entity_type' => "'unknown'",
+                'file_type' => "'image'"
+            ]
+        ];
+
+        return $this->dbCompat->safeQueryOne($query, $params, $mediaFallbacks);
     }
 }
