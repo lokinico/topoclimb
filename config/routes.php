@@ -382,6 +382,24 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/api/sites',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'apiIndex'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/sectors',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'apiIndex'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/routes',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'apiIndex'
+    ],
+    [
+        'method' => 'GET',
         'path' => '/regions/{id}/weather',
         'controller' => \TopoclimbCH\Controllers\RegionController::class,
         'action' => 'weather'
