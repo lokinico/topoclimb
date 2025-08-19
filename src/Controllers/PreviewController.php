@@ -3,16 +3,16 @@
 namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
-use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Response;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
+use TopoclimbCH\Core\Auth;
 use TopoclimbCH\Core\Security\CsrfManager;
 
 /**
- * Controller pour les pages d'aperçu public (freemium)
- * Affiche du contenu limité pour inciter à l'inscription
+ * Contrôleur pour les aperçus très limités
+ * Contenu ultra-restreint pour visiteurs publics
  */
 class PreviewController extends BaseController
 {
@@ -21,174 +21,93 @@ class PreviewController extends BaseController
         Session $session,
         CsrfManager $csrfManager,
         Database $db,
-        ?Auth $auth = null
+        Auth $auth
     ) {
         parent::__construct($view, $session, $csrfManager, $db, $auth);
-        $this->db = $db;
     }
 
     /**
-     * Aperçu des secteurs - quelques exemples publics
+     * Aperçu d'une région - très limité
      */
-    public function sectorsPreview(Request $request): Response
+    public function region(Request $request): Response
     {
-        try {
-            // Récupérer quelques secteurs d'exemple (3-4 max)
-            $previewSectors = $this->db->fetchAll("
-                SELECT s.id, s.name, s.description, s.altitude, 
-                       r.name as region_name,
-                       COUNT(rt.id) as routes_count
-                FROM climbing_sectors s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                LEFT JOIN climbing_routes rt ON s.id = rt.sector_id
-                WHERE s.active = 1
-                GROUP BY s.id, s.name, s.description, s.altitude, r.name
-                ORDER BY s.created_at DESC
-                LIMIT 3
-            ");
-
-            // Griser certaines informations
-            foreach ($previewSectors as &$sector) {
-                $sector['description'] = $this->limitText($sector['description'] ?? '', 100);
-                $sector['is_preview'] = true;
-                $sector['hidden_routes'] = max(0, ($sector['routes_count'] ?? 0) - 2);
-            }
-
-            // Stats générales limitées
-            $stats = [
-                'total_sectors' => '10+',
-                'total_routes' => '50+', 
-                'total_regions' => '5+',
-                'preview_mode' => true
-            ];
-
-            return $this->render('preview/sectors', [
-                'sectors' => $previewSectors,
-                'stats' => $stats,
-                'preview_mode' => true,
-                'login_url' => '/login',
-                'register_url' => '/register'
-            ]);
-            
-        } catch (\Exception $e) {
-            $this->handleError($e, 'Erreur lors du chargement de l\'aperçu secteurs');
-            
-            return $this->render('preview/sectors', [
-                'sectors' => [],
-                'stats' => ['total_sectors' => 0, 'total_routes' => 0],
-                'preview_mode' => true,
-                'error' => 'Impossible de charger l\'aperçu des secteurs.'
-            ]);
-        }
-    }
-
-    /**
-     * Aperçu des routes - quelques exemples publics
-     */
-    public function routesPreview(Request $request): Response
-    {
-        try {
-            // Récupérer quelques routes d'exemple (5-6 max)
-            $previewRoutes = $this->db->fetchAll("
-                SELECT r.id, r.name, r.difficulty, 
-                       s.name as sector_name,
-                       reg.name as region_name
-                FROM climbing_routes r
-                LEFT JOIN climbing_sectors s ON r.sector_id = s.id
-                LEFT JOIN climbing_regions reg ON s.region_id = reg.id
-                WHERE r.active = 1 AND s.active = 1
-                ORDER BY r.created_at DESC
-                LIMIT 5
-            ");
-
-            // Masquer certaines informations détaillées
-            foreach ($previewRoutes as &$route) {
-                $route['is_preview'] = true;
-                // Masquer des détails comme hauteur, coordonnées précises
-                unset($route['length'], $route['coordinates_lat'], $route['coordinates_lng']);
-            }
-
-            return $this->render('preview/routes', [
-                'routes' => $previewRoutes,
-                'preview_mode' => true,
-                'total_hidden' => '15+ routes cachées',
-                'login_url' => '/login',
-                'register_url' => '/register'
-            ]);
-            
-        } catch (\Exception $e) {
-            $this->handleError($e, 'Erreur lors du chargement de l\'aperçu routes');
-            
-            return $this->render('preview/routes', [
-                'routes' => [],
-                'preview_mode' => true,
-                'error' => 'Impossible de charger l\'aperçu des routes.'
-            ]);
-        }
-    }
-
-    /**
-     * Page d'aperçu principal - présentation du contenu
-     */
-    public function index(Request $request): Response
-    {
-        try {
-            // Stats globales pour teaser
-            $globalStats = $this->db->fetchOne("
-                SELECT 
-                    (SELECT COUNT(*) FROM climbing_sectors WHERE active = 1) as sectors,
-                    (SELECT COUNT(*) FROM climbing_routes WHERE active = 1) as routes,
-                    (SELECT COUNT(*) FROM climbing_regions WHERE active = 1) as regions
-            ");
-
-            // Quelques secteurs featued
-            $featuredSectors = $this->db->fetchAll("
-                SELECT s.id, s.name, s.altitude, r.name as region_name
-                FROM climbing_sectors s
-                LEFT JOIN climbing_regions r ON s.region_id = r.id
-                WHERE s.active = 1
-                ORDER BY RANDOM()
-                LIMIT 2
-            ");
-
-            return $this->render('preview/index', [
-                'stats' => [
-                    'sectors' => $globalStats['sectors'] . '+ secteurs',
-                    'routes' => $globalStats['routes'] . '+ voies', 
-                    'regions' => $globalStats['regions'] . ' régions'
-                ],
-                'featured_sectors' => $featuredSectors,
-                'preview_mode' => true,
-                'benefits' => [
-                    'Accès complet à toutes les voies',
-                    'Coordonnées GPS précises',
-                    'Météo en temps réel',
-                    'Favoris et planification',
-                    'Commentaires et évaluations'
-                ]
-            ]);
-            
-        } catch (\Exception $e) {
-            $this->handleError($e, 'Erreur lors du chargement de l\'aperçu');
-            
-            return $this->render('preview/index', [
-                'stats' => [],
-                'featured_sectors' => [],
-                'preview_mode' => true,
-                'error' => 'Impossible de charger l\'aperçu.'
-            ]);
-        }
-    }
-
-    /**
-     * Limiter le texte pour l'aperçu
-     */
-    private function limitText(string $text, int $limit = 100): string
-    {
-        if (strlen($text) <= $limit) {
-            return $text;
-        }
+        $id = $request->attributes->get('id');
         
-        return substr($text, 0, $limit) . '... [Inscription requise pour voir plus]';
+        if (!$id || !is_numeric($id)) {
+            return $this->redirect('/demo/regions');
+        }
+
+        // Seules les 3 premières régions sont prévisualisables
+        $allowedRegions = $this->db->fetchAll(
+            "SELECT id FROM climbing_regions WHERE active = 1 ORDER BY name ASC LIMIT 3"
+        );
+        $allowedIds = array_column($allowedRegions, 'id');
+        
+        if (!in_array($id, $allowedIds)) {
+            $this->flash('info', 'Cette région nécessite un compte gratuit pour être consultée.');
+            return $this->redirect('/register');
+        }
+
+        $region = $this->db->fetchOne(
+            "SELECT r.id, r.name, LEFT(r.description, 200) as description,
+                    COUNT(DISTINCT s.id) as sites_count
+             FROM climbing_regions r
+             LEFT JOIN climbing_sites s ON r.id = s.region_id AND s.active = 1
+             WHERE r.id = ? AND r.active = 1
+             GROUP BY r.id",
+            [$id]
+        );
+
+        if (!$region) {
+            return $this->redirect('/demo/regions');
+        }
+
+        // Quelques sites d'exemple seulement
+        $sampleSites = $this->db->fetchAll(
+            "SELECT s.id, s.name, LEFT(s.description, 150) as description
+             FROM climbing_sites s
+             WHERE s.region_id = ? AND s.active = 1
+             ORDER BY s.name ASC
+             LIMIT 2",
+            [$id]
+        );
+
+        // Masquer toute information sensible
+        foreach ($sampleSites as &$site) {
+            $site['preview_only'] = true;
+            $site['access_blocked'] = true;
+        }
+
+        return $this->render('preview/region', [
+            'title' => 'Aperçu - ' . $region['name'],
+            'region' => $region,
+            'sample_sites' => $sampleSites,
+            'preview_mode' => true,
+            'total_hidden' => max(0, $region['sites_count'] - 2),
+            'cta_message' => 'Créez un compte gratuit pour découvrir les ' . $region['sites_count'] . ' sites d\'escalade de cette région'
+        ]);
+    }
+
+    /**
+     * Page "Accès bloqué" pour contenu nécessitant inscription
+     */
+    public function blocked(Request $request): Response
+    {
+        $type = $request->query->get('type', 'content');
+        $name = $request->query->get('name', 'ce contenu');
+
+        return $this->render('preview/blocked', [
+            'title' => 'Inscription requise',
+            'content_type' => $type,
+            'content_name' => $name,
+            'benefits' => [
+                'Accès complet à toutes les régions d\'escalade',
+                'Coordonnées GPS précises des sites',
+                'Descriptions détaillées des voies',
+                'Conditions météo en temps réel',
+                'Guides d\'escalade complets',
+                'Communauté de grimpeurs'
+            ]
+        ]);
     }
 }

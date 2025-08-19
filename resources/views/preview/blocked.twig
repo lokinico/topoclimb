@@ -1,0 +1,210 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Inscription requise - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="blocked-access-page">
+    <div class="container-fluid">
+        <div class="row justify-content-center min-vh-100 align-items-center">
+            <div class="col-lg-8 col-xl-6">
+                <!-- Carte principale d'accès bloqué -->
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-5 text-center">
+                        <!-- Icône d'accès bloqué -->
+                        <div class="mb-4">
+                            <div class="blocked-icon mb-3">
+                                <i class="fas fa-lock fa-4x text-primary opacity-75"></i>
+                            </div>
+                            <h2 class="h3 text-primary mb-2">Accès restreint</h2>
+                            <p class="text-muted lead">
+                                {% if content_type == 'region' %}
+                                    La région <strong>{{ content_name }}</strong> nécessite un compte pour être consultée.
+                                {% elseif content_type == 'site' %}
+                                    Le site <strong>{{ content_name }}</strong> nécessite un compte pour être consulté.
+                                {% elseif content_type == 'sector' %}
+                                    Le secteur <strong>{{ content_name }}</strong> nécessite un compte pour être consulté.
+                                {% else %}
+                                    {{ content_name }} nécessite un compte pour être consulté.
+                                {% endif %}
+                            </p>
+                        </div>
+
+                        <!-- Avantages de l'inscription -->
+                        <div class="benefits-section mb-5">
+                            <h4 class="h5 mb-4 text-dark">En créant votre compte gratuit, vous débloquez :</h4>
+                            <div class="row g-3">
+                                {% for benefit in benefits %}
+                                    <div class="col-md-6">
+                                        <div class="benefit-item d-flex align-items-start text-start">
+                                            <div class="flex-shrink-0 me-3">
+                                                <i class="fas fa-check-circle text-success"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <small class="text-muted">{{ benefit }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="action-buttons">
+                            <div class="d-grid gap-2 d-md-flex justify-content-center">
+                                <a href="/register" class="btn btn-primary btn-lg px-5">
+                                    <i class="fas fa-user-plus me-2"></i>
+                                    Créer un compte gratuit
+                                </a>
+                                <a href="/login" class="btn btn-outline-primary btn-lg px-4">
+                                    <i class="fas fa-sign-in-alt me-2"></i>
+                                    Se connecter
+                                </a>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <a href="/demo" class="btn btn-link text-muted">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    Retour à la démonstration
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Témoignages -->
+                <div class="testimonials mt-5">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="avatar me-3">
+                                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">Sarah M.</h6>
+                                            <small class="text-muted">Grimpeuse passionnée</small>
+                                        </div>
+                                    </div>
+                                    <blockquote class="blockquote small">
+                                        <p>"TopoclimbCH m'a permis de découvrir des sites incroyables que je n'aurais jamais trouvés seule!"</p>
+                                    </blockquote>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="avatar me-3">
+                                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">Marc L.</h6>
+                                            <small class="text-muted">Guide de montagne</small>
+                                        </div>
+                                    </div>
+                                    <blockquote class="blockquote small">
+                                        <p>"Une base de données indispensable pour planifier mes sorties clients en Suisse."</p>
+                                    </blockquote>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations supplémentaires -->
+                <div class="additional-info mt-5 text-center">
+                    <div class="card border-0" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                        <div class="card-body py-4">
+                            <h5 class="text-dark mb-3">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                100% Gratuit et Sécurisé
+                            </h5>
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="mb-2">
+                                        <i class="fas fa-gift fa-2x text-primary mb-2"></i>
+                                    </div>
+                                    <h6 class="small">Inscription gratuite</h6>
+                                    <p class="small text-muted mb-0">Aucun frais, aucune carte bancaire</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-2">
+                                        <i class="fas fa-user-secret fa-2x text-primary mb-2"></i>
+                                    </div>
+                                    <h6 class="small">Données protégées</h6>
+                                    <p class="small text-muted mb-0">Respect total de votre vie privée</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-2">
+                                        <i class="fas fa-clock fa-2x text-primary mb-2"></i>
+                                    </div>
+                                    <h6 class="small">Accès immédiat</h6>
+                                    <p class="small text-muted mb-0">Activation en 30 secondes</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.blocked-access-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.blocked-icon {
+    position: relative;
+}
+
+.blocked-icon::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    background: rgba(66, 153, 225, 0.1);
+    border-radius: 50%;
+}
+
+.benefit-item {
+    padding: 0.5rem 0;
+}
+
+.benefit-item:hover {
+    background: rgba(66, 153, 225, 0.05);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.card {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4299e1 0%, #667eea 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #3182ce 0%, #5a67d8 100%);
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}

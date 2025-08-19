@@ -287,6 +287,20 @@ class ContainerBuilder
                 Database::class,                          // BaseController + RouteController
                 Auth::class                               // BaseController
             ],
+            'TopoclimbCH\\Controllers\\DemoController' => [
+                View::class,                              // BaseController
+                Session::class,                           // BaseController
+                CsrfManager::class,                       // BaseController
+                Database::class,                          // BaseController + DemoController
+                Auth::class                               // BaseController
+            ],
+            'TopoclimbCH\\Controllers\\PreviewController' => [
+                View::class,                              // BaseController
+                Session::class,                           // BaseController
+                CsrfManager::class,                       // BaseController
+                Database::class,                          // BaseController + PreviewController
+                Auth::class                               // BaseController
+            ],
             // Add other controllers as needed
         ];
 

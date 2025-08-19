@@ -5,6 +5,53 @@
  */
 
 return [
+    // ========== ROUTES DEMO & PREVIEW (PUBLIC) ==========
+    // Pages de démonstration pour utilisateurs non-connectés
+    [
+        'method' => 'GET',
+        'path' => '/demo',
+        'controller' => \TopoclimbCH\Controllers\DemoController::class,
+        'action' => 'index'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/demo/regions',
+        'controller' => \TopoclimbCH\Controllers\DemoController::class,
+        'action' => 'regions'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/demo/sites',
+        'controller' => \TopoclimbCH\Controllers\DemoController::class,
+        'action' => 'sites'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/demo/sectors',
+        'controller' => \TopoclimbCH\Controllers\DemoController::class,
+        'action' => 'sectors'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/demo/routes',
+        'controller' => \TopoclimbCH\Controllers\DemoController::class,
+        'action' => 'routes'
+    ],
+    
+    // Aperçus ultra-limités pour public
+    [
+        'method' => 'GET',
+        'path' => '/preview/region/{id}',
+        'controller' => \TopoclimbCH\Controllers\PreviewController::class,
+        'action' => 'region'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/preview/blocked',
+        'controller' => \TopoclimbCH\Controllers\PreviewController::class,
+        'action' => 'blocked'
+    ],
+
     // Routes publiques
     [
         'method' => 'GET',
@@ -85,12 +132,13 @@ return [
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
 
-    // Routes pour les régions et sites (publiques)
+    // Routes pour les régions et sites (contrôle d'accès hiérarchique)
     [
         'method' => 'GET',
         'path' => '/regions',
         'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'index'
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -104,13 +152,15 @@ return [
         'method' => 'GET',
         'path' => '/sites',
         'controller' => \TopoclimbCH\Controllers\SiteController::class,
-        'action' => 'index'
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
         'path' => '/sites/{id}',
         'controller' => \TopoclimbCH\Controllers\SiteController::class,
-        'action' => 'show'
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -132,13 +182,15 @@ return [
         'method' => 'GET',
         'path' => '/sectors',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'index'
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
         'path' => '/sectors/{id}',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'show'
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -198,13 +250,15 @@ return [
         'method' => 'GET',
         'path' => '/routes',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'index'
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
         'path' => '/routes/{id}',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'show'
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -532,13 +586,15 @@ return [
         'method' => 'GET',
         'path' => '/books',
         'controller' => \TopoclimbCH\Controllers\BookController::class,
-        'action' => 'index'
+        'action' => 'index',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
         'path' => '/books/{id}',
         'controller' => \TopoclimbCH\Controllers\BookController::class,
-        'action' => 'show'
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
