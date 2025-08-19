@@ -123,37 +123,37 @@ abstract class BaseController
     }
 
     /**
-     * Vérification sécurisée des permissions avec redirection
+     * Vérification sécurisée des permissions avec exception
      */
     protected function requireAuth(string $message = 'Authentification requise'): void
     {
         if (!$this->auth || !$this->auth->check()) {
+            error_log("BaseController::requireAuth - Auth failed. Auth: " . ($this->auth ? 'EXISTS' : 'NULL') . ", Check: " . ($this->auth ? ($this->auth->check() ? 'TRUE' : 'FALSE') : 'N/A'));
+            
             $this->session->set('intended_url', $_SERVER['REQUEST_URI'] ?? '/');
             $this->flash('error', $message);
             
-            // Rediriger vers la page de connexion au lieu de lancer une exception
-            header('Location: /login', true, 302);
-            exit;
+            // Lancer une exception au lieu d'une redirection directe
+            throw new AuthorizationException($message);
         }
     }
 
     /**
-     * Vérification des rôles utilisateur avec redirection vers page permissions
+     * Vérification des rôles utilisateur avec exception
      */
     protected function requireRole(array $allowedRoles, string $message = 'Permissions insuffisantes'): void
     {
         $this->requireAuth();
 
         $userRole = $this->auth->role();
+        
+        error_log("BaseController::requireRole - User role: $userRole, Allowed: " . implode(',', $allowedRoles));
 
         if (!in_array($userRole, $allowedRoles)) {
-            // Rediriger vers la page d'erreur permissions au lieu de lancer une exception
-            $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
-            $errorUrl = '/errors/permissions?message=' . urlencode($message) . '&return=' . urlencode($currentUrl);
+            error_log("BaseController::requireRole - Access denied for role $userRole");
             
-            // Utiliser une redirection HTTP au lieu d'une exception
-            header('Location: ' . $errorUrl, true, 403);
-            exit;
+            // Lancer une exception au lieu d'une redirection directe
+            throw new AuthorizationException("$message (rôle requis: " . implode('/', $allowedRoles) . ", rôle actuel: $userRole)");
         }
     }
 

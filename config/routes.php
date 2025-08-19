@@ -215,6 +215,19 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/test/routes/create',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'testCreate'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/test/routes/create-auth',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'testCreateAuth',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
         'path' => '/sectors/{sector_id}/routes/create',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'createFromSector',

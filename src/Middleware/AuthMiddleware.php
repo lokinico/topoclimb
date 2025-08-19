@@ -21,32 +21,34 @@ class AuthMiddleware
         '/contact',
         '/privacy',
         '/terms',
-        // Temporaire pour les tests
+        // Routes publiques (lecture seule)
         '/regions',
-        '/regions/create',
-        '/sites',
-        '/sites/create',
+        '/sites', 
         '/sectors',
-        '/sectors/create',
         '/routes',
-        '/routes/create',
         '/books',
-        '/books/create',
-        '/profile',
-        '/settings',
-        '/admin',
-        '/admin/users'
+        // Routes protégées (création/modification) - supprimées de public
+        // '/regions/create', 
+        // '/sites/create',
+        // '/sectors/create', 
+        // '/routes/create',     <- REMOVED
+        // '/books/create',
+        // Routes admin/user (toujours protégées)
+        // '/profile',
+        // '/settings',
+        // '/admin',
+        // '/admin/users'
     ];
 
     private Session $session;
     private Database $db;
-    private ?Auth $auth = null;
+    private Auth $auth;
 
-    public function __construct(Session $session, Database $db)
+    public function __construct(Session $session, Database $db, Auth $auth)
     {
         $this->session = $session;
         $this->db = $db;
-        $this->auth = new Auth($session, $db);
+        $this->auth = $auth; // Use the injected singleton Auth instance
     }
 
     public function handle(Request $request, callable $next): SymfonyResponse
