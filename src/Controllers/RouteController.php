@@ -476,6 +476,60 @@ class RouteController extends BaseController
     }
 
     /**
+     * Page de création de voie depuis un secteur parent
+     */
+    public function createFromSector(Request $request): Response
+    {
+        $this->requireAuth();
+        $this->requireRole([0, 1, 2]);
+        
+        try {
+            $sector_id = $request->attributes->get('sector_id');
+            
+            if (!$sector_id || !is_numeric($sector_id)) {
+                $this->flash('error', 'ID de secteur invalide');
+                return $this->redirect('/sectors');
+            }
+            
+            // Vérifier que le secteur existe
+            $sector = $this->db->fetchOne(
+                "SELECT s.*, r.name as region_name, si.name as site_name 
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 LEFT JOIN climbing_sites si ON s.site_id = si.id
+                 WHERE s.id = ? AND s.active = 1",
+                [$sector_id]
+            );
+            
+            if (!$sector) {
+                $this->flash('error', 'Secteur non trouvé');
+                return $this->redirect('/sectors');
+            }
+            
+            // Récupérer tous les secteurs pour le formulaire
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name, si.name as site_name
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 LEFT JOIN climbing_sites si ON s.site_id = si.id
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+            
+            return $this->render('routes/form', [
+                'route' => (object)['sector_id' => $sector_id],
+                'sectors' => $sectors,
+                'csrf_token' => $this->createCsrfToken(),
+                'is_edit' => false,
+                'parent_sector' => $sector
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire de création');
+            return $this->redirect('/sectors/' . ($sector_id ?? ''));
+        }
+    }
+
+    /**
      * Enregistrement d'une nouvelle voie
      */
     public function store(Request $request): Response

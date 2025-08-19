@@ -651,6 +651,83 @@ class SectorController extends BaseController
     }
 
     /**
+     * Page de création de secteur depuis un site parent
+     */
+    public function createFromSite(Request $request): Response
+    {
+        $this->requireAuth();
+        $this->requireRole([0, 1, 2]);
+        
+        try {
+            $site_id = $request->attributes->get('site_id');
+            
+            if (!$site_id || !is_numeric($site_id)) {
+                $this->flash('error', 'ID de site invalide');
+                return $this->redirect('/sites');
+            }
+            
+            // Vérifier que le site existe
+            $site = $this->db->fetchOne(
+                "SELECT s.*, r.name as region_name, r.id as region_id 
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.id = ? AND s.active = 1",
+                [$site_id]
+            );
+            
+            if (!$site) {
+                $this->flash('error', 'Site non trouvé');
+                return $this->redirect('/sites');
+            }
+            
+            // Récupérer toutes les régions et sites pour le formulaire
+            $regions = $this->db->fetchAll(
+                "SELECT * FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+            
+            $sites = $this->db->fetchAll(
+                "SELECT s.*, r.name as region_name 
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+            
+            // Récupérer les expositions
+            $expositions = [];
+            try {
+                $expositions = $this->db->fetchAll(
+                    "SELECT DISTINCT exposure FROM climbing_sectors 
+                     WHERE exposure IS NOT NULL AND exposure != '' 
+                     ORDER BY exposure ASC"
+                );
+                $expositions = array_column($expositions, 'exposure');
+            } catch (\Exception $e) {
+                $expositions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            }
+            
+            return $this->render('sectors/form', [
+                'sector' => (object)[
+                    'site_id' => $site_id,
+                    'region_id' => $site['region_id']
+                ],
+                'regions' => $regions,
+                'sites' => $sites,
+                'exposures' => $expositions,
+                'currentExposures' => [],
+                'primaryExposure' => null,
+                'media' => [],
+                'csrf_token' => $this->createCsrfToken(),
+                'is_edit' => false,
+                'parent_site' => $site
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire de création');
+            return $this->redirect('/sites/' . ($site_id ?? ''));
+        }
+    }
+
+    /**
      * Validation des données de secteur
      */
     private function validateSectorData(Request $request): array

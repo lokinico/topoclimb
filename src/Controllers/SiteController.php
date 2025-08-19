@@ -316,6 +316,48 @@ class SiteController extends BaseController
     }
 
     /**
+     * Page de création de site depuis une région parent
+     */
+    public function createFromRegion(Request $request): Response
+    {
+        try {
+            $region_id = $request->attributes->get('region_id');
+            
+            if (!$region_id || !is_numeric($region_id)) {
+                $this->flash('error', 'ID de région invalide');
+                return $this->redirect('/regions');
+            }
+            
+            // Vérifier que la région existe
+            $region = $this->db->fetchOne(
+                "SELECT * FROM climbing_regions WHERE id = ? AND active = 1",
+                [$region_id]
+            );
+            
+            if (!$region) {
+                $this->flash('error', 'Région non trouvée');
+                return $this->redirect('/regions');
+            }
+            
+            // Récupérer toutes les régions pour le formulaire
+            $regions = $this->db->fetchAll(
+                "SELECT * FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+
+            return $this->render('sites/form', [
+                'site' => (object)['region_id' => $region_id],
+                'regions' => $regions,
+                'csrf_token' => $this->createCsrfToken(),
+                'is_edit' => false,
+                'parent_region' => $region
+            ]);
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire de création');
+            return $this->redirect('/regions/' . ($region_id ?? ''));
+        }
+    }
+
+    /**
      * Version de test du create sans authentification (pour debug)
      */
     public function testCreate(Request $request): Response

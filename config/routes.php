@@ -119,6 +119,13 @@ return [
         'action' => 'create',
         'middlewares' => [\TopoclimbCH\Middleware\ModeratorMiddleware::class]
     ],
+    [
+        'method' => 'GET',
+        'path' => '/regions/{region_id}/sites/create',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'createFromRegion',
+        'middlewares' => [\TopoclimbCH\Middleware\ModeratorMiddleware::class]
+    ],
 
     // Routes pour les secteurs
     [
@@ -138,6 +145,13 @@ return [
         'path' => '/sectors/create',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'create',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sites/{site_id}/sectors/create',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'createFromSite',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
     [
@@ -197,6 +211,13 @@ return [
         'path' => '/routes/create',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'create',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{sector_id}/routes/create',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'createFromSector',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
     [
