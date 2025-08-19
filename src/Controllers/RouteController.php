@@ -453,6 +453,16 @@ class RouteController extends BaseController
         
         error_log("RouteController::create - Méthode appelée (auth déjà validée par middleware)");
         
+        // Si sector_id est fourni, rediriger vers la méthode spécialisée
+        $sectorId = $request->query->get('sector_id');
+        if ($sectorId && is_numeric($sectorId)) {
+            error_log("RouteController::create - Redirection vers createFromSector pour secteur: " . $sectorId);
+            
+            // Simuler la requête pour createFromSector
+            $request->attributes->set('sector_id', $sectorId);
+            return $this->createFromSector($request);
+        }
+        
         try {
             // Récupérer les secteurs disponibles
             $sectors = $this->db->fetchAll(
@@ -463,14 +473,11 @@ class RouteController extends BaseController
                  WHERE s.active = 1 
                  ORDER BY r.name ASC, s.name ASC"
             );
-
-            // Pré-sélection secteur si fourni
-            $sectorId = $request->query->get('sector_id');
             
-            error_log("RouteController::create - Secteurs trouvés: " . count($sectors) . ", sector_id: " . $sectorId);
+            error_log("RouteController::create - Secteurs trouvés: " . count($sectors) . ", pas de sector_id spécifique");
             
             return $this->render('routes/form', [
-                'route' => (object)['sector_id' => $sectorId],
+                'route' => (object)['sector_id' => null],
                 'sectors' => $sectors,
                 'csrf_token' => $this->createCsrfToken(),
                 'is_edit' => false
@@ -562,8 +569,8 @@ class RouteController extends BaseController
      */
     public function createFromSector(Request $request): Response
     {
-        $this->requireAuth();
-        $this->requireRole([0, 1, 2]);
+        // Auth déjà vérifiée par le middleware ou par la méthode appelante
+        error_log("RouteController::createFromSector - Méthode appelée");
         
         try {
             $sector_id = $request->attributes->get('sector_id');

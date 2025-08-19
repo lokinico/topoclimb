@@ -597,8 +597,18 @@ class SectorController extends BaseController
      */
     public function create(Request $request): Response
     {
-        $this->requireAuth();
-        $this->requireRole([0, 1, 2]);
+        // Auth déjà gérée par AuthMiddleware dans la configuration de routes
+        error_log("SectorController::create - Méthode appelée (auth déjà validée par middleware)");
+
+        // Si site_id est fourni, rediriger vers la méthode spécialisée
+        $siteId = $request->query->get('site_id');
+        if ($siteId && is_numeric($siteId)) {
+            error_log("SectorController::create - Redirection vers createFromSite pour site: " . $siteId);
+            
+            // Simuler la requête pour createFromSite
+            $request->attributes->set('site_id', $siteId);
+            return $this->createFromSite($request);
+        }
 
         try {
             // Récupérer les régions
@@ -655,8 +665,8 @@ class SectorController extends BaseController
      */
     public function createFromSite(Request $request): Response
     {
-        $this->requireAuth();
-        $this->requireRole([0, 1, 2]);
+        // Auth déjà vérifiée par le middleware ou par la méthode appelante
+        error_log("SectorController::createFromSite - Méthode appelée");
         
         try {
             $site_id = $request->attributes->get('site_id');

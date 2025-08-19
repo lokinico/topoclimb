@@ -1181,8 +1181,9 @@ class RegionController extends BaseController
         try {
             $id = $this->validateId($request->attributes->get('id'), 'ID de région');
 
-            // Vérification des permissions
-            $this->requirePermission('edit_regions', 'Vous n\'avez pas l\'autorisation de modifier les régions');
+            // Vérification des permissions - seuls admin, modérateurs et membres peuvent modifier
+            $this->requireAuth();
+            $this->requireRole([0, 1, 2]);
 
             // Récupérer la région
             $region = $this->db->fetchOne(
@@ -1238,8 +1239,9 @@ class RegionController extends BaseController
         try {
             $id = $this->validateId($request->attributes->get('id'), 'ID de région');
 
-            // Vérification des permissions
-            $this->requirePermission('edit_regions', 'Vous n\'avez pas l\'autorisation de modifier les régions');
+            // Vérification des permissions - seuls admin, modérateurs et membres peuvent modifier
+            $this->requireAuth();
+            $this->requireRole([0, 1, 2]);
 
             // Vérifier que la région existe
             $existingRegion = $this->db->fetchOne(
@@ -1350,7 +1352,8 @@ class RegionController extends BaseController
             $id = $this->validateId($request->attributes->get('id'), 'ID de région');
 
             // Vérification des permissions
-            $this->requirePermission('delete_regions', 'Vous n\'avez pas l\'autorisation de supprimer les régions');
+            $this->requireAuth();
+            $this->requireRole([0, 1]); // Seuls admin et modérateurs peuvent supprimer
 
             // Vérifier que la région existe
             $region = $this->db->fetchOne(

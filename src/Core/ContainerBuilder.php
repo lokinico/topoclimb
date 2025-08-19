@@ -301,6 +301,16 @@ class ContainerBuilder
                 Database::class,                          // BaseController + PreviewController
                 Auth::class                               // BaseController
             ],
+            'TopoclimbCH\\Controllers\\SiteController' => [
+                View::class,                              // BaseController
+                Session::class,                           // BaseController  
+                CsrfManager::class,                       // BaseController
+                'TopoclimbCH\\Services\\MediaService',    // SiteController
+                'TopoclimbCH\\Services\\RegionService',   // SiteController
+                'TopoclimbCH\\Services\\SectorService',   // SiteController
+                Database::class,                          // Optional
+                Auth::class                               // Optional
+            ],
             // Add other controllers as needed
         ];
 
