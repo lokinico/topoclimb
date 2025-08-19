@@ -859,4 +859,61 @@ class SiteController extends BaseController
             ], 500);
         }
     }
+
+    /**
+     * Affiche le formulaire d'édition d'un site
+     */
+    public function edit(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        
+        if (!$id) {
+            $this->session->flash('error', 'ID du site non spécifié');
+            return Response::redirect('/sites');
+        }
+        
+        try {
+            // Récupérer le site
+            $site = $this->db->fetchOne(
+                "SELECT * FROM climbing_sites WHERE id = ? AND active = 1",
+                [(int)$id]
+            );
+            
+            if (!$site) {
+                $this->session->flash('error', 'Site non trouvé');
+                return Response::redirect('/sites');
+            }
+            
+            // Récupérer les régions pour le formulaire
+            $regions = $this->db->fetchAll(
+                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+            
+            // Récupérer les médias existants
+            $media = [];
+            try {
+                $media = $this->db->fetchAll(
+                    "SELECT * FROM climbing_media 
+                     WHERE entity_type = 'site' AND entity_id = ? AND active = 1
+                     ORDER BY display_order ASC, created_at ASC",
+                    [(int)$id]
+                );
+            } catch (\Exception $e) {
+                error_log("Erreur récupération médias: " . $e->getMessage());
+            }
+            
+            return $this->render('sites/form', [
+                'title' => 'Modifier le site ' . $site['name'],
+                'site' => $site,
+                'regions' => $regions,
+                'media' => $media,
+                'is_edit' => true,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());
+            return Response::redirect('/sites');
+        }
+    }
 }

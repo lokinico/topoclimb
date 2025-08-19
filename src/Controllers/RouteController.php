@@ -956,6 +956,59 @@ class RouteController extends BaseController
         return $this->redirect('/routes/' . $routeId);
     }
 
+    /**
+     * Affiche le formulaire d'édition d'une route
+     */
+    public function edit(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        
+        if (!$id) {
+            $this->flash('error', 'ID de la route non spécifié');
+            return $this->redirect('/routes');
+        }
+        
+        try {
+            // Récupérer la route avec ses relations
+            $route = $this->db->fetchOne(
+                "SELECT r.*, s.name as sector_name, s.site_id, 
+                        site.name as site_name, reg.name as region_name
+                 FROM climbing_routes r
+                 LEFT JOIN climbing_sectors s ON r.sector_id = s.id
+                 LEFT JOIN climbing_sites site ON s.site_id = site.id
+                 LEFT JOIN climbing_regions reg ON site.region_id = reg.id
+                 WHERE r.id = ? AND r.active = 1",
+                [(int)$id]
+            );
+            
+            if (!$route) {
+                $this->flash('error', 'Route non trouvée');
+                return $this->redirect('/routes');
+            }
+            
+            // Récupérer les secteurs pour le formulaire
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, site.name as site_name
+                 FROM climbing_sectors s
+                 LEFT JOIN climbing_sites site ON s.site_id = site.id
+                 WHERE s.active = 1
+                 ORDER BY site.name, s.name"
+            );
+            
+            return $this->render('routes/form', [
+                'title' => 'Modifier la route ' . $route['name'],
+                'route' => $route,
+                'sectors' => $sectors,
+                'is_edit' => true,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire d\'édition');
+            return $this->redirect('/routes');
+        }
+    }
+
     public function update($id)
     {
         // TODO: Implémenter mise à jour route

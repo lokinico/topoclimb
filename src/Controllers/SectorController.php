@@ -897,6 +897,58 @@ class SectorController extends BaseController
         }
     }
 
+    /**
+     * Affiche le formulaire d'édition d'un secteur
+     */
+    public function edit(Request $request): Response
+    {
+        $id = $request->attributes->get('id');
+        
+        if (!$id) {
+            $this->flash('error', 'ID du secteur non spécifié');
+            return $this->redirect('/sectors');
+        }
+        
+        try {
+            // Récupérer le secteur avec ses relations
+            $sector = $this->db->fetchOne(
+                "SELECT s.*, site.name as site_name, site.region_id,
+                        reg.name as region_name
+                 FROM climbing_sectors s
+                 LEFT JOIN climbing_sites site ON s.site_id = site.id
+                 LEFT JOIN climbing_regions reg ON site.region_id = reg.id
+                 WHERE s.id = ? AND s.active = 1",
+                [(int)$id]
+            );
+            
+            if (!$sector) {
+                $this->flash('error', 'Secteur non trouvé');
+                return $this->redirect('/sectors');
+            }
+            
+            // Récupérer les sites pour le formulaire
+            $sites = $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name
+                 FROM climbing_sites s
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id
+                 WHERE s.active = 1
+                 ORDER BY r.name, s.name"
+            );
+            
+            return $this->render('sectors/form', [
+                'title' => 'Modifier le secteur ' . $sector['name'],
+                'sector' => $sector,
+                'sites' => $sites,
+                'is_edit' => true,
+                'csrf_token' => $this->createCsrfToken()
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->handleError($e, 'Erreur lors du chargement du formulaire d\'édition');
+            return $this->redirect('/sectors');
+        }
+    }
+
     public function update($id)
     {
         // TODO: Implémenter mise à jour secteur
