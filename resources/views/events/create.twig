@@ -1,0 +1,197 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Créer un événement - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header mb-4">
+        <div class="breadcrumbs mb-2">
+            <a href="{{ url('/') }}">Accueil</a> &raquo;
+            <a href="{{ url('/events') }}">Événements</a> &raquo;
+            <span>Nouvel événement</span>
+        </div>
+        
+        <h1>Créer un événement</h1>
+        <p class="text-muted">Organisez une sortie ou un événement d'escalade</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="POST" action="{{ url('/events') }}" class="card">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Titre de l'événement <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                        <div class="form-text">Un titre accrocheur pour votre événement</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                        <div class="form-text">Détails de l'événement, niveau requis, matériel...</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="event_date" class="form-label">Date de l'événement <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="event_date" name="event_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_time" class="form-label">Heure de début</label>
+                                <input type="time" class="form-control" id="start_time" name="start_time">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="region_id" class="form-label">Région</label>
+                                <select class="form-select" id="region_id" name="region_id">
+                                    <option value="">Sélectionner une région...</option>
+                                    {% for region in regions %}
+                                        <option value="{{ region.id }}">{{ region.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="meeting_point" class="form-label">Point de rendez-vous</label>
+                                <input type="text" class="form-control" id="meeting_point" name="meeting_point">
+                                <div class="form-text">Lieu de rencontre précis</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="difficulty_level" class="form-label">Niveau requis</label>
+                                <select class="form-select" id="difficulty_level" name="difficulty_level">
+                                    <option value="">Tout niveau</option>
+                                    <option value="beginner">Débutant (3a-4c)</option>
+                                    <option value="intermediate">Intermédiaire (5a-6b)</option>
+                                    <option value="advanced">Avancé (6c-7b)</option>
+                                    <option value="expert">Expert (7c+)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max_participants" class="form-label">Nombre max de participants</label>
+                                <input type="number" class="form-control" id="max_participants" name="max_participants" min="1" max="50">
+                                <div class="form-text">Laissez vide pour illimité</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="equipment_needed" class="form-label">Matériel requis</label>
+                        <textarea class="form-control" id="equipment_needed" name="equipment_needed" rows="3"></textarea>
+                        <div class="form-text">Baudrier, chaussons, casque, corde...</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contact_phone" class="form-label">Téléphone de contact</label>
+                                <input type="tel" class="form-control" id="contact_phone" name="contact_phone">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contact_email" class="form-label">Email de contact</label>
+                                <input type="email" class="form-control" id="contact_email" name="contact_email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="additional_info" class="form-label">Informations complémentaires</label>
+                        <textarea class="form-control" id="additional_info" name="additional_info" rows="3"></textarea>
+                        <div class="form-text">Conditions météo à prévoir, accès, parking...</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_free" name="is_free" value="1" checked>
+                            <label class="form-check-label" for="is_free">
+                                Événement gratuit
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="cost_section" style="display: none;">
+                        <label for="cost" class="form-label">Coût par participant (CHF)</label>
+                        <input type="number" class="form-control" id="cost" name="cost" min="0" step="5">
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url('/events') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Retour
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Créer l'événement
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Conseils pour un bon événement</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <ul class="mb-0">
+                            <li>Vérifiez la météo avant de publier</li>
+                            <li>Précisez le niveau technique requis</li>
+                            <li>Indiquez le matériel nécessaire</li>
+                            <li>Donnez des points de rendez-vous précis</li>
+                            <li>Laissez vos coordonnées pour les questions</li>
+                            <li>Respectez les règles d'accès aux sites</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sécurité</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Important :</strong> En tant qu'organisateur, assurez-vous que tous les participants ont un niveau suffisant et le matériel adapté. La sécurité est votre responsabilité.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isFreeCheckbox = document.getElementById('is_free');
+    const costSection = document.getElementById('cost_section');
+    
+    isFreeCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            costSection.style.display = 'none';
+            document.getElementById('cost').value = '';
+        } else {
+            costSection.style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}

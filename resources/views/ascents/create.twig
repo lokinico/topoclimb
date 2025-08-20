@@ -1,0 +1,176 @@
+{% extends "layouts/app.twig" %}
+
+{% block title %}Enregistrer une ascension - TopoclimbCH{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header mb-4">
+        <div class="breadcrumbs mb-2">
+            <a href="{{ url('/') }}">Accueil</a> &raquo;
+            <a href="{{ url('/ascents') }}">Ascensions</a> &raquo;
+            <span>Nouvelle ascension</span>
+        </div>
+        
+        <h1>Enregistrer une ascension</h1>
+        <p class="text-muted">Documentez votre ascension d'une voie</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="POST" action="{{ url('/ascents') }}" class="card">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="route_id" class="form-label">Voie <span class="text-danger">*</span></label>
+                        <select class="form-select" id="route_id" name="route_id" required>
+                            <option value="">Sélectionner une voie...</option>
+                            {% for route in routes %}
+                                <option value="{{ route.id }}">
+                                    {{ route.name }} ({{ route.difficulty }}) - {{ route.sector_name }}, {{ route.site_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">La voie que vous avez grimpée</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ascent_date" class="form-label">Date d'ascension <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="ascent_date" name="ascent_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="attempt_type" class="form-label">Type d'ascension <span class="text-danger">*</span></label>
+                                <select class="form-select" id="attempt_type" name="attempt_type" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="flash">Flash</option>
+                                    <option value="onsight">À vue</option>
+                                    <option value="redpoint">Après travail</option>
+                                    <option value="attempt">Tentative</option>
+                                    <option value="top_rope">Moulinette</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="grade_felt" class="form-label">Cotation ressentie</label>
+                                <input type="text" class="form-control" id="grade_felt" name="grade_felt">
+                                <div class="form-text">Votre appréciation de la difficulté</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="rating" class="form-label">Note sur 5</label>
+                                <select class="form-select" id="rating" name="rating">
+                                    <option value="">Non notée</option>
+                                    <option value="1">⭐ 1/5</option>
+                                    <option value="2">⭐⭐ 2/5</option>
+                                    <option value="3">⭐⭐⭐ 3/5</option>
+                                    <option value="4">⭐⭐⭐⭐ 4/5</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5/5</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if climbers is defined and climbers %}
+                    <div class="mb-3">
+                        <label for="partner_id" class="form-label">Partenaire(s)</label>
+                        <select class="form-select" id="partner_id" name="partner_id">
+                            <option value="">Aucun / Solo</option>
+                            {% for climber in climbers %}
+                                <option value="{{ climber.id }}">{{ climber.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes et commentaires</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="4"></textarea>
+                        <div class="form-text">Vos impressions, conditions, conseils...</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="weather" class="form-label">Conditions météo</label>
+                                <select class="form-select" id="weather" name="weather">
+                                    <option value="">Non précisées</option>
+                                    <option value="sunny">Ensoleillé</option>
+                                    <option value="cloudy">Nuageux</option>
+                                    <option value="rainy">Pluvieux</option>
+                                    <option value="windy">Venteux</option>
+                                    <option value="cold">Froid</option>
+                                    <option value="hot">Chaud</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="falls" class="form-label">Nombre de chutes</label>
+                                <input type="number" class="form-control" id="falls" name="falls" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url('/ascents') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Retour
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Enregistrer l'ascension
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Types d'ascension</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <dl>
+                            <dt>À vue</dt>
+                            <dd>Première ascension sans information préalable</dd>
+                            
+                            <dt>Flash</dt>
+                            <dd>Première ascension avec informations (beta)</dd>
+                            
+                            <dt>Après travail</dt>
+                            <dd>Ascension réussie après plusieurs tentatives</dd>
+                            
+                            <dt>Tentative</dt>
+                            <dd>Voie non terminée</dd>
+                            
+                            <dt>Moulinette</dt>
+                            <dd>Ascension en top-rope</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-complétion pour les voies
+document.addEventListener('DOMContentLoaded', function() {
+    const routeSelect = document.getElementById('route_id');
+    if (routeSelect) {
+        // Possibilité d'ajouter un système de recherche/filtrage
+    }
+});
+</script>
+{% endblock %}

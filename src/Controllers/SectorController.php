@@ -569,13 +569,6 @@ class SectorController extends BaseController
             // Récupération et validation des données
             $data = $this->validateSectorData($request);
             
-            // Vérifier unicité du code
-            $existing = $this->db->fetchOne("SELECT id FROM climbing_sectors WHERE code = ?", [$data['code']]);
-            if ($existing) {
-                $this->flash('error', 'Ce code de secteur existe déjà');
-                return $this->redirect('/sectors/create');
-            }
-            
             // Insertion en base
             $sectorId = $this->createSector($data);
             
@@ -744,7 +737,7 @@ class SectorController extends BaseController
     {
         $data = [
             'name' => trim($request->request->get('name', '')),
-            'code' => trim($request->request->get('code', '')),
+            
             'description' => trim($request->request->get('description', '')),
             'region_id' => (int)$request->request->get('region_id', 0),
             'site_id' => $request->request->get('site_id') ? (int)$request->request->get('site_id') : null,
@@ -767,10 +760,6 @@ class SectorController extends BaseController
             throw new \InvalidArgumentException('Le nom du secteur est obligatoire');
         }
 
-        if (empty($data['code'])) {
-            throw new \InvalidArgumentException('Le code du secteur est obligatoire');
-        }
-
         if ($data['region_id'] <= 0) {
             throw new \InvalidArgumentException('Une région valide est obligatoire');
         }
@@ -778,10 +767,6 @@ class SectorController extends BaseController
         // Validation des contraintes
         if (strlen($data['name']) > 255) {
             throw new \InvalidArgumentException('Le nom ne peut pas dépasser 255 caractères');
-        }
-
-        if (strlen($data['code']) > 50) {
-            throw new \InvalidArgumentException('Le code ne peut pas dépasser 50 caractères');
         }
 
         if ($data['altitude'] !== null && ($data['altitude'] < 0 || $data['altitude'] > 9000)) {
@@ -826,12 +811,10 @@ class SectorController extends BaseController
         $availableColumns = $this->getAvailableColumns('climbing_sectors');
         
         // Colonnes de base obligatoires
-        $baseColumns = ['name', 'code', 'description', 'region_id', 'active', 'created_at', 'updated_at'];
-        $baseValues = ['?', '?', '?', '?', '?', $dateFunction, $dateFunction];
+        $baseColumns = ['name', 'description', 'region_id', 'active', 'created_at', 'updated_at'];
+        $baseValues = ['?', '?', '?', '?', $dateFunction, $dateFunction];
         $baseParams = [
-            $data['name'],
-            $data['code'], 
-            $data['description'],
+            $data['name'], $data['description'],
             $data['region_id'],
             $data['active']
         ];
@@ -893,7 +876,7 @@ class SectorController extends BaseController
             }
         } catch (\Exception $e) {
             error_log("Erreur récupération colonnes {$tableName}: " . $e->getMessage());
-            return ['id', 'name', 'code', 'description', 'region_id', 'active', 'created_at', 'updated_at'];
+            return ['id', 'name', 'description', 'region_id', 'active', 'created_at', 'updated_at'];
         }
     }
 

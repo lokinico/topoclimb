@@ -48,7 +48,7 @@ class EventController extends BaseController
             return $this->render('events/create', [
                 'title' => 'Créer un événement',
                 'regions' => $regions,
-                'csrf_token' => $this->generateCsrfToken()
+                'csrf_token' => $this->createCsrfToken()
             ]);
             
         } catch (\Exception $e) {

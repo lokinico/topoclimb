@@ -462,7 +462,7 @@ class BookController extends BaseController
     {
         try {
             // Générer token CSRF
-            $csrfToken = $this->generateCsrfToken();
+            $csrfToken = $this->createCsrfToken();
             
             return $this->render('books/create', [
                 'title' => 'Créer un guide d\'escalade',

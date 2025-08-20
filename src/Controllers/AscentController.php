@@ -61,7 +61,7 @@ class AscentController extends BaseController
                 'title' => 'Enregistrer une ascension',
                 'routes' => $routes,
                 'climbers' => $climbers,
-                'csrf_token' => $this->generateCsrfToken()
+                'csrf_token' => $this->createCsrfToken()
             ]);
             
         } catch (\Exception $e) {
