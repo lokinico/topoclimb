@@ -105,6 +105,15 @@
                             </div>
                         </div>
                     {% endif %}
+
+                    <div class="form-group mb-3">
+                        <label for="description" class="form-label">Description du contenu</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="4" aria-describedby="description-help">{{ book.description|default('') }}</textarea>
+                        <small id="description-help" class="form-text text-muted">
+                            Description détaillée du contenu et des secteurs couverts
+                        </small>
+                    </div>
                 </div>
             </div>
 
@@ -114,7 +123,6 @@
                     <h3 class="card-title mb-0">Informations éditoriales</h3>
                 </div>
                 <div class="card-body">
-
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group mb-3">
@@ -144,65 +152,167 @@
 
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="mb-3">
+                            <div class="form-group mb-3">
                                 <label for="publication_year" class="form-label">Année de publication</label>
-                                <input type="number" class="form-control" id="publication_year" name="publication_year" min="1900" max="{{ "now"|date("Y") }}">
+                                <input type="number" class="form-control" id="publication_year" name="publication_year" 
+                                       value="{{ book.publication_year|default('') }}" 
+                                       min="1900" max="{{ "now"|date("Y") }}" 
+                                       aria-describedby="year-help">
+                                <small id="year-help" class="form-text text-muted">
+                                    Année de première publication du guide
+                                </small>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
+                            <div class="form-group mb-3">
                                 <label for="isbn" class="form-label">ISBN</label>
-                                <input type="text" class="form-control" id="isbn" name="isbn">
+                                <input type="text" class="form-control" id="isbn" name="isbn" 
+                                       value="{{ book.isbn|default('') }}" 
+                                       maxlength="20" 
+                                       aria-describedby="isbn-help">
+                                <small id="isbn-help" class="form-text text-muted">
+                                    Numéro ISBN pour identification unique
+                                </small>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="4"></textarea>
-                        <div class="form-text">Description du contenu du guide</div>
+            <!-- Caractéristiques -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Caractéristiques</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="pages" class="form-label">Nombre de pages</label>
+                                <input type="number" class="form-control" id="pages" name="pages" 
+                                       value="{{ book.pages|default('') }}" 
+                                       min="1" max="9999" 
+                                       aria-describedby="pages-help">
+                                <small id="pages-help" class="form-text text-muted">
+                                    Nombre total de pages du guide
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="language" class="form-label">Langue</label>
+                                <select class="form-control" id="language" name="language" 
+                                        aria-describedby="language-help">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="fr" {% if book.language == 'fr' %}selected{% endif %}>Français</option>
+                                    <option value="de" {% if book.language == 'de' %}selected{% endif %}>Allemand</option>
+                                    <option value="it" {% if book.language == 'it' %}selected{% endif %}>Italien</option>
+                                    <option value="en" {% if book.language == 'en' %}selected{% endif %}>Anglais</option>
+                                    <option value="rm" {% if book.language == 'rm' %}selected{% endif %}>Romanche</option>
+                                </select>
+                                <small id="language-help" class="form-text text-muted">
+                                    Langue principale du guide
+                                </small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="pages" class="form-label">Nombre de pages</label>
-                                <input type="number" class="form-control" id="pages" name="pages" min="1">
+                            <div class="form-group mb-3">
+                                <label for="price" class="form-label">Prix</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="price" name="price" 
+                                           value="{{ book.price|default('') }}" 
+                                           step="0.01" min="0" max="999.99" 
+                                           aria-describedby="price-help">
+                                    <span class="input-group-text">CHF</span>
+                                </div>
+                                <small id="price-help" class="form-text text-muted">
+                                    Prix de vente du guide (optionnel)
+                                </small>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="language" class="form-label">Langue</label>
-                                <select class="form-select" id="language" name="language">
-                                    <option value="">Sélectionner...</option>
-                                    <option value="fr">Français</option>
-                                    <option value="de">Allemand</option>
-                                    <option value="it">Italien</option>
-                                    <option value="en">Anglais</option>
-                                </select>
+                            <div class="form-group mb-3">
+                                <label for="url" class="form-label">Site web ou lien</label>
+                                <input type="url" class="form-control" id="url" name="url" 
+                                       value="{{ book.url|default('') }}" 
+                                       maxlength="500" 
+                                       aria-describedby="url-help">
+                                <small id="url-help" class="form-text text-muted">
+                                    Lien vers le site de l'éditeur ou informations complémentaires
+                                </small>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="mb-3">
-                        <label for="url" class="form-label">Site web ou lien</label>
-                        <input type="url" class="form-control" id="url" name="url">
-                        <div class="form-text">Lien vers le site de l'éditeur ou des informations complémentaires</div>
+            <!-- Images -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Images</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="image" class="form-label">Ajouter une image</label>
+                        <div class="custom-file">
+                            <input type="file" name="image" id="image" 
+                                   class="custom-file-input" accept="image/*" 
+                                   aria-describedby="image-help">
+                            <label class="custom-file-label" for="image">Choisir un fichier</label>
+                        </div>
+                        <small id="image-help" class="form-text text-muted">
+                            Image de couverture du guide. Formats supportés: JPG, PNG, GIF. Taille max: 5MB
+                        </small>
                     </div>
                 </div>
+            </div>
 
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ url('/books') }}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Retour
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Créer le guide
-                        </button>
+            <!-- État -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">État</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input type="checkbox" name="active" id="active" class="form-check-input" 
+                               value="1" {% if not book or book.active != 0 %}checked{% endif %}>
+                        <label for="active" class="form-check-label">
+                            Guide actif
+                        </label>
+                        <small class="form-text text-muted d-block">
+                            Décochez pour désactiver temporairement le guide
+                        </small>
                     </div>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions d-flex gap-3 mb-5">
+                <button type="submit" class="btn btn-primary">
+                    {% if book.id %}
+                        <i class="fa fa-save"></i> Mettre à jour
+                    {% else %}
+                        <i class="fa fa-plus"></i> Créer le guide
+                    {% endif %}
+                </button>
+                
+                <a href="{{ book.id ? url('/books/' ~ book.id) : url('/books') }}" 
+                   class="btn btn-secondary">
+                    <i class="fa fa-times"></i> Annuler
+                </a>
+                
+                {% if book.id %}
+                    <button type="button" class="btn btn-outline-danger ms-auto" 
+                            data-bs-toggle="modal" data-bs-target="#deleteBookModal">
+                        <i class="fa fa-trash"></i> Supprimer
+                    </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
 
     <!-- Sidebar avec aide -->
     <div class="col-lg-4">
@@ -225,48 +335,105 @@
                 <div class="help-item mb-3">
                     <h6>Types de guides</h6>
                     <p class="small text-muted">
-                        <strong>Topo sélectif:</strong> Voies remarquables<br>
-                        <strong>Topo exhaustif:</strong> Toutes les voies connues<br>
+                        <strong>Topo sélectif:</strong> Voies remarquables uniquement<br>
+                        <strong>Topo exhaustif:</strong> Toutes les voies répertoriées<br>
                         <strong>Guide de secteur:</strong> Zone géographique précise<br>
-                        <strong>Guide de style:</strong> Un type d'escalade spécifique
+                        <strong>Guide de style:</strong> Un type d'escalade spécifique<br>
+                        <strong>Guide de difficulté:</strong> Niveau ciblé (débutant, expert)
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Formats et supports</h6>
+                    <p class="small text-muted">
+                        <strong>Guide papier:</strong> Livre traditionnel<br>
+                        <strong>Topo plastifié:</strong> Résistant aux intempéries<br>
+                        <strong>Guide numérique:</strong> PDF, application mobile<br>
+                        <strong>Guide en ligne:</strong> Site web, base de données
                     </p>
                 </div>
                 
                 <div class="help-item mb-3">
                     <h6>Informations essentielles</h6>
                     <p class="small text-muted">
-                        Titre, auteur et année sont les informations minimales.
-                        L'ISBN facilite l'identification et la recherche.
-                        La description aide les grimpeurs à choisir.
+                        <strong>Titre:</strong> Nom du guide ou zone couverte<br>
+                        <strong>Auteur:</strong> Ouvreur, équipeur, compilateur<br>
+                        <strong>Éditeur:</strong> Maison d'édition ou auto-édition<br>
+                        <strong>ISBN:</strong> Facilite l'identification et recherche<br>
+                        <strong>Description:</strong> Aide les grimpeurs à choisir
                     </p>
                 </div>
-                
+
                 <div class="help-item mb-3">
-                    <h6>Localisation</h6>
+                    <h6>Couverture géographique</h6>
                     <p class="small text-muted">
-                        Sélectionnez la région et le site principal couverts 
-                        pour faciliter la recherche par zone géographique.
+                        Sélectionnez la région et le site principal pour faciliter 
+                        la recherche par zone. Un guide peut couvrir plusieurs sites 
+                        d'une même région ou être spécialisé sur un site unique.
                     </p>
                 </div>
                 
                 <div class="help-item mb-3">
                     <h6>Langues en Suisse</h6>
                     <p class="small text-muted">
-                        <strong>Français:</strong> Suisse romande<br>
-                        <strong>Allemand:</strong> Suisse alémanique<br>
-                        <strong>Italien:</strong> Tessin<br>
-                        <strong>Romanche:</strong> Grisons<br>
-                        <strong>Anglais:</strong> Guides internationaux
+                        <strong>Français:</strong> Suisse romande (Valais, Vaud, Genève)<br>
+                        <strong>Allemand:</strong> Suisse alémanique (majorité du pays)<br>
+                        <strong>Italien:</strong> Tessin et Grisons italiens<br>
+                        <strong>Romanche:</strong> Grisons (langue régionale)<br>
+                        <strong>Anglais:</strong> Guides internationaux, tourisme
                     </p>
                 </div>
-                
+
+                <div class="help-item mb-3">
+                    <h6>Informations de prix</h6>
+                    <p class="small text-muted">
+                        Indiquez le prix de vente public pour aider les grimpeurs 
+                        dans leur recherche. Prix typiques: 15-25 CHF pour un topo 
+                        régional, 35-50 CHF pour un guide exhaustif.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>ISBN et identification</h6>
+                    <p class="small text-muted">
+                        L'ISBN (International Standard Book Number) est un identifiant 
+                        unique international. Format moderne à 13 chiffres: 
+                        978-2-1234-5678-9. Facilite les commandes et recherches.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Années de publication</h6>
+                    <p class="small text-muted">
+                        Indiquez l'année de première publication, pas celle des réimpressions. 
+                        Important pour la datation des cotations et équipements décrits.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Liens et ressources</h6>
+                    <p class="small text-muted">
+                        Ajoutez le site de l'éditeur, boutique en ligne, errata, 
+                        ou ressources complémentaires (cartes, conditions, météo).
+                    </p>
+                </div>
+
                 <div class="help-item mb-3">
                     <h6>Conseils pratiques</h6>
                     <p class="small text-muted">
-                        • Vérifiez que le guide n'existe pas déjà<br>
-                        • Ajoutez une description détaillée<br>
+                        • Vérifiez que le guide n'existe pas déjà dans la base<br>
+                        • Ajoutez une description détaillée du contenu<br>
                         • Mentionnez le niveau de difficulté couvert<br>
-                        • Indiquez si c'est une réédition mise à jour
+                        • Indiquez si c'est une réédition mise à jour<br>
+                        • Précisez le nombre de voies ou secteurs couverts
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Image de couverture</h6>
+                    <p class="small text-muted">
+                        Ajoutez une photo de la couverture du guide en bonne qualité. 
+                        Évitez les photos floues ou avec des reflets. Format JPG recommandé.
                     </p>
                 </div>
                 
@@ -274,12 +441,11 @@
                     <h6>Hiérarchie</h6>
                     <p class="small text-muted">
                         <strong>Région</strong> → <strong>Site</strong> → <strong>Secteur</strong> → <strong>Voie</strong><br>
-                        <small>Un guide peut couvrir plusieurs niveaux</small>
+                        <small>Un guide peut couvrir plusieurs niveaux hiérarchiques</small>
                     </p>
                 </div>
             </div>
         </div>
-    </div>
     </div>
 </div>
 

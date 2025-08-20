@@ -1,384 +1,866 @@
 {% extends "layouts/app.twig" %}
 
+{% block body_class %}sector-form-page{% endblock %}
+
 {% block title %}
     {% if sector.id %}
         Modifier le secteur {{ sector.name }}
     {% else %}
-        Ajouter un secteur
+        Créer un nouveau secteur
     {% endif %}
     - TopoclimbCH
 {% endblock %}
 
 {% block content %}
-    <div class="page-header">
-        <h1>
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url('/sectors') }}">Secteurs</a></li>
             {% if sector.id %}
-                Modifier le secteur {{ sector.name }}
+                <li class="breadcrumb-item"><a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a></li>
+                <li class="breadcrumb-item active">Modifier</li>
             {% else %}
-                Ajouter un secteur
+                <li class="breadcrumb-item active">Nouveau secteur</li>
             {% endif %}
-        </h1>
-    </div>
+        </ol>
+    </nav>
     
-    <div class="form-container">
-        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors') }}" method="post" 
+    <h1>
+        {% if sector.id %}
+            Modifier le secteur {{ sector.name }}
+        {% else %}
+            Créer un nouveau secteur
+        {% endif %}
+    </h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form action="{{ sector.id ? url('/sectors/' ~ sector.id) : url('/sectors') }}" 
+              method="post" 
               enctype="multipart/form-data" 
-              class="form form-horizontal" autocomplete="on">
+              class="sector-form-content" 
+              id="sector-form"
+              data-sector-id="{{ sector.id|default('') }}"
+              data-site-id="{{ sector.site_id|default(parent_site.id|default('')) }}"
+              autocomplete="on">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            
-            <div class="form-group">
-                <label for="site_id">Site (optionnel)</label>
-                <select name="site_id" id="site_id" class="form-control" aria-describedby="site-help">
-                    <option value="">Aucun site sélectionné</option>
-                    {% set current_region = '' %}
-                    {% for site in sites %}
-                        {% if site.region_name != current_region %}
-                            {% if current_region != '' %}</optgroup>{% endif %}
-                            {% set current_region = site.region_name %}
-                            <optgroup label="{{ site.region_name|default('Sans région') }}">
-                        {% endif %}
-                        <option value="{{ site.id }}" {% if sector.site_id == site.id %}selected{% endif %}>
-                            {{ site.name }}
-                        </option>
-                        {% if loop.last %}</optgroup>{% endif %}
-                    {% endfor %}
-                </select>
-                <small id="site-help" class="form-text text-muted">Site d'escalade auquel appartient ce secteur (optionnel) - Sites groupés par région</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="region_id">Région</label>
-                <select name="region_id" id="region_id" class="form-control" aria-describedby="region-help">
-                    <option value="">Sélectionnez une région</option>
-                    {% for region in regions %}
-                        <option value="{{ region.id }}" {% if sector.region_id == region.id %}selected{% endif %}>
-                            {{ region.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <small id="region-help" class="form-text text-muted">Région géographique du secteur</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="name">Nom</label>
-                <input type="text" name="name" id="name" class="form-control" value="{{ sector.name }}" 
-                       required maxlength="255" aria-describedby="name-help" autocomplete="off">
-                <small id="name-help" class="form-text text-muted">Nom complet du secteur</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="code">Code</label>
-                <input type="text" name="code" id="code" class="form-control" value="{{ sector.code }}" 
-                       required maxlength="50" aria-describedby="code-help" autocomplete="off">
-                <small id="code-help" class="form-text text-muted">Identifiant unique du secteur</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="color">Couleur</label>
-                <input type="color" name="color" id="color" class="form-control" 
-                       value="{{ sector.color|default('#FF0000') }}" aria-describedby="color-help">
-                <small id="color-help" class="form-text text-muted">Couleur utilisée pour identifier ce secteur</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="description">Description</label>
-                <textarea name="description" id="description" class="form-control" 
-                          rows="5" aria-describedby="description-help">{{ sector.description }}</textarea>
-                <small id="description-help" class="form-text text-muted">Description détaillée du secteur</small>
-            </div>
-            
-            <div class="form-section">
-                <h3>Informations d'accès</h3>
-                
-                <div class="form-group">
-                    <label for="access_info">Informations d'accès</label>
-                    <textarea name="access_info" id="access_info" class="form-control" 
-                              rows="3" aria-describedby="access-info-help">{{ sector.access_info }}</textarea>
-                    <small id="access-info-help" class="form-text text-muted">Instructions d'accès au secteur</small>
+            {% if sector.id %}
+                <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+
+            <!-- Informations de base -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations de base</h3>
                 </div>
-                
-                <div class="form-group">
-                    <label for="access_time">Temps d'accès (en minutes)</label>
-                    <input type="number" name="access_time" id="access_time" class="form-control" 
-                           value="{{ sector.access_time }}" min="0" max="1440" 
-                           aria-describedby="access-time-help">
-                    <small id="access-time-help" class="form-text text-muted">Temps de marche estimé en minutes (max 24h)</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="approach">Marche d'approche</label>
-                    <textarea name="approach" id="approach" class="form-control" 
-                              rows="3" aria-describedby="approach-help">{{ sector.approach }}</textarea>
-                    <small id="approach-help" class="form-text text-muted">Instructions détaillées pour l'approche à pied</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="parking_info">Informations de parking</label>
-                    <textarea name="parking_info" id="parking_info" class="form-control" 
-                              rows="3" aria-describedby="parking-help">{{ sector.parking_info }}</textarea>
-                    <small id="parking-help" class="form-text text-muted">Indications sur les parkings disponibles</small>
-                </div>
-            </div>
-            
-            <div class="form-section">
-                <h3>Caractéristiques</h3>
-                
-                <div class="form-group">
-                    <label for="altitude">Altitude (en mètres)</label>
-                    <input type="number" name="altitude" id="altitude" class="form-control" 
-                           value="{{ sector.altitude }}" min="0" max="9000" aria-describedby="altitude-help">
-                    <small id="altitude-help" class="form-text text-muted">Altitude du secteur en mètres</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="height">Hauteur (en mètres)</label>
-                    <input type="number" name="height" id="height" step="0.1" class="form-control" 
-                           value="{{ sector.height }}" min="0" max="2000" aria-describedby="height-help">
-                    <small id="height-help" class="form-text text-muted">Hauteur moyenne du secteur en mètres</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Expositions</label>
-                    <div class="checkbox-group" role="group" aria-label="Expositions du secteur">
-                        {% for exposure in exposures %}
-                            <div class="form-check">
-                                <input type="checkbox" 
-                                       name="exposures[]" 
-                                       id="exposure_{{ exposure.id }}" 
-                                       value="{{ exposure.id }}" 
-                                       {% if exposure.id in currentExposures %}checked{% endif %}
-                                       aria-describedby="exposure-help">
-                                <label for="exposure_{{ exposure.id }}">
-                                    {{ exposure.name }} ({{ exposure.code }})
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group mb-3">
+                                <label for="name" class="form-label">
+                                    Nom du secteur <span class="text-danger">*</span>
                                 </label>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <small id="exposure-help" class="form-text text-muted">Orientations cardinales du secteur</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Exposition principale</label>
-                    <div class="radio-group" role="radiogroup" aria-label="Exposition principale du secteur">
-                        {% for exposure in exposures %}
-                            <div class="form-check">
-                                <input type="radio" 
-                                       name="primary_exposure" 
-                                       id="primary_exposure_{{ exposure.id }}" 
-                                       value="{{ exposure.id }}" 
-                                       {% if exposure.id == primaryExposure %}checked{% endif %}
-                                       aria-describedby="primary-exposure-help">
-                                <label for="primary_exposure_{{ exposure.id }}">
-                                    {{ exposure.name }} ({{ exposure.code }})
-                                </label>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <small id="primary-exposure-help" class="form-text text-muted">Orientation principale du secteur</small>
-                </div>
-            </div>
-            
-            <div class="form-section">
-                <h3>Coordonnées</h3>
-                
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="coordinates_lat">Latitude</label>
-                        <input type="number" name="coordinates_lat" id="coordinates_lat" class="form-control" 
-                               value="{{ sector.coordinates_lat }}" step="0.00000001" min="-90" max="90"
-                               aria-describedby="lat-help">
-                        <small id="lat-help" class="form-text text-muted">Latitude en degrés décimaux (ex: 46.2044)</small>
-                    </div>
-                    
-                    <div class="form-group col-md-6">
-                        <label for="coordinates_lng">Longitude</label>
-                        <input type="number" name="coordinates_lng" id="coordinates_lng" class="form-control" 
-                               value="{{ sector.coordinates_lng }}" step="0.00000001" min="-180" max="180"
-                               aria-describedby="lng-help">
-                        <small id="lng-help" class="form-text text-muted">Longitude en degrés décimaux (ex: 6.1432)</small>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="coordinates_swiss_e">Coordonnées suisses E (LV95)</label>
-                        <div class="input-group">
-                            <input type="text" name="coordinates_swiss_e" id="coordinates_swiss_e" class="form-control" 
-                                   value="{{ sector.coordinates_swiss_e }}" aria-describedby="ch-e-help"
-                                   placeholder="2600000">
-                            <div class="input-group-append">
-                                <button type="button" class="btn btn-outline-secondary" id="convert-from-swiss-btn" title="Convertir vers GPS">
-                                    <i class="fa fa-exchange-alt"></i>
-                                </button>
+                                <input type="text" name="name" id="name" class="form-control" 
+                                       value="{{ sector.name|default('') }}" 
+                                       required maxlength="255" 
+                                       aria-describedby="name-help">
+                                <small id="name-help" class="form-text text-muted">
+                                    Nom complet du secteur d'escalade
+                                </small>
                             </div>
                         </div>
-                        <small id="ch-e-help" class="form-text text-muted">Coordonnée Est du système suisse LV95 (ex: 2600000)</small>
-                    </div>
-                    
-                    <div class="form-group col-md-6">
-                        <label for="coordinates_swiss_n">Coordonnées suisses N (LV95)</label>
-                        <div class="input-group">
-                            <input type="text" name="coordinates_swiss_n" id="coordinates_swiss_n" class="form-control" 
-                                   value="{{ sector.coordinates_swiss_n }}" aria-describedby="ch-n-help"
-                                   placeholder="1200000">
-                            <div class="input-group-append">
-                                <button type="button" class="btn btn-outline-secondary" id="convert-to-swiss-btn" title="Convertir depuis GPS">
-                                    <i class="fa fa-exchange-alt"></i>
-                                </button>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="code" class="form-label">
+                                    Code <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="code" id="code" class="form-control" 
+                                       value="{{ sector.code|default('') }}" 
+                                       required maxlength="50" 
+                                       aria-describedby="code-help">
+                                <small id="code-help" class="form-text text-muted">
+                                    Identifiant unique du secteur
+                                </small>
                             </div>
                         </div>
-                        <small id="ch-n-help" class="form-text text-muted">Coordonnée Nord du système suisse LV95 (ex: 1200000)</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group mb-3">
+                                <label for="site_id" class="form-label">Site d'escalade</label>
+                                <select name="site_id" id="site_id" class="form-control" 
+                                        aria-describedby="site-help">
+                                    <option value="">Aucun site sélectionné</option>
+                                    {% set current_region = '' %}
+                                    {% for site in sites %}
+                                        {% if site.region_name != current_region %}
+                                            {% if current_region != '' %}</optgroup>{% endif %}
+                                            {% set current_region = site.region_name %}
+                                            <optgroup label="{{ site.region_name|default('Sans région') }}">
+                                        {% endif %}
+                                        <option value="{{ site.id }}" {% if sector.site_id == site.id %}selected{% endif %}>
+                                            {{ site.name }}
+                                        </option>
+                                        {% if loop.last %}</optgroup>{% endif %}
+                                    {% endfor %}
+                                </select>
+                                <small id="site-help" class="form-text text-muted">
+                                    Site d'escalade auquel appartient ce secteur (optionnel)
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="color" class="form-label">Couleur d'identification</label>
+                                <input type="color" name="color" id="color" class="form-control" 
+                                       value="{{ sector.color|default('#FF0000') }}" 
+                                       aria-describedby="color-help">
+                                <small id="color-help" class="form-text text-muted">
+                                    Couleur pour identifier ce secteur sur les cartes
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="region_id" class="form-label">
+                            Région <span class="text-danger">*</span>
+                        </label>
+                        <select name="region_id" id="region_id" class="form-control" 
+                                required aria-describedby="region-help">
+                            <option value="">Sélectionnez une région</option>
+                            {% for region in regions %}
+                                <option value="{{ region.id }}" 
+                                        {% if sector.region_id == region.id %}selected{% endif %}>
+                                    {{ region.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small id="region-help" class="form-text text-muted">
+                            Région géographique du secteur
+                        </small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea name="description" id="description" class="form-control" 
+                                  rows="4" aria-describedby="description-help">{{ sector.description|default('') }}</textarea>
+                        <small id="description-help" class="form-text text-muted">
+                            Description générale du secteur d'escalade
+                        </small>
                     </div>
                 </div>
-                
-                <div class="coordinate-conversion-help mb-3">
-                    <div class="alert alert-info">
-                        <strong><i class="fa fa-info-circle"></i> Conversion de coordonnées:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>Entrez les coordonnées GPS (latitude/longitude) et cliquez sur <i class="fa fa-exchange-alt"></i> pour convertir vers le système suisse LV95</li>
-                            <li>Entrez les coordonnées suisses LV95 et cliquez sur <i class="fa fa-exchange-alt"></i> pour convertir vers GPS</li>
-                            <li>Les deux systèmes sont mis à jour automatiquement lors de la sélection sur la carte</li>
-                        </ul>
+            </div>
+
+            <!-- Localisation -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Localisation</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_lat" class="form-label">Latitude</label>
+                                <input type="number" name="coordinates_lat" id="coordinates_lat" 
+                                       class="form-control" 
+                                       value="{{ sector.coordinates_lat|default('') }}" 
+                                       step="0.00000001" min="-90" max="90"
+                                       aria-describedby="lat-help">
+                                <small id="lat-help" class="form-text text-muted">
+                                    Latitude en degrés décimaux (ex: 46.2044)
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_lng" class="form-label">Longitude</label>
+                                <input type="number" name="coordinates_lng" id="coordinates_lng" 
+                                       class="form-control" 
+                                       value="{{ sector.coordinates_lng|default('') }}" 
+                                       step="0.00000001" min="-180" max="180"
+                                       aria-describedby="lng-help">
+                                <small id="lng-help" class="form-text text-muted">
+                                    Longitude en degrés décimaux (ex: 6.1432)
+                                </small>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="map-picker">
-                    <div id="map" style="height: 400px;" aria-label="Carte pour sélectionner la position"></div>
-                    <button type="button" class="btn btn-secondary" id="locate-button">
-                        <i class="icon-location" aria-hidden="true"></i> Ma position
-                    </button>
-                </div>
-            </div>
-            <div class="form-section">
-        <h3>Images</h3>
-        
-        <div class="media-upload-section">
-            <div class="form-group">
-                <label for="media_file">Ajouter une image</label>
-                <div class="custom-file">
-                    <input type="file" name="media_file" id="media_file" class="custom-file-input" 
-                        accept="image/*" aria-describedby="media-help">
-                    <label class="custom-file-label" for="media_file">Choisir un fichier</label>
-                </div>
-                <small id="media-help" class="form-text text-muted">Formats supportés: JPG, PNG, GIF. Taille max: 5MB</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="media_title">Titre de l'image</label>
-                <input type="text" name="media_title" id="media_title" class="form-control" 
-                    aria-describedby="media-title-help">
-                <small id="media-title-help" class="form-text text-muted">Titre descriptif de l'image (optionnel)</small>
-            </div>
-            
-            <div class="form-group">
-                <label>Type d'image</label>
-                <div class="custom-control custom-radio">
-                    <input type="radio" id="media_type_main" name="media_relationship_type" 
-                        value="main" class="custom-control-input" checked>
-                    <label class="custom-control-label" for="media_type_main">Image principale</label>
-                </div>
-                <div class="custom-control custom-radio">
-                    <input type="radio" id="media_type_gallery" name="media_relationship_type" 
-                        value="gallery" class="custom-control-input">
-                    <label class="custom-control-label" for="media_type_gallery">Galerie</label>
-                </div>
-                <div class="custom-control custom-radio">
-                    <input type="radio" id="media_type_topo" name="media_relationship_type" 
-                        value="topo" class="custom-control-input">
-                    <label class="custom-control-label" for="media_type_topo">Topo</label>
-                </div>
-            </div>
-        </div>
-        
-        {% if media and media|length > 0 %}
-            <div class="existing-media mt-4">
-                <h4>Images existantes</h4>
-                
-                <div class="media-gallery row">
-                    {% for item in media %}
-                        <div class="media-item col-md-4 mb-4">
-                            <div class="card h-100">
-                                <div class="card-img-container" style="height: 200px; overflow: hidden;">
-                                    {% if item.file_path %}
-                                        {% set image_url = item.file_path starts with 'http' ? item.file_path : url(item.file_path starts with '/' ? item.file_path : '/' ~ item.file_path) %}
-                                        <img src="{{ image_url }}" class="card-img-top" 
-                                            alt="{{ item.title|default('Image du secteur') }}" 
-                                            style="object-fit: cover; height: 100%; width: 100%;"
-                                            onerror="this.parentElement.innerHTML='<div class=&quot;text-center p-5 bg-light&quot;>Image non disponible</div>'">
-                                    {% else %}
-                                        <div class="text-center p-5 bg-light">Image non disponible</div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="card-body">
-                                    <h5 class="card-title text-truncate">
-                                        {{ item.title|default('Image ' ~ item.id) }}
-                                    </h5>
-                                    
-                                    <p class="card-text small text-muted">
-                                        Type: {{ item.relationship_type|default('gallery')|capitalize }}
-                                    </p>
-                                    
-                                    <div class="btn-group btn-group-sm d-flex">
-                                        <a href="{{ url('/media/' ~ item.id) }}" class="btn btn-outline-primary w-100">
-                                            <i class="fa fa-eye mr-1"></i> Voir
-                                        </a>
-                                        
-                                        <button type="button" 
-                                                class="btn btn-outline-danger w-100 media-delete-btn"
-                                                data-media-id="{{ item.id }}"
-                                                data-csrf-token="{{ csrf_token }}">
-                                            <i class="fa fa-trash mr-1"></i> Supprimer
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_swiss_e" class="form-label">Coordonnées suisses E (LV95)</label>
+                                <div class="input-group">
+                                    <input type="text" name="coordinates_swiss_e" id="coordinates_swiss_e" 
+                                           class="form-control" 
+                                           value="{{ sector.coordinates_swiss_e|default('') }}" 
+                                           aria-describedby="ch-e-help"
+                                           placeholder="2600000">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                id="convert-to-gps-btn" 
+                                                title="Convertir LV95 → GPS">
+                                            <i class="fa fa-exchange-alt"></i>
                                         </button>
                                     </div>
                                 </div>
+                                <small id="ch-e-help" class="form-text text-muted">
+                                    Coordonnée Est du système suisse LV95
+                                </small>
                             </div>
                         </div>
-                    {% endfor %}
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_swiss_n" class="form-label">Coordonnées suisses N (LV95)</label>
+                                <div class="input-group">
+                                    <input type="text" name="coordinates_swiss_n" id="coordinates_swiss_n" 
+                                           class="form-control" 
+                                           value="{{ sector.coordinates_swiss_n|default('') }}" 
+                                           aria-describedby="ch-n-help"
+                                           placeholder="1200000">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                id="convert-to-lv95-btn" 
+                                                title="Convertir GPS → LV95">
+                                            <i class="fa fa-exchange-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small id="ch-n-help" class="form-text text-muted">
+                                    Coordonnée Nord du système suisse LV95
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="coordinate-conversion-help mb-3">
+                        <div class="alert alert-info">
+                            <strong><i class="fa fa-info-circle"></i> Conversion de coordonnées:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Utilisez <i class="fa fa-exchange-alt"></i> pour convertir entre GPS et LV95</li>
+                                <li>Les coordonnées GPS sont utilisées pour l'affichage sur cartes</li>
+                                <li>Les coordonnées LV95 sont le système officiel suisse</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="altitude" class="form-label">Altitude</label>
+                        <div class="input-group">
+                            <input type="number" name="altitude" id="altitude" class="form-control" 
+                                   value="{{ sector.altitude|default('') }}" 
+                                   min="0" max="9000" aria-describedby="altitude-help">
+                            <span class="input-group-text">m</span>
+                        </div>
+                        <small id="altitude-help" class="form-text text-muted">
+                            Altitude approximative du secteur en mètres
+                        </small>
+                    </div>
+
+                    <!-- Carte interactive -->
+                    <div class="map-section">
+                        <label class="form-label">Sélectionner la position sur la carte</label>
+                        <div id="sector-map" 
+                             data-coordinates-lat="{{ sector.coordinates_lat|default('') }}" 
+                             data-coordinates-lng="{{ sector.coordinates_lng|default('') }}"
+                             style="height: 350px; border-radius: 0.375rem; border: 1px solid #dee2e6;"></div>
+                        <small class="form-text text-muted mt-2">
+                            Cliquez sur la carte pour placer le marker du secteur
+                        </small>
+                    </div>
                 </div>
             </div>
-        {% endif %}
-    </div>
-            
-            <div class="form-group">
-                <label for="active">État</label>
-                <select name="active" id="active" class="form-control" aria-describedby="active-help">
-                    <option value="1" {% if sector.active != 0 %}selected{% endif %}>Actif</option>
-                    <option value="0" {% if sector.active == 0 %}selected{% endif %}>Inactif</option>
-                </select>
-                <small id="active-help" class="form-text text-muted">L'état détermine si le secteur est visible pour les utilisateurs</small>
+
+            <!-- Caractéristiques -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Caractéristiques</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="height" class="form-label">Hauteur moyenne</label>
+                                <div class="input-group">
+                                    <input type="number" name="height" id="height" step="0.1" class="form-control" 
+                                           value="{{ sector.height|default('') }}" 
+                                           min="0" max="2000" aria-describedby="height-help">
+                                    <span class="input-group-text">m</span>
+                                </div>
+                                <small id="height-help" class="form-text text-muted">
+                                    Hauteur moyenne des voies du secteur
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Exposition principale</label>
+                                <div class="form-check-group">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="primary_exposure" 
+                                               id="exposure_n" value="N" {% if sector.primary_exposure == 'N' %}checked{% endif %}>
+                                        <label class="form-check-label" for="exposure_n">Nord</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="primary_exposure" 
+                                               id="exposure_s" value="S" {% if sector.primary_exposure == 'S' %}checked{% endif %}>
+                                        <label class="form-check-label" for="exposure_s">Sud</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="primary_exposure" 
+                                               id="exposure_e" value="E" {% if sector.primary_exposure == 'E' %}checked{% endif %}>
+                                        <label class="form-check-label" for="exposure_e">Est</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="primary_exposure" 
+                                               id="exposure_w" value="W" {% if sector.primary_exposure == 'W' %}checked{% endif %}>
+                                        <label class="form-check-label" for="exposure_w">Ouest</label>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Orientation principale du secteur
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="form-actions">
+
+            <!-- Informations d'accès -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations d'accès</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="access_info" class="form-label">Informations d'accès</label>
+                        <textarea name="access_info" id="access_info" class="form-control" 
+                                  rows="4" aria-describedby="access-help">{{ sector.access_info|default('') }}</textarea>
+                        <small id="access-help" class="form-text text-muted">
+                            Instructions pour accéder au secteur (parking, marche d'approche, etc.)
+                        </small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="access_time" class="form-label">Temps d'accès</label>
+                                <div class="input-group">
+                                    <input type="number" name="access_time" id="access_time" class="form-control" 
+                                           value="{{ sector.access_time|default('') }}" 
+                                           min="0" max="1440" aria-describedby="access-time-help">
+                                    <span class="input-group-text">min</span>
+                                </div>
+                                <small id="access-time-help" class="form-text text-muted">
+                                    Temps de marche estimé en minutes (max 24h)
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="approach" class="form-label">Marche d'approche</label>
+                                <textarea name="approach" id="approach" class="form-control" 
+                                          rows="3" aria-describedby="approach-help">{{ sector.approach|default('') }}</textarea>
+                                <small id="approach-help" class="form-text text-muted">
+                                    Instructions détaillées pour l'approche à pied
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="parking_info" class="form-label">Informations de parking</label>
+                        <textarea name="parking_info" id="parking_info" class="form-control" 
+                                  rows="3" aria-describedby="parking-help">{{ sector.parking_info|default('') }}</textarea>
+                        <small id="parking-help" class="form-text text-muted">
+                            Indications sur les parkings disponibles
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Images -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Images</h3>
+                </div>
+                <div class="card-body">
+                    <div class="media-upload-section">
+                        <div class="form-group mb-3">
+                            <label for="media_file" class="form-label">Ajouter une image</label>
+                            <div class="custom-file">
+                                <input type="file" name="media_file" id="media_file" 
+                                       class="custom-file-input" accept="image/*" 
+                                       aria-describedby="media-help">
+                                <label class="custom-file-label" for="media_file">Choisir un fichier</label>
+                            </div>
+                            <small id="media-help" class="form-text text-muted">
+                                Formats supportés: JPG, PNG, GIF. Taille max: 5MB
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="media_title" class="form-label">Titre de l'image</label>
+                            <input type="text" name="media_title" id="media_title" 
+                                   class="form-control" aria-describedby="media-title-help">
+                            <small id="media-title-help" class="form-text text-muted">
+                                Titre descriptif de l'image (optionnel)
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Type d'image</label>
+                            <div class="form-check">
+                                <input type="radio" id="media_type_main" name="media_relationship_type" 
+                                       value="main" class="form-check-input" checked>
+                                <label class="form-check-label" for="media_type_main">
+                                    Image principale
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input type="radio" id="media_type_gallery" name="media_relationship_type" 
+                                       value="gallery" class="form-check-input">
+                                <label class="form-check-label" for="media_type_gallery">
+                                    Galerie
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input type="radio" id="media_type_topo" name="media_relationship_type" 
+                                       value="topo" class="form-check-input">
+                                <label class="form-check-label" for="media_type_topo">
+                                    Topo
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Images existantes -->
+                    {% if media and media|length > 0 %}
+                        <div class="existing-media mt-4">
+                            <h5>Images existantes</h5>
+                            <div class="media-gallery row">
+                                {% for item in media %}
+                                    <div class="col-md-4 mb-3">
+                                        <div class="media-item">
+                                            {% if item.file_path %}
+                                                {% set image_url = item.file_path starts with 'http' ? item.file_path : url(item.file_path starts with '/' ? item.file_path : '/' ~ item.file_path) %}
+                                                <img src="{{ image_url }}" 
+                                                     class="img-fluid rounded" 
+                                                     alt="{{ item.title|default('Image du secteur') }}"
+                                                     style="height: 150px; width: 100%; object-fit: cover;">
+                                            {% endif %}
+                                            
+                                            <div class="media-info mt-2">
+                                                <h6 class="mb-1">{{ item.title|default('Image ' ~ item.id) }}</h6>
+                                                <small class="text-muted">
+                                                    Type: {{ item.relationship_type|default('gallery')|capitalize }}
+                                                </small>
+                                            </div>
+                                            
+                                            <div class="media-actions mt-2">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-danger media-delete-btn"
+                                                        data-media-id="{{ item.id }}"
+                                                        data-csrf-token="{{ csrf_token }}">
+                                                    <i class="fa fa-trash"></i> Supprimer
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- État -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">État</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input type="checkbox" name="active" id="active" class="form-check-input" 
+                               value="1" {% if not sector or sector.active != 0 %}checked{% endif %}>
+                        <label for="active" class="form-check-label">
+                            Secteur actif
+                        </label>
+                        <small class="form-text text-muted d-block">
+                            Décochez pour désactiver temporairement le secteur
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions d-flex gap-3 mb-5">
                 <button type="submit" class="btn btn-primary">
                     {% if sector.id %}
-                        Mettre à jour
+                        <i class="fa fa-save"></i> Mettre à jour
                     {% else %}
-                        Créer
+                        <i class="fa fa-plus"></i> Créer le secteur
                     {% endif %}
                 </button>
                 
-                <a href="{{ url('/sectors' ~ (sector.id ? '/' ~ sector.id : '')) }}" class="btn btn-secondary" role="button">
-                    Annuler
+                <a href="{{ sector.id ? url('/sectors/' ~ sector.id) : url('/sectors') }}" 
+                   class="btn btn-secondary">
+                    <i class="fa fa-times"></i> Annuler
                 </a>
+                
+                {% if sector.id %}
+                    <button type="button" class="btn btn-outline-danger ms-auto" 
+                            data-bs-toggle="modal" data-bs-target="#deleteSectorModal">
+                        <i class="fa fa-trash"></i> Supprimer
+                    </button>
+                {% endif %}
             </div>
         </form>
     </div>
 
+    <!-- Sidebar avec aide -->
+    <div class="col-lg-4">
+        <div class="help-section card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-info-circle text-info"></i> Aide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="help-item mb-3">
+                    <h6>Qu'est-ce qu'un secteur ?</h6>
+                    <p class="small text-muted">
+                        Un secteur est une zone d'escalade homogène regroupant plusieurs voies 
+                        sur une même paroi ou formation rocheuse (ex: "Secteur Sud", "Le Mur Jaune").
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Code du secteur</h6>
+                    <p class="small text-muted">
+                        Utilisez un code court et descriptif (ex: "SUD_A", "MUR_JAUNE", "DALLE_EST"). 
+                        Évitez les espaces et utilisez des underscores.
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Couleur d'identification</h6>
+                    <p class="small text-muted">
+                        Choisissez une couleur distinctive pour identifier le secteur sur les cartes 
+                        et topos. Évitez les couleurs déjà utilisées dans le même site.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Exposition</h6>
+                    <p class="small text-muted">
+                        <strong>Nord:</strong> Ombre, frais, séchage lent<br>
+                        <strong>Sud:</strong> Soleil toute la journée, chaud<br>
+                        <strong>Est:</strong> Soleil matinal, ombre l'après-midi<br>
+                        <strong>Ouest:</strong> Ombre le matin, soleil l'après-midi
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Coordonnées GPS</h6>
+                    <p class="small text-muted">
+                        Placez le point au pied du secteur, là où commencent les voies. 
+                        Cela facilite la navigation pour les grimpeurs.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Coordonnées suisses LV95</h6>
+                    <p class="small text-muted">
+                        Système officiel suisse pour la cartographie précise. 
+                        Format: E ~2'600'000 / N ~1'200'000 pour la Suisse centrale.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Temps d'accès</h6>
+                    <p class="small text-muted">
+                        Indiquez le temps depuis le parking le plus proche jusqu'au pied 
+                        du secteur. Comptez pour un marcheur moyen avec matériel.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Types d'images</h6>
+                    <p class="small text-muted">
+                        <strong>Principale:</strong> Vue générale du secteur<br>
+                        <strong>Topo:</strong> Schéma avec tracé des voies<br>
+                        <strong>Galerie:</strong> Photos d'ambiance, détails
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Marche d'approche</h6>
+                    <p class="small text-muted">
+                        Décrivez le chemin depuis le parking: sentiers, cairns, 
+                        points de repère, difficultés particulières, équipement nécessaire.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Parking</h6>
+                    <p class="small text-muted">
+                        Indiquez les places disponibles, tarifs éventuels, 
+                        horaires, alternatives en cas de saturation.
+                    </p>
+                </div>
+
+                <div class="help-item mb-3">
+                    <h6>Hauteur moyenne</h6>
+                    <p class="small text-muted">
+                        Hauteur typique des voies du secteur. Aide les grimpeurs 
+                        à prévoir la longueur de corde nécessaire.
+                    </p>
+                </div>
+                
+                <div class="help-item">
+                    <h6>Hiérarchie</h6>
+                    <p class="small text-muted">
+                        <strong>Région</strong> → <strong>Site</strong> → <strong>Secteur</strong> → <strong>Voie</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+{% if sector.id %}
+<div class="modal fade" id="deleteSectorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Supprimer le secteur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le secteur <strong>{{ sector.name }}</strong> ?</p>
+                <p class="text-danger small">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Cette action est irréversible et supprimera également toutes les voies associées.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Annuler
+                </button>
+                <form method="POST" action="{{ url('/sectors/' ~ sector.id) }}" class="d-inline" autocomplete="on">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="btn btn-danger">
+                        Supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-    <!-- Leaflet pour les cartes -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Leaflet pour la carte -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- TopoclimbCH JavaScript Components -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🏔️ Initialisation gestionnaire de formulaire secteur TopoclimbCH');
     
-    <!-- Composants JavaScript -->
-    <script src="{{ url('/js/components/media-manager.js') }}"></script>
-    <script src="{{ url('/js/components/map-manager.js') }}"></script>
+    try {
+        // Initialiser le gestionnaire de formulaire avec coordonnées existantes
+        const formManager = new SectorFormManager({
+            mapId: 'sector-map',
+            latInputId: 'coordinates_lat',
+            lngInputId: 'coordinates_lng',
+            swissEInputId: 'coordinates_swiss_e',
+            swissNInputId: 'coordinates_swiss_n'
+        });
+        
+        console.log('✅ Gestionnaire de formulaire secteur initialisé');
+        
+        // Si coordonnées existantes dans le formulaire, les utiliser
+        {% if sector.coordinates_lat and sector.coordinates_lng %}
+            console.log('📍 Coordonnées existantes détectées: {{ sector.coordinates_lat }}, {{ sector.coordinates_lng }}');
+        {% endif %}
+        
+        // Gestion conversion coordonnées
+        const convertToGpsBtn = document.getElementById('convert-to-gps-btn');
+        const convertToLv95Btn = document.getElementById('convert-to-lv95-btn');
+        
+        if (convertToGpsBtn) {
+            convertToGpsBtn.addEventListener('click', function() {
+                console.log('🔄 Conversion LV95 → GPS demandée (non implémentée)');
+                TopoclimbCH.Notifications.info('Conversion LV95 → GPS : fonctionnalité à venir');
+            });
+        }
+        
+        if (convertToLv95Btn) {
+            convertToLv95Btn.addEventListener('click', function() {
+                console.log('🔄 Conversion GPS → LV95 demandée (non implémentée)');
+                TopoclimbCH.Notifications.info('Conversion GPS → LV95 : fonctionnalité à venir');
+            });
+        }
+        
+        // Gestion du fichier média
+        const mediaFileInput = document.getElementById('media_file');
+        if (mediaFileInput) {
+            mediaFileInput.addEventListener('change', function() {
+                const label = this.nextElementSibling;
+                if (label) {
+                    const fileName = this.files[0]?.name || 'Choisir un fichier';
+                    label.textContent = fileName;
+                }
+            });
+        }
+        
+        // Écouter les événements personnalisés
+        window.TopoclimbCH.Events.on('form:validation-error', function(errors) {
+            console.warn('⚠️ Erreurs de validation:', errors);
+        });
+        
+        window.TopoclimbCH.Events.on('form:media-deleted', function(mediaId) {
+            console.log('🗑️ Média supprimé:', mediaId);
+            TopoclimbCH.Notifications.success('Image supprimée avec succès');
+        });
+        
+    } catch (error) {
+        console.error('❌ Erreur initialisation formulaire secteur:', error);
+        TopoclimbCH.Notifications.error('Erreur d\'initialisation du formulaire');
+        
+        // Fallback vers fonctionnalité basique si erreur
+        initBasicFormFunctionality();
+    }
+});
+
+/**
+ * Fonctionnalité de base en cas d'erreur avec les composants avancés
+ */
+function initBasicFormFunctionality() {
+    console.log('🔄 Initialisation fonctionnalité de base formulaire secteur');
     
-    <!-- Script spécifique à cette page -->
-    <script src="{{ url('/js/pages/sectors/form.js') }}"></script>
+    // Génération code basique
+    const nameInput = document.getElementById('name');
+    const codeInput = document.getElementById('code');
+    
+    if (nameInput && codeInput) {
+        nameInput.addEventListener('input', function() {
+            if (!codeInput.value || codeInput.dataset.autoGenerated === 'true') {
+                const generatedCode = this.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, '_')
+                    .substring(0, 20);
+                codeInput.value = generatedCode;
+                codeInput.dataset.autoGenerated = 'true';
+            }
+        });
+        
+        codeInput.addEventListener('input', function() {
+            this.dataset.autoGenerated = 'false';
+        });
+    }
+    
+    // Gestion fichier basique
+    const mediaFileInput = document.getElementById('media_file');
+    if (mediaFileInput) {
+        mediaFileInput.addEventListener('change', function() {
+            const label = this.nextElementSibling;
+            if (label) {
+                const fileName = this.files[0]?.name || 'Choisir un fichier';
+                label.textContent = fileName;
+            }
+        });
+    }
+}
+</script>
+
+<style>
+.form-section .card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-section .card-title {
+    color: #495057;
+    font-weight: 600;
+}
+
+.custom-file-label::after {
+    content: "Parcourir";
+}
+
+.media-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+}
+
+.help-section {
+    position: sticky;
+    top: 2rem;
+}
+
+.help-item h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.form-actions {
+    border-top: 1px solid #dee2e6;
+    padding-top: 2rem;
+}
+
+/* Styles pour carte dans formulaire */
+#sector-map {
+    border: 2px solid #dee2e6;
+    border-radius: 0.375rem;
+    transition: border-color 0.2s;
+}
+
+#sector-map:hover {
+    border-color: #007bff;
+}
+
+/* Validation visuelle pour coordonnées */
+.coordinates-valid {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.coordinates-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+@media (max-width: 768px) {
+    .help-section {
+        position: static;
+        margin-top: 2rem;
+    }
+    
+    #sector-map {
+        height: 250px !important;
+    }
+}
+</style>
 {% endblock %}
