@@ -454,4 +454,73 @@ class BookController extends BaseController
             return ['id', 'title', 'author', 'created_at'];
         }
     }
+
+    /**
+     * Affiche le formulaire de création d'un guide d'escalade
+     */
+    public function create(Request $request): Response
+    {
+        try {
+            // Générer token CSRF
+            $csrfToken = $this->generateCsrfToken();
+            
+            return $this->render('books/create', [
+                'title' => 'Créer un guide d\'escalade',
+                'csrf_token' => $csrfToken
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("BookController::create error: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors du chargement du formulaire de création');
+            return Response::redirect('/books');
+        }
+    }
+
+    /**
+     * Traite la soumission du formulaire de création d'un guide
+     */
+    public function store(Request $request): Response
+    {
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect('/books/create');
+        }
+
+        try {
+            // Récupérer et valider les données
+            $data = [
+                'title' => trim($request->post('title')),
+                'description' => trim($request->post('description')),
+                'author' => trim($request->post('author')),
+                'publisher' => trim($request->post('publisher')),
+                'publication_year' => (int)$request->post('publication_year'),
+                'isbn' => trim($request->post('isbn')),
+                'price' => (float)$request->post('price'),
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Validation basique
+            if (empty($data['title'])) {
+                $this->session->flash('error', 'Le titre du guide est obligatoire');
+                return Response::redirect('/books/create');
+            }
+
+            // Créer le guide
+            $bookId = $this->db->insert('climbing_books', $data);
+
+            if ($bookId) {
+                $this->session->flash('success', 'Guide créé avec succès !');
+                return Response::redirect("/books/$bookId");
+            } else {
+                $this->session->flash('error', 'Erreur lors de la création du guide');
+                return Response::redirect('/books/create');
+            }
+
+        } catch (\Exception $e) {
+            error_log("BookController::store error: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la création: ' . $e->getMessage());
+            return Response::redirect('/books/create');
+        }
+    }
 }

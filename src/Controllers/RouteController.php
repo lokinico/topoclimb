@@ -11,6 +11,7 @@ use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Pagination\Paginator;
+use Exception;
 
 class RouteController extends BaseController
 {
@@ -1009,10 +1010,67 @@ class RouteController extends BaseController
         }
     }
 
-    public function update($id)
+
+    public function update(Request $request): Response
     {
-        // TODO: Implémenter mise à jour route
-        $this->flash('success', 'Route mise à jour avec succès!');
-        return $this->redirect("/routes/{$id}");
+        $id = $request->attributes->get('id');
+        
+        if (!$id) {
+            $this->session->flash('error', 'ID de la route non spécifié');
+            return Response::redirect('/routes');
+        }
+
+        if (!$this->validateCsrfToken($request)) {
+            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return Response::redirect("/routes/{$id}/edit");
+        }
+
+        try {
+            // Récupérer la voie à modifier
+            $route = $this->db->fetchOne(
+                "SELECT * FROM climbing_routes WHERE id = ? AND active = 1", 
+                [$id]
+            );
+
+            if (!$route) {
+                $this->session->flash('error', 'Voie non trouvée');
+                return Response::redirect('/routes');
+            }
+
+            // Préparer les données de mise à jour
+            $updateData = [
+                'name' => trim($request->post('name')),
+                'description' => trim($request->post('description')),
+                'sector_id' => (int)$request->post('sector_id'),
+                'difficulty' => trim($request->post('difficulty')),
+                'length' => (int)$request->post('length'),
+                'grade_value' => (int)$request->post('grade_value'),
+                'beauty_rating' => (int)$request->post('beauty_rating'),
+                'danger_rating' => (int)$request->post('danger_rating'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Validation basique
+            if (empty($updateData['name'])) {
+                $this->session->flash('error', 'Le nom de la voie est obligatoire');
+                return Response::redirect("/routes/{$id}/edit");
+            }
+
+            // Mettre à jour en base
+            $updated = $this->db->update('climbing_routes', $updateData, 'id = ?', [$id]);
+
+            if ($updated) {
+                $this->session->flash('success', 'Voie mise à jour avec succès!');
+                return Response::redirect("/routes/{$id}");
+            } else {
+                $this->session->flash('error', 'Erreur lors de la mise à jour');
+                return Response::redirect("/routes/{$id}/edit");
+            }
+
+        } catch (Exception $e) {
+            error_log("Erreur update route: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+            return Response::redirect("/routes/{$id}/edit");
+        }
     }
 }
