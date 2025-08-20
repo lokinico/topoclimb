@@ -1,5 +1,7 @@
 {% extends "layouts/app.twig" %}
 
+{% block body_class %}route-form-page{% endblock %}
+
 {% block title %}
     {% if route.id %}
         Modifier la voie {{ route.name }}
@@ -10,97 +12,145 @@
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="page-header mb-4">
-        <div class="breadcrumbs mb-2">
-            <a href="{{ url('/') }}">Accueil</a> &raquo;
-            <a href="{{ url('/sectors') }}">Secteurs</a> &raquo;
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url('/routes') }}">Voies</a></li>
             {% if sector %}
-                <a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a> &raquo;
+                <li class="breadcrumb-item"><a href="{{ url('/sectors/' ~ sector.id) }}">{{ sector.name }}</a></li>
             {% endif %}
-            <span>
-                {% if route.id %}
-                    Modifier {{ route.name }}
-                {% else %}
-                    Nouvelle voie
-                {% endif %}
-            </span>
-        </div>
-        
-        <h1>
             {% if route.id %}
-                Modifier la voie "{{ route.name }}"
+                <li class="breadcrumb-item"><a href="{{ url('/routes/' ~ route.id) }}">{{ route.name }}</a></li>
+                <li class="breadcrumb-item active">Modifier</li>
             {% else %}
-                Ajouter une nouvelle voie
+                <li class="breadcrumb-item active">Nouvelle voie</li>
             {% endif %}
-        </h1>
-    </div>
+        </ol>
+    </nav>
     
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card">
+    <h1>
+        {% if route.id %}
+            Modifier la voie {{ route.name }}
+        {% else %}
+            Créer une nouvelle voie
+        {% endif %}
+    </h1>
+</div>
+<div class="row">
+    <div class="col-lg-8">
+        <form action="{{ route.id ? url('/routes/' ~ route.id) : url('/routes') }}" 
+              method="post" 
+              enctype="multipart/form-data" 
+              class="route-form-content" 
+              id="route-form"
+              data-route-id="{{ route.id|default('') }}"
+              data-sector-id="{{ sector.id|default(route.sector_id|default('')) }}"
+              autocomplete="on">
+            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% if route.id %}
+                <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+            <!-- Informations de localisation -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Localisation</h3>
+                </div>
                 <div class="card-body">
-                    <form method="post" action="{{ route.id ? url('/routes/' ~ route.id ~ '/edit') : url('/routes') }}" enctype="multipart/form-data" id="route-form" autocomplete="off">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        {% if not sector %}
-                            <!-- SÉLECTEUR CASCADE RÉGION → SECTEUR -->
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="region_id" class="form-label required">Région</label>
-                                        <select class="form-select" id="region_id" name="region_id" required>
-                                            <option value="">Sélectionnez une région...</option>
-                                            {% for region in regions %}
-                                                <option value="{{ region.id }}" 
-                                                    {{ (selected_region and selected_region.id == region.id) or (route.region_id and route.region_id == region.id) ? 'selected' : '' }}>
-                                                    {{ region.name }}{% if region.country_name %} ({{ region.country_name }}){% endif %}
-                                                </option>
-                                            {% endfor %}
+                    {% if not sector %}
+                        <!-- SÉLECTEUR CASCADE RÉGION → SECTEUR -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="region_id" class="form-label">
+                                        Région <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-control" id="region_id" name="region_id" required aria-describedby="region-help">
+                                        <option value="">Sélectionnez une région...</option>
+                                        {% for region in regions %}
+                                            <option value="{{ region.id }}" 
+                                                {{ (selected_region and selected_region.id == region.id) or (route.region_id and route.region_id == region.id) ? 'selected' : '' }}>
+                                                {{ region.name }}{% if region.country_name %} ({{ region.country_name }}){% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <small id="region-help" class="form-text text-muted">
+                                        Région géographique de la voie
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="sector_id" class="form-label">
+                                        Secteur <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="position-relative">
+                                        <select class="form-control" id="sector_id" name="sector_id" required disabled aria-describedby="sector-help">
+                                            <option value="">Choisissez d'abord une région...</option>
+                                            {% if selected_sector %}
+                                                <option value="{{ selected_sector.id }}" selected>{{ selected_sector.name }}</option>
+                                            {% endif %}
                                         </select>
-                                        <div class="invalid-feedback"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="sector_id" class="form-label required">Secteur</label>
-                                        <div class="position-relative">
-                                            <select class="form-select" id="sector_id" name="sector_id" required disabled>
-                                                <option value="">Choisissez d'abord une région...</option>
-                                                {% if selected_sector %}
-                                                    <option value="{{ selected_sector.id }}" selected>{{ selected_sector.name }}</option>
-                                                {% endif %}
-                                            </select>
-                                            <div class="loading-spinner d-none">
-                                                <i class="fas fa-spinner fa-spin"></i>
-                                            </div>
+                                        <div class="loading-spinner d-none">
+                                            <i class="fas fa-spinner fa-spin"></i>
                                         </div>
-                                        <div class="invalid-feedback"></div>
-                                        <small class="form-text text-muted" id="sector-info"></small>
                                     </div>
+                                    <small id="sector-help" class="form-text text-muted">
+                                        Secteur d'escalade de la voie
+                                    </small>
                                 </div>
                             </div>
-                        {% else %}
-                            <input type="hidden" name="sector_id" value="{{ sector.id }}">
-                            <div class="mb-3">
-                                <label class="form-label">Secteur</label>
-                                <div class="form-control-plaintext">{{ sector.name }}</div>
+                        </div>
+                    {% else %}
+                        <input type="hidden" name="sector_id" value="{{ sector.id }}">
+                        <div class="form-group mb-3">
+                            <label class="form-label">Secteur</label>
+                            <div class="form-control-plaintext bg-light p-2 rounded border">
+                                {{ sector.name }}
+                                {% if sector.site_name %}
+                                    <small class="text-muted d-block">Site: {{ sector.site_name }}</small>
+                                {% endif %}
                             </div>
-                        {% endif %}
-                        
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Nom de la voie</label>
-                            <input type="text" class="form-control" id="name" name="name" value="{{ route.name }}" required>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Informations de base -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Informations de base</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="name" class="form-label">
+                            Nom de la voie <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ route.name|default('') }}" 
+                               required maxlength="255" 
+                               aria-describedby="name-help">
+                        <small id="name-help" class="form-text text-muted">
+                            Nom complet de la voie d'escalade
+                        </small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="difficulty" class="form-label">Difficulté</label>
+                                <input type="text" class="form-control" id="difficulty" name="difficulty" 
+                                       value="{{ route.difficulty|default('') }}" 
+                                       aria-describedby="difficulty-help">
+                                <small id="difficulty-help" class="form-text text-muted">
+                                    Cotation de la voie (ex: 6a+, 5.10a)
+                                </small>
+                            </div>
                         </div>
                         
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="difficulty" class="form-label">Difficulté</label>
-                                <input type="text" class="form-control" id="difficulty" name="difficulty" value="{{ route.difficulty }}">
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="difficulty_system_id" class="form-label">Système</label>
-                                <select class="form-select" id="difficulty_system_id" name="difficulty_system_id">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="difficulty_system_id" class="form-label">Système de cotation</label>
+                                <select class="form-control" id="difficulty_system_id" name="difficulty_system_id" 
+                                        aria-describedby="system-help">
                                     <option value="">Choisir un système</option>
                                     {% if difficulty_systems is defined %}
                                         {% for system in difficulty_systems %}
@@ -110,13 +160,18 @@
                                         {% endfor %}
                                     {% endif %}
                                 </select>
+                                <small id="system-help" class="form-text text-muted">
+                                    Système de cotation utilisé
+                                </small>
                             </div>
                         </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="style" class="form-label">Style</label>
-                                <select class="form-select" id="style" name="style">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="style" class="form-label">Style d'escalade</label>
+                                <select class="form-control" id="style" name="style" 
+                                        aria-describedby="style-help">
                                     <option value="">-- Sélectionner --</option>
                                     <option value="sport" {% if route.style == 'sport' %}selected{% endif %}>Sportif</option>
                                     <option value="trad" {% if route.style == 'trad' %}selected{% endif %}>Traditionnel</option>
@@ -126,11 +181,17 @@
                                     <option value="ice" {% if route.style == 'ice' %}selected{% endif %}>Glace</option>
                                     <option value="other" {% if route.style == 'other' %}selected{% endif %}>Autre</option>
                                 </select>
+                                <small id="style-help" class="form-text text-muted">
+                                    Type d'escalade de la voie
+                                </small>
                             </div>
-                            
-                            <div class="col-md-6">
-                                <label for="beauty" class="form-label">Beauté</label>
-                                <select class="form-select" id="beauty" name="beauty">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="beauty" class="form-label">Évaluation esthétique</label>
+                                <select class="form-control" id="beauty" name="beauty" 
+                                        aria-describedby="beauty-help">
                                     <option value="0" {% if route.beauty == '0' %}selected{% endif %}>Non évalué</option>
                                     <option value="1" {% if route.beauty == '1' %}selected{% endif %}>★☆☆☆☆</option>
                                     <option value="2" {% if route.beauty == '2' %}selected{% endif %}>★★☆☆☆</option>
@@ -138,104 +199,536 @@
                                     <option value="4" {% if route.beauty == '4' %}selected{% endif %}>★★★★☆</option>
                                     <option value="5" {% if route.beauty == '5' %}selected{% endif %}>★★★★★</option>
                                 </select>
+                                <small id="beauty-help" class="form-text text-muted">
+                                    Beauté et qualité esthétique de la voie
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Caractéristiques techniques -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Caractéristiques techniques</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="length" class="form-label">Longueur</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="length" name="length" 
+                                           value="{{ route.length|default('') }}" 
+                                           step="0.1" min="0" max="2000" 
+                                           aria-describedby="length-help">
+                                    <span class="input-group-text">m</span>
+                                </div>
+                                <small id="length-help" class="form-text text-muted">
+                                    Longueur totale de la voie en mètres
+                                </small>
                             </div>
                         </div>
                         
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="length" class="form-label">Longueur (m)</label>
-                                <input type="number" class="form-control" id="length" name="length" value="{{ route.length }}" step="0.1" min="0">
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="equipment" class="form-label">Équipement</label>
-                                <select class="form-select" id="equipment" name="equipment">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="equipment" class="form-label">Qualité équipement</label>
+                                <select class="form-control" id="equipment" name="equipment" 
+                                        aria-describedby="equipment-help">
                                     <option value="">-- Sélectionner --</option>
                                     <option value="poor" {% if route.equipment == 'poor' %}selected{% endif %}>Mauvais</option>
                                     <option value="adequate" {% if route.equipment == 'adequate' %}selected{% endif %}>Adéquat</option>
                                     <option value="good" {% if route.equipment == 'good' %}selected{% endif %}>Bon</option>
                                     <option value="excellent" {% if route.equipment == 'excellent' %}selected{% endif %}>Excellent</option>
                                 </select>
+                                <small id="equipment-help" class="form-text text-muted">
+                                    État et qualité de l'équipement en place
+                                </small>
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="rappel" class="form-label">Rappel</label>
-                            <input type="text" class="form-control" id="rappel" name="rappel" value="{{ route.rappel }}">
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="rappel" class="form-label">Descente / Rappel</label>
+                        <input type="text" class="form-control" id="rappel" name="rappel" 
+                               value="{{ route.rappel|default('') }}" 
+                               aria-describedby="rappel-help">
+                        <small id="rappel-help" class="form-text text-muted">
+                            Instructions pour la descente (ex: "Rappel 25m", "Désescalade")
+                        </small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="comment" class="form-label">Description et commentaires</label>
+                        <textarea class="form-control" id="comment" name="comment" 
+                                  rows="4" aria-describedby="comment-help">{{ route.comment|default('') }}</textarea>
+                        <small id="comment-help" class="form-text text-muted">
+                            Description détaillée de la voie, remarques particulières
+                        </small>
+                    </div>
+                    {% if route.id %}
+                        <div class="form-group mb-3">
+                            <label for="number" class="form-label">Numéro de voie</label>
+                            <input type="number" class="form-control" id="number" name="number" 
+                                   value="{{ route.number|default('') }}" 
+                                   min="1" max="999" 
+                                   aria-describedby="number-help">
+                            <small id="number-help" class="form-text text-muted">
+                                Numéro d'ordre dans le secteur (détermine l'affichage)
+                            </small>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="comment" class="form-label">Commentaire</label>
-                            <textarea class="form-control" id="comment" name="comment" rows="4">{{ route.comment }}</textarea>
-                        </div>
-                        
-                        {% if route.id %}
-                            <div class="mb-3">
-                                <label for="number" class="form-label">Numéro de voie</label>
-                                <input type="number" class="form-control" id="number" name="number" value="{{ route.number }}" min="1">
-                                <div class="form-text">Le numéro détermine l'ordre d'affichage dans le secteur.</div>
-                            </div>
-                        {% endif %}
-                        
-                        <div class="mb-3">
-                            <label for="image" class="form-label">Image principale</label>
-                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="active" class="form-label">Statut</label>
-                            <select class="form-select" id="active" name="active">
-                                <option value="1" {% if route.active != 0 %}selected{% endif %}>Active</option>
-                                <option value="0" {% if route.active == 0 %}selected{% endif %}>Inactive</option>
-                            </select>
-                        </div>
-                        
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{{ sector ? url('/sectors/' ~ sector.id) : url('/routes') }}" class="btn btn-outline-secondary">
-                                Annuler
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                {% if route.id %}
-                                    Mettre à jour
-                                {% else %}
-                                    Créer
-                                {% endif %}
-                            </button>
-                        </div>
-                    </form>
+                    {% endif %}
                 </div>
             </div>
-        </div>
-        
-        <div class="col-lg-4">
-            <div class="card">
+
+            <!-- Coordonnées et localisation précise -->
+            <div class="form-section card mb-4">
                 <div class="card-header">
-                    <h2 class="h5 mb-0">Conseils</h2>
+                    <h3 class="card-title mb-0">Coordonnées GPS</h3>
                 </div>
                 <div class="card-body">
-                    <h3 class="h6">Difficulté</h3>
-                    <p>Utilisez le format adapté au système choisi. Exemple: "6a+" pour la cotation française.</p>
-                    
-                    <h3 class="h6">Équipement</h3>
-                    <ul>
-                        <li><strong>Excellent</strong>: Très bien équipé, tous les 2-3m</li>
-                        <li><strong>Bon</strong>: Bien équipé, tous les 3-4m</li>
-                        <li><strong>Adéquat</strong>: Engagé</li>
-                        <li><strong>Mauvais</strong>: Équipement vétuste ou insuffisant</li>
-                    </ul>
-                    
-                    <h3 class="h6">Beauté</h3>
-                    <p>Évaluez la qualité esthétique de la voie, de 1 à 5 étoiles.</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_lat" class="form-label">Latitude</label>
+                                <input type="number" name="coordinates_lat" id="coordinates_lat" 
+                                       class="form-control" 
+                                       value="{{ route.coordinates_lat|default('') }}" 
+                                       step="0.00000001" min="-90" max="90"
+                                       aria-describedby="lat-help">
+                                <small id="lat-help" class="form-text text-muted">
+                                    Latitude en degrés décimaux (ex: 46.2044)
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_lng" class="form-label">Longitude</label>
+                                <input type="number" name="coordinates_lng" id="coordinates_lng" 
+                                       class="form-control" 
+                                       value="{{ route.coordinates_lng|default('') }}" 
+                                       step="0.00000001" min="-180" max="180"
+                                       aria-describedby="lng-help">
+                                <small id="lng-help" class="form-text text-muted">
+                                    Longitude en degrés décimaux (ex: 6.1432)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_swiss_e" class="form-label">Coordonnées suisses E (LV95)</label>
+                                <div class="input-group">
+                                    <input type="text" name="coordinates_swiss_e" id="coordinates_swiss_e" 
+                                           class="form-control" 
+                                           value="{{ route.coordinates_swiss_e|default('') }}" 
+                                           aria-describedby="ch-e-help"
+                                           placeholder="2600000">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                id="convert-to-gps-btn" 
+                                                title="Convertir LV95 → GPS">
+                                            <i class="fa fa-exchange-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small id="ch-e-help" class="form-text text-muted">
+                                    Coordonnée Est du système suisse LV95
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_swiss_n" class="form-label">Coordonnées suisses N (LV95)</label>
+                                <div class="input-group">
+                                    <input type="text" name="coordinates_swiss_n" id="coordinates_swiss_n" 
+                                           class="form-control" 
+                                           value="{{ route.coordinates_swiss_n|default('') }}" 
+                                           aria-describedby="ch-n-help"
+                                           placeholder="1200000">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                id="convert-to-lv95-btn" 
+                                                title="Convertir GPS → LV95">
+                                            <i class="fa fa-exchange-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small id="ch-n-help" class="form-text text-muted">
+                                    Coordonnée Nord du système suisse LV95
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="coordinate-conversion-help mb-3">
+                        <div class="alert alert-info">
+                            <strong><i class="fa fa-info-circle"></i> Conversion de coordonnées:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Utilisez <i class="fa fa-exchange-alt"></i> pour convertir entre GPS et LV95</li>
+                                <li>Les coordonnées GPS sont utilisées pour l'affichage sur cartes</li>
+                                <li>Les coordonnées LV95 sont le système officiel suisse</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Carte interactive -->
+                    <div class="map-section">
+                        <label class="form-label">Position précise de la voie</label>
+                        <div id="route-map" 
+                             data-coordinates-lat="{{ route.coordinates_lat|default('') }}" 
+                             data-coordinates-lng="{{ route.coordinates_lng|default('') }}"
+                             style="height: 300px; border-radius: 0.375rem; border: 1px solid #dee2e6;"></div>
+                        <small class="form-text text-muted mt-2">
+                            Cliquez sur la carte pour placer la position exacte de la voie
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image et médias -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Images</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="image" class="form-label">Ajouter une image</label>
+                        <div class="custom-file">
+                            <input type="file" name="image" id="image" 
+                                   class="custom-file-input" accept="image/*" 
+                                   aria-describedby="image-help">
+                            <label class="custom-file-label" for="image">Choisir un fichier</label>
+                        </div>
+                        <small id="image-help" class="form-text text-muted">
+                            Formats supportés: JPG, PNG, GIF. Taille max: 5MB
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- État -->
+            <div class="form-section card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">État</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input type="checkbox" name="active" id="active" class="form-check-input" 
+                               value="1" {% if not route or route.active != 0 %}checked{% endif %}>
+                        <label for="active" class="form-check-label">
+                            Voie active
+                        </label>
+                        <small class="form-text text-muted d-block">
+                            Décochez pour désactiver temporairement la voie
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <!-- Actions -->
+            <div class="form-actions d-flex gap-3 mb-5">
+                <button type="submit" class="btn btn-primary">
+                    {% if route.id %}
+                        <i class="fa fa-save"></i> Mettre à jour
+                    {% else %}
+                        <i class="fa fa-plus"></i> Créer la voie
+                    {% endif %}
+                </button>
+                
+                <a href="{{ sector ? url('/sectors/' ~ sector.id) : url('/routes') }}" 
+                   class="btn btn-secondary">
+                    <i class="fa fa-times"></i> Annuler
+                </a>
+                
+                {% if route.id %}
+                    <button type="button" class="btn btn-outline-danger ms-auto" 
+                            data-bs-toggle="modal" data-bs-target="#deleteRouteModal">
+                        <i class="fa fa-trash"></i> Supprimer
+                    </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    <!-- Sidebar avec aide -->
+    <div class="col-lg-4">
+        <div class="help-section card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-info-circle text-info"></i> Aide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="help-item mb-3">
+                    <h6>Qu'est-ce qu'une voie ?</h6>
+                    <p class="small text-muted">
+                        Une voie d'escalade est un itinéraire précis sur une paroi rocheuse, 
+                        caractérisé par sa difficulté, son style et ses protections.
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Cotation</h6>
+                    <p class="small text-muted">
+                        <strong>Française:</strong> 3a, 4b, 5c, 6a+, 7b, 8c+...<br>
+                        <strong>YDS:</strong> 5.6, 5.10a, 5.12d, 5.15c...<br>
+                        <strong>UIAA:</strong> III, V+, VII-, IX+, XII...
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Styles d'escalade</h6>
+                    <p class="small text-muted">
+                        <strong>Sportif:</strong> Voie équipée de spits<br>
+                        <strong>Traditionnel:</strong> Protection mobile<br>
+                        <strong>Mixte:</strong> Combinaison des deux<br>
+                        <strong>Bloc:</strong> Escalade de blocs sans corde
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Qualité équipement</h6>
+                    <p class="small text-muted">
+                        <strong>Excellent:</strong> Spits neufs tous les 2-3m<br>
+                        <strong>Bon:</strong> Bon équipement, espacé 3-4m<br>
+                        <strong>Adéquat:</strong> Équipement correct mais engagé<br>
+                        <strong>Mauvais:</strong> Équipement vétuste ou insuffisant
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Évaluation esthétique</h6>
+                    <p class="small text-muted">
+                        ★☆☆☆☆ Quelconque<br>
+                        ★★☆☆☆ Correcte<br>
+                        ★★★☆☆ Belle voie<br>
+                        ★★★★☆ Très belle<br>
+                        ★★★★★ Exceptionnelle
+                    </p>
+                </div>
+                
+                <div class="help-item mb-3">
+                    <h6>Coordonnées GPS</h6>
+                    <p class="small text-muted">
+                        Placez le point au départ exact de la voie pour faciliter 
+                        la localisation avec un GPS ou smartphone.
+                    </p>
+                </div>
+                
+                <div class="help-item">
+                    <h6>Hiérarchie</h6>
+                    <p class="small text-muted">
+                        <strong>Région</strong> → <strong>Site</strong> → <strong>Secteur</strong> → <strong>Voie</strong>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
-{% block styles %}
-    <link rel="stylesheet" href="{{ asset('css/pages/routes/form.css') }}">
+
+<!-- Modal de suppression -->
+{% if route.id %}
+<div class="modal fade" id="deleteRouteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Supprimer la voie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer la voie <strong>{{ route.name }}</strong> ?</p>
+                <p class="text-danger small">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Cette action est irréversible et supprimera également toutes les ascensions associées.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Annuler
+                </button>
+                <form method="POST" action="{{ url('/routes/' ~ route.id) }}" class="d-inline" autocomplete="on">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="btn btn-danger">
+                        Supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ asset('js/pages/routes/form.js') }}"></script>
+<!-- Leaflet pour la carte -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- TopoclimbCH JavaScript Components -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📝 Initialisation gestionnaire de formulaire voie TopoclimbCH');
+    
+    try {
+        // Initialiser le gestionnaire de formulaire avec coordonnées existantes
+        const formManager = new RouteFormManager({
+            mapId: 'route-map',
+            latInputId: 'coordinates_lat',
+            lngInputId: 'coordinates_lng',
+            swissEInputId: 'coordinates_swiss_e',
+            swissNInputId: 'coordinates_swiss_n'
+        });
+        
+        console.log('✅ Gestionnaire de formulaire voie initialisé');
+        
+        // Si coordonnées existantes dans le formulaire, les utiliser
+        {% if route.coordinates_lat and route.coordinates_lng %}
+            console.log('📍 Coordonnées existantes détectées: {{ route.coordinates_lat }}, {{ route.coordinates_lng }}');
+        {% endif %}
+        
+        // Gestion conversion coordonnées
+        const convertToGpsBtn = document.getElementById('convert-to-gps-btn');
+        const convertToLv95Btn = document.getElementById('convert-to-lv95-btn');
+        
+        if (convertToGpsBtn) {
+            convertToGpsBtn.addEventListener('click', function() {
+                console.log('🔄 Conversion LV95 → GPS demandée (non implémentée)');
+                TopoclimbCH.Notifications.info('Conversion LV95 → GPS : fonctionnalité à venir');
+            });
+        }
+        
+        if (convertToLv95Btn) {
+            convertToLv95Btn.addEventListener('click', function() {
+                console.log('🔄 Conversion GPS → LV95 demandée (non implémentée)');
+                TopoclimbCH.Notifications.info('Conversion GPS → LV95 : fonctionnalité à venir');
+            });
+        }
+        
+        // Écouter les événements personnalisés
+        window.TopoclimbCH.Events.on('form:validation-error', function(errors) {
+            console.warn('⚠️ Erreurs de validation:', errors);
+        });
+        
+    } catch (error) {
+        console.error('❌ Erreur initialisation formulaire voie:', error);
+        TopoclimbCH.Notifications.error('Erreur d\'initialisation du formulaire');
+        
+        // Fallback vers fonctionnalité basique si erreur
+        initBasicFormFunctionality();
+    }
+});
+
+/**
+ * Fonctionnalité de base en cas d'erreur avec les composants avancés
+ */
+function initBasicFormFunctionality() {
+    console.log('🔄 Initialisation fonctionnalité de base formulaire voie');
+    
+    // Gestion fichier basique
+    const imageInput = document.getElementById('image');
+    if (imageInput) {
+        imageInput.addEventListener('change', function() {
+            const label = this.nextElementSibling;
+            if (label) {
+                const fileName = this.files[0]?.name || 'Choisir un fichier';
+                label.textContent = fileName;
+            }
+        });
+    }
+    
+    // Validation basique des coordonnées
+    const latInput = document.getElementById('coordinates_lat');
+    const lngInput = document.getElementById('coordinates_lng');
+    
+    if (latInput && lngInput) {
+        [latInput, lngInput].forEach(input => {
+            input.addEventListener('input', function() {
+                const value = parseFloat(this.value);
+                const isLat = this.id.includes('lat');
+                const min = isLat ? -90 : -180;
+                const max = isLat ? 90 : 180;
+                
+                if (value < min || value > max) {
+                    this.classList.add('coordinates-invalid');
+                    this.classList.remove('coordinates-valid');
+                } else {
+                    this.classList.add('coordinates-valid');
+                    this.classList.remove('coordinates-invalid');
+                }
+            });
+        });
+    }
+}
+</script>
+
+<style>
+.form-section .card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-section .card-title {
+    color: #495057;
+    font-weight: 600;
+}
+
+.custom-file-label::after {
+    content: "Parcourir";
+}
+
+.help-section {
+    position: sticky;
+    top: 2rem;
+}
+
+.help-item h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.form-actions {
+    border-top: 1px solid #dee2e6;
+    padding-top: 2rem;
+}
+
+/* Styles pour carte dans formulaire */
+#route-map {
+    border: 2px solid #dee2e6;
+    border-radius: 0.375rem;
+    transition: border-color 0.2s;
+}
+
+#route-map:hover {
+    border-color: #007bff;
+}
+
+/* Validation visuelle pour coordonnées */
+.coordinates-valid {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.coordinates-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+@media (max-width: 768px) {
+    .help-section {
+        position: static;
+        margin-top: 2rem;
+    }
+    
+    #route-map {
+        height: 250px !important;
+    }
+}
+</style>
 {% endblock %}
