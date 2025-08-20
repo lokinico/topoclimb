@@ -30,8 +30,8 @@ class ModeratorMiddleware
 
         $user = $this->auth->user();
 
-        // Utiliser le système moderne user_role : 0 = admin, 1 = modérateur
-        $userRole = $this->session->get('user_role', null);
+        // Utiliser la même méthode que AccessControl : 0 = admin, 1 = modérateur
+        $userRole = $this->auth->role();
         
         if (
             !$user || $userRole === null ||

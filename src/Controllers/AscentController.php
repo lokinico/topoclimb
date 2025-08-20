@@ -47,8 +47,8 @@ class AscentController extends BaseController
                      LIMIT 100"
                 );
                 
-                // Essayer climbing_users pour les grimpeurs
-                $climbers = $this->db->fetchAll("SELECT id, username FROM climbing_users WHERE active = 1 ORDER BY username LIMIT 50");
+                // Essayer users pour les grimpeurs (table réelle en production)
+                $climbers = $this->db->fetchAll("SELECT id, username FROM users WHERE autorisation IN ('0', '1', '2', '3') ORDER BY username LIMIT 50");
                 
             } catch (\Exception $e) {
                 error_log("AscentController::create error: " . $e->getMessage());
