@@ -157,17 +157,17 @@ return [
     ],
     [
         'method' => 'GET',
-        'path' => '/sites/{id}',
-        'controller' => \TopoclimbCH\Controllers\SiteController::class,
-        'action' => 'show',
-        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
         'path' => '/sites/create',
         'controller' => \TopoclimbCH\Controllers\SiteController::class,
         'action' => 'create',
         'middlewares' => [\TopoclimbCH\Middleware\ModeratorMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sites/{id}',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -194,17 +194,17 @@ return [
     ],
     [
         'method' => 'GET',
-        'path' => '/sectors/{id}',
-        'controller' => \TopoclimbCH\Controllers\SectorController::class,
-        'action' => 'show',
-        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
         'path' => '/sectors/create',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'create',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/sectors/{id}',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -262,17 +262,17 @@ return [
     ],
     [
         'method' => 'GET',
-        'path' => '/routes/{id}',
-        'controller' => \TopoclimbCH\Controllers\RouteController::class,
-        'action' => 'show',
-        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
         'path' => '/routes/create',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'create',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/routes/{id}',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -642,17 +642,17 @@ return [
     ],
     [
         'method' => 'GET',
-        'path' => '/books/{id}',
-        'controller' => \TopoclimbCH\Controllers\BookController::class,
-        'action' => 'show',
-        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
-    ],
-    [
-        'method' => 'GET',
         'path' => '/books/create',
         'controller' => \TopoclimbCH\Controllers\BookController::class,
         'action' => 'create',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/books/{id}',
+        'controller' => \TopoclimbCH\Controllers\BookController::class,
+        'action' => 'show',
+        'middlewares' => [\TopoclimbCH\Middleware\AccessControlMiddleware::class]
     ],
     [
         'method' => 'POST',

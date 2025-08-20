@@ -30,10 +30,12 @@ class ModeratorMiddleware
 
         $user = $this->auth->user();
 
-        // Autorisation 1 = admin, 2 = modérateur
+        // Utiliser le système moderne user_role : 0 = admin, 1 = modérateur
+        $userRole = $this->session->get('user_role', null);
+        
         if (
-            !$user || !isset($user->autorisation) ||
-            ($user->autorisation !== '1' && $user->autorisation !== '2')
+            !$user || $userRole === null ||
+            (!in_array($userRole, [0, 1]))
         ) {
             $this->session->flash('error', 'Accès non autorisé. Permission modérateur requise.');
             return Response::redirect('/');
