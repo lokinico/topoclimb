@@ -297,6 +297,13 @@ class SiteController extends BaseController
      */
     public function create(Request $request): Response
     {
+        // Si region_id est fourni, rediriger vers la méthode spécialisée
+        $regionId = $request->query->get('region_id');
+        if ($regionId && is_numeric($regionId)) {
+            $request->attributes->set('region_id', $regionId);
+            return $this->createFromRegion($request);
+        }
+        
         try {
             // Récupérer les régions pour le formulaire
             $regions = $this->db->fetchAll(

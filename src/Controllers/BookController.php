@@ -460,19 +460,91 @@ class BookController extends BaseController
      */
     public function create(Request $request): Response
     {
+        // Si site_id est fourni, rediriger vers la méthode spécialisée
+        $siteId = $request->query->get('site_id');
+        if ($siteId && is_numeric($siteId)) {
+            $request->attributes->set('site_id', $siteId);
+            return $this->createFromSite($request);
+        }
+        
         try {
             // Générer token CSRF
             $csrfToken = $this->createCsrfToken();
             
+            // Récupérer les sites pour sélection contextuelle
+            $sites = $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name 
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+            
             return $this->render('books/create', [
                 'title' => 'Créer un guide d\'escalade',
-                'csrf_token' => $csrfToken
+                'csrf_token' => $csrfToken,
+                'sites' => $sites
             ]);
             
         } catch (\Exception $e) {
             error_log("BookController::create error: " . $e->getMessage());
             $this->session->flash('error', 'Erreur lors du chargement du formulaire de création');
             return Response::redirect('/books');
+        }
+    }
+
+    /**
+     * Page de création de guide depuis un site parent
+     */
+    public function createFromSite(Request $request): Response
+    {
+        try {
+            $site_id = $request->attributes->get('site_id');
+            
+            if (!$site_id || !is_numeric($site_id)) {
+                $this->flash('error', 'ID de site invalide');
+                return $this->redirect('/sites');
+            }
+            
+            // Vérifier que le site existe et récupérer ses données
+            $site = $this->db->fetchOne(
+                "SELECT s.*, r.name as region_name, r.id as region_id 
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.id = ? AND s.active = 1",
+                [$site_id]
+            );
+            
+            if (!$site) {
+                $this->flash('error', 'Site non trouvé');
+                return $this->redirect('/sites');
+            }
+            
+            // Récupérer tous les sites pour le formulaire
+            $sites = $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name 
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+            
+            return $this->render('books/create', [
+                'title' => 'Créer un guide d\'escalade - ' . $site['name'],
+                'csrf_token' => $this->createCsrfToken(),
+                'sites' => $sites,
+                'book' => (object)['site_id' => $site_id, 'region_id' => $site['region_id']],
+                'selected_site' => $site,
+                'selected_region' => (object)[
+                    'id' => $site['region_id'],
+                    'name' => $site['region_name']
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("BookController::createFromSite error: " . $e->getMessage());
+            $this->session->flash('error', 'Erreur lors du chargement du formulaire de création');
+            return $this->redirect('/sites/' . ($site_id ?? ''));
         }
     }
 

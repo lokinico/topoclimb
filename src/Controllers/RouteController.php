@@ -611,7 +611,12 @@ class RouteController extends BaseController
                 'sectors' => $sectors,
                 'csrf_token' => $this->createCsrfToken(),
                 'is_edit' => false,
-                'parent_sector' => $sector
+                'parent_sector' => $sector,
+                'selected_sector' => $sector,
+                'selected_region' => (object)[
+                    'id' => $sector['region_id'] ?? null,
+                    'name' => $sector['region_name'] ?? null
+                ]
             ]);
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors du chargement du formulaire de création');

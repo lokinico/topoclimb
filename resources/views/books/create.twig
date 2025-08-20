@@ -27,6 +27,38 @@
                         <div class="form-text">Le nom du guide ou topo</div>
                     </div>
 
+                    {% if sites is defined %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="region_id" class="form-label">Région couverte</label>
+                                <select class="form-select" id="region_id" name="region_id">
+                                    <option value="">Toutes les régions</option>
+                                    {% if selected_region %}
+                                        <option value="{{ selected_region.id }}" selected>{{ selected_region.name }}</option>
+                                    {% endif %}
+                                </select>
+                                <div class="form-text">Région principale couverte par le guide</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="site_id" class="form-label">Site principal</label>
+                                <select class="form-select" id="site_id" name="site_id">
+                                    <option value="">Tous les sites</option>
+                                    {% for site in sites %}
+                                        <option value="{{ site.id }}" 
+                                                {{ (selected_site and selected_site.id == site.id) or (book.site_id and book.site_id == site.id) ? 'selected' : '' }}>
+                                            {{ site.name }}{% if site.region_name %} ({{ site.region_name }}){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Site principal couvert par le guide</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
