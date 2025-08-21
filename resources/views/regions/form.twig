@@ -177,6 +177,65 @@
                         </div>
                     </div>
 
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_swiss_e" class="form-label">Coordonnées suisses E (LV95)</label>
+                                <div class="input-group">
+                                    <input type="text" name="coordinates_swiss_e" id="coordinates_swiss_e" 
+                                           class="form-control" 
+                                           value="{{ region.coordinates_swiss_e|default('') }}" 
+                                           aria-describedby="ch-e-help"
+                                           placeholder="2600000">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                id="convert-to-gps-btn" 
+                                                title="Convertir LV95 → GPS">
+                                            <i class="fa fa-exchange-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small id="ch-e-help" class="form-text text-muted">
+                                    Coordonnée Est du système suisse LV95
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="coordinates_swiss_n" class="form-label">Coordonnées suisses N (LV95)</label>
+                                <div class="input-group">
+                                    <input type="text" name="coordinates_swiss_n" id="coordinates_swiss_n" 
+                                           class="form-control" 
+                                           value="{{ region.coordinates_swiss_n|default('') }}" 
+                                           aria-describedby="ch-n-help"
+                                           placeholder="1200000">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                id="convert-to-lv95-btn" 
+                                                title="Convertir GPS → LV95">
+                                            <i class="fa fa-exchange-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small id="ch-n-help" class="form-text text-muted">
+                                    Coordonnée Nord du système suisse LV95
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="coordinate-conversion-help mb-3">
+                        <div class="alert alert-info">
+                            <strong><i class="fa fa-info-circle"></i> Conversion de coordonnées:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Utilisez <i class="fa fa-exchange-alt"></i> pour convertir entre GPS et LV95</li>
+                                <li>Les coordonnées GPS sont utilisées pour l'affichage sur cartes</li>
+                                <li>Les coordonnées LV95 sont le système officiel suisse</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- Carte interactive -->
                     <div class="map-section">
                         <label class="form-label">Sélectionner la position sur la carte</label>
@@ -455,6 +514,7 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <!-- TopoclimbCH JavaScript Components -->
+<script src="/js/coordinate-converter.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -474,6 +534,22 @@ document.addEventListener('DOMContentLoaded', function() {
         {% if region.coordinates_lat and region.coordinates_lng %}
             console.log('📍 Coordonnées existantes détectées: {{ region.coordinates_lat }}, {{ region.coordinates_lng }}');
         {% endif %}
+        
+        // Gestion conversion coordonnées
+        const convertToGpsBtn = document.getElementById('convert-to-gps-btn');
+        const convertToLv95Btn = document.getElementById('convert-to-lv95-btn');
+        
+        if (convertToGpsBtn) {
+            convertToGpsBtn.addEventListener('click', async function() {
+                await convertLV95toGPS();
+            });
+        }
+        
+        if (convertToLv95Btn) {
+            convertToLv95Btn.addEventListener('click', async function() {
+                await convertGPStoLV95();
+            });
+        }
         
         // Écouter les événements personnalisés
         window.TopoclimbCH.Events.on('form:validation-error', function(errors) {
@@ -527,6 +603,110 @@ function initBasicFormFunctionality() {
                 }
             });
         });
+    }
+}
+
+/**
+ * Convertit les coordonnées LV95 vers GPS
+ */
+async function convertLV95toGPS() {
+    const eastingInput = document.getElementById('coordinates_swiss_e');
+    const northingInput = document.getElementById('coordinates_swiss_n');
+    const latInput = document.getElementById('coordinates_lat');
+    const lngInput = document.getElementById('coordinates_lng');
+    
+    if (!eastingInput || !northingInput || !latInput || !lngInput) {
+        console.error('❌ Champs de coordonnées non trouvés');
+        return;
+    }
+    
+    const easting = parseFloat(eastingInput.value);
+    const northing = parseFloat(northingInput.value);
+    
+    if (isNaN(easting) || isNaN(northing)) {
+        showNotification('Veuillez saisir des coordonnées LV95 valides', 'warning');
+        return;
+    }
+    
+    try {
+        showNotification('Conversion LV95 → GPS en cours...', 'info');
+        
+        const result = await window.TopoclimbCoordinateConverter.convertLV95toWGS84(easting, northing);
+        
+        // Mettre à jour les champs GPS
+        latInput.value = result.latitude.toFixed(8);
+        lngInput.value = result.longitude.toFixed(8);
+        
+        // Validation visuelle
+        latInput.classList.add('coordinates-valid');
+        lngInput.classList.add('coordinates-valid');
+        
+        showNotification('✅ Conversion LV95 → GPS réussie!', 'success');
+        
+        // Mettre à jour la carte si elle existe
+        if (typeof formManager !== 'undefined' && formManager.updateMapFromCoordinates) {
+            formManager.updateMapFromCoordinates(result.latitude, result.longitude);
+        }
+        
+    } catch (error) {
+        console.error('❌ Erreur conversion LV95→GPS:', error);
+        showNotification(`Erreur conversion: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Convertit les coordonnées GPS vers LV95
+ */
+async function convertGPStoLV95() {
+    const latInput = document.getElementById('coordinates_lat');
+    const lngInput = document.getElementById('coordinates_lng');
+    const eastingInput = document.getElementById('coordinates_swiss_e');
+    const northingInput = document.getElementById('coordinates_swiss_n');
+    
+    if (!latInput || !lngInput || !eastingInput || !northingInput) {
+        console.error('❌ Champs de coordonnées non trouvés');
+        return;
+    }
+    
+    const latitude = parseFloat(latInput.value);
+    const longitude = parseFloat(lngInput.value);
+    
+    if (isNaN(latitude) || isNaN(longitude)) {
+        showNotification('Veuillez saisir des coordonnées GPS valides', 'warning');
+        return;
+    }
+    
+    try {
+        showNotification('Conversion GPS → LV95 en cours...', 'info');
+        
+        const result = await window.TopoclimbCoordinateConverter.convertWGS84toLV95(longitude, latitude);
+        
+        // Mettre à jour les champs LV95
+        eastingInput.value = Math.round(result.easting).toString();
+        northingInput.value = Math.round(result.northing).toString();
+        
+        // Validation visuelle
+        eastingInput.classList.add('coordinates-valid');
+        northingInput.classList.add('coordinates-valid');
+        
+        showNotification('✅ Conversion GPS → LV95 réussie!', 'success');
+        
+    } catch (error) {
+        console.error('❌ Erreur conversion GPS→LV95:', error);
+        showNotification(`Erreur conversion: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Affiche une notification à l'utilisateur
+ */
+function showNotification(message, type = 'info') {
+    // Utiliser les notifications TopoclimbCH si disponibles
+    if (typeof TopoclimbCH !== 'undefined' && TopoclimbCH.Notifications) {
+        TopoclimbCH.Notifications[type](message);
+    } else {
+        // Fallback vers alert
+        alert(message);
     }
 }
 </script>
