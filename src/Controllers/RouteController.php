@@ -465,21 +465,22 @@ class RouteController extends BaseController
         }
         
         try {
-            // Récupérer les secteurs disponibles
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, r.name as region_name, si.name as site_name
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 LEFT JOIN climbing_sites si ON s.site_id = si.id
-                 WHERE s.active = 1 
-                 ORDER BY r.name ASC, s.name ASC"
+            // Récupérer les régions pour le sélecteur cascade
+            $regions = $this->db->fetchAll(
+                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
             );
             
-            error_log("RouteController::create - Secteurs trouvés: " . count($sectors) . ", pas de sector_id spécifique");
+            // Récupérer les systèmes de cotation
+            $difficulty_systems = $this->db->fetchAll(
+                "SELECT id, name, code FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
+            );
+            
+            error_log("RouteController::create - Régions trouvées: " . count($regions) . ", Systèmes cotation: " . count($difficulty_systems));
             
             return $this->render('routes/form', [
                 'route' => (object)['sector_id' => null],
-                'sectors' => $sectors,
+                'regions' => $regions,
+                'difficulty_systems' => $difficulty_systems,
                 'csrf_token' => $this->createCsrfToken(),
                 'is_edit' => false
             ]);
@@ -596,19 +597,20 @@ class RouteController extends BaseController
                 return $this->redirect('/sectors');
             }
             
-            // Récupérer tous les secteurs pour le formulaire
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, r.name as region_name, si.name as site_name
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 LEFT JOIN climbing_sites si ON s.site_id = si.id
-                 WHERE s.active = 1 
-                 ORDER BY r.name ASC, s.name ASC"
+            // Récupérer les régions pour le sélecteur cascade
+            $regions = $this->db->fetchAll(
+                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+            
+            // Récupérer les systèmes de cotation
+            $difficulty_systems = $this->db->fetchAll(
+                "SELECT id, name, code FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
             );
             
             return $this->render('routes/form', [
                 'route' => (object)['sector_id' => $sector_id],
-                'sectors' => $sectors,
+                'regions' => $regions,
+                'difficulty_systems' => $difficulty_systems,
                 'csrf_token' => $this->createCsrfToken(),
                 'is_edit' => false,
                 'parent_sector' => $sector,
@@ -616,6 +618,10 @@ class RouteController extends BaseController
                 'selected_region' => (object)[
                     'id' => $sector['region_id'] ?? null,
                     'name' => $sector['region_name'] ?? null
+                ],
+                'selected_site' => (object)[
+                    'id' => $sector['site_id'] ?? null,
+                    'name' => $sector['site_name'] ?? null
                 ]
             ]);
         } catch (\Exception $e) {

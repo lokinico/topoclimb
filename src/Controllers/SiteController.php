@@ -868,6 +868,42 @@ class SiteController extends BaseController
     }
 
     /**
+     * API: Sites par région
+     */
+    public function apiByRegion(Request $request): Response
+    {
+        $regionId = $request->attributes->get('region_id');
+        
+        if (!$regionId) {
+            return Response::json([
+                'success' => false,
+                'error' => 'ID de région requis'
+            ], 400);
+        }
+
+        try {
+            $sites = $this->db->fetchAll(
+                "SELECT s.id, s.name, s.code, s.description, s.region_id, r.name as region_name
+                 FROM climbing_sites s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id
+                 WHERE s.region_id = ? AND s.active = 1
+                 ORDER BY s.name ASC",
+                [(int)$regionId]
+            );
+
+            return Response::json([
+                'success' => true,
+                'data' => $sites
+            ]);
+        } catch (\Exception $e) {
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération des sites'
+            ], 500);
+        }
+    }
+
+    /**
      * Affiche le formulaire d'édition d'un site
      */
     public function edit(Request $request): Response

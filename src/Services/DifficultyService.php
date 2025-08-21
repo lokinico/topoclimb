@@ -21,7 +21,7 @@ class DifficultyService
      */
     public function getAllSystems(): array
     {
-        return $this->db->fetchAll("SELECT * FROM difficulty_systems ORDER BY name ASC");
+        return $this->db->fetchAll("SELECT * FROM climbing_difficulty_systems ORDER BY name ASC");
     }
 
     /**
@@ -30,7 +30,7 @@ class DifficultyService
     public function getGradesForSystem(int $systemId): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM difficulty_grades WHERE system_id = ? ORDER BY difficulty_order ASC",
+            "SELECT * FROM climbing_difficulty_grades WHERE system_id = ? ORDER BY difficulty_order ASC",
             [$systemId]
         );
     }
@@ -40,7 +40,7 @@ class DifficultyService
      */
     public function getSystemById(int $id): ?array
     {
-        return $this->db->fetchOne("SELECT * FROM difficulty_systems WHERE id = ?", [$id]);
+        return $this->db->fetchOne("SELECT * FROM climbing_difficulty_systems WHERE id = ?", [$id]);
     }
 
     /**
@@ -48,7 +48,7 @@ class DifficultyService
      */
     public function createSystem(array $data): int
     {
-        return $this->db->insert('difficulty_systems', $data);
+        return $this->db->insert('climbing_difficulty_systems', $data);
     }
 
     /**
@@ -56,7 +56,7 @@ class DifficultyService
      */
     public function updateSystem(int $id, array $data): bool
     {
-        return $this->db->update('difficulty_systems', $data, 'id = ?', [$id]) > 0;
+        return $this->db->update('climbing_difficulty_systems', $data, 'id = ?', [$id]) > 0;
     }
 
     /**
@@ -64,7 +64,7 @@ class DifficultyService
      */
     public function deleteSystem(int $id): bool
     {
-        return $this->db->delete('difficulty_systems', 'id = ?', [$id]) > 0;
+        return $this->db->delete('climbing_difficulty_systems', 'id = ?', [$id]) > 0;
     }
 
     /**

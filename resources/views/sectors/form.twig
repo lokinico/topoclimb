@@ -88,32 +88,56 @@
                         </div>
                     </div>
 
+                    <!-- Hiérarchie géographique: Région → Site -->
                     <div class="row">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label for="site_id" class="form-label">Site d'escalade</label>
-                                <select name="site_id" id="site_id" class="form-control" 
-                                        aria-describedby="site-help">
-                                    <option value="">Aucun site sélectionné</option>
-                                    {% set current_region = '' %}
-                                    {% for site in sites %}
-                                        {% if site.region_name != current_region %}
-                                            {% if current_region != '' %}</optgroup>{% endif %}
-                                            {% set current_region = site.region_name %}
-                                            <optgroup label="{{ site.region_name|default('Sans région') }}">
-                                        {% endif %}
-                                        <option value="{{ site.id }}" {% if sector.site_id == site.id %}selected{% endif %}>
-                                            {{ site.name }}
+                                <label for="region_id" class="form-label">
+                                    Région <span class="text-danger">*</span>
+                                </label>
+                                <select name="region_id" id="region_id" class="form-control" 
+                                        required aria-describedby="region-help">
+                                    <option value="">Sélectionnez une région</option>
+                                    {% for region in regions %}
+                                        <option value="{{ region.id }}" 
+                                                {% if sector.region_id == region.id %}selected{% endif %}>
+                                            {{ region.name }}
                                         </option>
-                                        {% if loop.last %}</optgroup>{% endif %}
                                     {% endfor %}
                                 </select>
+                                <small id="region-help" class="form-text text-muted">
+                                    Région géographique du secteur
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="site_id" class="form-label">Site d'escalade</label>
+                                <div class="position-relative">
+                                    <select name="site_id" id="site_id" class="form-control" 
+                                            disabled aria-describedby="site-help">
+                                        <option value="">Choisissez d'abord une région...</option>
+                                        {% if selected_site %}
+                                            <option value="{{ selected_site.id }}" selected>{{ selected_site.name }}</option>
+                                        {% endif %}
+                                    </select>
+                                    <div class="loading-spinner d-none" id="site-loading">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    </div>
+                                </div>
                                 <small id="site-help" class="form-text text-muted">
                                     Site d'escalade auquel appartient ce secteur (optionnel)
                                 </small>
                             </div>
                         </div>
+                    </div>
 
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Espace réservé pour autres champs -->
+                        </div>
+                        
                         <div class="col-md-4">
                             <div class="form-group mb-3">
                                 <label for="color" class="form-label">Couleur d'identification</label>
@@ -125,25 +149,6 @@
                                 </small>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="form-group mb-3">
-                        <label for="region_id" class="form-label">
-                            Région <span class="text-danger">*</span>
-                        </label>
-                        <select name="region_id" id="region_id" class="form-control" 
-                                required aria-describedby="region-help">
-                            <option value="">Sélectionnez une région</option>
-                            {% for region in regions %}
-                                <option value="{{ region.id }}" 
-                                        {% if sector.region_id == region.id %}selected{% endif %}>
-                                    {{ region.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <small id="region-help" class="form-text text-muted">
-                            Région géographique du secteur
-                        </small>
                     </div>
 
                     <div class="form-group mb-3">
@@ -687,6 +692,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏔️ Initialisation gestionnaire de formulaire secteur TopoclimbCH');
     
+    // Initialiser le cascade région→site
+    initRegionSiteCascade();
+    
     try {
         // Initialiser le gestionnaire de formulaire avec coordonnées existantes
         const formManager = new SectorFormManager({
@@ -892,6 +900,127 @@ function showNotification(message, type = 'info') {
     } else {
         // Fallback vers alert
         alert(message);
+    }
+}
+
+/**
+ * Initialise le système cascade Région → Site pour les secteurs
+ */
+function initRegionSiteCascade() {
+    const regionSelect = document.getElementById('region_id');
+    const siteSelect = document.getElementById('site_id');
+    const siteLoadingSpinner = document.getElementById('site-loading');
+
+    if (!regionSelect || !siteSelect) {
+        console.warn('Éléments cascade région→site non trouvés');
+        return;
+    }
+
+    console.log('🔗 Initialisation cascade région→site');
+
+    // État initial
+    const initialRegionId = regionSelect.value;
+    const initialSiteId = siteSelect.value;
+
+    // Si région déjà sélectionnée (mode édition), charger les sites
+    if (initialRegionId) {
+        loadSites(initialRegionId, false, initialSiteId);
+    }
+
+    // Événement changement de région
+    regionSelect.addEventListener('change', function() {
+        const regionId = this.value;
+        if (regionId) {
+            loadSites(regionId, true);
+        } else {
+            resetSiteSelect();
+        }
+    });
+
+    /**
+     * Charge les sites pour une région donnée
+     */
+    async function loadSites(regionId, resetSelection = true, selectedSiteId = null) {
+        try {
+            console.log(`🔄 Chargement sites pour région ${regionId}`);
+            
+            showSiteLoading(true);
+            siteSelect.disabled = true;
+
+            if (resetSelection) {
+                siteSelect.innerHTML = '<option value="">Chargement des sites...</option>';
+            }
+
+            const response = await fetch(`/api/regions/${regionId}/sites`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Erreur lors du chargement des sites');
+            }
+
+            populateSites(data.data, selectedSiteId);
+            siteSelect.disabled = false;
+            
+            console.log(`✅ Sites chargés: ${data.data.length}`);
+
+        } catch (error) {
+            console.error('❌ Erreur chargement sites:', error);
+            showNotification(`Erreur lors du chargement des sites: ${error.message}`, 'error');
+            resetSiteSelect();
+        } finally {
+            showSiteLoading(false);
+        }
+    }
+
+    /**
+     * Peuple la liste des sites
+     */
+    function populateSites(sites, selectedSiteId = null) {
+        siteSelect.innerHTML = '';
+        
+        // Option par défaut
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Aucun site sélectionné (optionnel)';
+        siteSelect.appendChild(defaultOption);
+
+        // Ajouter les sites
+        sites.forEach(site => {
+            const option = document.createElement('option');
+            option.value = site.id;
+            option.textContent = site.name;
+            
+            // Sélectionner le site si spécifié
+            if (selectedSiteId && site.id == selectedSiteId) {
+                option.selected = true;
+            }
+            
+            siteSelect.appendChild(option);
+        });
+
+        console.log(`Sites populés: ${sites.length} sites`);
+    }
+
+    /**
+     * Remet à zéro la sélection de site
+     */
+    function resetSiteSelect() {
+        siteSelect.innerHTML = '<option value="">Choisissez d\'abord une région...</option>';
+        siteSelect.disabled = true;
+    }
+
+    /**
+     * Affiche/cache le spinner de chargement des sites
+     */
+    function showSiteLoading(show) {
+        if (siteLoadingSpinner) {
+            siteLoadingSpinner.classList.toggle('d-none', !show);
+        }
     }
 }
 </script>

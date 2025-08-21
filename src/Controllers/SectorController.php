@@ -426,6 +426,45 @@ class SectorController extends BaseController
     }
 
     /**
+     * API: Secteurs par site
+     */
+    public function apiBySite(Request $request): JsonResponse
+    {
+        $siteId = $request->attributes->get('site_id');
+        
+        if (!$siteId) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'ID de site requis'
+            ], 400);
+        }
+
+        try {
+            $sectors = $this->db->fetchAll(
+                "SELECT s.id, s.name, s.description, s.site_id, site.name as site_name, s.orientation,
+                        s.coordinates_lat, s.coordinates_lng, s.altitude
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_sites site ON s.site_id = site.id
+                 WHERE s.site_id = ? AND s.active = 1
+                 ORDER BY s.name ASC",
+                [(int)$siteId]
+            );
+
+            return new JsonResponse([
+                'success' => true,
+                'data' => $sectors,
+                'count' => count($sectors)
+            ]);
+        } catch (\Exception $e) {
+            error_log('Erreur API secteurs par site: ' . $e->getMessage());
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération des secteurs'
+            ], 500);
+        }
+    }
+
+    /**
      * API Show - détails d'un secteur spécifique
      */
     public function apiShow(Request $request): JsonResponse

@@ -58,9 +58,9 @@
                 </div>
                 <div class="card-body">
                     {% if not sector %}
-                        <!-- SÉLECTEUR CASCADE RÉGION → SECTEUR -->
+                        <!-- SÉLECTEUR CASCADE RÉGION → SITE → SECTEUR -->
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group mb-3">
                                     <label for="region_id" class="form-label">
                                         Région <span class="text-danger">*</span>
@@ -75,28 +75,49 @@
                                         {% endfor %}
                                     </select>
                                     <small id="region-help" class="form-text text-muted">
-                                        Région géographique de la voie
+                                        Région géographique
                                     </small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="site_id" class="form-label">
+                                        Site <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="position-relative">
+                                        <select class="form-control" id="site_id" name="site_id" required disabled aria-describedby="site-help">
+                                            <option value="">Choisissez d'abord une région...</option>
+                                            {% if selected_site %}
+                                                <option value="{{ selected_site.id }}" selected>{{ selected_site.name }}</option>
+                                            {% endif %}
+                                        </select>
+                                        <div class="loading-spinner d-none" id="site-loading">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                        </div>
+                                    </div>
+                                    <small id="site-help" class="form-text text-muted">
+                                        Site d'escalade
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <div class="form-group mb-3">
                                     <label for="sector_id" class="form-label">
                                         Secteur <span class="text-danger">*</span>
                                     </label>
                                     <div class="position-relative">
                                         <select class="form-control" id="sector_id" name="sector_id" required disabled aria-describedby="sector-help">
-                                            <option value="">Choisissez d'abord une région...</option>
+                                            <option value="">Choisissez d'abord un site...</option>
                                             {% if selected_sector %}
                                                 <option value="{{ selected_sector.id }}" selected>{{ selected_sector.name }}</option>
                                             {% endif %}
                                         </select>
-                                        <div class="loading-spinner d-none">
+                                        <div class="loading-spinner d-none" id="sector-loading">
                                             <i class="fas fa-spinner fa-spin"></i>
                                         </div>
                                     </div>
                                     <small id="sector-help" class="form-text text-muted">
-                                        Secteur d'escalade de la voie
+                                        Secteur spécifique
                                     </small>
                                 </div>
                             </div>
@@ -328,10 +349,10 @@
                                            aria-describedby="ch-e-help"
                                            placeholder="2600000">
                                     <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-secondary" 
+                                        <button type="button" class="btn btn-outline-primary btn-sm" 
                                                 id="convert-to-gps-btn" 
                                                 title="Convertir LV95 → GPS">
-                                            <i class="fa fa-exchange-alt"></i>
+                                            <i class="fa fa-arrow-right"></i> GPS
                                         </button>
                                     </div>
                                 </div>
@@ -351,10 +372,10 @@
                                            aria-describedby="ch-n-help"
                                            placeholder="1200000">
                                     <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-secondary" 
+                                        <button type="button" class="btn btn-outline-success btn-sm" 
                                                 id="convert-to-lv95-btn" 
                                                 title="Convertir GPS → LV95">
-                                            <i class="fa fa-exchange-alt"></i>
+                                            <i class="fa fa-arrow-left"></i> LV95
                                         </button>
                                     </div>
                                 </div>
@@ -368,8 +389,27 @@
                     <div class="coordinate-conversion-help mb-3">
                         <div class="alert alert-info">
                             <strong><i class="fa fa-info-circle"></i> Conversion de coordonnées:</strong>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="text-center p-2 bg-light rounded border">
+                                        <strong class="text-primary">
+                                            <i class="fa fa-arrow-right"></i> LV95 → GPS
+                                        </strong>
+                                        <br>
+                                        <small>Remplissez les coordonnées LV95, cliquez sur <span class="btn btn-outline-primary btn-xs"><i class="fa fa-arrow-right"></i> GPS</span></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="text-center p-2 bg-light rounded border">
+                                        <strong class="text-success">
+                                            <i class="fa fa-arrow-left"></i> GPS → LV95
+                                        </strong>
+                                        <br>
+                                        <small>Remplissez les coordonnées GPS, cliquez sur <span class="btn btn-outline-success btn-xs"><i class="fa fa-arrow-left"></i> LV95</span></small>
+                                    </div>
+                                </div>
+                            </div>
                             <ul class="mb-0 mt-2">
-                                <li>Utilisez <i class="fa fa-exchange-alt"></i> pour convertir entre GPS et LV95</li>
                                 <li>Les coordonnées GPS sont utilisées pour l'affichage sur cartes</li>
                                 <li>Les coordonnées LV95 sont le système officiel suisse</li>
                             </ul>

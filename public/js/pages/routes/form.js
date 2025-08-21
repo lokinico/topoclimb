@@ -7,19 +7,22 @@
 class RouteFormCascade {
     constructor() {
         this.regionSelect = document.getElementById('region_id');
+        this.siteSelect = document.getElementById('site_id');
         this.sectorSelect = document.getElementById('sector_id');
         this.sectorInfo = document.getElementById('sector-info');
-        this.loadingSpinner = document.querySelector('.loading-spinner');
+        this.siteLoadingSpinner = document.getElementById('site-loading');
+        this.sectorLoadingSpinner = document.getElementById('sector-loading');
         this.form = document.getElementById('route-form') || document.querySelector('form');
 
         this.currentRegionId = null;
+        this.currentSiteId = null;
         this.currentSectorId = null;
 
         this.init();
     }
 
     init() {
-        if (!this.regionSelect || !this.sectorSelect) {
+        if (!this.regionSelect || !this.siteSelect || !this.sectorSelect) {
             console.log('Sélecteurs cascade non trouvés - probablement en mode secteur fixe');
             return;
         }
@@ -28,13 +31,18 @@ class RouteFormCascade {
         this.setupInitialState();
         this.setupFormValidation();
 
-        console.log('RouteFormCascade initialisé');
+        console.log('RouteFormCascade initialisé avec cascade région→site→secteur');
     }
 
     bindEvents() {
         // Événement changement de région
         this.regionSelect.addEventListener('change', (e) => {
             this.onRegionChange(e.target.value);
+        });
+
+        // Événement changement de site
+        this.siteSelect.addEventListener('change', (e) => {
+            this.onSiteChange(e.target.value);
         });
 
         // Événement changement de secteur  
@@ -58,9 +66,16 @@ class RouteFormCascade {
     setupInitialState() {
         // Si on édite une voie existante ou qu'une région est présélectionnée
         const selectedRegionId = this.regionSelect.value;
+        const selectedSiteId = this.siteSelect.value;
+        
         if (selectedRegionId) {
             this.currentRegionId = selectedRegionId;
-            this.loadSectors(selectedRegionId, false); // false = pas de reset de la sélection
+            this.loadSites(selectedRegionId, false); // false = pas de reset de la sélection
+            
+            if (selectedSiteId) {
+                this.currentSiteId = selectedSiteId;
+                this.loadSectors(selectedSiteId, false); // false = pas de reset de la sélection
+            }
         }
     }
 
@@ -68,6 +83,7 @@ class RouteFormCascade {
         console.log('Changement région:', regionId);
 
         if (!regionId) {
+            this.resetSiteSelect();
             this.resetSectorSelect();
             return;
         }
@@ -77,21 +93,79 @@ class RouteFormCascade {
         }
 
         this.currentRegionId = regionId;
-        await this.loadSectors(regionId, true); // true = reset de la sélection
+        this.currentSiteId = null;
+        this.currentSectorId = null;
+        
+        await this.loadSites(regionId, true); // true = reset de la sélection
     }
 
-    async loadSectors(regionId, resetSelection = true) {
+    async onSiteChange(siteId) {
+        console.log('Changement site:', siteId);
+
+        if (!siteId) {
+            this.resetSectorSelect();
+            return;
+        }
+
+        if (siteId === this.currentSiteId) {
+            return; // Pas de changement
+        }
+
+        this.currentSiteId = siteId;
+        this.currentSectorId = null;
+        
+        await this.loadSectors(siteId, true); // true = reset de la sélection
+    }
+
+    async loadSites(regionId, resetSelection = true) {
         try {
-            this.showLoading(true);
+            this.showSiteLoading(true);
+            this.siteSelect.disabled = true;
+
+            if (resetSelection) {
+                this.resetSiteSelect();
+                this.resetSectorSelect();
+            }
+
+            console.log('Chargement sites pour région:', regionId);
+
+            const response = await fetch(`/api/regions/${regionId}/sites`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('Réponse API sites:', data);
+
+            if (!data.success) {
+                throw new Error(data.error || 'Erreur lors du chargement des sites');
+            }
+
+            this.populateSites(data.data);
+            this.siteSelect.disabled = false;
+
+        } catch (error) {
+            console.error('Erreur chargement sites:', error);
+            this.showError('Erreur lors du chargement des sites: ' + error.message);
+            this.resetSiteSelect();
+        } finally {
+            this.showSiteLoading(false);
+        }
+    }
+
+    async loadSectors(siteId, resetSelection = true) {
+        try {
+            this.showSectorLoading(true);
             this.sectorSelect.disabled = true;
 
             if (resetSelection) {
                 this.resetSectorSelect();
             }
 
-            console.log('Chargement secteurs pour région:', regionId);
+            console.log('Chargement secteurs pour site:', siteId);
 
-            const response = await fetch(`/api/regions/${regionId}/sectors`);
+            const response = await fetch(`/api/sites/${siteId}/sectors`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -112,8 +186,31 @@ class RouteFormCascade {
             this.showError('Erreur lors du chargement des secteurs: ' + error.message);
             this.resetSectorSelect();
         } finally {
-            this.showLoading(false);
+            this.showSectorLoading(false);
         }
+    }
+
+    populateSites(sites) {
+        console.log('Population sites:', sites.length, 'éléments');
+
+        // Vider et recréer les options
+        this.siteSelect.innerHTML = '';
+
+        // Option par défaut
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Sélectionnez un site...';
+        this.siteSelect.appendChild(defaultOption);
+
+        // Ajouter les sites
+        sites.forEach(site => {
+            const option = document.createElement('option');
+            option.value = site.id;
+            option.textContent = site.name;
+            this.siteSelect.appendChild(option);
+        });
+
+        console.log('Sites populés:', this.siteSelect.children.length - 1, 'sites');
     }
 
     populateSectors(sectors) {
@@ -143,12 +240,6 @@ class RouteFormCascade {
         });
 
         console.log('Secteurs populés:', this.sectorSelect.children.length - 1, 'secteurs');
-
-        // Maintenir la sélection existante si on ne reset pas
-        if (this.currentSectorId && !resetSelection) {
-            this.sectorSelect.value = this.currentSectorId;
-            this.updateSectorInfo();
-        }
     }
 
     onSectorChange(sectorId) {
@@ -190,14 +281,33 @@ class RouteFormCascade {
         this.sectorInfo.textContent = infoText.join(' • ');
     }
 
+    resetSiteSelect() {
+        this.siteSelect.innerHTML = '<option value="">Choisissez d\'abord une région...</option>';
+        this.siteSelect.disabled = true;
+        this.currentSiteId = null;
+        this.clearFieldError(this.siteSelect);
+    }
+
     resetSectorSelect() {
-        this.sectorSelect.innerHTML = '<option value="">Choisissez d\'abord une région...</option>';
+        this.sectorSelect.innerHTML = '<option value="">Choisissez d\'abord un site...</option>';
         this.sectorSelect.disabled = true;
         if (this.sectorInfo) {
             this.sectorInfo.textContent = '';
         }
         this.currentSectorId = null;
         this.clearFieldError(this.sectorSelect);
+    }
+
+    showSiteLoading(show) {
+        if (this.siteLoadingSpinner) {
+            this.siteLoadingSpinner.classList.toggle('d-none', !show);
+        }
+    }
+
+    showSectorLoading(show) {
+        if (this.sectorLoadingSpinner) {
+            this.sectorLoadingSpinner.classList.toggle('d-none', !show);
+        }
     }
 
     showLoading(show) {
@@ -222,6 +332,7 @@ class RouteFormCascade {
     setupFormValidation() {
         this.validationRules = {
             'region_id': { required: true },
+            'site_id': { required: true },
             'sector_id': { required: true },
             'name': { required: true, maxLength: 255 },
             'difficulty': { maxLength: 10 },

@@ -527,9 +527,21 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/api/regions/{region_id}/sites',
+        'controller' => \TopoclimbCH\Controllers\SiteController::class,
+        'action' => 'apiByRegion'
+    ],
+    [
+        'method' => 'GET',
         'path' => '/api/sectors',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'apiIndex'
+    ],
+    [
+        'method' => 'GET',
+        'path' => '/api/sites/{site_id}/sectors',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'apiBySite'
     ],
     [
         'method' => 'GET',
