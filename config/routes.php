@@ -142,6 +142,16 @@ return [
     ],
     [
         'method' => 'GET',
+        'path' => '/regions/create',
+        'controller' => \TopoclimbCH\Controllers\RegionController::class,
+        'action' => 'create',
+        'middlewares' => [
+            \TopoclimbCH\Middleware\AuthMiddleware::class,
+            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-climbing-data']
+        ]
+    ],
+    [
+        'method' => 'GET',
         'path' => '/regions/{id}',
         'controller' => \TopoclimbCH\Controllers\RegionController::class,
         'action' => 'show'
@@ -452,16 +462,6 @@ return [
     ],
 
     // Routes CRUD pour les régions (avec permissions)
-    [
-        'method' => 'GET',
-        'path' => '/regions/create',
-        'controller' => \TopoclimbCH\Controllers\RegionController::class,
-        'action' => 'create',
-        'middlewares' => [
-            \TopoclimbCH\Middleware\AuthMiddleware::class,
-            \TopoclimbCH\Middleware\PermissionMiddleware::class => ['manage-climbing-data']
-        ]
-    ],
     [
         'method' => 'POST',
         'path' => '/regions',

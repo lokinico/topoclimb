@@ -43,7 +43,7 @@
               id="site-form"
               data-site-id="{{ site.id|default('') }}"
               data-region-id="{{ site.region_id|default(region.id|default('')) }}"
-              autocomplete="on">
+              autocomplete="off">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if site %}

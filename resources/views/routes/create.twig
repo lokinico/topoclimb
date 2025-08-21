@@ -22,7 +22,7 @@
             <div class="card">
                 <div class="card-body">
                     <!-- CORRECTION: action pointe vers /routes au lieu de /routes/create -->
-                    <form method="post" action="{{ url('/routes') }}" enctype="multipart/form-data">
+                    <form method="post" action="{{ url('/routes/create') }}" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         
                         {% if not sector %}

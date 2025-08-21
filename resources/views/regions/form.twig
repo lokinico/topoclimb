@@ -42,7 +42,7 @@
               class="region-form-content" 
               id="region-form"
               data-region-id="{{ region.id|default('') }}"
-              autocomplete="on">
+              autocomplete="off">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if region.id %}

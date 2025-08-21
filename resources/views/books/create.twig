@@ -36,13 +36,13 @@
 
 <div class="row">
     <div class="col-lg-8">
-        <form action="{{ book.id ? url('/books/' ~ book.id) : url('/books') }}" 
+        <form action="{{ book.id ? url('/books/' ~ book.id) : url('/books/create') }}" 
               method="post" 
               enctype="multipart/form-data" 
               class="book-form-content" 
               id="book-form"
               data-book-id="{{ book.id|default('') }}"
-              autocomplete="on">
+              autocomplete="off">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if book.id %}

@@ -36,14 +36,14 @@
 
 <div class="row">
     <div class="col-lg-8">
-        <form action="{{ sector.id ? url('/sectors/' ~ sector.id) : url('/sectors') }}" 
+        <form action="{{ sector.id ? url('/sectors/' ~ sector.id) : url('/sectors/create') }}" 
               method="post" 
               enctype="multipart/form-data" 
               class="sector-form-content" 
               id="sector-form"
               data-sector-id="{{ sector.id|default('') }}"
               data-site-id="{{ sector.site_id|default(parent_site.id|default('')) }}"
-              autocomplete="on">
+              autocomplete="off">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if sector.id %}

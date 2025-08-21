@@ -38,14 +38,14 @@
 </div>
 <div class="row">
     <div class="col-lg-8">
-        <form action="{{ route.id ? url('/routes/' ~ route.id) : url('/routes') }}" 
+        <form action="{{ route.id ? url('/routes/' ~ route.id) : url('/routes/create') }}" 
               method="post" 
               enctype="multipart/form-data" 
               class="route-form-content" 
               id="route-form"
               data-route-id="{{ route.id|default('') }}"
               data-sector-id="{{ sector.id|default(route.sector_id|default('')) }}"
-              autocomplete="on">
+              autocomplete="off">
             
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if route.id %}
