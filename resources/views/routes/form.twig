@@ -662,10 +662,14 @@
 
 <!-- TopoclimbCH JavaScript Components -->
 <script src="/js/coordinate-converter.js"></script>
+<script src="/js/pages/routes/form.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📝 Initialisation gestionnaire de formulaire voie TopoclimbCH');
+    
+    // Initialiser la cascade région → site → secteur
+    const routeCascade = new RouteFormCascade();
     
     try {
         // Initialiser le gestionnaire de formulaire avec coordonnées existantes

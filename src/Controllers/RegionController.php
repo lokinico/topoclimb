@@ -711,8 +711,14 @@ class RegionController extends BaseController
 
         // Validation supplémentaire pour coordonnées cohérentes
         if (isset($validatedData['coordinates_lat']) && isset($validatedData['coordinates_lng'])) {
-            if (!$this->areCoordinatesInSwitzerland($validatedData['coordinates_lat'], $validatedData['coordinates_lng'])) {
-                throw new ValidationException('Les coordonnées doivent être situées en Suisse');
+            // Vérifier que les coordonnées ne sont pas vides
+            $lat = $validatedData['coordinates_lat'];
+            $lng = $validatedData['coordinates_lng'];
+            
+            if (!empty($lat) && !empty($lng) && is_numeric($lat) && is_numeric($lng)) {
+                if (!$this->areCoordinatesInSwitzerland((float)$lat, (float)$lng)) {
+                    throw new ValidationException(['coordinates' => 'Les coordonnées doivent être situées en Suisse']);
+                }
             }
         }
 
@@ -1304,8 +1310,14 @@ class RegionController extends BaseController
 
         // Validation supplémentaire pour coordonnées cohérentes
         if (isset($validatedData['coordinates_lat']) && isset($validatedData['coordinates_lng'])) {
-            if (!$this->areCoordinatesInSwitzerland($validatedData['coordinates_lat'], $validatedData['coordinates_lng'])) {
-                throw new ValidationException('Les coordonnées doivent être situées en Suisse');
+            // Vérifier que les coordonnées ne sont pas vides
+            $lat = $validatedData['coordinates_lat'];
+            $lng = $validatedData['coordinates_lng'];
+            
+            if (!empty($lat) && !empty($lng) && is_numeric($lat) && is_numeric($lng)) {
+                if (!$this->areCoordinatesInSwitzerland((float)$lat, (float)$lng)) {
+                    throw new ValidationException(['coordinates' => 'Les coordonnées doivent être situées en Suisse']);
+                }
             }
         }
 

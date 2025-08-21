@@ -580,6 +580,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📝 Initialisation gestionnaire de formulaire site TopoclimbCH');
     
+    // Initialiser la cascade région (diagnostique)
+    initializeBasicRegionCascade();
+    
     try {
         // Initialiser le gestionnaire de formulaire avec coordonnées existantes
         const formManager = new SiteFormManager({
@@ -773,6 +776,27 @@ function showNotification(message, type = 'info') {
         // Fallback vers alert
         alert(message);
     }
+}
+
+/**
+ * Initialise la cascade région → site pour le formulaire sites
+ * Fonction basique pour diagnostiquer et corriger le problème
+ */
+function initializeBasicRegionCascade() {
+    console.log('🔗 Initialisation cascade région pour formulaire sites');
+    
+    const regionSelect = document.getElementById('region_id');
+    
+    if (!regionSelect) {
+        console.log('⚠️  Pas de sélecteur région trouvé - OK si édition');
+        return;
+    }
+    
+    console.log('✅ Sélecteur région trouvé - mode création');
+    
+    // Pas de cascade nécessaire pour le formulaire sites
+    // (les sites n'ont pas de sous-éléments à charger dynamiquement dans ce formulaire)
+    console.log('ℹ️  Cascade région → site non nécessaire pour formulaire sites');
 }
 </script>
 
