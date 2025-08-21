@@ -94,6 +94,7 @@ abstract class BaseController
             $this->session->flash('old', $cleanData);
 
             throw new ValidationException(
+                $validator->getErrors(),
                 "Validation échouée: " . json_encode($validator->getErrors())
             );
         }
@@ -210,7 +211,7 @@ abstract class BaseController
     protected function validateId(mixed $id, string $context = 'ID'): int
     {
         if (!$id || !is_numeric($id) || (int)$id <= 0) {
-            throw new ValidationException("$context invalide");
+            throw new ValidationException(["$context" => 'invalide'], "$context invalide");
         }
 
         return (int)$id;
@@ -223,7 +224,7 @@ abstract class BaseController
     {
         if (!$entity) {
             $this->flash('error', $message);
-            throw new ValidationException($message);
+            throw new ValidationException(['entity' => 'not_found'], $message);
         }
         return $entity;
     }
