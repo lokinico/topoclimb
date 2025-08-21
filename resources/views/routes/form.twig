@@ -82,10 +82,10 @@
                             <div class="col-md-4">
                                 <div class="form-group mb-3">
                                     <label for="site_id" class="form-label">
-                                        Site <span class="text-danger">*</span>
+                                        Site (optionnel)
                                     </label>
                                     <div class="position-relative">
-                                        <select class="form-control" id="site_id" name="site_id" required disabled aria-describedby="site-help">
+                                        <select class="form-control" id="site_id" name="site_id" disabled aria-describedby="site-help">
                                             <option value="">Choisissez d'abord une région...</option>
                                             {% if selected_site %}
                                                 <option value="{{ selected_site.id }}" selected>{{ selected_site.name }}</option>
@@ -664,12 +664,25 @@
 <script src="/js/coordinate-converter.js"></script>
 <script src="/js/pages/routes/form.js"></script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📝 Initialisation gestionnaire de formulaire voie TopoclimbCH');
     
+    // DEBUG : Vérifier la disponibilité du script
+    console.log('🔍 DEBUG: Script routes/form.js chargé?', typeof RouteFormCascade !== 'undefined');
+    console.log('🔍 DEBUG: Éléments DOM trouvés?', {
+        region_id: !!document.getElementById('region_id'),
+        site_id: !!document.getElementById('site_id'), 
+        sector_id: !!document.getElementById('sector_id')
+    });
+    
     // Initialiser la cascade région → site → secteur
-    const routeCascade = new RouteFormCascade();
+    if (typeof RouteFormCascade !== 'undefined') {
+        const routeCascade = new RouteFormCascade();
+        console.log('✅ RouteFormCascade initialisé');
+    } else {
+        console.error('❌ RouteFormCascade non trouvé - script non chargé');
+    }
     
     try {
         // Initialiser le gestionnaire de formulaire avec coordonnées existantes
