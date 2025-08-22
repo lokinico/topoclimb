@@ -311,7 +311,7 @@ class SiteController extends BaseController
             );
 
             return $this->render('sites/form', [
-                'site' => (object)[],
+                'site' => null,
                 'regions' => $regions,
                 'csrf_token' => $this->createCsrfToken(),
                 'is_edit' => false
@@ -375,7 +375,7 @@ class SiteController extends BaseController
             );
 
             return $this->render('sites/form', [
-                'site' => (object)[],
+                'site' => null,
                 'regions' => $regions,
                 'csrf_token' => $this->createCsrfToken(),
                 'is_edit' => false

@@ -482,6 +482,7 @@ class RouteController extends BaseController
                 'regions' => $regions,
                 'difficulty_systems' => $difficulty_systems,
                 'csrf_token' => $this->createCsrfToken(),
+                'csp_nonce' => $this->generateCspNonce(),
                 'is_edit' => false
             ]);
         } catch (\Exception $e) {
@@ -658,6 +659,10 @@ class RouteController extends BaseController
                 throw new \Exception('Impossible de créer la voie');
             }
             
+        } catch (\InvalidArgumentException $e) {
+            // Erreurs de validation - retourner au formulaire avec message
+            $this->flash('error', $e->getMessage());
+            return $this->redirect('/routes/create');
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors de la création de la voie');
             return $this->redirect('/routes/create');
@@ -677,13 +682,14 @@ class RouteController extends BaseController
             'description' => trim($request->request->get('description', '')),
             'active' => (int)$request->request->get('active', 1)
         ];
+        
 
         // Validation des champs obligatoires
         if (empty($data['name'])) {
             throw new \InvalidArgumentException('Le nom de la voie est obligatoire');
         }
 
-        if (empty($data['difficulty'])) {
+        if (empty($data['difficulty']) || trim($data['difficulty']) === '') {
             throw new \InvalidArgumentException('La difficulté est obligatoire');
         }
 

@@ -309,7 +309,7 @@ return [
         'path' => '/routes/create',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'store',
-        'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class, \TopoclimbCH\Middleware\CsrfMiddleware::class]
     ],
     [
         'method' => 'GET',

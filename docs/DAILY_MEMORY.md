@@ -2,7 +2,137 @@
 
 > Journal des actions effectuées par jour pour ne rien oublier
 
-## 📅 21 Août 2025 - 09:30
+## 📅 **Mercredi 21 Août 2025**
+
+### 🎯 **SESSION: Correction formulaires create/edit**
+
+#### 🔧 **Problèmes traités**
+
+1. **ValidationException Constructor Bug** ✅ **RÉSOLU**
+   - **Problème**: `ValidationException::__construct(): Argument #1 ($errors) must be of type array, string given`
+   - **Cause**: BaseController passait string au lieu d'array au constructor ValidationException
+   - **Solution**: Correction des appels dans BaseController.php:
+     ```php
+     // AVANT
+     throw new ValidationException("Validation échouée: " . json_encode($validator->getErrors()));
+     
+     // APRÈS  
+     throw new ValidationException(
+         $validator->getErrors(),
+         "Validation échouée: " . json_encode($validator->getErrors())
+     );
+     ```
+   - **Commit**: `3c5124b - 🐛 fix: correction ValidationException constructor arguments`
+
+2. **Content Security Policy (CSP) JavaScript** ✅ **RÉSOLU**
+   - **Problème**: Scripts inline bloqués par CSP dans routes/form.twig
+   - **Cause**: Script inline sans nonce CSP
+   - **Solution**: Ajout nonce CSP au script inline:
+     ```twig
+     <script nonce="{{ csp_nonce }}">
+     ```
+   - **Commit**: `0da3dad - 🔐 fix: ajout nonce CSP pour script inline routes/form`
+
+3. **Static File Serving** ✅ **DÉJÀ CORRIGÉ**
+   - **Problème**: Fichiers JS/CSS servis avec mauvais MIME types
+   - **Solution**: Router `/public/router.php` avec mapping MIME correct
+   - **Status**: Fonctionnel - JavaScript RouteFormCascade se charge correctement
+
+#### 🚧 **Travail en cours**
+
+4. **Routes Form Cascade** 🔄 **EN COURS**
+   - **Objectif**: Cascade région→site→secteur fonctionnelle dans routes/create
+   - **Progress**:
+     - ✅ Script RouteFormCascade se charge
+     - ✅ CSP nonce résolu
+     - ✅ APIs /api/regions/{id}/sites et /api/sites/{id}/sectors fonctionnelles
+     - ❌ Problème d'authentification empêche test complet
+   - **Blocage actuel**: Login admin renvoie erreur 500 malgré correction ValidationException
+   - **Next**: Déboguer authentification complètement
+
+#### 📊 **État des tâches**
+
+| Tâche | Status | Détail |
+|-------|--------|--------|
+| ROUTES: Site optionnel | ✅ DONE | Champ site marqué optionnel dans form.twig |
+| SITES: Redirection create | ✅ DONE | SiteController::create() corrigé (null au lieu objet vide) |
+| ValidationException bug | ✅ DONE | Constructor arguments corrigés |
+| CSP nonce JavaScript | ✅ DONE | Script inline autorisé |
+| **ROUTES: Cascade région→site→secteur** | 🔄 **WIP** | **Authentification à déboguer** |
+| SECTORS: Sélecteur site | ⏳ PENDING | À traiter après cascade routes |
+| ROUTES: Validation difficulté | ⏳ PENDING | À traiter après cascade routes |
+
+#### 🎯 **Tests effectués**
+
+- ✅ **API Endpoints**: 
+  - `/api/regions/1/sites` → 200 OK, 3 sites
+  - `/api/sites/1/sectors` → 200 OK, 4 secteurs
+- ✅ **JavaScript Loading**: RouteFormCascade se charge correctement
+- ✅ **Static Files**: CSS/JS servis avec bons MIME types
+- ❌ **Login Flow**: Erreur 500 malgré correction ValidationException
+
+#### 📝 **Actions pour demain**
+
+1. **PRIORITÉ 1**: Déboguer complètement le login admin
+   - Vérifier pourquoi erreur 500 persiste après correction ValidationException
+   - Tester login avec traces détaillées
+   - S'assurer que routes/create est accessible après login
+
+2. **PRIORITÉ 2**: Finaliser cascade JavaScript routes/create
+   - Tester sélecteurs région→site→secteur en conditions réelles
+   - Vérifier que dropdowns se dégristent correctement
+   - Valider soumission formulaire
+
+3. **PRIORITÉ 3**: Corrections formulaires restants
+   - SECTORS: Sélecteur site d'escalade non accessible
+   - ROUTES: Erreur validation difficulté obligatoire
+
+#### 🔍 **Notes techniques**
+
+**ValidationException Fix**:
+```php
+// Pattern correct pour ValidationException
+throw new ValidationException(
+    ['field' => 'error_message'],  // Array d'erreurs
+    'Message human readable'        // Message général
+);
+```
+
+**CSP Nonce Usage**:
+```twig
+<script nonce="{{ csp_nonce }}">
+// Script inline autorisé
+</script>
+```
+
+**API Endpoints confirmés**:
+- GET `/api/regions/{id}/sites` ✅
+- GET `/api/sites/{id}/sectors` ✅
+
+#### 📂 **Fichiers modifiés aujourd'hui**
+
+- `/src/Controllers/BaseController.php` - Fix ValidationException calls
+- `/resources/views/routes/form.twig` - Ajout CSP nonce script inline  
+- **Commits**: `0da3dad`, `3c5124b`
+
+---
+
+## 📋 **Notes de session**
+
+- Architecture MVC solide, problèmes principalement sur edge cases
+- JavaScript RouteFormCascade bien structuré et fonctionnel  
+- APIs backend répondent correctement avec données
+- Reste principalement problème d'auth à résoudre pour finaliser
+
+**Status global**: 🟡 **En cours** - Bonnes fondations, quelques bugs d'intégration à corriger
+
+---
+
+*Dernière mise à jour: 21 Août 2025 17:20*
+
+---
+
+## 📅 21 Août 2025 - 09:30 (ARCHIVÉ)
 
 ### 🎨 **STANDARDISATION COMPLÈTE TEMPLATES - MISSION ACCOMPLIE** ✅
 
