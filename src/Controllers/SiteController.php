@@ -141,7 +141,8 @@ class SiteController extends BaseController
                     'search' => $search,
                     'sort_by' => $sortBy,
                     'sort_dir' => $sortDir
-                ]
+                ],
+                'csp_nonce' => $this->generateCspNonce()
             ]);
         } catch (\Exception $e) {
             $this->session->flash('error', 'Une erreur est survenue lors du chargement des sites: ' . $e->getMessage());

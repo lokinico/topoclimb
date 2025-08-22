@@ -42,4 +42,383 @@ TopoclimbCH.modules.register('api', ['utils'], (utils) => {
         constructor(options = {}) {
             this.baseUrl = options.baseUrl || TopoclimbCH.config.apiBaseUrl;
             this.timeout = options.timeout || TopoclimbCH.config.apiTimeout;
-            this.headers = {\n                'Content-Type': 'application/json',\n                'Accept': 'application/json',\n                ...options.headers\n            };\n            \n            // Intercepteurs\n            this.requestInterceptors = [];\n            this.responseInterceptors = [];\n            \n            // Cache des requêtes\n            this.cache = new Map();\n            this.cacheTimeout = options.cacheTimeout || 300000; // 5 minutes\n            \n            // Statistiques\n            this.stats = {\n                requests: 0,\n                errors: 0,\n                cacheHits: 0,\n                totalTime: 0\n            };\n        }\n        \n        /**\n         * Ajoute un intercepteur de requête\n         */\n        addRequestInterceptor(interceptor) {\n            this.requestInterceptors.push(interceptor);\n            return this;\n        }\n        \n        /**\n         * Ajoute un intercepteur de réponse\n         */\n        addResponseInterceptor(interceptor) {\n            this.responseInterceptors.push(interceptor);\n            return this;\n        }\n        \n        /**\n         * Requête HTTP générique\n         */\n        async request(url, options = {}) {\n            const startTime = performance.now();\n            this.stats.requests++;\n            \n            try {\n                // Construction de l'URL complète\n                const fullUrl = this._buildUrl(url, options.params);\n                \n                // Vérification du cache\n                if (options.method === 'GET' || !options.method) {\n                    const cached = this._getFromCache(fullUrl);\n                    if (cached) {\n                        this.stats.cacheHits++;\n                        return cached;\n                    }\n                }\n                \n                // Configuration de la requête\n                const config = {\n                    method: 'GET',\n                    headers: { ...this.headers },\n                    ...options\n                };\n                \n                // Suppression des paramètres custom\n                delete config.params;\n                delete config.cache;\n                delete config.retry;\n                \n                // Application des intercepteurs de requête\n                for (const interceptor of this.requestInterceptors) {\n                    await interceptor(config);\n                }\n                \n                // Exécution de la requête avec timeout\n                const response = await this._fetchWithTimeout(fullUrl, config);\n                \n                // Application des intercepteurs de réponse\n                for (const interceptor of this.responseInterceptors) {\n                    await interceptor(response);\n                }\n                \n                // Parsing de la réponse\n                const data = await this._parseResponse(response);\n                \n                // Mise en cache pour les GET\n                if ((options.method === 'GET' || !options.method) && options.cache !== false) {\n                    this._setCache(fullUrl, data);\n                }\n                \n                // Mise à jour des statistiques\n                this.stats.totalTime += performance.now() - startTime;\n                \n                TopoclimbCH.events.emit('api:success', {\n                    url: fullUrl,\n                    method: config.method,\n                    data,\n                    duration: performance.now() - startTime\n                });\n                \n                return data;\n                \n            } catch (error) {\n                this.stats.errors++;\n                this.stats.totalTime += performance.now() - startTime;\n                \n                TopoclimbCH.events.emit('api:error', {\n                    url,\n                    error,\n                    duration: performance.now() - startTime\n                });\n                \n                // Retry automatique si configuré\n                if (options.retry && options.retry > 0) {\n                    const retryOptions = { ...options, retry: options.retry - 1 };\n                    await utils.sleep(1000); // Attente avant retry\n                    return this.request(url, retryOptions);\n                }\n                \n                throw error;\n            }\n        }\n        \n        /**\n         * Méthodes HTTP simplifiées\n         */\n        async get(url, params = {}, options = {}) {\n            return this.request(url, {\n                method: 'GET',\n                params,\n                ...options\n            });\n        }\n        \n        async post(url, data = {}, options = {}) {\n            return this.request(url, {\n                method: 'POST',\n                body: JSON.stringify(data),\n                ...options\n            });\n        }\n        \n        async put(url, data = {}, options = {}) {\n            return this.request(url, {\n                method: 'PUT',\n                body: JSON.stringify(data),\n                ...options\n            });\n        }\n        \n        async patch(url, data = {}, options = {}) {\n            return this.request(url, {\n                method: 'PATCH',\n                body: JSON.stringify(data),\n                ...options\n            });\n        }\n        \n        async delete(url, options = {}) {\n            return this.request(url, {\n                method: 'DELETE',\n                ...options\n            });\n        }\n        \n        /**\n         * APIs spécifiques TopoclimbCH\n         */\n        \n        // Régions\n        async getRegions(params = {}) {\n            return this.get('/api/regions', params);\n        }\n        \n        async getRegion(id) {\n            return this.get(`/api/regions/${id}`);\n        }\n        \n        // Sites\n        async getSites(params = {}) {\n            return this.get('/api/sites', params);\n        }\n        \n        async getSite(id) {\n            return this.get(`/api/sites/${id}`);\n        }\n        \n        // Secteurs\n        async getSectors(params = {}) {\n            return this.get('/api/sectors', params);\n        }\n        \n        async getSector(id) {\n            return this.get(`/api/sectors/${id}`);\n        }\n        \n        // Voies\n        async getRoutes(params = {}) {\n            return this.get('/api/routes', params);\n        }\n        \n        async getRoute(id) {\n            return this.get(`/api/routes/${id}`);\n        }\n        \n        // Géolocalisation\n        async getNearestSites(lat, lng, radius = 50, limit = 10) {\n            return this.get('/api/geolocation/nearest-sites', {\n                lat, lng, radius, limit\n            });\n        }\n        \n        async getNearestSectors(lat, lng, radius = 50, limit = 10) {\n            return this.get('/api/geolocation/nearest-sectors', {\n                lat, lng, radius, limit\n            });\n        }\n        \n        async reverseGeocode(lat, lng) {\n            return this.get('/api/geolocation/reverse-geocode', { lat, lng });\n        }\n        \n        // Météo\n        async getWeather(lat, lng) {\n            return this.get('/api/weather/current', { lat, lng }, {\n                cache: true\n            });\n        }\n        \n        // Médias\n        async deleteMedia(mediaId, csrfToken) {\n            return this.delete(`/api/media/${mediaId}`, {\n                headers: {\n                    'X-CSRF-Token': csrfToken\n                }\n            });\n        }\n        \n        /**\n         * Méthodes utilitaires internes\n         */\n        \n        _buildUrl(endpoint, params = {}) {\n            const url = new URL(endpoint, this.baseUrl || window.location.origin);\n            \n            Object.keys(params).forEach(key => {\n                if (params[key] !== null && params[key] !== undefined) {\n                    url.searchParams.append(key, params[key]);\n                }\n            });\n            \n            return url.toString();\n        }\n        \n        async _fetchWithTimeout(url, options) {\n            const controller = new AbortController();\n            const timeoutId = setTimeout(() => controller.abort(), this.timeout);\n            \n            try {\n                const response = await fetch(url, {\n                    ...options,\n                    signal: controller.signal\n                });\n                \n                clearTimeout(timeoutId);\n                return response;\n                \n            } catch (error) {\n                clearTimeout(timeoutId);\n                \n                if (error.name === 'AbortError') {\n                    throw new TimeoutError(`Request timeout (${this.timeout}ms)`, { url, options });\n                }\n                \n                throw new NetworkError(error.message, { url, options });\n            }\n        }\n        \n        async _parseResponse(response) {\n            if (!response.ok) {\n                let errorData;\n                try {\n                    errorData = await response.json();\n                } catch (e) {\n                    errorData = { message: response.statusText };\n                }\n                \n                throw new ApiError(\n                    errorData.message || `HTTP ${response.status}: ${response.statusText}`,\n                    response.status,\n                    errorData,\n                    response.url\n                );\n            }\n            \n            const contentType = response.headers.get('content-type');\n            if (contentType && contentType.includes('application/json')) {\n                return await response.json();\n            }\n            \n            return await response.text();\n        }\n        \n        _getFromCache(url) {\n            const cached = this.cache.get(url);\n            if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {\n                return cached.data;\n            }\n            \n            this.cache.delete(url);\n            return null;\n        }\n        \n        _setCache(url, data) {\n            this.cache.set(url, {\n                data,\n                timestamp: Date.now()\n            });\n            \n            // Nettoyage automatique du cache\n            if (this.cache.size > 100) {\n                const oldestKey = this.cache.keys().next().value;\n                this.cache.delete(oldestKey);\n            }\n        }\n        \n        /**\n         * Utilitaires publiques\n         */\n        \n        clearCache() {\n            this.cache.clear();\n        }\n        \n        getStats() {\n            return {\n                ...this.stats,\n                averageTime: this.stats.requests > 0 ? this.stats.totalTime / this.stats.requests : 0,\n                errorRate: this.stats.requests > 0 ? this.stats.errors / this.stats.requests : 0,\n                cacheHitRate: this.stats.requests > 0 ? this.stats.cacheHits / this.stats.requests : 0\n            };\n        }\n    }\n    \n    // Instance globale du client API\n    const api = new ApiClient();\n    \n    // Intercepteur pour ajouter le token CSRF automatiquement\n    api.addRequestInterceptor(async (config) => {\n        const token = document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content');\n        if (token && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method)) {\n            config.headers['X-CSRF-Token'] = token;\n        }\n    });\n    \n    // Intercepteur pour le debug\n    if (TopoclimbCH.debug) {\n        api.addRequestInterceptor(async (config) => {\n            console.log(`🔄 API Request: ${config.method} ${config.url}`, config);\n        });\n        \n        api.addResponseInterceptor(async (response) => {\n            console.log(`✅ API Response: ${response.status} ${response.url}`);\n        });\n    }\n    \n    // Exposer dans le namespace global\n    TopoclimbCH.api = api;\n    \n    // Exposer les classes d'erreur\n    TopoclimbCH.ApiError = ApiError;\n    TopoclimbCH.NetworkError = NetworkError;\n    TopoclimbCH.TimeoutError = TimeoutError;\n    \n    return api;\n});\n\nconsole.log('🌐 TopoclimbCH API module ready');
+            this.headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...options.headers
+            };
+            
+            // Intercepteurs
+            this.requestInterceptors = [];
+            this.responseInterceptors = [];
+            
+            // Cache des requêtes
+            this.cache = new Map();
+            this.cacheTimeout = options.cacheTimeout || 300000; // 5 minutes
+            
+            // Statistiques
+            this.stats = {
+                requests: 0,
+                errors: 0,
+                cacheHits: 0,
+                totalTime: 0
+            };
+        }
+        
+        /**
+         * Ajoute un intercepteur de requête
+         */
+        addRequestInterceptor(interceptor) {
+            this.requestInterceptors.push(interceptor);
+            return this;
+        }
+        
+        /**
+         * Ajoute un intercepteur de réponse
+         */
+        addResponseInterceptor(interceptor) {
+            this.responseInterceptors.push(interceptor);
+            return this;
+        }
+        
+        /**
+         * Requête HTTP générique
+         */
+        async request(url, options = {}) {
+            const startTime = performance.now();
+            this.stats.requests++;
+            
+            try {
+                // Construction de l'URL complète
+                const fullUrl = this._buildUrl(url, options.params);
+                
+                // Vérification du cache
+                if (options.method === 'GET' || !options.method) {
+                    const cached = this._getFromCache(fullUrl);
+                    if (cached) {
+                        this.stats.cacheHits++;
+                        return cached;
+                    }
+                }
+                
+                // Configuration de la requête
+                const config = {
+                    method: 'GET',
+                    headers: { ...this.headers },
+                    ...options
+                };
+                
+                // Suppression des paramètres custom
+                delete config.params;
+                delete config.cache;
+                delete config.retry;
+                
+                // Application des intercepteurs de requête
+                for (const interceptor of this.requestInterceptors) {
+                    await interceptor(config);
+                }
+                
+                // Exécution de la requête avec timeout
+                const response = await this._fetchWithTimeout(fullUrl, config);
+                
+                // Application des intercepteurs de réponse
+                for (const interceptor of this.responseInterceptors) {
+                    await interceptor(response);
+                }
+                
+                // Parsing de la réponse
+                const data = await this._parseResponse(response);
+                
+                // Mise en cache pour les GET
+                if ((options.method === 'GET' || !options.method) && options.cache !== false) {
+                    this._setCache(fullUrl, data);
+                }
+                
+                // Mise à jour des statistiques
+                this.stats.totalTime += performance.now() - startTime;
+                
+                TopoclimbCH.events.emit('api:success', {
+                    url: fullUrl,
+                    method: config.method,
+                    data,
+                    duration: performance.now() - startTime
+                });
+                
+                return data;
+                
+            } catch (error) {
+                this.stats.errors++;
+                this.stats.totalTime += performance.now() - startTime;
+                
+                TopoclimbCH.events.emit('api:error', {
+                    url,
+                    error,
+                    duration: performance.now() - startTime
+                });
+                
+                // Retry automatique si configuré
+                if (options.retry && options.retry > 0) {
+                    const retryOptions = { ...options, retry: options.retry - 1 };
+                    await utils.sleep(1000); // Attente avant retry
+                    return this.request(url, retryOptions);
+                }
+                
+                throw error;
+            }
+        }
+        
+        /**
+         * Méthodes HTTP simplifiées
+         */
+        async get(url, params = {}, options = {}) {
+            return this.request(url, {
+                method: 'GET',
+                params,
+                ...options
+            });
+        }
+        
+        async post(url, data = {}, options = {}) {
+            return this.request(url, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                ...options
+            });
+        }
+        
+        async put(url, data = {}, options = {}) {
+            return this.request(url, {
+                method: 'PUT',
+                body: JSON.stringify(data),
+                ...options
+            });
+        }
+        
+        async patch(url, data = {}, options = {}) {
+            return this.request(url, {
+                method: 'PATCH',
+                body: JSON.stringify(data),
+                ...options
+            });
+        }
+        
+        async delete(url, options = {}) {
+            return this.request(url, {
+                method: 'DELETE',
+                ...options
+            });
+        }
+        
+        /**
+         * APIs spécifiques TopoclimbCH
+         */
+        
+        // Régions
+        async getRegions(params = {}) {
+            return this.get('/api/regions', params);
+        }
+        
+        async getRegion(id) {
+            return this.get(`/api/regions/${id}`);
+        }
+        
+        // Sites
+        async getSites(params = {}) {
+            return this.get('/api/sites', params);
+        }
+        
+        async getSite(id) {
+            return this.get(`/api/sites/${id}`);
+        }
+        
+        // Secteurs
+        async getSectors(params = {}) {
+            return this.get('/api/sectors', params);
+        }
+        
+        async getSector(id) {
+            return this.get(`/api/sectors/${id}`);
+        }
+        
+        // Voies
+        async getRoutes(params = {}) {
+            return this.get('/api/routes', params);
+        }
+        
+        async getRoute(id) {
+            return this.get(`/api/routes/${id}`);
+        }
+        
+        // Géolocalisation
+        async getNearestSites(lat, lng, radius = 50, limit = 10) {
+            return this.get('/api/geolocation/nearest-sites', {
+                lat, lng, radius, limit
+            });
+        }
+        
+        async getNearestSectors(lat, lng, radius = 50, limit = 10) {
+            return this.get('/api/geolocation/nearest-sectors', {
+                lat, lng, radius, limit
+            });
+        }
+        
+        async reverseGeocode(lat, lng) {
+            return this.get('/api/geolocation/reverse-geocode', { lat, lng });
+        }
+        
+        // Météo
+        async getWeather(lat, lng) {
+            return this.get('/api/weather/current', { lat, lng }, {
+                cache: true
+            });
+        }
+        
+        // Médias
+        async deleteMedia(mediaId, csrfToken) {
+            return this.delete(`/api/media/${mediaId}`, {
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+        }
+        
+        /**
+         * Méthodes utilitaires internes
+         */
+        
+        _buildUrl(endpoint, params = {}) {
+            const url = new URL(endpoint, this.baseUrl || window.location.origin);
+            
+            Object.keys(params).forEach(key => {
+                if (params[key] !== null && params[key] !== undefined) {
+                    url.searchParams.append(key, params[key]);
+                }
+            });
+            
+            return url.toString();
+        }
+        
+        async _fetchWithTimeout(url, options) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+            
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                return response;
+                
+            } catch (error) {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    throw new TimeoutError(`Request timeout (${this.timeout}ms)`, { url, options });
+                }
+                
+                throw new NetworkError(error.message, { url, options });
+            }
+        }
+        
+        async _parseResponse(response) {
+            if (!response.ok) {
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    errorData = { message: response.statusText };
+                }
+                
+                throw new ApiError(
+                    errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+                    response.status,
+                    errorData,
+                    response.url
+                );
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            }
+            
+            return await response.text();
+        }
+        
+        _getFromCache(url) {
+            const cached = this.cache.get(url);
+            if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+                return cached.data;
+            }
+            
+            this.cache.delete(url);
+            return null;
+        }
+        
+        _setCache(url, data) {
+            this.cache.set(url, {
+                data,
+                timestamp: Date.now()
+            });
+            
+            // Nettoyage automatique du cache
+            if (this.cache.size > 100) {
+                const oldestKey = this.cache.keys().next().value;
+                this.cache.delete(oldestKey);
+            }
+        }
+        
+        /**
+         * Utilitaires publiques
+         */
+        
+        clearCache() {
+            this.cache.clear();
+        }
+        
+        getStats() {
+            return {
+                ...this.stats,
+                averageTime: this.stats.requests > 0 ? this.stats.totalTime / this.stats.requests : 0,
+                errorRate: this.stats.requests > 0 ? this.stats.errors / this.stats.requests : 0,
+                cacheHitRate: this.stats.requests > 0 ? this.stats.cacheHits / this.stats.requests : 0
+            };
+        }
+    }
+    
+    // Instance globale du client API
+    const api = new ApiClient();
+    
+    // Intercepteur pour ajouter le token CSRF automatiquement
+    api.addRequestInterceptor(async (config) => {
+        const token = document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content');
+        if (token && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method)) {
+            config.headers['X-CSRF-Token'] = token;
+        }
+    });
+    
+    // Intercepteur pour le debug
+    if (TopoclimbCH.debug) {
+        api.addRequestInterceptor(async (config) => {
+            console.log(`🔄 API Request: ${config.method} ${config.url}`, config);
+        });
+        
+        api.addResponseInterceptor(async (response) => {
+            console.log(`✅ API Response: ${response.status} ${response.url}`);
+        });
+    }
+    
+    // Exposer dans le namespace global
+    TopoclimbCH.api = api;
+    
+    // Exposer les classes d'erreur
+    TopoclimbCH.ApiError = ApiError;
+    TopoclimbCH.NetworkError = NetworkError;
+    TopoclimbCH.TimeoutError = TimeoutError;
+    
+    return api;
+});
+
+console.log('🌐 TopoclimbCH API module ready');

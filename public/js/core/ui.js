@@ -43,4 +43,573 @@ TopoclimbCH.modules.register('ui', ['utils'], (utils) => {
             document.body.appendChild(overlay);
         }
         
-        bindEvents() {\n            // Délégation d'événements pour les déclencheurs\n            document.addEventListener('click', (e) => {\n                const trigger = e.target.closest('[data-modal]');\n                if (trigger) {\n                    e.preventDefault();\n                    const modalId = trigger.dataset.modal;\n                    this.open(modalId);\n                }\n                \n                // Fermeture par clic sur overlay\n                if (e.target.classList.contains('modal-overlay')) {\n                    this.close();\n                }\n                \n                // Fermeture par bouton close\n                if (e.target.closest('[data-modal-close]')) {\n                    this.close();\n                }\n            });\n            \n            // Fermeture par Escape\n            document.addEventListener('keydown', (e) => {\n                if (e.key === 'Escape' && this.activeModal) {\n                    this.close();\n                }\n            });\n        }\n        \n        open(modalId, options = {}) {\n            const modal = document.getElementById(modalId);\n            if (!modal) {\n                console.warn(`Modal ${modalId} not found`);\n                return;\n            }\n            \n            const { closeOnOverlay = true, closeOnEscape = true } = options;\n            \n            // Empiler la modale précédente\n            if (this.activeModal) {\n                this.stack.push(this.activeModal);\n                this.activeModal.style.display = 'none';\n            }\n            \n            this.activeModal = modal;\n            \n            // Affichage\n            const overlay = document.querySelector('.modal-overlay');\n            overlay.style.visibility = 'visible';\n            overlay.style.opacity = '1';\n            \n            modal.style.display = 'block';\n            modal.style.zIndex = '9999';\n            document.body.classList.add('modal-open');\n            \n            // Animation d'entrée\n            requestAnimationFrame(() => {\n                modal.classList.add('modal-show');\n            });\n            \n            // Focus trap\n            this.trapFocus(modal);\n            \n            TopoclimbCH.events.emit('modal:opened', { modalId, modal });\n        }\n        \n        close() {\n            if (!this.activeModal) return;\n            \n            const modal = this.activeModal;\n            const modalId = modal.id;\n            \n            // Animation de sortie\n            modal.classList.remove('modal-show');\n            \n            setTimeout(() => {\n                modal.style.display = 'none';\n                \n                // Restaurer la modale précédente ou masquer l'overlay\n                if (this.stack.length > 0) {\n                    this.activeModal = this.stack.pop();\n                    this.activeModal.style.display = 'block';\n                } else {\n                    this.activeModal = null;\n                    const overlay = document.querySelector('.modal-overlay');\n                    overlay.style.opacity = '0';\n                    overlay.style.visibility = 'hidden';\n                    document.body.classList.remove('modal-open');\n                }\n            }, 300);\n            \n            TopoclimbCH.events.emit('modal:closed', { modalId, modal });\n        }\n        \n        trapFocus(modal) {\n            const focusableElements = modal.querySelectorAll(\n                'button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])'\n            );\n            \n            if (focusableElements.length === 0) return;\n            \n            const firstElement = focusableElements[0];\n            const lastElement = focusableElements[focusableElements.length - 1];\n            \n            firstElement.focus();\n            \n            modal.addEventListener('keydown', (e) => {\n                if (e.key === 'Tab') {\n                    if (e.shiftKey) {\n                        if (document.activeElement === firstElement) {\n                            e.preventDefault();\n                            lastElement.focus();\n                        }\n                    } else {\n                        if (document.activeElement === lastElement) {\n                            e.preventDefault();\n                            firstElement.focus();\n                        }\n                    }\n                }\n            });\n        }\n    }\n    \n    /**\n     * 🍞 Gestionnaire de notifications toast\n     */\n    class ToastManager {\n        constructor() {\n            this.container = null;\n            this.toasts = new Map();\n            this.init();\n        }\n        \n        init() {\n            this.createContainer();\n        }\n        \n        createContainer() {\n            if (document.querySelector('.toast-container')) return;\n            \n            const container = document.createElement('div');\n            container.className = 'toast-container';\n            container.style.cssText = `\n                position: fixed;\n                top: 20px;\n                right: 20px;\n                z-index: 10000;\n                display: flex;\n                flex-direction: column;\n                gap: 10px;\n                pointer-events: none;\n            `;\n            \n            document.body.appendChild(container);\n            this.container = container;\n        }\n        \n        show(message, type = 'info', options = {}) {\n            const {\n                duration = 5000,\n                dismissible = true,\n                persistent = false,\n                action = null\n            } = options;\n            \n            const id = utils.generateId('toast');\n            const toast = this.createToast(id, message, type, { dismissible, action });\n            \n            this.container.appendChild(toast);\n            this.toasts.set(id, toast);\n            \n            // Animation d'entrée\n            requestAnimationFrame(() => {\n                toast.classList.add('toast-show');\n            });\n            \n            // Auto-suppression\n            if (!persistent && duration > 0) {\n                setTimeout(() => {\n                    this.hide(id);\n                }, duration);\n            }\n            \n            TopoclimbCH.events.emit('toast:shown', { id, message, type });\n            \n            return id;\n        }\n        \n        createToast(id, message, type, options) {\n            const toast = document.createElement('div');\n            toast.id = id;\n            toast.className = `toast toast-${type}`;\n            toast.style.cssText = `\n                background: ${this.getTypeColor(type)};\n                color: white;\n                padding: 16px 20px;\n                border-radius: 8px;\n                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);\n                min-width: 300px;\n                max-width: 400px;\n                transform: translateX(100%);\n                transition: all 0.3s ease;\n                pointer-events: auto;\n                display: flex;\n                align-items: center;\n                gap: 12px;\n            `;\n            \n            // Icône\n            const icon = document.createElement('span');\n            icon.innerHTML = this.getTypeIcon(type);\n            icon.style.cssText = 'flex-shrink: 0; font-size: 18px;';\n            \n            // Message\n            const messageEl = document.createElement('span');\n            messageEl.textContent = message;\n            messageEl.style.cssText = 'flex: 1; font-size: 14px; line-height: 1.4;';\n            \n            toast.appendChild(icon);\n            toast.appendChild(messageEl);\n            \n            // Bouton de fermeture\n            if (options.dismissible) {\n                const closeBtn = document.createElement('button');\n                closeBtn.innerHTML = '×';\n                closeBtn.style.cssText = `\n                    background: none;\n                    border: none;\n                    color: white;\n                    font-size: 20px;\n                    cursor: pointer;\n                    padding: 0;\n                    width: 24px;\n                    height: 24px;\n                    display: flex;\n                    align-items: center;\n                    justify-content: center;\n                    opacity: 0.7;\n                    transition: opacity 0.2s;\n                `;\n                \n                closeBtn.addEventListener('click', () => this.hide(id));\n                closeBtn.addEventListener('mouseenter', () => closeBtn.style.opacity = '1');\n                closeBtn.addEventListener('mouseleave', () => closeBtn.style.opacity = '0.7');\n                \n                toast.appendChild(closeBtn);\n            }\n            \n            // Action personnalisée\n            if (options.action) {\n                const actionBtn = document.createElement('button');\n                actionBtn.textContent = options.action.text;\n                actionBtn.style.cssText = `\n                    background: rgba(255, 255, 255, 0.2);\n                    border: 1px solid rgba(255, 255, 255, 0.3);\n                    color: white;\n                    padding: 4px 8px;\n                    border-radius: 4px;\n                    cursor: pointer;\n                    font-size: 12px;\n                    margin-left: 8px;\n                `;\n                \n                actionBtn.addEventListener('click', () => {\n                    options.action.handler();\n                    this.hide(id);\n                });\n                \n                toast.appendChild(actionBtn);\n            }\n            \n            return toast;\n        }\n        \n        hide(id) {\n            const toast = this.toasts.get(id);\n            if (!toast) return;\n            \n            toast.classList.remove('toast-show');\n            toast.style.transform = 'translateX(100%)';\n            \n            setTimeout(() => {\n                if (toast.parentNode) {\n                    toast.parentNode.removeChild(toast);\n                }\n                this.toasts.delete(id);\n            }, 300);\n            \n            TopoclimbCH.events.emit('toast:hidden', { id });\n        }\n        \n        getTypeColor(type) {\n            const colors = {\n                success: '#10b981',\n                error: '#ef4444',\n                warning: '#f59e0b',\n                info: '#3b82f6'\n            };\n            return colors[type] || colors.info;\n        }\n        \n        getTypeIcon(type) {\n            const icons = {\n                success: '✓',\n                error: '✕',\n                warning: '⚠',\n                info: 'ℹ'\n            };\n            return icons[type] || icons.info;\n        }\n        \n        // Méthodes de raccourci\n        success(message, options) {\n            return this.show(message, 'success', options);\n        }\n        \n        error(message, options) {\n            return this.show(message, 'error', { duration: 8000, ...options });\n        }\n        \n        warning(message, options) {\n            return this.show(message, 'warning', options);\n        }\n        \n        info(message, options) {\n            return this.show(message, 'info', options);\n        }\n        \n        clear() {\n            this.toasts.forEach((toast, id) => this.hide(id));\n        }\n    }\n    \n    /**\n     * 🖼️ Gestionnaire de lightbox\n     */\n    class LightboxManager {\n        constructor() {\n            this.isOpen = false;\n            this.currentIndex = 0;\n            this.images = [];\n            this.init();\n        }\n        \n        init() {\n            this.bindEvents();\n        }\n        \n        bindEvents() {\n            document.addEventListener('click', (e) => {\n                const trigger = e.target.closest('[data-lightbox]');\n                if (trigger) {\n                    e.preventDefault();\n                    this.open(trigger);\n                }\n            });\n        }\n        \n        open(trigger) {\n            const group = trigger.dataset.lightbox;\n            this.images = Array.from(document.querySelectorAll(`[data-lightbox=\"${group}\"]`));\n            this.currentIndex = this.images.indexOf(trigger);\n            \n            this.createLightbox();\n            this.showImage(this.currentIndex);\n            this.isOpen = true;\n            \n            document.body.classList.add('lightbox-open');\n        }\n        \n        createLightbox() {\n            if (document.querySelector('.lightbox')) return;\n            \n            const lightbox = document.createElement('div');\n            lightbox.className = 'lightbox';\n            lightbox.style.cssText = `\n                position: fixed;\n                top: 0;\n                left: 0;\n                width: 100%;\n                height: 100%;\n                background: rgba(0, 0, 0, 0.9);\n                z-index: 10001;\n                display: flex;\n                align-items: center;\n                justify-content: center;\n                opacity: 0;\n                transition: opacity 0.3s ease;\n            `;\n            \n            lightbox.innerHTML = `\n                <div class=\"lightbox-content\" style=\"\n                    position: relative;\n                    max-width: 90vw;\n                    max-height: 90vh;\n                    display: flex;\n                    align-items: center;\n                    justify-content: center;\n                \">\n                    <img class=\"lightbox-image\" style=\"\n                        max-width: 100%;\n                        max-height: 100%;\n                        object-fit: contain;\n                        border-radius: 8px;\n                    \">\n                    <button class=\"lightbox-close\" style=\"\n                        position: absolute;\n                        top: -40px;\n                        right: 0;\n                        background: none;\n                        border: none;\n                        color: white;\n                        font-size: 30px;\n                        cursor: pointer;\n                        width: 40px;\n                        height: 40px;\n                        display: flex;\n                        align-items: center;\n                        justify-content: center;\n                    \">×</button>\n                    <button class=\"lightbox-prev\" style=\"\n                        position: absolute;\n                        left: -60px;\n                        top: 50%;\n                        transform: translateY(-50%);\n                        background: rgba(255, 255, 255, 0.1);\n                        border: none;\n                        color: white;\n                        font-size: 24px;\n                        cursor: pointer;\n                        width: 50px;\n                        height: 50px;\n                        border-radius: 50%;\n                        display: flex;\n                        align-items: center;\n                        justify-content: center;\n                    \">‹</button>\n                    <button class=\"lightbox-next\" style=\"\n                        position: absolute;\n                        right: -60px;\n                        top: 50%;\n                        transform: translateY(-50%);\n                        background: rgba(255, 255, 255, 0.1);\n                        border: none;\n                        color: white;\n                        font-size: 24px;\n                        cursor: pointer;\n                        width: 50px;\n                        height: 50px;\n                        border-radius: 50%;\n                        display: flex;\n                        align-items: center;\n                        justify-content: center;\n                    \">›</button>\n                    <div class=\"lightbox-counter\" style=\"\n                        position: absolute;\n                        bottom: -40px;\n                        left: 50%;\n                        transform: translateX(-50%);\n                        color: white;\n                        font-size: 14px;\n                    \"></div>\n                </div>\n            `;\n            \n            document.body.appendChild(lightbox);\n            \n            // Événements\n            lightbox.querySelector('.lightbox-close').addEventListener('click', () => this.close());\n            lightbox.querySelector('.lightbox-prev').addEventListener('click', () => this.prev());\n            lightbox.querySelector('.lightbox-next').addEventListener('click', () => this.next());\n            \n            lightbox.addEventListener('click', (e) => {\n                if (e.target === lightbox) this.close();\n            });\n            \n            document.addEventListener('keydown', (e) => {\n                if (!this.isOpen) return;\n                \n                switch (e.key) {\n                    case 'Escape':\n                        this.close();\n                        break;\n                    case 'ArrowLeft':\n                        this.prev();\n                        break;\n                    case 'ArrowRight':\n                        this.next();\n                        break;\n                }\n            });\n            \n            // Animation d'entrée\n            requestAnimationFrame(() => {\n                lightbox.style.opacity = '1';\n            });\n        }\n        \n        showImage(index) {\n            const lightbox = document.querySelector('.lightbox');\n            const image = lightbox.querySelector('.lightbox-image');\n            const counter = lightbox.querySelector('.lightbox-counter');\n            const prev = lightbox.querySelector('.lightbox-prev');\n            const next = lightbox.querySelector('.lightbox-next');\n            \n            const trigger = this.images[index];\n            const src = trigger.href || trigger.dataset.src || trigger.src;\n            \n            image.src = src;\n            counter.textContent = `${index + 1} / ${this.images.length}`;\n            \n            prev.style.display = this.images.length > 1 ? 'flex' : 'none';\n            next.style.display = this.images.length > 1 ? 'flex' : 'none';\n        }\n        \n        prev() {\n            this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;\n            this.showImage(this.currentIndex);\n        }\n        \n        next() {\n            this.currentIndex = (this.currentIndex + 1) % this.images.length;\n            this.showImage(this.currentIndex);\n        }\n        \n        close() {\n            const lightbox = document.querySelector('.lightbox');\n            if (!lightbox) return;\n            \n            lightbox.style.opacity = '0';\n            \n            setTimeout(() => {\n                lightbox.remove();\n                this.isOpen = false;\n                document.body.classList.remove('lightbox-open');\n            }, 300);\n        }\n    }\n    \n    // Instances globales\n    const modal = new ModalManager();\n    const toast = new ToastManager();\n    const lightbox = new LightboxManager();\n    \n    // Ajout de styles CSS automatiques\n    const style = document.createElement('style');\n    style.textContent = `\n        .modal-open { overflow: hidden; }\n        .toast-show { transform: translateX(0) !important; }\n        .lightbox-open { overflow: hidden; }\n    `;\n    document.head.appendChild(style);\n    \n    // Exposer dans le namespace global\n    const UI = {\n        modal,\n        toast,\n        lightbox,\n        ModalManager,\n        ToastManager,\n        LightboxManager\n    };\n    \n    TopoclimbCH.ui = UI;\n    \n    return UI;\n});\n\nconsole.log('🎨 TopoclimbCH UI module ready');
+        bindEvents() {
+            // Délégation d'événements pour les déclencheurs
+            document.addEventListener('click', (e) => {
+                const trigger = e.target.closest('[data-modal]');
+                if (trigger) {
+                    e.preventDefault();
+                    const modalId = trigger.dataset.modal;
+                    this.open(modalId);
+                }
+                
+                // Fermeture par clic sur overlay
+                if (e.target.classList.contains('modal-overlay')) {
+                    this.close();
+                }
+                
+                // Fermeture par bouton close
+                if (e.target.closest('[data-modal-close]')) {
+                    this.close();
+                }
+            });
+            
+            // Fermeture par Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.activeModal) {
+                    this.close();
+                }
+            });
+        }
+        
+        open(modalId, options = {}) {
+            const modal = document.getElementById(modalId);
+            if (!modal) {
+                console.warn(`Modal ${modalId} not found`);
+                return;
+            }
+            
+            const { closeOnOverlay = true, closeOnEscape = true } = options;
+            
+            // Empiler la modale précédente
+            if (this.activeModal) {
+                this.stack.push(this.activeModal);
+                this.activeModal.style.display = 'none';
+            }
+            
+            this.activeModal = modal;
+            
+            // Affichage
+            const overlay = document.querySelector('.modal-overlay');
+            overlay.style.visibility = 'visible';
+            overlay.style.opacity = '1';
+            
+            modal.style.display = 'block';
+            modal.style.zIndex = '9999';
+            document.body.classList.add('modal-open');
+            
+            // Animation d'entrée
+            requestAnimationFrame(() => {
+                modal.classList.add('modal-show');
+            });
+            
+            // Focus trap
+            this.trapFocus(modal);
+            
+            TopoclimbCH.events.emit('modal:opened', { modalId, modal });
+        }
+        
+        close() {
+            if (!this.activeModal) return;
+            
+            const modal = this.activeModal;
+            const modalId = modal.id;
+            
+            // Animation de sortie
+            modal.classList.remove('modal-show');
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+                
+                // Restaurer la modale précédente ou masquer l'overlay
+                if (this.stack.length > 0) {
+                    this.activeModal = this.stack.pop();
+                    this.activeModal.style.display = 'block';
+                } else {
+                    this.activeModal = null;
+                    const overlay = document.querySelector('.modal-overlay');
+                    overlay.style.opacity = '0';
+                    overlay.style.visibility = 'hidden';
+                    document.body.classList.remove('modal-open');
+                }
+            }, 300);
+            
+            TopoclimbCH.events.emit('modal:closed', { modalId, modal });
+        }
+        
+        trapFocus(modal) {
+            const focusableElements = modal.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])'
+            );
+            
+            if (focusableElements.length === 0) return;
+            
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+            
+            firstElement.focus();
+            
+            modal.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstElement) {
+                            e.preventDefault();
+                            lastElement.focus();
+                        }
+                    } else {
+                        if (document.activeElement === lastElement) {
+                            e.preventDefault();
+                            firstElement.focus();
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * 🍞 Gestionnaire de notifications toast
+     */
+    class ToastManager {
+        constructor() {
+            this.container = null;
+            this.toasts = new Map();
+            this.init();
+        }
+        
+        init() {
+            this.createContainer();
+        }
+        
+        createContainer() {
+            if (document.querySelector('.toast-container')) return;
+            
+            const container = document.createElement('div');
+            container.className = 'toast-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+            `;
+            
+            document.body.appendChild(container);
+            this.container = container;
+        }
+        
+        show(message, type = 'info', options = {}) {
+            const {
+                duration = 5000,
+                dismissible = true,
+                persistent = false,
+                action = null
+            } = options;
+            
+            const id = utils.generateId('toast');
+            const toast = this.createToast(id, message, type, { dismissible, action });
+            
+            this.container.appendChild(toast);
+            this.toasts.set(id, toast);
+            
+            // Animation d'entrée
+            requestAnimationFrame(() => {
+                toast.classList.add('toast-show');
+            });
+            
+            // Auto-suppression
+            if (!persistent && duration > 0) {
+                setTimeout(() => {
+                    this.hide(id);
+                }, duration);
+            }
+            
+            TopoclimbCH.events.emit('toast:shown', { id, message, type });
+            
+            return id;
+        }
+        
+        createToast(id, message, type, options) {
+            const toast = document.createElement('div');
+            toast.id = id;
+            toast.className = `toast toast-${type}`;
+            toast.style.cssText = `
+                background: ${this.getTypeColor(type)};
+                color: white;
+                padding: 16px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                min-width: 300px;
+                max-width: 400px;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+                pointer-events: auto;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            `;
+            
+            // Icône
+            const icon = document.createElement('span');
+            icon.innerHTML = this.getTypeIcon(type);
+            icon.style.cssText = 'flex-shrink: 0; font-size: 18px;';
+            
+            // Message
+            const messageEl = document.createElement('span');
+            messageEl.textContent = message;
+            messageEl.style.cssText = 'flex: 1; font-size: 14px; line-height: 1.4;';
+            
+            toast.appendChild(icon);
+            toast.appendChild(messageEl);
+            
+            // Bouton de fermeture
+            if (options.dismissible) {
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '×';
+                closeBtn.style.cssText = `
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 20px;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0.7;
+                    transition: opacity 0.2s;
+                `;
+                
+                closeBtn.addEventListener('click', () => this.hide(id));
+                closeBtn.addEventListener('mouseenter', () => closeBtn.style.opacity = '1');
+                closeBtn.addEventListener('mouseleave', () => closeBtn.style.opacity = '0.7');
+                
+                toast.appendChild(closeBtn);
+            }
+            
+            // Action personnalisée
+            if (options.action) {
+                const actionBtn = document.createElement('button');
+                actionBtn.textContent = options.action.text;
+                actionBtn.style.cssText = `
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    margin-left: 8px;
+                `;
+                
+                actionBtn.addEventListener('click', () => {
+                    options.action.handler();
+                    this.hide(id);
+                });
+                
+                toast.appendChild(actionBtn);
+            }
+            
+            return toast;
+        }
+        
+        hide(id) {
+            const toast = this.toasts.get(id);
+            if (!toast) return;
+            
+            toast.classList.remove('toast-show');
+            toast.style.transform = 'translateX(100%)';
+            
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+                this.toasts.delete(id);
+            }, 300);
+            
+            TopoclimbCH.events.emit('toast:hidden', { id });
+        }
+        
+        getTypeColor(type) {
+            const colors = {
+                success: '#10b981',
+                error: '#ef4444',
+                warning: '#f59e0b',
+                info: '#3b82f6'
+            };
+            return colors[type] || colors.info;
+        }
+        
+        getTypeIcon(type) {
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ'
+            };
+            return icons[type] || icons.info;
+        }
+        
+        // Méthodes de raccourci
+        success(message, options) {
+            return this.show(message, 'success', options);
+        }
+        
+        error(message, options) {
+            return this.show(message, 'error', { duration: 8000, ...options });
+        }
+        
+        warning(message, options) {
+            return this.show(message, 'warning', options);
+        }
+        
+        info(message, options) {
+            return this.show(message, 'info', options);
+        }
+        
+        clear() {
+            this.toasts.forEach((toast, id) => this.hide(id));
+        }
+    }
+    
+    /**
+     * 🖼️ Gestionnaire de lightbox
+     */
+    class LightboxManager {
+        constructor() {
+            this.isOpen = false;
+            this.currentIndex = 0;
+            this.images = [];
+            this.init();
+        }
+        
+        init() {
+            this.bindEvents();
+        }
+        
+        bindEvents() {
+            document.addEventListener('click', (e) => {
+                const trigger = e.target.closest('[data-lightbox]');
+                if (trigger) {
+                    e.preventDefault();
+                    this.open(trigger);
+                }
+            });
+        }
+        
+        open(trigger) {
+            const group = trigger.dataset.lightbox;
+            this.images = Array.from(document.querySelectorAll(`[data-lightbox=\"${group}\"]`));
+            this.currentIndex = this.images.indexOf(trigger);
+            
+            this.createLightbox();
+            this.showImage(this.currentIndex);
+            this.isOpen = true;
+            
+            document.body.classList.add('lightbox-open');
+        }
+        
+        createLightbox() {
+            if (document.querySelector('.lightbox')) return;
+            
+            const lightbox = document.createElement('div');
+            lightbox.className = 'lightbox';
+            lightbox.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            lightbox.innerHTML = `
+                <div class=\"lightbox-content\" style=\"
+                    position: relative;
+                    max-width: 90vw;
+                    max-height: 90vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                \">
+                    <img class=\"lightbox-image\" style=\"
+                        max-width: 100%;
+                        max-height: 100%;
+                        object-fit: contain;
+                        border-radius: 8px;
+                    \">
+                    <button class=\"lightbox-close\" style=\"
+                        position: absolute;
+                        top: -40px;
+                        right: 0;
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 30px;
+                        cursor: pointer;
+                        width: 40px;
+                        height: 40px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    \">×</button>
+                    <button class=\"lightbox-prev\" style=\"
+                        position: absolute;
+                        left: -60px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        background: rgba(255, 255, 255, 0.1);
+                        border: none;
+                        color: white;
+                        font-size: 24px;
+                        cursor: pointer;
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    \">‹</button>
+                    <button class=\"lightbox-next\" style=\"
+                        position: absolute;
+                        right: -60px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        background: rgba(255, 255, 255, 0.1);
+                        border: none;
+                        color: white;
+                        font-size: 24px;
+                        cursor: pointer;
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    \">›</button>
+                    <div class=\"lightbox-counter\" style=\"
+                        position: absolute;
+                        bottom: -40px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        color: white;
+                        font-size: 14px;
+                    \"></div>
+                </div>
+            `;
+            
+            document.body.appendChild(lightbox);
+            
+            // Événements
+            lightbox.querySelector('.lightbox-close').addEventListener('click', () => this.close());
+            lightbox.querySelector('.lightbox-prev').addEventListener('click', () => this.prev());
+            lightbox.querySelector('.lightbox-next').addEventListener('click', () => this.next());
+            
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) this.close();
+            });
+            
+            document.addEventListener('keydown', (e) => {
+                if (!this.isOpen) return;
+                
+                switch (e.key) {
+                    case 'Escape':
+                        this.close();
+                        break;
+                    case 'ArrowLeft':
+                        this.prev();
+                        break;
+                    case 'ArrowRight':
+                        this.next();
+                        break;
+                }
+            });
+            
+            // Animation d'entrée
+            requestAnimationFrame(() => {
+                lightbox.style.opacity = '1';
+            });
+        }
+        
+        showImage(index) {
+            const lightbox = document.querySelector('.lightbox');
+            const image = lightbox.querySelector('.lightbox-image');
+            const counter = lightbox.querySelector('.lightbox-counter');
+            const prev = lightbox.querySelector('.lightbox-prev');
+            const next = lightbox.querySelector('.lightbox-next');
+            
+            const trigger = this.images[index];
+            const src = trigger.href || trigger.dataset.src || trigger.src;
+            
+            image.src = src;
+            counter.textContent = `${index + 1} / ${this.images.length}`;
+            
+            prev.style.display = this.images.length > 1 ? 'flex' : 'none';
+            next.style.display = this.images.length > 1 ? 'flex' : 'none';
+        }
+        
+        prev() {
+            this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+            this.showImage(this.currentIndex);
+        }
+        
+        next() {
+            this.currentIndex = (this.currentIndex + 1) % this.images.length;
+            this.showImage(this.currentIndex);
+        }
+        
+        close() {
+            const lightbox = document.querySelector('.lightbox');
+            if (!lightbox) return;
+            
+            lightbox.style.opacity = '0';
+            
+            setTimeout(() => {
+                lightbox.remove();
+                this.isOpen = false;
+                document.body.classList.remove('lightbox-open');
+            }, 300);
+        }
+    }
+    
+    // Instances globales
+    const modal = new ModalManager();
+    const toast = new ToastManager();
+    const lightbox = new LightboxManager();
+    
+    // Ajout de styles CSS automatiques
+    const style = document.createElement('style');
+    style.textContent = `
+        .modal-open { overflow: hidden; }
+        .toast-show { transform: translateX(0) !important; }
+        .lightbox-open { overflow: hidden; }
+    `;
+    document.head.appendChild(style);
+    
+    // Exposer dans le namespace global
+    const UI = {
+        modal,
+        toast,
+        lightbox,
+        ModalManager,
+        ToastManager,
+        LightboxManager
+    };
+    
+    TopoclimbCH.ui = UI;
+    
+    return UI;
+});
+
+console.log('🎨 TopoclimbCH UI module ready');

@@ -76,6 +76,7 @@ class RegionController extends BaseController
 
             // Ajouter la clé API météo
             $data['weather_api_key'] = $_ENV['OPENWEATHER_API_KEY'] ?? '';
+            $data['csp_nonce'] = $this->generateCspNonce();
             
             return $this->render('regions/index', $data);
         } catch (\Exception $e) {
@@ -87,7 +88,8 @@ class RegionController extends BaseController
                 'filters' => [],
                 'weather_api_key' => $_ENV['OPENWEATHER_API_KEY'] ?? '',
                 'stats' => ['total_regions' => 0, 'total_sectors' => 0, 'total_routes' => 0],
-                'error' => 'Impossible de charger les régions actuellement.'
+                'error' => 'Impossible de charger les régions actuellement.',
+                'csp_nonce' => $this->generateCspNonce()
             ]);
         }
     }
@@ -213,6 +215,7 @@ class RegionController extends BaseController
 
             // Récupération simplifiée des données
             $data = $this->getRegionDetailsSimplified($id);
+            $data['csp_nonce'] = $this->generateCspNonce();
 
             return $this->render('regions/show', $data);
         } catch (\Exception $e) {

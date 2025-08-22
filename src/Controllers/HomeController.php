@@ -75,7 +75,8 @@ class HomeController extends BaseController
                 // Ajout des breadcrumbs pour la page d'accueil
                 'breadcrumbs' => [
                     ['title' => 'Accueil', 'url' => '/']
-                ]
+                ],
+                'csp_nonce' => $this->generateCspNonce()
             ];
 
             return $this->render('home/index', $data);

@@ -144,4 +144,546 @@ window.SimpleWeatherWidget = SimpleWeatherWidget;
 TopoclimbCH.modules.register('weather-widget', ['utils', 'api'], (utils, api) => {
     
     class WeatherWidget {
-        constructor(containerId, options = {}) {\n            this.containerId = containerId;\n            this.options = {\n                updateInterval: 300000, // 5 minutes\n                showForecast: true,\n                showClimbingConditions: true,\n                units: 'metric',\n                ...options\n            };\n            \n            this.container = null;\n            this.weatherCache = new Map();\n            this.updateTimer = null;\n            \n            this.coordinates = options.coordinates || null;\n            this.regionData = options.regionData || null;\n        }\n        \n        /**\n         * Initialise le widget météo\n         */\n        init() {\n            this.container = document.getElementById(this.containerId);\n            if (!this.container) {\n                console.warn(`Weather widget container #${this.containerId} not found`);\n                return;\n            }\n            \n            if (!this.coordinates && this.regionData) {\n                this.coordinates = {\n                    lat: this.regionData.coordinates_lat,\n                    lng: this.regionData.coordinates_lng\n                };\n            }\n            \n            if (!this.coordinates) {\n                console.warn('No coordinates provided for weather widget');\n                return;\n            }\n            \n            this.createWidget();\n            this.loadWeatherData();\n            this.startAutoUpdate();\n            \n            console.log('🌤️ WeatherWidget initialized');\n        }\n        \n        /**\n         * Crée la structure HTML du widget\n         */\n        createWidget() {\n            this.container.innerHTML = `\n                <div class=\"weather-widget\">\n                    <div class=\"weather-header\">\n                        <h6 class=\"weather-title\">\n                            <i class=\"fa fa-cloud-sun\"></i>\n                            Conditions météo\n                        </h6>\n                        <div class=\"weather-refresh\">\n                            <button id=\"refresh-weather\" class=\"btn btn-sm btn-outline-secondary\">\n                                <i class=\"fa fa-refresh\"></i>\n                            </button>\n                        </div>\n                    </div>\n                    \n                    <div class=\"weather-loading\" id=\"weather-loading\">\n                        <div class=\"spinner-border spinner-border-sm\" role=\"status\">\n                            <span class=\"sr-only\">Chargement...</span>\n                        </div>\n                        <span class=\"ms-2\">Chargement météo...</span>\n                    </div>\n                    \n                    <div class=\"weather-content\" id=\"weather-content\" style=\"display: none;\">\n                        <div class=\"current-weather\" id=\"current-weather\"></div>\n                        \n                        ${this.options.showForecast ? '<div class=\"weather-forecast\" id=\"weather-forecast\"></div>' : ''}\n                        \n                        ${this.options.showClimbingConditions ? '<div class=\"climbing-conditions\" id=\"climbing-conditions\"></div>' : ''}\n                    </div>\n                    \n                    <div class=\"weather-error\" id=\"weather-error\" style=\"display: none;\">\n                        <div class=\"alert alert-warning\">\n                            <i class=\"fa fa-exclamation-triangle\"></i>\n                            Impossible de charger les données météo\n                        </div>\n                    </div>\n                </div>\n            `;\n            \n            // Événement de refresh\n            const refreshBtn = this.container.querySelector('#refresh-weather');\n            if (refreshBtn) {\n                refreshBtn.addEventListener('click', () => {\n                    this.loadWeatherData(true);\n                });\n            }\n        }\n        \n        /**\n         * Charge les données météo\n         */\n        async loadWeatherData(forceRefresh = false) {\n            const cacheKey = `${this.coordinates.lat},${this.coordinates.lng}`;\n            \n            // Vérifier le cache\n            if (!forceRefresh && this.weatherCache.has(cacheKey)) {\n                const cached = this.weatherCache.get(cacheKey);\n                if (Date.now() - cached.timestamp < this.options.updateInterval) {\n                    this.displayWeatherData(cached.data);\n                    return;\n                }\n            }\n            \n            this.showLoading();\n            \n            try {\n                const weatherData = await api.getWeather(\n                    this.coordinates.lat,\n                    this.coordinates.lng\n                );\n                \n                // Mettre en cache\n                this.weatherCache.set(cacheKey, {\n                    data: weatherData,\n                    timestamp: Date.now()\n                });\n                \n                this.displayWeatherData(weatherData);\n                this.hideLoading();\n                \n            } catch (error) {\n                console.error('Weather data loading error:', error);\n                this.showError();\n            }\n        }\n        \n        /**\n         * Affiche les données météo\n         */\n        displayWeatherData(data) {\n            this.displayCurrentWeather(data.current);\n            \n            if (this.options.showForecast && data.forecast) {\n                this.displayForecast(data.forecast);\n            }\n            \n            if (this.options.showClimbingConditions) {\n                this.displayClimbingConditions(data);\n            }\n        }\n        \n        /**\n         * Affiche la météo actuelle\n         */\n        displayCurrentWeather(current) {\n            const container = this.container.querySelector('#current-weather');\n            if (!container) return;\n            \n            const temp = Math.round(current.temperature);\n            const feelsLike = Math.round(current.feels_like);\n            const humidity = current.humidity;\n            const windSpeed = Math.round(current.wind_speed * 3.6); // m/s to km/h\n            const windDir = this.getWindDirection(current.wind_direction);\n            \n            container.innerHTML = `\n                <div class=\"current-weather-main\">\n                    <div class=\"weather-icon\">\n                        ${this.getWeatherIcon(current.weather_code)}\n                    </div>\n                    <div class=\"weather-temp\">\n                        <span class=\"temp-main\">${temp}°C</span>\n                        <span class=\"temp-feels\">Ressenti ${feelsLike}°C</span>\n                    </div>\n                    <div class=\"weather-desc\">\n                        ${this.getWeatherDescription(current.weather_code)}\n                    </div>\n                </div>\n                \n                <div class=\"weather-details\">\n                    <div class=\"detail-item\">\n                        <i class=\"fa fa-tint\"></i>\n                        <span class=\"detail-label\">Humidité</span>\n                        <span class=\"detail-value\">${humidity}%</span>\n                    </div>\n                    <div class=\"detail-item\">\n                        <i class=\"fa fa-wind\"></i>\n                        <span class=\"detail-label\">Vent</span>\n                        <span class=\"detail-value\">${windSpeed} km/h ${windDir}</span>\n                    </div>\n                    <div class=\"detail-item\">\n                        <i class=\"fa fa-barometer\"></i>\n                        <span class=\"detail-label\">Pression</span>\n                        <span class=\"detail-value\">${current.pressure} hPa</span>\n                    </div>\n                </div>\n            `;\n        }\n        \n        /**\n         * Affiche les prévisions\n         */\n        displayForecast(forecast) {\n            const container = this.container.querySelector('#weather-forecast');\n            if (!container || !forecast.length) return;\n            \n            const forecastItems = forecast.slice(0, 5).map(day => `\n                <div class=\"forecast-item\">\n                    <div class=\"forecast-day\">\n                        ${this.formatForecastDay(day.date)}\n                    </div>\n                    <div class=\"forecast-icon\">\n                        ${this.getWeatherIcon(day.weather_code, 'small')}\n                    </div>\n                    <div class=\"forecast-temp\">\n                        <span class=\"temp-max\">${Math.round(day.temp_max)}°</span>\n                        <span class=\"temp-min\">${Math.round(day.temp_min)}°</span>\n                    </div>\n                    <div class=\"forecast-rain\">\n                        ${day.precipitation ? `<i class=\"fa fa-droplet\"></i> ${day.precipitation}mm` : ''}\n                    </div>\n                </div>\n            `).join('');\n            \n            container.innerHTML = `\n                <h6 class=\"forecast-title\">Prévisions 5 jours</h6>\n                <div class=\"forecast-grid\">\n                    ${forecastItems}\n                </div>\n            `;\n        }\n        \n        /**\n         * Affiche les conditions d'escalade\n         */\n        displayClimbingConditions(data) {\n            const container = this.container.querySelector('#climbing-conditions');\n            if (!container) return;\n            \n            const conditions = this.evaluateClimbingConditions(data);\n            \n            container.innerHTML = `\n                <h6 class=\"conditions-title\">\n                    <i class=\"fa fa-mountain\"></i>\n                    Conditions d'escalade\n                </h6>\n                \n                <div class=\"conditions-overall\">\n                    <div class=\"condition-score condition-${conditions.overall.level}\">\n                        ${this.getConditionIcon(conditions.overall.level)}\n                        <span class=\"condition-text\">${conditions.overall.text}</span>\n                    </div>\n                </div>\n                \n                <div class=\"conditions-details\">\n                    <div class=\"condition-item\">\n                        <span class=\"condition-label\">Température:</span>\n                        <span class=\"condition-value condition-${conditions.temperature.level}\">\n                            ${conditions.temperature.text}\n                        </span>\n                    </div>\n                    <div class=\"condition-item\">\n                        <span class=\"condition-label\">Vent:</span>\n                        <span class=\"condition-value condition-${conditions.wind.level}\">\n                            ${conditions.wind.text}\n                        </span>\n                    </div>\n                    <div class=\"condition-item\">\n                        <span class=\"condition-label\">Précipitations:</span>\n                        <span class=\"condition-value condition-${conditions.precipitation.level}\">\n                            ${conditions.precipitation.text}\n                        </span>\n                    </div>\n                </div>\n                \n                ${conditions.advice ? `\n                    <div class=\"conditions-advice\">\n                        <i class=\"fa fa-lightbulb\"></i>\n                        <span>${conditions.advice}</span>\n                    </div>\n                ` : ''}\n            `;\n        }\n        \n        /**\n         * Évalue les conditions d'escalade\n         */\n        evaluateClimbingConditions(data) {\n            const current = data.current;\n            const temp = current.temperature;\n            const windSpeed = current.wind_speed * 3.6; // km/h\n            const precipitation = current.precipitation || 0;\n            \n            // Évaluation température\n            let tempLevel, tempText;\n            if (temp < 5) {\n                tempLevel = 'poor';\n                tempText = 'Très froid';\n            } else if (temp < 15) {\n                tempLevel = 'fair';\n                tempText = 'Frais';\n            } else if (temp < 25) {\n                tempLevel = 'good';\n                tempText = 'Idéal';\n            } else if (temp < 30) {\n                tempLevel = 'fair';\n                tempText = 'Chaud';\n            } else {\n                tempLevel = 'poor';\n                tempText = 'Très chaud';\n            }\n            \n            // Évaluation vent\n            let windLevel, windText;\n            if (windSpeed < 10) {\n                windLevel = 'good';\n                windText = 'Calme';\n            } else if (windSpeed < 20) {\n                windLevel = 'fair';\n                windText = 'Modéré';\n            } else if (windSpeed < 30) {\n                windLevel = 'poor';\n                windText = 'Fort';\n            } else {\n                windLevel = 'poor';\n                windText = 'Très fort';\n            }\n            \n            // Évaluation précipitations\n            let precipLevel, precipText;\n            if (precipitation === 0) {\n                precipLevel = 'good';\n                precipText = 'Sec';\n            } else if (precipitation < 2) {\n                precipLevel = 'fair';\n                precipText = 'Légères';\n            } else {\n                precipLevel = 'poor';\n                precipText = 'Importantes';\n            }\n            \n            // Évaluation globale\n            const scores = { good: 3, fair: 2, poor: 1 };\n            const avgScore = (scores[tempLevel] + scores[windLevel] + scores[precipLevel]) / 3;\n            \n            let overallLevel, overallText, advice;\n            if (avgScore >= 2.5) {\n                overallLevel = 'good';\n                overallText = 'Excellentes';\n                advice = 'Conditions idéales pour l\\'escalade !';\n            } else if (avgScore >= 2) {\n                overallLevel = 'fair';\n                overallText = 'Correctes';\n                advice = 'Escalade possible avec précautions.';\n            } else {\n                overallLevel = 'poor';\n                overallText = 'Difficiles';\n                advice = 'Escalade déconseillée. Restez prudents.';\n            }\n            \n            return {\n                overall: { level: overallLevel, text: overallText },\n                temperature: { level: tempLevel, text: tempText },\n                wind: { level: windLevel, text: windText },\n                precipitation: { level: precipLevel, text: precipText },\n                advice\n            };\n        }\n        \n        /**\n         * Retourne l'icône météo\n         */\n        getWeatherIcon(code, size = 'normal') {\n            const iconMap = {\n                0: '☀️',   // Clear sky\n                1: '🌤️',   // Mainly clear\n                2: '⛅',   // Partly cloudy\n                3: '☁️',   // Overcast\n                45: '🌫️',  // Fog\n                48: '🌫️',  // Depositing rime fog\n                51: '🌦️',  // Light drizzle\n                53: '🌧️',  // Moderate drizzle\n                55: '🌧️',  // Dense drizzle\n                61: '🌧️',  // Slight rain\n                63: '🌧️',  // Moderate rain\n                65: '🌧️',  // Heavy rain\n                71: '🌨️',  // Slight snow\n                73: '🌨️',  // Moderate snow\n                75: '🌨️',  // Heavy snow\n                95: '⛈️',  // Thunderstorm\n                96: '⛈️',  // Thunderstorm with hail\n                99: '⛈️'   // Thunderstorm with heavy hail\n            };\n            \n            const icon = iconMap[code] || '❓';\n            const sizeClass = size === 'small' ? 'weather-icon-small' : 'weather-icon-normal';\n            \n            return `<span class=\"${sizeClass}\">${icon}</span>`;\n        }\n        \n        /**\n         * Retourne la description météo\n         */\n        getWeatherDescription(code) {\n            const descriptions = {\n                0: 'Ciel dégagé',\n                1: 'Principalement dégagé',\n                2: 'Partiellement nuageux',\n                3: 'Couvert',\n                45: 'Brouillard',\n                48: 'Brouillard givrant',\n                51: 'Bruine légère',\n                53: 'Bruine modérée',\n                55: 'Bruine dense',\n                61: 'Pluie légère',\n                63: 'Pluie modérée',\n                65: 'Pluie forte',\n                71: 'Neige légère',\n                73: 'Neige modérée',\n                75: 'Neige forte',\n                95: 'Orage',\n                96: 'Orage avec grêle',\n                99: 'Orage violent'\n            };\n            \n            return descriptions[code] || 'Conditions inconnues';\n        }\n        \n        /**\n         * Convertit la direction du vent\n         */\n        getWindDirection(degrees) {\n            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];\n            const index = Math.round(degrees / 45) % 8;\n            return directions[index];\n        }\n        \n        /**\n         * Formate le jour pour les prévisions\n         */\n        formatForecastDay(dateString) {\n            const date = new Date(dateString);\n            const today = new Date();\n            const tomorrow = new Date(today);\n            tomorrow.setDate(tomorrow.getDate() + 1);\n            \n            if (date.toDateString() === today.toDateString()) {\n                return 'Aujourd\\'hui';\n            } else if (date.toDateString() === tomorrow.toDateString()) {\n                return 'Demain';\n            } else {\n                return date.toLocaleDateString('fr-FR', { weekday: 'short' });\n            }\n        }\n        \n        /**\n         * Retourne l'icône de condition\n         */\n        getConditionIcon(level) {\n            const icons = {\n                good: '✅',\n                fair: '⚠️',\n                poor: '❌'\n            };\n            return icons[level] || '❓';\n        }\n        \n        /**\n         * Affiche le loading\n         */\n        showLoading() {\n            const loading = this.container.querySelector('#weather-loading');\n            const content = this.container.querySelector('#weather-content');\n            const error = this.container.querySelector('#weather-error');\n            \n            if (loading) loading.style.display = 'block';\n            if (content) content.style.display = 'none';\n            if (error) error.style.display = 'none';\n        }\n        \n        /**\n         * Masque le loading\n         */\n        hideLoading() {\n            const loading = this.container.querySelector('#weather-loading');\n            const content = this.container.querySelector('#weather-content');\n            \n            if (loading) loading.style.display = 'none';\n            if (content) content.style.display = 'block';\n        }\n        \n        /**\n         * Affiche l'erreur\n         */\n        showError() {\n            const loading = this.container.querySelector('#weather-loading');\n            const content = this.container.querySelector('#weather-content');\n            const error = this.container.querySelector('#weather-error');\n            \n            if (loading) loading.style.display = 'none';\n            if (content) content.style.display = 'none';\n            if (error) error.style.display = 'block';\n        }\n        \n        /**\n         * Démarre la mise à jour automatique\n         */\n        startAutoUpdate() {\n            if (this.updateTimer) {\n                clearInterval(this.updateTimer);\n            }\n            \n            this.updateTimer = setInterval(() => {\n                this.loadWeatherData();\n            }, this.options.updateInterval);\n        }\n        \n        /**\n         * Arrête la mise à jour automatique\n         */\n        stopAutoUpdate() {\n            if (this.updateTimer) {\n                clearInterval(this.updateTimer);\n                this.updateTimer = null;\n            }\n        }\n        \n        /**\n         * Nettoyage\n         */\n        destroy() {\n            this.stopAutoUpdate();\n            this.weatherCache.clear();\n            \n            if (this.container) {\n                this.container.innerHTML = '';\n            }\n        }\n    }\n    \n    return WeatherWidget;\n});\n\nconsole.log('🌤️ WeatherWidget module ready');
+        constructor(containerId, options = {}) {
+            this.containerId = containerId;
+            this.options = {
+                updateInterval: 300000, // 5 minutes
+                showForecast: true,
+                showClimbingConditions: true,
+                units: 'metric',
+                ...options
+            };
+            
+            this.container = null;
+            this.weatherCache = new Map();
+            this.updateTimer = null;
+            
+            this.coordinates = options.coordinates || null;
+            this.regionData = options.regionData || null;
+        }
+        
+        /**
+         * Initialise le widget météo
+         */
+        init() {
+            this.container = document.getElementById(this.containerId);
+            if (!this.container) {
+                console.warn(`Weather widget container #${this.containerId} not found`);
+                return;
+            }
+            
+            if (!this.coordinates && this.regionData) {
+                this.coordinates = {
+                    lat: this.regionData.coordinates_lat,
+                    lng: this.regionData.coordinates_lng
+                };
+            }
+            
+            if (!this.coordinates) {
+                console.warn('No coordinates provided for weather widget');
+                return;
+            }
+            
+            this.createWidget();
+            this.loadWeatherData();
+            this.startAutoUpdate();
+            
+            console.log('🌤️ WeatherWidget initialized');
+        }
+        
+        /**
+         * Crée la structure HTML du widget
+         */
+        createWidget() {
+            this.container.innerHTML = `
+                <div class=\"weather-widget\">
+                    <div class=\"weather-header\">
+                        <h6 class=\"weather-title\">
+                            <i class=\"fa fa-cloud-sun\"></i>
+                            Conditions météo
+                        </h6>
+                        <div class=\"weather-refresh\">
+                            <button id=\"refresh-weather\" class=\"btn btn-sm btn-outline-secondary\">
+                                <i class=\"fa fa-refresh\"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class=\"weather-loading\" id=\"weather-loading\">
+                        <div class=\"spinner-border spinner-border-sm\" role=\"status\">
+                            <span class=\"sr-only\">Chargement...</span>
+                        </div>
+                        <span class=\"ms-2\">Chargement météo...</span>
+                    </div>
+                    
+                    <div class=\"weather-content\" id=\"weather-content\" style=\"display: none;\">
+                        <div class=\"current-weather\" id=\"current-weather\"></div>
+                        
+                        ${this.options.showForecast ? '<div class=\"weather-forecast\" id=\"weather-forecast\"></div>' : ''}
+                        
+                        ${this.options.showClimbingConditions ? '<div class=\"climbing-conditions\" id=\"climbing-conditions\"></div>' : ''}
+                    </div>
+                    
+                    <div class=\"weather-error\" id=\"weather-error\" style=\"display: none;\">
+                        <div class=\"alert alert-warning\">
+                            <i class=\"fa fa-exclamation-triangle\"></i>
+                            Impossible de charger les données météo
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Événement de refresh
+            const refreshBtn = this.container.querySelector('#refresh-weather');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    this.loadWeatherData(true);
+                });
+            }
+        }
+        
+        /**
+         * Charge les données météo
+         */
+        async loadWeatherData(forceRefresh = false) {
+            const cacheKey = `${this.coordinates.lat},${this.coordinates.lng}`;
+            
+            // Vérifier le cache
+            if (!forceRefresh && this.weatherCache.has(cacheKey)) {
+                const cached = this.weatherCache.get(cacheKey);
+                if (Date.now() - cached.timestamp < this.options.updateInterval) {
+                    this.displayWeatherData(cached.data);
+                    return;
+                }
+            }
+            
+            this.showLoading();
+            
+            try {
+                const weatherData = await api.getWeather(
+                    this.coordinates.lat,
+                    this.coordinates.lng
+                );
+                
+                // Mettre en cache
+                this.weatherCache.set(cacheKey, {
+                    data: weatherData,
+                    timestamp: Date.now()
+                });
+                
+                this.displayWeatherData(weatherData);
+                this.hideLoading();
+                
+            } catch (error) {
+                console.error('Weather data loading error:', error);
+                this.showError();
+            }
+        }
+        
+        /**
+         * Affiche les données météo
+         */
+        displayWeatherData(data) {
+            this.displayCurrentWeather(data.current);
+            
+            if (this.options.showForecast && data.forecast) {
+                this.displayForecast(data.forecast);
+            }
+            
+            if (this.options.showClimbingConditions) {
+                this.displayClimbingConditions(data);
+            }
+        }
+        
+        /**
+         * Affiche la météo actuelle
+         */
+        displayCurrentWeather(current) {
+            const container = this.container.querySelector('#current-weather');
+            if (!container) return;
+            
+            const temp = Math.round(current.temperature);
+            const feelsLike = Math.round(current.feels_like);
+            const humidity = current.humidity;
+            const windSpeed = Math.round(current.wind_speed * 3.6); // m/s to km/h
+            const windDir = this.getWindDirection(current.wind_direction);
+            
+            container.innerHTML = `
+                <div class=\"current-weather-main\">
+                    <div class=\"weather-icon\">
+                        ${this.getWeatherIcon(current.weather_code)}
+                    </div>
+                    <div class=\"weather-temp\">
+                        <span class=\"temp-main\">${temp}°C</span>
+                        <span class=\"temp-feels\">Ressenti ${feelsLike}°C</span>
+                    </div>
+                    <div class=\"weather-desc\">
+                        ${this.getWeatherDescription(current.weather_code)}
+                    </div>
+                </div>
+                
+                <div class=\"weather-details\">
+                    <div class=\"detail-item\">
+                        <i class=\"fa fa-tint\"></i>
+                        <span class=\"detail-label\">Humidité</span>
+                        <span class=\"detail-value\">${humidity}%</span>
+                    </div>
+                    <div class=\"detail-item\">
+                        <i class=\"fa fa-wind\"></i>
+                        <span class=\"detail-label\">Vent</span>
+                        <span class=\"detail-value\">${windSpeed} km/h ${windDir}</span>
+                    </div>
+                    <div class=\"detail-item\">
+                        <i class=\"fa fa-barometer\"></i>
+                        <span class=\"detail-label\">Pression</span>
+                        <span class=\"detail-value\">${current.pressure} hPa</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Affiche les prévisions
+         */
+        displayForecast(forecast) {
+            const container = this.container.querySelector('#weather-forecast');
+            if (!container || !forecast.length) return;
+            
+            const forecastItems = forecast.slice(0, 5).map(day => `
+                <div class=\"forecast-item\">
+                    <div class=\"forecast-day\">
+                        ${this.formatForecastDay(day.date)}
+                    </div>
+                    <div class=\"forecast-icon\">
+                        ${this.getWeatherIcon(day.weather_code, 'small')}
+                    </div>
+                    <div class=\"forecast-temp\">
+                        <span class=\"temp-max\">${Math.round(day.temp_max)}°</span>
+                        <span class=\"temp-min\">${Math.round(day.temp_min)}°</span>
+                    </div>
+                    <div class=\"forecast-rain\">
+                        ${day.precipitation ? `<i class=\"fa fa-droplet\"></i> ${day.precipitation}mm` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = `
+                <h6 class=\"forecast-title\">Prévisions 5 jours</h6>
+                <div class=\"forecast-grid\">
+                    ${forecastItems}
+                </div>
+            `;
+        }
+        
+        /**
+         * Affiche les conditions d'escalade
+         */
+        displayClimbingConditions(data) {
+            const container = this.container.querySelector('#climbing-conditions');
+            if (!container) return;
+            
+            const conditions = this.evaluateClimbingConditions(data);
+            
+            container.innerHTML = `
+                <h6 class=\"conditions-title\">
+                    <i class=\"fa fa-mountain\"></i>
+                    Conditions d'escalade
+                </h6>
+                
+                <div class=\"conditions-overall\">
+                    <div class=\"condition-score condition-${conditions.overall.level}\">
+                        ${this.getConditionIcon(conditions.overall.level)}
+                        <span class=\"condition-text\">${conditions.overall.text}</span>
+                    </div>
+                </div>
+                
+                <div class=\"conditions-details\">
+                    <div class=\"condition-item\">
+                        <span class=\"condition-label\">Température:</span>
+                        <span class=\"condition-value condition-${conditions.temperature.level}\">
+                            ${conditions.temperature.text}
+                        </span>
+                    </div>
+                    <div class=\"condition-item\">
+                        <span class=\"condition-label\">Vent:</span>
+                        <span class=\"condition-value condition-${conditions.wind.level}\">
+                            ${conditions.wind.text}
+                        </span>
+                    </div>
+                    <div class=\"condition-item\">
+                        <span class=\"condition-label\">Précipitations:</span>
+                        <span class=\"condition-value condition-${conditions.precipitation.level}\">
+                            ${conditions.precipitation.text}
+                        </span>
+                    </div>
+                </div>
+                
+                ${conditions.advice ? `
+                    <div class=\"conditions-advice\">
+                        <i class=\"fa fa-lightbulb\"></i>
+                        <span>${conditions.advice}</span>
+                    </div>
+                ` : ''}
+            `;
+        }
+        
+        /**
+         * Évalue les conditions d'escalade
+         */
+        evaluateClimbingConditions(data) {
+            const current = data.current;
+            const temp = current.temperature;
+            const windSpeed = current.wind_speed * 3.6; // km/h
+            const precipitation = current.precipitation || 0;
+            
+            // Évaluation température
+            let tempLevel, tempText;
+            if (temp < 5) {
+                tempLevel = 'poor';
+                tempText = 'Très froid';
+            } else if (temp < 15) {
+                tempLevel = 'fair';
+                tempText = 'Frais';
+            } else if (temp < 25) {
+                tempLevel = 'good';
+                tempText = 'Idéal';
+            } else if (temp < 30) {
+                tempLevel = 'fair';
+                tempText = 'Chaud';
+            } else {
+                tempLevel = 'poor';
+                tempText = 'Très chaud';
+            }
+            
+            // Évaluation vent
+            let windLevel, windText;
+            if (windSpeed < 10) {
+                windLevel = 'good';
+                windText = 'Calme';
+            } else if (windSpeed < 20) {
+                windLevel = 'fair';
+                windText = 'Modéré';
+            } else if (windSpeed < 30) {
+                windLevel = 'poor';
+                windText = 'Fort';
+            } else {
+                windLevel = 'poor';
+                windText = 'Très fort';
+            }
+            
+            // Évaluation précipitations
+            let precipLevel, precipText;
+            if (precipitation === 0) {
+                precipLevel = 'good';
+                precipText = 'Sec';
+            } else if (precipitation < 2) {
+                precipLevel = 'fair';
+                precipText = 'Légères';
+            } else {
+                precipLevel = 'poor';
+                precipText = 'Importantes';
+            }
+            
+            // Évaluation globale
+            const scores = { good: 3, fair: 2, poor: 1 };
+            const avgScore = (scores[tempLevel] + scores[windLevel] + scores[precipLevel]) / 3;
+            
+            let overallLevel, overallText, advice;
+            if (avgScore >= 2.5) {
+                overallLevel = 'good';
+                overallText = 'Excellentes';
+                advice = 'Conditions idéales pour l\\'escalade !';
+            } else if (avgScore >= 2) {
+                overallLevel = 'fair';
+                overallText = 'Correctes';
+                advice = 'Escalade possible avec précautions.';
+            } else {
+                overallLevel = 'poor';
+                overallText = 'Difficiles';
+                advice = 'Escalade déconseillée. Restez prudents.';
+            }
+            
+            return {
+                overall: { level: overallLevel, text: overallText },
+                temperature: { level: tempLevel, text: tempText },
+                wind: { level: windLevel, text: windText },
+                precipitation: { level: precipLevel, text: precipText },
+                advice
+            };
+        }
+        
+        /**
+         * Retourne l'icône météo
+         */
+        getWeatherIcon(code, size = 'normal') {
+            const iconMap = {
+                0: '☀️',   // Clear sky
+                1: '🌤️',   // Mainly clear
+                2: '⛅',   // Partly cloudy
+                3: '☁️',   // Overcast
+                45: '🌫️',  // Fog
+                48: '🌫️',  // Depositing rime fog
+                51: '🌦️',  // Light drizzle
+                53: '🌧️',  // Moderate drizzle
+                55: '🌧️',  // Dense drizzle
+                61: '🌧️',  // Slight rain
+                63: '🌧️',  // Moderate rain
+                65: '🌧️',  // Heavy rain
+                71: '🌨️',  // Slight snow
+                73: '🌨️',  // Moderate snow
+                75: '🌨️',  // Heavy snow
+                95: '⛈️',  // Thunderstorm
+                96: '⛈️',  // Thunderstorm with hail
+                99: '⛈️'   // Thunderstorm with heavy hail
+            };
+            
+            const icon = iconMap[code] || '❓';
+            const sizeClass = size === 'small' ? 'weather-icon-small' : 'weather-icon-normal';
+            
+            return `<span class=\"${sizeClass}\">${icon}</span>`;
+        }
+        
+        /**
+         * Retourne la description météo
+         */
+        getWeatherDescription(code) {
+            const descriptions = {
+                0: 'Ciel dégagé',
+                1: 'Principalement dégagé',
+                2: 'Partiellement nuageux',
+                3: 'Couvert',
+                45: 'Brouillard',
+                48: 'Brouillard givrant',
+                51: 'Bruine légère',
+                53: 'Bruine modérée',
+                55: 'Bruine dense',
+                61: 'Pluie légère',
+                63: 'Pluie modérée',
+                65: 'Pluie forte',
+                71: 'Neige légère',
+                73: 'Neige modérée',
+                75: 'Neige forte',
+                95: 'Orage',
+                96: 'Orage avec grêle',
+                99: 'Orage violent'
+            };
+            
+            return descriptions[code] || 'Conditions inconnues';
+        }
+        
+        /**
+         * Convertit la direction du vent
+         */
+        getWindDirection(degrees) {
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const index = Math.round(degrees / 45) % 8;
+            return directions[index];
+        }
+        
+        /**
+         * Formate le jour pour les prévisions
+         */
+        formatForecastDay(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            if (date.toDateString() === today.toDateString()) {
+                return 'Aujourd\\'hui';
+            } else if (date.toDateString() === tomorrow.toDateString()) {
+                return 'Demain';
+            } else {
+                return date.toLocaleDateString('fr-FR', { weekday: 'short' });
+            }
+        }
+        
+        /**
+         * Retourne l'icône de condition
+         */
+        getConditionIcon(level) {
+            const icons = {
+                good: '✅',
+                fair: '⚠️',
+                poor: '❌'
+            };
+            return icons[level] || '❓';
+        }
+        
+        /**
+         * Affiche le loading
+         */
+        showLoading() {
+            const loading = this.container.querySelector('#weather-loading');
+            const content = this.container.querySelector('#weather-content');
+            const error = this.container.querySelector('#weather-error');
+            
+            if (loading) loading.style.display = 'block';
+            if (content) content.style.display = 'none';
+            if (error) error.style.display = 'none';
+        }
+        
+        /**
+         * Masque le loading
+         */
+        hideLoading() {
+            const loading = this.container.querySelector('#weather-loading');
+            const content = this.container.querySelector('#weather-content');
+            
+            if (loading) loading.style.display = 'none';
+            if (content) content.style.display = 'block';
+        }
+        
+        /**
+         * Affiche l'erreur
+         */
+        showError() {
+            const loading = this.container.querySelector('#weather-loading');
+            const content = this.container.querySelector('#weather-content');
+            const error = this.container.querySelector('#weather-error');
+            
+            if (loading) loading.style.display = 'none';
+            if (content) content.style.display = 'none';
+            if (error) error.style.display = 'block';
+        }
+        
+        /**
+         * Démarre la mise à jour automatique
+         */
+        startAutoUpdate() {
+            if (this.updateTimer) {
+                clearInterval(this.updateTimer);
+            }
+            
+            this.updateTimer = setInterval(() => {
+                this.loadWeatherData();
+            }, this.options.updateInterval);
+        }
+        
+        /**
+         * Arrête la mise à jour automatique
+         */
+        stopAutoUpdate() {
+            if (this.updateTimer) {
+                clearInterval(this.updateTimer);
+                this.updateTimer = null;
+            }
+        }
+        
+        /**
+         * Nettoyage
+         */
+        destroy() {
+            this.stopAutoUpdate();
+            this.weatherCache.clear();
+            
+            if (this.container) {
+                this.container.innerHTML = '';
+            }
+        }
+    }
+    
+    return WeatherWidget;
+});
+
+console.log('🌤️ WeatherWidget module ready');
