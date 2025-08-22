@@ -354,10 +354,11 @@ class SectorController extends BaseController
             $media = [];
             try {
                 $media = $this->db->fetchAll(
-                    "SELECT m.id, m.title, m.file_path, m.file_type, m.created_at
+                    "SELECT m.id, m.title, m.file_path, m.media_type, m.created_at
                      FROM climbing_media m 
-                     WHERE m.entity_type = 'sector' AND m.entity_id = ? AND m.active = 1
-                     ORDER BY m.display_order ASC, m.created_at ASC",
+                     JOIN climbing_media_relationships mr ON m.id = mr.media_id
+                     WHERE mr.entity_type = 'sector' AND mr.entity_id = ? AND m.is_public = 1
+                     ORDER BY mr.relationship_type, mr.sort_order ASC, m.created_at ASC",
                     [$id]
                 );
             } catch (\Exception $e) {

@@ -194,9 +194,11 @@ class SiteController extends BaseController
             $media = [];
             try {
                 $media = $this->db->fetchAll(
-                    "SELECT * FROM climbing_media 
-                     WHERE entity_type = 'site' AND entity_id = ? AND active = 1
-                     ORDER BY display_order ASC, created_at ASC",
+                    "SELECT m.id, m.title, m.file_path, m.media_type, m.created_at
+                     FROM climbing_media m 
+                     JOIN climbing_media_relationships mr ON m.id = mr.media_id
+                     WHERE mr.entity_type = 'site' AND mr.entity_id = ? AND m.is_public = 1
+                     ORDER BY mr.relationship_type, mr.sort_order ASC, m.created_at ASC",
                     [(int)$id]
                 );
             } catch (\Exception $e) {
@@ -936,9 +938,11 @@ class SiteController extends BaseController
             $media = [];
             try {
                 $media = $this->db->fetchAll(
-                    "SELECT * FROM climbing_media 
-                     WHERE entity_type = 'site' AND entity_id = ? AND active = 1
-                     ORDER BY display_order ASC, created_at ASC",
+                    "SELECT m.id, m.title, m.file_path, m.media_type, m.created_at
+                     FROM climbing_media m 
+                     JOIN climbing_media_relationships mr ON m.id = mr.media_id
+                     WHERE mr.entity_type = 'site' AND mr.entity_id = ? AND m.is_public = 1
+                     ORDER BY mr.relationship_type, mr.sort_order ASC, m.created_at ASC",
                     [(int)$id]
                 );
             } catch (\Exception $e) {

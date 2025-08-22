@@ -309,10 +309,11 @@ class RouteController extends BaseController
         $media = [];
         try {
             $media = $this->db->fetchAll(
-                "SELECT m.id, m.title, m.file_path, m.file_type, m.created_at
+                "SELECT m.id, m.title, m.file_path, m.media_type, m.created_at
                  FROM climbing_media m 
-                 WHERE m.entity_type = 'route' AND m.entity_id = ? AND m.active = 1
-                 ORDER BY m.display_order ASC, m.created_at ASC",
+                 JOIN climbing_media_relationships mr ON m.id = mr.media_id
+                 WHERE mr.entity_type = 'route' AND mr.entity_id = ? AND m.is_public = 1
+                 ORDER BY mr.relationship_type, mr.sort_order ASC, m.created_at ASC",
                 [$id]
             );
         } catch (\Exception $e) {
@@ -473,7 +474,7 @@ class RouteController extends BaseController
             
             // Récupérer les systèmes de cotation
             $difficulty_systems = $this->db->fetchAll(
-                "SELECT id, name, code FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
+                "SELECT id, name FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
             );
             
             error_log("RouteController::create - Régions trouvées: " . count($regions) . ", Systèmes cotation: " . count($difficulty_systems));
@@ -606,7 +607,7 @@ class RouteController extends BaseController
             
             // Récupérer les systèmes de cotation
             $difficulty_systems = $this->db->fetchAll(
-                "SELECT id, name, code FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
+                "SELECT id, name FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
             );
             
             return $this->render('routes/form', [
