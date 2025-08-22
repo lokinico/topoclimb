@@ -11,6 +11,7 @@ use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Pagination\Paginator;
+use TopoclimbCH\Services\MediaUploadService;
 use Exception;
 
 class RouteController extends BaseController
@@ -646,6 +647,9 @@ class RouteController extends BaseController
                 return $this->redirect('/routes/create');
             }
             
+            // DEBUG: Vérifier si on a des fichiers
+            app_log("RouteController::store - Files reçus: " . print_r($_FILES, true));
+            
             // Récupération et validation des données
             $data = $this->validateRouteData($request);
             
@@ -653,6 +657,9 @@ class RouteController extends BaseController
             $routeId = $this->createRoute($data);
             
             if ($routeId) {
+                // Gestion de l'upload d'image si présente
+                $this->handleImageUpload($request, $routeId);
+                
                 $this->flash('success', 'Voie créée avec succès');
                 return $this->redirect('/routes/' . $routeId);
             } else {
@@ -1033,13 +1040,13 @@ class RouteController extends BaseController
         $id = $request->attributes->get('id');
         
         if (!$id) {
-            $this->session->flash('error', 'ID de la route non spécifié');
-            return Response::redirect('/routes');
+            $this->flash('error', 'ID de la route non spécifié');
+            return $this->redirect('/routes');
         }
 
-        if (!$this->validateCsrfToken($request)) {
-            $this->session->flash('error', 'Token de sécurité invalide, veuillez réessayer');
-            return Response::redirect("/routes/{$id}/edit");
+        if (!$this->validateCsrfToken($request->request->get('csrf_token'))) {
+            $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return $this->redirect("/routes/{$id}/edit");
         }
 
         try {
@@ -1050,8 +1057,8 @@ class RouteController extends BaseController
             );
 
             if (!$route) {
-                $this->session->flash('error', 'Voie non trouvée');
-                return Response::redirect('/routes');
+                $this->flash('error', 'Voie non trouvée');
+                return $this->redirect('/routes');
             }
 
             // Préparer les données de mise à jour
@@ -1069,25 +1076,82 @@ class RouteController extends BaseController
 
             // Validation basique
             if (empty($updateData['name'])) {
-                $this->session->flash('error', 'Le nom de la voie est obligatoire');
-                return Response::redirect("/routes/{$id}/edit");
+                $this->flash('error', 'Le nom de la voie est obligatoire');
+                return $this->redirect("/routes/{$id}/edit");
             }
 
             // Mettre à jour en base
             $updated = $this->db->update('climbing_routes', $updateData, 'id = ?', [$id]);
 
             if ($updated) {
-                $this->session->flash('success', 'Voie mise à jour avec succès!');
-                return Response::redirect("/routes/{$id}");
+                // Gestion de l'upload d'image si présente
+                $this->handleImageUpload($request, $id);
+                
+                $this->flash('success', 'Voie mise à jour avec succès!');
+                return $this->redirect("/routes/{$id}");
             } else {
-                $this->session->flash('error', 'Erreur lors de la mise à jour');
-                return Response::redirect("/routes/{$id}/edit");
+                $this->flash('error', 'Erreur lors de la mise à jour');
+                return $this->redirect("/routes/{$id}/edit");
             }
 
-        } catch (Exception $e) {
-            error_log("Erreur update route: " . $e->getMessage());
-            $this->session->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
-            return Response::redirect("/routes/{$id}/edit");
+        } catch (\Exception $e) {
+            app_log("Erreur update route: " . $e->getMessage());
+            $this->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+            return $this->redirect("/routes/{$id}/edit");
+        }
+    }
+    
+    /**
+     * Gestion de l'upload d'image pour une route
+     */
+    private function handleImageUpload(Request $request, int $routeId): void
+    {
+        // DEBUG: Log détaillé des fichiers reçus
+        app_log("handleImageUpload: Début méthode");
+        app_log("handleImageUpload: Request files = " . print_r($request->files->all(), true));
+        app_log("handleImageUpload: _FILES = " . print_r($_FILES, true));
+
+        // Vérifier si un fichier a été uploadé
+        $files = $request->files->all();
+        if (!isset($files['image']) || !$files['image']) {
+            return; // Pas de fichier, pas d'erreur
+        }
+        
+        $uploadedFile = $files['image'];
+        
+        // Vérifier que c'est bien un objet UploadedFile et qu'il y a un fichier
+        if (!$uploadedFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            return;
+        }
+        
+        if ($uploadedFile->getError() === UPLOAD_ERR_NO_FILE) {
+            return; // Pas de fichier sélectionné, normal
+        }
+        
+        if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            throw new \InvalidArgumentException('Erreur lors de l\'upload du fichier');
+        }
+        
+        try {
+            $mediaService = new MediaUploadService($this->db);
+            $userId = $this->session->get('user_id');
+            
+            $mediaId = $mediaService->uploadMedia(
+                $uploadedFile,
+                'route',
+                $routeId,
+                'Image de la voie',
+                $userId
+            );
+            
+            if ($mediaId) {
+                app_log("RouteController: Image uploadée avec succès - Media ID: $mediaId");
+            }
+            
+        } catch (\Exception $e) {
+            // Log l'erreur mais ne pas faire échouer la création de route
+            app_log("RouteController: Erreur upload image - " . $e->getMessage());
+            $this->flash('warning', 'Route créée mais erreur lors de l\'upload de l\'image: ' . $e->getMessage());
         }
     }
 }

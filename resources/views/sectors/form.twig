@@ -36,7 +36,7 @@
 
 <div class="row">
     <div class="col-lg-8">
-        <form action="{{ sector.id ? url('/sectors/' ~ sector.id) : url('/sectors/create') }}" 
+        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors/create') }}" 
               method="post" 
               enctype="multipart/form-data" 
               class="sector-form-content" 

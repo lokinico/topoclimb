@@ -38,7 +38,7 @@
 </div>
 <div class="row">
     <div class="col-lg-8">
-        <form action="{{ route.id ? url('/routes/' ~ route.id) : url('/routes/create') }}" 
+        <form action="{{ route.id ? url('/routes/' ~ route.id ~ '/edit') : url('/routes/create') }}" 
               method="post" 
               enctype="multipart/form-data" 
               class="route-form-content" 

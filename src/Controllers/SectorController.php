@@ -11,6 +11,7 @@ use TopoclimbCH\Core\View;
 use TopoclimbCH\Core\Database;
 use TopoclimbCH\Core\Security\CsrfManager;
 use TopoclimbCH\Core\Pagination\Paginator;
+use TopoclimbCH\Services\MediaUploadService;
 
 class SectorController extends BaseController
 {
@@ -612,6 +613,9 @@ class SectorController extends BaseController
             $sectorId = $this->createSector($data);
             
             if ($sectorId) {
+                // Gestion de l'upload d'image si présente
+                $this->handleImageUpload($request, $sectorId);
+                
                 $this->flash('success', 'Secteur créé avec succès');
                 return $this->redirect('/sectors/' . $sectorId);
             } else {
@@ -971,11 +975,55 @@ class SectorController extends BaseController
         }
     }
 
-    public function update($id)
+    public function update(Request $request): Response
     {
-        // TODO: Implémenter mise à jour secteur
-        $this->flash('success', 'Secteur mis à jour avec succès!');
-        return $this->redirect("/sectors/{$id}");
+        $id = $request->attributes->get('id');
+        
+        if (!$id) {
+            $this->flash('error', 'ID du secteur non spécifié');
+            return $this->redirect('/sectors');
+        }
+        
+        if (!$this->validateCsrfToken($request->request->get('csrf_token'))) {
+            $this->flash('error', 'Token de sécurité invalide, veuillez réessayer');
+            return $this->redirect("/sectors/{$id}/edit");
+        }
+        
+        try {
+            // Récupérer le secteur à modifier
+            $sector = $this->db->fetchOne(
+                "SELECT * FROM climbing_sectors WHERE id = ? AND active = 1", 
+                [$id]
+            );
+            
+            if (!$sector) {
+                $this->flash('error', 'Secteur non trouvé');
+                return $this->redirect('/sectors');
+            }
+            
+            // Récupérer et valider les données de mise à jour
+            $updateData = $this->validateSectorData($request);
+            $updateData['updated_at'] = date('Y-m-d H:i:s');
+            
+            // Mettre à jour en base
+            $updated = $this->db->update('climbing_sectors', $updateData, 'id = ?', [$id]);
+            
+            if ($updated) {
+                // Gestion de l'upload d'image si présente
+                $this->handleImageUpload($request, $id);
+                
+                $this->flash('success', 'Secteur mis à jour avec succès!');
+                return $this->redirect("/sectors/{$id}");
+            } else {
+                $this->flash('error', 'Erreur lors de la mise à jour');
+                return $this->redirect("/sectors/{$id}/edit");
+            }
+            
+        } catch (\Exception $e) {
+            app_log("Erreur update secteur: " . $e->getMessage());
+            $this->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+            return $this->redirect("/sectors/{$id}/edit");
+        }
     }
     
     public function delete($id)
@@ -993,6 +1041,64 @@ class SectorController extends BaseController
             return $this->json($routes);
         } catch (Exception $e) {
             return $this->json(['error' => 'Erreur lors de la récupération des routes'], 500);
+        }
+    }
+    
+    /**
+     * Gestion de l'upload d'image pour un secteur
+     */
+    private function handleImageUpload(Request $request, int $sectorId): void
+    {
+        app_log("SectorController::handleImageUpload - Début méthode pour secteur {$sectorId}");
+        
+        // Vérifier si un fichier a été uploadé (nom du champ: media_file)
+        $files = $request->files->all();
+        app_log("SectorController::handleImageUpload - Files reçus: " . print_r($files, true));
+        
+        if (!isset($files['media_file']) || !$files['media_file']) {
+            app_log("SectorController::handleImageUpload - Pas de fichier media_file");
+            return; // Pas de fichier, pas d'erreur
+        }
+        
+        $uploadedFile = $files['media_file'];
+        
+        // Vérifier que c'est bien un objet UploadedFile et qu'il y a un fichier
+        if (!$uploadedFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            app_log("SectorController::handleImageUpload - Fichier n'est pas UploadedFile");
+            return;
+        }
+        
+        if ($uploadedFile->getError() === UPLOAD_ERR_NO_FILE) {
+            app_log("SectorController::handleImageUpload - UPLOAD_ERR_NO_FILE");
+            return; // Pas de fichier sélectionné, normal
+        }
+        
+        if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            app_log("SectorController::handleImageUpload - Erreur upload: " . $uploadedFile->getError());
+            throw new \InvalidArgumentException('Erreur lors de l\'upload du fichier');
+        }
+        
+        try {
+            $mediaService = new MediaUploadService($this->db);
+            $userId = $this->session->get('user_id');
+            
+            // Upload avec entity_type = 'sector' au lieu de 'route'
+            $mediaId = $mediaService->uploadMedia(
+                $uploadedFile, 
+                'sector', 
+                $sectorId, 
+                'Image du secteur', 
+                $userId
+            );
+            
+            if ($mediaId) {
+                app_log("SectorController: Image uploadée avec succès - Media ID: {$mediaId}");
+            }
+            
+        } catch (\Exception $e) {
+            app_log("SectorController: Erreur upload image - " . $e->getMessage());
+            // Ne pas faire échouer la création du secteur pour une erreur d'image
+            $this->flash('warning', 'Secteur créé mais erreur lors de l\'upload de l\'image: ' . $e->getMessage());
         }
     }
 }
