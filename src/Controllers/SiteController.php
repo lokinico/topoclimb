@@ -246,7 +246,8 @@ class SiteController extends BaseController
                 'sectors' => $sectors,
                 'media' => $media,
                 'stats' => $stats,
-                'csrf_token' => $this->createCsrfToken()
+                'csrf_token' => $this->createCsrfToken(),
+                'csp_nonce' => $this->generateCspNonce()
             ]);
         } catch (\Exception $e) {
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());

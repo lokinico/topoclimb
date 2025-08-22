@@ -69,8 +69,9 @@ class ModuleManager {
         
         try {
             // Charger les dépendances d'abord
+            const deps = Array.isArray(module.dependencies) ? module.dependencies : [];
             const dependencies = await Promise.all(
-                module.dependencies.map(dep => this.load(dep))
+                deps.map(dep => this.load(dep))
             );
             
             // Créer l'instance du module
