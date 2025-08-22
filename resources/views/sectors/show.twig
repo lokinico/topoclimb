@@ -344,6 +344,9 @@
                 </div>
             {% endif %}
 
+            <!-- Widget météo -->
+            {% include 'components/weather-widget.twig' with { sector: sector } %}
+
             <!-- Informations techniques -->
             <div class="info-card">
                 <h4 class="h5 mb-3">
@@ -483,9 +486,10 @@
 
 {% block scripts %}
 <script src="{{ asset('js/components/common.js') }}"></script>
+<script src="{{ asset('js/components/weather-widget.js') }}"></script>
 <script src="{{ asset('js/pages/sectors/show.js') }}"></script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 // Initialiser les données pour la page
 document.addEventListener('DOMContentLoaded', function() {
     // Données pour la carte

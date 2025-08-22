@@ -391,7 +391,8 @@ class SectorController extends BaseController
                 'sector' => $sector,
                 'routes' => $routes,
                 'media' => $media,
-                'stats' => $stats
+                'stats' => $stats,
+                'csp_nonce' => $this->generateCspNonce()
             ]);
         } catch (\Exception $e) {
             error_log("SectorController::show - Erreur: " . $e->getMessage());

@@ -3,7 +3,144 @@
  * Extrait et modularisé depuis pages/regions/show.js
  */
 
-// Enregistrement du module WeatherWidget
+// Classe autonome pour widgets météo secteurs (depuis Twig template)
+class SimpleWeatherWidget {
+    constructor(element) {
+        this.element = element;
+        this.lat = element.dataset.lat;
+        this.lng = element.dataset.lng;
+        this.sectorId = element.dataset.sectorId;
+        
+        this.loadingEl = element.querySelector('.weather-loading');
+        this.contentEl = element.querySelector('.weather-content');
+        this.errorEl = element.querySelector('.weather-error');
+        this.updatedEl = element.querySelector('.weather-updated');
+        
+        this.init();
+    }
+    
+    async init() {
+        if (!this.lat || !this.lng) {
+            this.showError('Coordonnées manquantes');
+            return;
+        }
+        
+        try {
+            await this.loadWeatherData();
+        } catch (error) {
+            console.error('Erreur chargement météo:', error);
+            this.showError('Erreur de chargement');
+        }
+    }
+    
+    async loadWeatherData() {
+        const response = await fetch(`/api/weather/current?lat=${this.lat}&lng=${this.lng}&sector_id=${this.sectorId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const response_data = await response.json();
+        
+        if (!response_data.success) {
+            throw new Error(response_data.error || 'Erreur API');
+        }
+        
+        this.displayWeatherData(response_data.data);
+    }
+    
+    displayWeatherData(data) {
+        this.hideLoading();
+        
+        this.setElementText('.weather-temp', `${Math.round(data.temperature)}°`);
+        this.setElementText('.weather-desc', data.description);
+        this.setElementText('.weather-humidity', `${data.humidity}%`);
+        this.setElementText('.weather-wind', `${Math.round(data.wind_speed)} km/h`);
+        this.setElementText('.weather-precipitation', `${data.precipitation || 0} mm`);
+        
+        this.updateWeatherIcon(data.condition, data.description);
+        this.updateClimbingRecommendation(data.climbing_conditions);
+        this.setElementText('.weather-timestamp', new Date().toLocaleString('fr-CH'));
+        
+        this.contentEl.classList.remove('d-none');
+        this.updatedEl.classList.remove('d-none');
+    }
+    
+    updateWeatherIcon(iconCode, description) {
+        const iconEl = this.element.querySelector('.weather-icon i');
+        const iconMap = {
+            '01d': 'fas fa-sun text-warning',
+            '01n': 'fas fa-moon text-secondary',
+            '02d': 'fas fa-cloud-sun text-warning',
+            '02n': 'fas fa-cloud-moon text-secondary',
+            '03d': 'fas fa-cloud text-secondary',
+            '04d': 'fas fa-cloud text-secondary',
+            '09d': 'fas fa-cloud-rain text-primary',
+            '10d': 'fas fa-cloud-sun-rain text-primary',
+            '11d': 'fas fa-bolt text-warning',
+            '13d': 'fas fa-snowflake text-info',
+            '50d': 'fas fa-smog text-muted'
+        };
+        
+        iconEl.className = iconMap[iconCode] || 'fas fa-question text-muted';
+        iconEl.setAttribute('title', description);
+    }
+    
+    updateClimbingRecommendation(conditions) {
+        const recommendationEl = this.element.querySelector('.climbing-recommendation');
+        const statusEl = this.element.querySelector('.recommendation-status');
+        const textEl = this.element.querySelector('.recommendation-text');
+        const iconEl = this.element.querySelector('.recommendation-icon');
+        
+        recommendationEl.className = 'climbing-recommendation mt-3 p-2 rounded';
+        
+        const rating = conditions.rating || 'good';
+        if (rating === 'excellent' || rating === 'good') {
+            recommendationEl.classList.add('bg-success', 'bg-opacity-10', 'border-success');
+            iconEl.className = 'fas fa-mountain text-success me-2';
+        } else if (rating === 'fair' || rating === 'warning') {
+            recommendationEl.classList.add('warning');
+            iconEl.className = 'fas fa-exclamation-triangle text-warning me-2';
+        } else {
+            recommendationEl.classList.add('danger');
+            iconEl.className = 'fas fa-times-circle text-danger me-2';
+        }
+        
+        statusEl.textContent = rating.charAt(0).toUpperCase() + rating.slice(1);
+        textEl.textContent = conditions.recommendations ? conditions.recommendations[0] : 'Analysez les conditions';
+    }
+    
+    setElementText(selector, text) {
+        const element = this.element.querySelector(selector);
+        if (element) element.textContent = text;
+    }
+    
+    hideLoading() {
+        this.loadingEl.classList.add('d-none');
+    }
+    
+    showError(message) {
+        this.loadingEl.classList.add('d-none');
+        this.errorEl.classList.remove('d-none');
+        const errorText = this.errorEl.querySelector('.text-muted');
+        if (errorText) {
+            errorText.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
+        }
+    }
+}
+
+// Auto-initialisation des widgets météo simple (secteurs)
+document.addEventListener('DOMContentLoaded', function() {
+    const weatherWidgets = document.querySelectorAll('.weather-widget[data-lat][data-lng]');
+    weatherWidgets.forEach(widget => {
+        new SimpleWeatherWidget(widget);
+    });
+});
+
+// Export pour utilisation globale
+window.SimpleWeatherWidget = SimpleWeatherWidget;
+
+// Enregistrement du module WeatherWidget pour régions
 TopoclimbCH.modules.register('weather-widget', ['utils', 'api'], (utils, api) => {
     
     class WeatherWidget {
