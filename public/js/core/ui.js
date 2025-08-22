@@ -4,7 +4,7 @@
  */
 
 // Enregistrement du module UI
-TopoclimbCH.modules.register('ui', ['utils'], (utils) => {
+TopoclimbCH.modules.register('ui', (utils) => {
     
     /**
      * 🪟 Gestionnaire de modales moderne
@@ -610,6 +610,6 @@ TopoclimbCH.modules.register('ui', ['utils'], (utils) => {
     TopoclimbCH.ui = UI;
     
     return UI;
-});
+}, ['utils']);
 
 console.log('🎨 TopoclimbCH UI module ready');

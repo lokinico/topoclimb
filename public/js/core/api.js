@@ -4,7 +4,7 @@
  */
 
 // Enregistrement du module API
-TopoclimbCH.modules.register('api', ['utils'], (utils) => {
+TopoclimbCH.modules.register('api', (utils) => {
     
     /**
      * Erreurs API personnalisées
@@ -419,6 +419,6 @@ TopoclimbCH.modules.register('api', ['utils'], (utils) => {
     TopoclimbCH.TimeoutError = TimeoutError;
     
     return api;
-});
+}, ['utils']);
 
 console.log('🌐 TopoclimbCH API module ready');
