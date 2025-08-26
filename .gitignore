@@ -71,7 +71,6 @@ test_*.php
 test_*.sh
 test_results_*.json
 debug_*.php
-check_*.php
 public/debug_*.php
 public/test_*.html
 public/router.php
