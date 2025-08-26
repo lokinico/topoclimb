@@ -28,6 +28,66 @@ class RouteController extends BaseController
     }
 
     /**
+     * Helper pour récupérer les régions avec fallback si colonne 'active' manquante
+     */
+    private function getActiveRegions(): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+        } catch (Exception $e) {
+            error_log("RouteController - Fallback regions query (no active column): " . $e->getMessage());
+            return $this->db->fetchAll(
+                "SELECT id, name FROM climbing_regions ORDER BY name ASC"
+            );
+        }
+    }
+
+    /**
+     * Helper pour récupérer les systèmes de cotation avec fallback si colonne 'active' manquante
+     */
+    private function getActiveDifficultySystems(): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT id, name FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
+            );
+        } catch (Exception $e) {
+            error_log("RouteController - Fallback difficulty_systems query (no active column): " . $e->getMessage());
+            return $this->db->fetchAll(
+                "SELECT id, name FROM climbing_difficulty_systems ORDER BY name ASC"
+            );
+        }
+    }
+
+    /**
+     * Helper pour récupérer les secteurs avec fallback si colonne 'active' manquante
+     */
+    private function getActiveSectors(): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name, si.name as site_name
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 LEFT JOIN climbing_sites si ON s.site_id = si.id
+                 WHERE s.active = 1 
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+        } catch (Exception $e) {
+            error_log("RouteController - Fallback sectors query (no active column): " . $e->getMessage());
+            return $this->db->fetchAll(
+                "SELECT s.id, s.name, r.name as region_name, si.name as site_name
+                 FROM climbing_sectors s 
+                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                 LEFT JOIN climbing_sites si ON s.site_id = si.id
+                 ORDER BY r.name ASC, s.name ASC"
+            );
+        }
+    }
+
+    /**
      * Affichage de la liste des voies
      */
     public function index(Request $request): Response
@@ -468,14 +528,10 @@ class RouteController extends BaseController
         
         try {
             // Récupérer les régions pour le sélecteur cascade
-            $regions = $this->db->fetchAll(
-                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
-            );
+            $regions = $this->getActiveRegions();
             
             // Récupérer les systèmes de cotation
-            $difficulty_systems = $this->db->fetchAll(
-                "SELECT id, name FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
-            );
+            $difficulty_systems = $this->getActiveDifficultySystems();
             
             error_log("RouteController::create - Régions trouvées: " . count($regions) . ", Systèmes cotation: " . count($difficulty_systems));
             
@@ -506,14 +562,7 @@ class RouteController extends BaseController
         
         try {
             // Récupérer les secteurs disponibles
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, r.name as region_name, si.name as site_name
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 LEFT JOIN climbing_sites si ON s.site_id = si.id
-                 WHERE s.active = 1 
-                 ORDER BY r.name ASC, s.name ASC"
-            );
+            $sectors = $this->getActiveSectors();
 
             // Pré-sélection secteur si fourni
             $sectorId = $request->query->get('sector_id');
@@ -542,14 +591,7 @@ class RouteController extends BaseController
         
         try {
             // Récupérer les secteurs disponibles
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, r.name as region_name, si.name as site_name
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 LEFT JOIN climbing_sites si ON s.site_id = si.id
-                 WHERE s.active = 1 
-                 ORDER BY r.name ASC, s.name ASC"
-            );
+            $sectors = $this->getActiveSectors();
 
             // Pré-sélection secteur si fourni
             $sectorId = $request->query->get('sector_id');
@@ -586,14 +628,27 @@ class RouteController extends BaseController
             }
             
             // Vérifier que le secteur existe
-            $sector = $this->db->fetchOne(
-                "SELECT s.*, r.name as region_name, si.name as site_name 
-                 FROM climbing_sectors s 
-                 LEFT JOIN climbing_regions r ON s.region_id = r.id 
-                 LEFT JOIN climbing_sites si ON s.site_id = si.id
-                 WHERE s.id = ? AND s.active = 1",
-                [$sector_id]
-            );
+            try {
+                $sector = $this->db->fetchOne(
+                    "SELECT s.*, r.name as region_name, si.name as site_name 
+                     FROM climbing_sectors s 
+                     LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                     LEFT JOIN climbing_sites si ON s.site_id = si.id
+                     WHERE s.id = ? AND s.active = 1",
+                    [$sector_id]
+                );
+            } catch (Exception $e) {
+                // Fallback si colonne 'active' n'existe pas
+                error_log("RouteController::createFromSector - Fallback sector query (no active column): " . $e->getMessage());
+                $sector = $this->db->fetchOne(
+                    "SELECT s.*, r.name as region_name, si.name as site_name 
+                     FROM climbing_sectors s 
+                     LEFT JOIN climbing_regions r ON s.region_id = r.id 
+                     LEFT JOIN climbing_sites si ON s.site_id = si.id
+                     WHERE s.id = ?",
+                    [$sector_id]
+                );
+            }
             
             if (!$sector) {
                 $this->flash('error', 'Secteur non trouvé');
@@ -601,14 +656,10 @@ class RouteController extends BaseController
             }
             
             // Récupérer les régions pour le sélecteur cascade
-            $regions = $this->db->fetchAll(
-                "SELECT id, name FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
-            );
+            $regions = $this->getActiveRegions();
             
             // Récupérer les systèmes de cotation
-            $difficulty_systems = $this->db->fetchAll(
-                "SELECT id, name FROM climbing_difficulty_systems WHERE active = 1 ORDER BY name ASC"
-            );
+            $difficulty_systems = $this->getActiveDifficultySystems();
             
             return $this->render('routes/form', [
                 'route' => (object)['sector_id' => $sector_id],
@@ -996,16 +1047,31 @@ class RouteController extends BaseController
         
         try {
             // Récupérer la route avec ses relations
-            $route = $this->db->fetchOne(
-                "SELECT r.*, s.name as sector_name, s.site_id, 
-                        site.name as site_name, reg.name as region_name
-                 FROM climbing_routes r
-                 LEFT JOIN climbing_sectors s ON r.sector_id = s.id
-                 LEFT JOIN climbing_sites site ON s.site_id = site.id
-                 LEFT JOIN climbing_regions reg ON site.region_id = reg.id
-                 WHERE r.id = ? AND r.active = 1",
-                [(int)$id]
-            );
+            try {
+                $route = $this->db->fetchOne(
+                    "SELECT r.*, s.name as sector_name, s.site_id, 
+                            site.name as site_name, reg.name as region_name
+                     FROM climbing_routes r
+                     LEFT JOIN climbing_sectors s ON r.sector_id = s.id
+                     LEFT JOIN climbing_sites site ON s.site_id = site.id
+                     LEFT JOIN climbing_regions reg ON site.region_id = reg.id
+                     WHERE r.id = ? AND r.active = 1",
+                    [(int)$id]
+                );
+            } catch (Exception $e) {
+                // Fallback si colonne 'active' n'existe pas
+                error_log("RouteController::edit - Fallback route query (no active column): " . $e->getMessage());
+                $route = $this->db->fetchOne(
+                    "SELECT r.*, s.name as sector_name, s.site_id, 
+                            site.name as site_name, reg.name as region_name
+                     FROM climbing_routes r
+                     LEFT JOIN climbing_sectors s ON r.sector_id = s.id
+                     LEFT JOIN climbing_sites site ON s.site_id = site.id
+                     LEFT JOIN climbing_regions reg ON site.region_id = reg.id
+                     WHERE r.id = ?",
+                    [(int)$id]
+                );
+            }
             
             if (!$route) {
                 $this->flash('error', 'Route non trouvée');
@@ -1013,13 +1079,24 @@ class RouteController extends BaseController
             }
             
             // Récupérer les secteurs pour le formulaire
-            $sectors = $this->db->fetchAll(
-                "SELECT s.id, s.name, site.name as site_name
-                 FROM climbing_sectors s
-                 LEFT JOIN climbing_sites site ON s.site_id = site.id
-                 WHERE s.active = 1
-                 ORDER BY site.name, s.name"
-            );
+            try {
+                $sectors = $this->db->fetchAll(
+                    "SELECT s.id, s.name, site.name as site_name
+                     FROM climbing_sectors s
+                     LEFT JOIN climbing_sites site ON s.site_id = site.id
+                     WHERE s.active = 1
+                     ORDER BY site.name, s.name"
+                );
+            } catch (Exception $e) {
+                // Fallback si colonne 'active' n'existe pas
+                error_log("RouteController::edit - Fallback sectors query (no active column): " . $e->getMessage());
+                $sectors = $this->db->fetchAll(
+                    "SELECT s.id, s.name, site.name as site_name
+                     FROM climbing_sectors s
+                     LEFT JOIN climbing_sites site ON s.site_id = site.id
+                     ORDER BY site.name, s.name"
+                );
+            }
             
             return $this->render('routes/form', [
                 'title' => 'Modifier la route ' . $route['name'],
