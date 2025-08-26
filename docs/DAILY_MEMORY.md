@@ -4,6 +4,839 @@
 
 ## 📅 **Jeudi 22 Août 2025**
 
+### en cours
+
+> Refused to execute inline script because it violates the following Content Security Policy
+   directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-j9Sh9MAlTwpqjjvicaTzAw=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  common.js:9 🔧 Loading TopoclimbCH Common Components...
+  common.js:460 ✅ TopoclimbCH Common Components loaded successfully
+  view-manager.js:449 ViewManager script loaded
+  api-integration.js:432 🔗 API Integration Layer loaded
+  topoclimb.js:69 🏗️ Initializing TopoclimbCH v2.0...
+  common.js:454 Uncaught TypeError: window.TopoclimbCH.init is not a function
+      at HTMLDocument.<anonymous> (common.js:454:28)
+  (anonymous) @ common.js:454Understand this error
+  app.js:352 🏔️ TopoclimbCH v2.0.0 initialized
+  view-manager.js:452 DOM loaded, initializing ViewManager...
+  api-integration.js:8 🔄 Initializing API integration...
+  view-manager.js:484 ViewManager: ❌ No valid containers found!
+  (anonymous) @ view-manager.js:484
+  setTimeout
+  (anonymous) @ view-manager.js:455Understand this error
+  view-manager.js:485 Available containers: NodeList(7) [div.container, div.container, 
+  div.container, div.container, div.container, div.container, div.container]
+  view-manager.js:486 Available view buttons: NodeList []
+  index.js:300 🎯 TopoclimbCH Core loaded and ready
+  topoclimb.js:34 ✅ Loaded: /js/core/index.js
+  utils.js:417 🛠️ TopoclimbCH Utils module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/utils.js
+  api-integration.js:17 ✅ API integration initialized successfully
+  api.js:424 🌐 TopoclimbCH API module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/api.js
+  ui.js:615 🎨 TopoclimbCH UI module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/ui.js
+  topoclimb.js:101 🚨 Failed to initialize TopoclimbCH: TypeError: module.factory is not a 
+  function
+      at ModuleManager.load (index.js:78:44)
+      at async Promise.all (:8000/index 1)
+  initializeApplication @ topoclimb.js:101
+  await in initializeApplication
+  (anonymous) @ topoclimb.js:296
+  (anonymous) @ topoclimb.js:299Understand this error
+  topoclimb.js:257 🔄 Initializing fallback mode...
+  topoclimb.js:287 ✅ Fallback mode ready
+  region Refused to execute inline script because it violates the following Content Security
+   Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-K0m7whoByu8z19+UzSWd6Q=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  regions:887 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-K0m7whoByu8z19+UzSWd6Q=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  common.js:9 🔧 Loading TopoclimbCH Common Components...
+  common.js:460 ✅ TopoclimbCH Common Components loaded successfully
+  VM195 view-manager.js:449 ViewManager script loaded
+  api-integration.js:432 🔗 API Integration Layer loaded
+  pages-common.js:1 Uncaught SyntaxError: Identifier 'EntityPageManager' has already been 
+  declared (at pages-common.js:1:1)Understand this error
+  view-manager.js:1 Uncaught SyntaxError: Identifier 'ViewManager' has already been declared
+   (at view-manager.js:1:1)Understand this error
+  regions:2239 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-K0m7whoByu8z19+UzSWd6Q=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  topoclimb.js:69 🏗️ Initializing TopoclimbCH v2.0...
+  common.js:454 Uncaught TypeError: window.TopoclimbCH.init is not a function
+      at HTMLDocument.<anonymous> (common.js:454:28)
+  (anonymous) @ common.js:454Understand this error
+  app.js:352 🏔️ TopoclimbCH v2.0.0 initialized
+  VM195 view-manager.js:452 DOM loaded, initializing ViewManager...
+  api-integration.js:8 🔄 Initializing API integration...
+  VM195 view-manager.js:470 ViewManager: ✅ Initializing for container: .regions-container
+  VM195 view-manager.js:10 ViewManager constructor: .regions-container <div 
+  class=​"regions-container entities-container" id=​"regions-container">​…​</div>​
+  VM195 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM195 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM195 view-manager.js:48 ViewManager: Found views: 3
+  VM195 view-manager.js:51 ViewManager: View 0: regions-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM195 view-manager.js:51 ViewManager: View 1: regions-list entities-list view-list Active:
+   false Display: none
+  VM195 view-manager.js:51 ViewManager: View 2: regions-compact entities-compact 
+  view-compact Active: false Display: none
+  VM195 view-manager.js:65 ViewManager: Found view controls: 3
+  VM195 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM195 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM195 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM195 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM195 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM195 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM195 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM195 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM195 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM195 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM195 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM195 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM195 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  VM195 view-manager.js:470 ViewManager: ✅ Initializing for container: .entities-container
+  VM195 view-manager.js:10 ViewManager constructor: .entities-container <div 
+  class=​"regions-container entities-container" id=​"regions-container">​…​</div>​
+  VM195 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM195 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM195 view-manager.js:48 ViewManager: Found views: 3
+  VM195 view-manager.js:51 ViewManager: View 0: regions-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM195 view-manager.js:51 ViewManager: View 1: regions-list entities-list view-list Active:
+   false Display: none
+  VM195 view-manager.js:51 ViewManager: View 2: regions-compact entities-compact 
+  view-compact Active: false Display: none
+  VM195 view-manager.js:65 ViewManager: Found view controls: 3
+  VM195 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM195 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM195 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM195 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM195 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM195 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM195 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM195 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM195 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM195 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM195 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM195 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM195 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  index.js:300 🎯 TopoclimbCH Core loaded and ready
+  topoclimb.js:34 ✅ Loaded: /js/core/index.js
+  utils.js:417 🛠️ TopoclimbCH Utils module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/utils.js
+  api-integration.js:17 ✅ API integration initialized successfully
+  api.js:424 🌐 TopoclimbCH API module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/api.js
+  ui.js:615 🎨 TopoclimbCH UI module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/ui.js
+  topoclimb.js:101 🚨 Failed to initialize TopoclimbCH: TypeError: module.factory is not a 
+  function
+      at ModuleManager.load (index.js:78:44)
+      at async Promise.all (index 1)
+  initializeApplication @ topoclimb.js:101
+  await in initializeApplication
+  (anonymous) @ topoclimb.js:296
+  (anonymous) @ topoclimb.js:299Understand this error
+  topoclimb.js:257 🔄 Initializing fallback mode...
+  topoclimb.js:287 ✅ Fallback mode ready
+  sites Refused to execute inline script because it violates the following Content Security 
+  Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-Uwd7+w4u0SyQQdwrQyflcQ=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  sites:918 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-Uwd7+w4u0SyQQdwrQyflcQ=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  common.js:9 🔧 Loading TopoclimbCH Common Components...
+  common.js:460 ✅ TopoclimbCH Common Components loaded successfully
+  VM290 view-manager.js:449 ViewManager script loaded
+  api-integration.js:432 🔗 API Integration Layer loaded
+  pages-common.js:1 Uncaught SyntaxError: Identifier 'EntityPageManager' has already been 
+  declared (at pages-common.js:1:1)Understand this error
+  view-manager.js:1 Uncaught SyntaxError: Identifier 'ViewManager' has already been declared
+   (at view-manager.js:1:1)Understand this error
+  sites:1550 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-Uwd7+w4u0SyQQdwrQyflcQ=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  topoclimb.js:69 🏗️ Initializing TopoclimbCH v2.0...
+  common.js:454 Uncaught TypeError: window.TopoclimbCH.init is not a function
+      at HTMLDocument.<anonymous> (common.js:454:28)
+  (anonymous) @ common.js:454Understand this error
+  app.js:352 🏔️ TopoclimbCH v2.0.0 initialized
+  VM290 view-manager.js:452 DOM loaded, initializing ViewManager...
+  api-integration.js:8 🔄 Initializing API integration...
+  VM290 view-manager.js:470 ViewManager: ✅ Initializing for container: .sites-container
+  VM290 view-manager.js:10 ViewManager constructor: .sites-container <div 
+  class=​"sites-container entities-container" id=​"sites-container">​…​</div>​
+  VM290 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM290 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM290 view-manager.js:48 ViewManager: Found views: 3
+  VM290 view-manager.js:51 ViewManager: View 0: sites-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM290 view-manager.js:51 ViewManager: View 1: sites-list entities-list view-list Active: 
+  false Display: none
+  VM290 view-manager.js:51 ViewManager: View 2: sites-compact entities-compact view-compact 
+  Active: false Display: none
+  VM290 view-manager.js:65 ViewManager: Found view controls: 3
+  VM290 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM290 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM290 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM290 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM290 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM290 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM290 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM290 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM290 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM290 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM290 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM290 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM290 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  VM290 view-manager.js:470 ViewManager: ✅ Initializing for container: .entities-container
+  VM290 view-manager.js:10 ViewManager constructor: .entities-container <div 
+  class=​"sites-container entities-container" id=​"sites-container">​…​</div>​
+  VM290 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM290 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM290 view-manager.js:48 ViewManager: Found views: 3
+  VM290 view-manager.js:51 ViewManager: View 0: sites-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM290 view-manager.js:51 ViewManager: View 1: sites-list entities-list view-list Active: 
+  false Display: none
+  VM290 view-manager.js:51 ViewManager: View 2: sites-compact entities-compact view-compact 
+  Active: false Display: none
+  VM290 view-manager.js:65 ViewManager: Found view controls: 3
+  VM290 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM290 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM290 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM290 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM290 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM290 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM290 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM290 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM290 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM290 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM290 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM290 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM290 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  index.js:300 🎯 TopoclimbCH Core loaded and ready
+  topoclimb.js:34 ✅ Loaded: /js/core/index.js
+  utils.js:417 🛠️ TopoclimbCH Utils module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/utils.js
+  api-integration.js:17 ✅ API integration initialized successfully
+  api.js:424 🌐 TopoclimbCH API module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/api.js
+  ui.js:615 🎨 TopoclimbCH UI module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/ui.js
+  topoclimb.js:101 🚨 Failed to initialize TopoclimbCH: TypeError: module.factory is not a 
+  function
+      at ModuleManager.load (index.js:78:44)
+      at async Promise.all (index 1)
+  initializeApplication @ topoclimb.js:101
+  await in initializeApplication
+  (anonymous) @ topoclimb.js:296
+  (anonymous) @ topoclimb.js:299Understand this error
+  topoclimb.js:257 🔄 Initializing fallback mode...
+  topoclimb.js:287 ✅ Fallback mode ready
+  secteurs Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-14w3XBgz91U3YGXXMfVu4g=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  sectors:1317 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-14w3XBgz91U3YGXXMfVu4g=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  common.js:9 🔧 Loading TopoclimbCH Common Components...
+  common.js:460 ✅ TopoclimbCH Common Components loaded successfully
+  VM384 view-manager.js:449 ViewManager script loaded
+  api-integration.js:432 🔗 API Integration Layer loaded
+  pages-common.js:1 Uncaught SyntaxError: Identifier 'EntityPageManager' has already been 
+  declared (at pages-common.js:1:1)Understand this error
+  view-manager.js:1 Uncaught SyntaxError: Identifier 'ViewManager' has already been declared
+   (at view-manager.js:1:1)Understand this error
+  sectors:1583 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-14w3XBgz91U3YGXXMfVu4g=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  sectors:1922 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-14w3XBgz91U3YGXXMfVu4g=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  topoclimb.js:69 🏗️ Initializing TopoclimbCH v2.0...
+  common.js:454 Uncaught TypeError: window.TopoclimbCH.init is not a function
+      at HTMLDocument.<anonymous> (common.js:454:28)
+  (anonymous) @ common.js:454Understand this error
+  app.js:352 🏔️ TopoclimbCH v2.0.0 initialized
+  VM384 view-manager.js:452 DOM loaded, initializing ViewManager...
+  api-integration.js:8 🔄 Initializing API integration...
+  VM384 view-manager.js:470 ViewManager: ✅ Initializing for container: .sectors-container
+  VM384 view-manager.js:10 ViewManager constructor: .sectors-container <div 
+  class=​"sectors-container entities-container" id=​"sectors-container" style=​"transition:​ 
+  opacity 0.3s;​">​…​</div>​
+  VM384 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM384 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM384 view-manager.js:48 ViewManager: Found views: 3
+  VM384 view-manager.js:51 ViewManager: View 0: sectors-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM384 view-manager.js:51 ViewManager: View 1: sectors-list entities-list view-list Active:
+   false Display: none
+  VM384 view-manager.js:51 ViewManager: View 2: sectors-compact entities-compact 
+  view-compact Active: false Display: none
+  VM384 view-manager.js:65 ViewManager: Found view controls: 3
+  VM384 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM384 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM384 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM384 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM384 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM384 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM384 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM384 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM384 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM384 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM384 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM384 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM384 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  VM384 view-manager.js:470 ViewManager: ✅ Initializing for container: .entities-container
+  VM384 view-manager.js:10 ViewManager constructor: .entities-container <div 
+  class=​"sectors-container entities-container" id=​"sectors-container" style=​"transition:​ 
+  opacity 0.3s;​">​…​</div>​
+  VM384 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM384 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM384 view-manager.js:48 ViewManager: Found views: 3
+  VM384 view-manager.js:51 ViewManager: View 0: sectors-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM384 view-manager.js:51 ViewManager: View 1: sectors-list entities-list view-list Active:
+   false Display: none
+  VM384 view-manager.js:51 ViewManager: View 2: sectors-compact entities-compact 
+  view-compact Active: false Display: none
+  VM384 view-manager.js:65 ViewManager: Found view controls: 3
+  VM384 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM384 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM384 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM384 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM384 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM384 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM384 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM384 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM384 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM384 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM384 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM384 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM384 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  index.js:300 🎯 TopoclimbCH Core loaded and ready
+  topoclimb.js:34 ✅ Loaded: /js/core/index.js
+  api-integration.js:17 ✅ API integration initialized successfully
+  utils.js:417 🛠️ TopoclimbCH Utils module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/utils.js
+  api.js:424 🌐 TopoclimbCH API module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/api.js
+  ui.js:615 🎨 TopoclimbCH UI module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/ui.js
+  topoclimb.js:101 🚨 Failed to initialize TopoclimbCH: TypeError: module.factory is not a 
+  function
+      at ModuleManager.load (index.js:78:44)
+      at async Promise.all (index 1)
+  initializeApplication @ topoclimb.js:101
+  await in initializeApplication
+  (anonymous) @ topoclimb.js:296
+  (anonymous) @ topoclimb.js:299Understand this error
+  topoclimb.js:257 🔄 Initializing fallback mode...
+  topoclimb.js:287 ✅ Fallback mode ready
+  voies Refused to execute inline script because it violates the following Content Security 
+  Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-wO6zqiCKE0OYjHmlIvnznA=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  routes:1926 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-wO6zqiCKE0OYjHmlIvnznA=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  common.js:9 🔧 Loading TopoclimbCH Common Components...
+  common.js:460 ✅ TopoclimbCH Common Components loaded successfully
+  VM480 view-manager.js:449 ViewManager script loaded
+  api-integration.js:432 🔗 API Integration Layer loaded
+  pages-common.js:1 Uncaught SyntaxError: Identifier 'EntityPageManager' has already been 
+  declared (at pages-common.js:1:1)Understand this error
+  view-manager.js:1 Uncaught SyntaxError: Identifier 'ViewManager' has already been declared
+   (at view-manager.js:1:1)Understand this error
+  routes:2235 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-wO6zqiCKE0OYjHmlIvnznA=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  routes:2358 Refused to execute inline script because it violates the following Content 
+  Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: 
+  'nonce-wO6zqiCKE0OYjHmlIvnznA=='". Note that 'unsafe-inline' is ignored if either a hash 
+  or nonce value is present in the source list.
+  Understand this error
+  topoclimb.js:69 🏗️ Initializing TopoclimbCH v2.0...
+  common.js:454 Uncaught TypeError: window.TopoclimbCH.init is not a function
+      at HTMLDocument.<anonymous> (common.js:454:28)
+  (anonymous) @ common.js:454Understand this error
+  app.js:352 🏔️ TopoclimbCH v2.0.0 initialized
+  VM480 view-manager.js:452 DOM loaded, initializing ViewManager...
+  api-integration.js:8 🔄 Initializing API integration...
+  VM480 view-manager.js:470 ViewManager: ✅ Initializing for container: .routes-container
+  VM480 view-manager.js:10 ViewManager constructor: .routes-container <div 
+  class=​"routes-container entities-container" id=​"routes-container" style=​"transition:​ 
+  opacity 0.3s;​">​…​</div>​
+  VM480 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM480 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM480 view-manager.js:48 ViewManager: Found views: 1
+  VM480 view-manager.js:51 ViewManager: View 0: routes-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM480 view-manager.js:65 ViewManager: Found view controls: 3
+  VM480 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM480 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM480 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM480 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM480 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM480 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM480 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM480 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM480 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM480 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM480 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM480 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM480 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  VM480 view-manager.js:470 ViewManager: ✅ Initializing for container: .entities-container
+  VM480 view-manager.js:10 ViewManager constructor: .entities-container <div 
+  class=​"routes-container entities-container" id=​"routes-container" style=​"transition:​ 
+  opacity 0.3s;​">​…​</div>​
+  VM480 view-manager.js:40 ViewManager: Detected initial view from DOM: grid
+  VM480 view-manager.js:44 ViewManager init started - Current view detected: grid
+  VM480 view-manager.js:48 ViewManager: Found views: 1
+  VM480 view-manager.js:51 ViewManager: View 0: routes-grid entities-grid view-grid active 
+  Active: true Display: grid
+  VM480 view-manager.js:65 ViewManager: Found view controls: 3
+  VM480 view-manager.js:68 ViewManager: Setting up control 0: grid
+  VM480 view-manager.js:68 ViewManager: Setting up control 1: list
+  VM480 view-manager.js:68 ViewManager: Setting up control 2: compact
+  VM480 view-manager.js:213 ViewManager: Raw saved view from localStorage: null
+  VM480 view-manager.js:214 ViewManager: Current view from DOM: grid
+  VM480 view-manager.js:233 ViewManager: 🆕 No saved view, using detected view: grid
+  VM480 view-manager.js:198 ViewManager: Updated active button to: grid
+  VM480 view-manager.js:395 ViewManager: Announced view change: Affichage en mode cartes 
+  activé.
+  VM480 view-manager.js:59 ViewManager init completed - Final state: grid
+  VM480 view-manager.js:476 ViewManager: ✅ Found 3 view buttons
+  VM480 view-manager.js:478 ViewManager: Button 0 - grid: <button type=​"button" class=​"btn 
+  btn-outline-primary active" data-view=​"grid" aria-pressed=​"true">​…​</button>​flex
+  VM480 view-manager.js:478 ViewManager: Button 1 - list: <button type=​"button" class=​"btn 
+  btn-outline-primary" data-view=​"list" aria-pressed=​"false">​…​</button>​flex
+  VM480 view-manager.js:478 ViewManager: Button 2 - compact: <button type=​"button" 
+  class=​"btn btn-outline-primary" data-view=​"compact" aria-pressed=​"false">​…​</button>​flex
+  index.js:300 🎯 TopoclimbCH Core loaded and ready
+  topoclimb.js:34 ✅ Loaded: /js/core/index.js
+  api-integration.js:17 ✅ API integration initialized successfully
+  utils.js:417 🛠️ TopoclimbCH Utils module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/utils.js
+  api.js:424 🌐 TopoclimbCH API module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/api.js
+  ui.js:615 🎨 TopoclimbCH UI module ready
+  topoclimb.js:34 ✅ Loaded: /js/core/ui.js
+  topoclimb.js:101 🚨 Failed to initialize TopoclimbCH: TypeError: module.factory is not a 
+  function
+      at ModuleManager.load (index.js:78:44)
+      at async Promise.all (index 1)
+  initializeApplication @ topoclimb.js:101
+  await in initializeApplication
+  (anonymous) @ topoclimb.js:296
+  (anonymous) @ topoclimb.js:299Understand this error
+  topoclimb.js:257 🔄 Initializing fallback mode...
+  topoclimb.js:287 ✅ Fallback mode ready
+
+● I can see several critical issues that need to be addressed:
+
+● Update Todos
+  ⎿  ☐ Fix CSP inline script violations in templates  
+     ☐ Fix module.factory is not a function error
+     ☐ Fix duplicate JavaScript class declarations
+     ☐ Fix TopoclimbCH.init not available in common.js
+
+● The main issues I see are:
+
+  1. CSP violations: Inline scripts in templates without nonces
+  2. module.factory is not a function: Module registration issue
+  3. Duplicate class declarations: ViewManager and EntityPageManager being declared multiple
+   times
+  4. TopoclimbCH.init not available: Timing issue with module loading
+
+  Let me start by examining the module factory error:
+
+● Read(public/js/topoclimb.js)
+  ⎿  Read 100 lines (ctrl+r to expand)
+
+● Read(public/js/topoclimb.js)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+● The issue is that the modules are being loaded (utils, api, ui) but they're not being
+  registered with the ModuleManager. Let me check how modules should be registered:
+
+● Search(pattern: "TopoclimbCH\.modules\.register", path: "public/js", glob: "*.js",
+        output_mode: "content")
+  ⎿  Found 13 lines (ctrl+r to expand)
+
+● I can see the issue! The modules are registering themselves incorrectly. Let me check the
+  utils.js registration:
+
+● Read(public/js/core/utils.js)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+● The problem is in how modules are being registered. The register method expects (name, 
+  factory, dependencies) but it's being called as register('utils', () => {}) without
+  dependencies. Let me check the register method again:
+
+● Read(public/js/core/index.js)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● The register method signature is correct: register(name, factory, dependencies = []). But
+  some modules are calling it with wrong parameter order. Let me check the api.js module
+  registration:
+
+● Read(public/js/core/api.js)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● I found the issue! The modules are being registered with wrong parameter order. The
+  correct order should be register(name, factory, dependencies) but they're calling it as
+  register(name, dependencies, factory).
+
+  Let me fix the module registrations:
+
+● Update(public/js/core/utils.js)
+  ⎿  Error editing file
+
+● Actually, utils.js is correct since it has no dependencies. Let me fix api.js:
+
+● Update(public/js/core/api.js)
+  ⎿  Updated public/js/core/api.js with 1 addition and 1 removal        
+        4     */
+        5    
+        6    // Enregistrement du module API
+        7 -  TopoclimbCH.modules.register('api', ['utils'], (utils) => {
+        7 +  TopoclimbCH.modules.register('api', (utils) => {
+        8        
+        9        /**
+       10         * Erreurs API personnalisées
+
+● Wait, that's still wrong. Let me fix it properly:
+
+● Update(public/js/core/api.js)
+  ⎿  Error editing file
+
+● Let me fix the correct signature:
+
+● Update(public/js/core/api.js)
+  ⎿  Error editing file
+
+● Let me fix it with the correct parameter order:
+
+● Update(public/js/core/api.js)
+  ⎿  Updated public/js/core/api.js with 1 addition and 1  
+     removal
+        4     */
+        5    
+        6    // Enregistrement du module API
+        7 -  TopoclimbCH.modules.register('api', (utils) 
+     => {
+          -  {
+        7 +  TopoclimbCH.modules.register('api', (utils) 
+     => {}, ['utils']);
+          +  {}, ['utils']);
+        8        
+        9        /**
+       10         * Erreurs API personnalisées
+
+● That's not right. Let me fix this properly. The modules
+  need to be registered with the right syntax. Let me read
+   the api.js file and understand its structure:
+
+● Read(public/js/core/api.js)
+  ⎿  Read 50 lines (ctrl+r to expand)
+  ⎿ Found 4 new diagnostic issues in 1 file (ctrl-r to 
+    expand)
+
+● I see the issue! I broke the file structure. Let me fix
+  this properly. I need to restore the original structure
+  and fix the module registration correctly:
+
+● Update(public/js/core/api.js)
+  ⎿  Updated public/js/core/api.js with 1 addition and 1  
+     removal
+        4     */
+        5    
+        6    // Enregistrement du module API
+        7 -  TopoclimbCH.modules.register('api', (utils) 
+     => {}, ['utils']);
+          -  {}, ['utils']);
+        7 +  TopoclimbCH.modules.register('api', (utils) 
+     => {
+          +  {
+        8        
+        9        /**
+       10         * Erreurs API personnalisées
+
+● Now I need to add the dependencies parameter correctly:
+
+● Update(public/js/core/api.js)
+  ⎿  Error editing file
+
+● Let me find the end of the api.js file to see how it should be structured:
+
+● Read(public/js/core/api.js)
+  ⎿  Read 25 lines (ctrl+r to expand)
+
+● Good! Now I need to add the dependencies parameter correctly. Let me fix it:
+
+● Update(public/js/core/api.js)
+  ⎿  Updated public/js/core/api.js with 1 addition and 1 removal
+       419        TopoclimbCH.TimeoutError = TimeoutError;
+       420        
+       421        return api;
+       422 -  });
+       422 +  }, ['utils']);
+       423    
+       424    console.log('🌐 TopoclimbCH API module ready');
+       425   \ No newline at end of file
+
+● Perfect! Now let me fix the ui.js module as well:
+
+● Read(public/js/core/ui.js)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● Let me find the end of ui.js to fix its registration:
+
+● Read(public/js/core/ui.js)
+  ⎿  Read 16 lines (ctrl+r to expand)
+
+● I need to fix the ui.js registration as well:
+
+● Update(public/js/core/ui.js)
+  ⎿  Updated public/js/core/ui.js with 1 addition and 1 removal        
+        4     */
+        5    
+        6    // Enregistrement du module UI
+        7 -  TopoclimbCH.modules.register('ui', ['utils'], (utils) => {
+        7 +  TopoclimbCH.modules.register('ui', (utils) => {
+        8        
+        9        /**
+       10         * 🪟 Gestionnaire de modales moderne
+
+● Update(public/js/core/ui.js)
+  ⎿  Updated public/js/core/ui.js with 1 addition and 1 removal
+       610        TopoclimbCH.ui = UI;
+       611        
+       612        return UI;
+       613 -  });
+       613 +  }, ['utils']);
+       614    
+       615    console.log('🎨 TopoclimbCH UI module ready');
+       616   \ No newline at end of file
+
+● Now let me update the todo list and test the fixes:
+
+● Update Todos
+  ⎿  ☐ Fix CSP inline script violations in templates  
+     ☒ Fix module.factory is not a function error
+     ☐ Fix duplicate JavaScript class declarations
+     ☐ Fix TopoclimbCH.init not available in common.js
+
+● Let me run a quick test to verify the module fixes:
+
+● Bash(/home/nibaechl/.config/herd-lite/bin/php quick_js_test.php)
+  ⎿  🧪 TEST RAPIDE JAVASCRIPT APRÈS CORRECTIONS
+     ===========================================
+     … +32 lines (ctrl+r to expand)
+
+● Good! Now I need to fix the duplicate class declarations issue. Looking at the errors,
+  EntityPageManager and ViewManager are being declared multiple times. Let me check what's
+  causing this:
+
+● Search(pattern: "class EntityPageManager", path: "public/js")
+  ⎿  Found 4 files (ctrl+r to expand)
+
+● Search(pattern: "class ViewManager", path: "public/js")
+  ⎿  Found 4 files (ctrl+r to expand)
+
+● The issue is that these files are being loaded multiple times. Let me check which
+  templates are including these scripts:
+
+● Search(pattern: "pages-common\.js", path: "resources/views")
+  ⎿  Found 6 files (ctrl+r to expand)
+
+● Search(pattern: "view-manager\.js", path: "resources/views")
+  ⎿  Found 6 files (ctrl+r to expand)
+
+● The problem is these scripts are being loaded both in the main layout AND in individual
+  templates. Let me check the layout first:
+
+● Search(pattern: "pages-common\.js|view-manager\.js", path: "resources/views/layouts",
+        output_mode: "content")
+  ⎿  Found 2 lines (ctrl+r to expand)
+
+● These scripts are loaded globally in the layout. Now let me remove them from individual
+  templates. Let me start with regions/index.twig:
+
+● Search(pattern: "pages-common\.js|view-manager\.js", path:
+        "resources/views/regions/index.twig", output_mode: "content")
+  ⎿  Found 2 lines (ctrl+r to expand)
+
+● Update(resources/views/regions/index.twig)
+  ⎿  Error editing file
+
+● Read(resources/views/regions/index.twig)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● Update(resources/views/regions/index.twig)
+  ⎿  Updated resources/views/regions/index.twig with 2 removals                         
+       290    {% endblock %}
+       291    
+       292    {% block scripts %}
+       293 -  <script src="/js/pages-common.js"></script>
+       294 -  <script src="/js/view-manager.js"></script>
+       293    <script>
+       294    // Exposer les données des régions pour les composants JavaScript modernes
+       295    window.regionsData = {
+
+● Good! Now let me fix the other templates as well. Let me check sites/index.twig:
+
+● Read(resources/views/sites/index.twig)
+  ⎿  Read 0 lines 
+
+● Search(pattern: "pages-common\.js|view-manager\.js", path:
+        "resources/views/sites/index.twig", output_mode: "content")
+  ⎿  Found 2 lines (ctrl+r to expand)
+
+● Read(resources/views/sites/index.twig)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● Update(resources/views/sites/index.twig)
+  ⎿  Updated resources/views/sites/index.twig with 3 removals                         
+       230    {% endblock %}
+       231    
+       232    {% block scripts %}
+       233 -  
+       234 -  <script src="/js/pages-common.js"></script>
+       235 -  <script src="/js/view-manager.js"></script>
+       233    <script>
+       234    // Exposer les données des sites pour les composants JavaScript modernes
+       235    window.sitesData = {
+
+● Let me continue with sectors/index.twig:
+
+● Search(pattern: "pages-common\.js|view-manager\.js", path:
+        "resources/views/sectors/index.twig", output_mode: "content")
+  ⎿  Found 2 lines (ctrl+r to expand)
+
+● Read(resources/views/sectors/index.twig)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● Update(resources/views/sectors/index.twig)
+  ⎿  Updated resources/views/sectors/index.twig with 2 removals
+       357    {% endblock %}
+       358    
+       359    {% block scripts %}
+       360 -  <script src="/js/pages-common.js"></script>
+       361 -  <script src="/js/view-manager.js"></script>
+       360    <script src="/js/pagination.js"></script>
+       361    <script>
+       362    // JavaScript simple pour la gestion des vues
+
+● Let me continue with routes/index.twig:
+
+● Search(pattern: "pages-common\.js|view-manager\.js", path:
+        "resources/views/routes/index.twig", output_mode: "content")
+  ⎿  Found 2 lines (ctrl+r to expand)
+
+● Read(resources/views/routes/index.twig)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● Update(resources/views/routes/index.twig)
+  ⎿  Updated resources/views/routes/index.twig with 2 removals     
+       320    {% endblock %}
+       321    
+       322    {% block scripts %}
+       323 -  <script src="/js/pages-common.js"></script>
+       324 -  <script src="/js/view-manager.js"></script>
+       323    <script src="/js/pagination.js"></script>
+       324    <script>
+       325    // JavaScript pour la gestion des vues et des actions
+
+● And finally books/index.twig:
+
+● Search(pattern: "pages-common\.js|view-manager\.js", path:
+        "resources/views/books/index.twig", output_mode: "content")
+  ⎿  Found 2 lines (ctrl+r to expand)
+
+● Read(resources/views/books/index.twig)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+● Update(resources/views/books/index.twig)
+  ⎿  Updated resources/views/books/index.twig with 2 removals      
+       302    {% endblock %}
+       303    
+       304    {% block scripts %}
+       305 -  <script src="/js/pages-common.js"></script>
+       306 -  <script src="/js/view-manager.js"></script>
+       305    <script src="/js/pagination.js"></script>
+       306    <script>
+       307    // JavaScript pour la gestion des vues et des actions
+
+● Now let me update the todo list and address the CSP inline script violations. I need to
+  add nonces to all the inline scripts in the templates:
+
+● Update Todos
+  ⎿  ☐ Fix CSP inline script violations in templates  
+     ☒ Fix module.factory is not a function error
+     ☒ Fix duplicate JavaScript class declarations
+     ☐ Fix TopoclimbCH.init not available in common.js
+  ⎿  5-hour limit reached ∙ resets 6pm
+
 ### 🎯 **SESSION: Implémentation Complète Upload Médias Routes/Secteurs** ✅
 
 #### 📸 **FONCTIONNALITÉ MAJEURE IMPLÉMENTÉE**
