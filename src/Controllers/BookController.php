@@ -561,13 +561,13 @@ class BookController extends BaseController
         try {
             // Récupérer et valider les données
             $data = [
-                'title' => trim($request->post('title')),
-                'description' => trim($request->post('description')),
-                'author' => trim($request->post('author')),
-                'publisher' => trim($request->post('publisher')),
-                'publication_year' => (int)$request->post('publication_year'),
-                'isbn' => trim($request->post('isbn')),
-                'price' => (float)$request->post('price'),
+                'title' => trim($request->request->get('title', '')),
+                'description' => trim($request->request->get('description', '')),
+                'author' => trim($request->request->get('author', '')),
+                'publisher' => trim($request->request->get('publisher', '')),
+                'publication_year' => (int)$request->request->get('publication_year', 0),
+                'isbn' => trim($request->request->get('isbn', '')),
+                'price' => (float)$request->request->get('price', 0),
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];

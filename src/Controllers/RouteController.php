@@ -1064,14 +1064,14 @@ class RouteController extends BaseController
 
             // Préparer les données de mise à jour
             $updateData = [
-                'name' => trim($request->post('name')),
-                'description' => trim($request->post('description')),
-                'sector_id' => (int)$request->post('sector_id'),
-                'difficulty' => trim($request->post('difficulty')),
-                'length' => (int)$request->post('length'),
-                'grade_value' => (int)$request->post('grade_value'),
-                'beauty_rating' => (int)$request->post('beauty_rating'),
-                'danger_rating' => (int)$request->post('danger_rating'),
+                'name' => trim($request->request->get('name', '')),
+                'description' => trim($request->request->get('description', '')),
+                'sector_id' => (int)$request->request->get('sector_id', 0),
+                'difficulty' => trim($request->request->get('difficulty', '')),
+                'length' => (int)$request->request->get('length', 0),
+                'grade_value' => (int)$request->request->get('grade_value', 0),
+                'beauty_rating' => (int)$request->request->get('beauty_rating', 0),
+                'danger_rating' => (int)$request->request->get('danger_rating', 0),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
 
