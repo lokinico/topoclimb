@@ -782,10 +782,11 @@ class SectorController extends BaseController
     {
         $data = [
             'name' => trim($request->request->get('name', '')),
-            
+            'code' => trim($request->request->get('code', '')),
             'description' => trim($request->request->get('description', '')),
             'region_id' => (int)$request->request->get('region_id', 0),
             'site_id' => $request->request->get('site_id') ? (int)$request->request->get('site_id') : null,
+            'book_id' => $request->request->get('book_id') ? (int)$request->request->get('book_id') : null,
             'altitude' => $request->request->get('altitude') ? (int)$request->request->get('altitude') : null,
             'height' => $request->request->get('height') ? (float)$request->request->get('height') : null,
             'coordinates_lat' => $request->request->get('coordinates_lat') ? (float)$request->request->get('coordinates_lat') : null,
@@ -797,12 +798,17 @@ class SectorController extends BaseController
             'approach' => trim($request->request->get('approach', '')),
             'parking_info' => trim($request->request->get('parking_info', '')),
             'color' => $request->request->get('color', '#FF0000'),
+            'orientation' => trim($request->request->get('orientation', '')),
             'active' => (int)$request->request->get('active', 1)
         ];
 
         // Validation des champs obligatoires
         if (empty($data['name'])) {
             throw new \InvalidArgumentException('Le nom du secteur est obligatoire');
+        }
+
+        if (empty($data['code'])) {
+            throw new \InvalidArgumentException('Le code du secteur est obligatoire');
         }
 
         if ($data['region_id'] <= 0) {
@@ -866,6 +872,8 @@ class SectorController extends BaseController
         
         // Colonnes optionnelles avec vérification existence
         $optionalFields = [
+            'code' => $data['code'],
+            'book_id' => $data['book_id'],
             'site_id' => $data['site_id'],
             'altitude' => $data['altitude'],
             'height' => $data['height'],
@@ -877,7 +885,8 @@ class SectorController extends BaseController
             'access_time' => $data['access_time'],
             'approach' => $data['approach'],
             'parking_info' => $data['parking_info'],
-            'color' => $data['color']
+            'color' => $data['color'],
+            'orientation' => $data['orientation']
         ];
         
         $columns = $baseColumns;
