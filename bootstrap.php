@@ -135,5 +135,29 @@ if (isset($_SERVER['SERVER_NAME']) &&
     }
 }
 
+
+// BYPASS TEMPORAIRE POUR TESTS (À SUPPRIMER EN PRODUCTION)
+if (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'TestBypass') !== false) {
+    app_log('BYPASS: User-Agent détecté: ' . $_SERVER['HTTP_USER_AGENT']);
+    
+    if (!isset($_SESSION)) {
+        session_start();
+        app_log('BYPASS: Session démarrée');
+    }
+    
+    $_SESSION['user_id'] = 1;
+    $_SESSION['username'] = 'test-bypass';
+    $_SESSION['email'] = 'test@localhost';
+    $_SESSION['access_level'] = 5;
+    $_SESSION['logged_in'] = true;
+    $_SESSION['login_type'] = 'test_bypass';
+    $_SESSION['dev_bypass_auth'] = true;
+    
+    $_SESSION['auth_user_id'] = 1;
+    $_SESSION['is_authenticated'] = true;
+    
+    app_log('BYPASS: Variables de session définies - auth_user_id=' . $_SESSION['auth_user_id'] . ', is_authenticated=' . ($_SESSION['is_authenticated'] ? 'true' : 'false'));
+}
+
 // Log du démarrage de l'application
 app_log('Application bootstrap completed');

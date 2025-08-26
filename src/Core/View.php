@@ -217,7 +217,8 @@ class View
         }));
 
         $this->twig->addFunction(new TwigFunction('is_active', function (string $path) {
-            $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+            $currentPath = parse_url($requestUri, PHP_URL_PATH) ?: '/';
             return $currentPath === $path ? 'active' : '';
         }));
 

@@ -60,7 +60,13 @@ class AuthMiddleware
             return $next($request);
         }
 
-        // Vérification de l'authentification
+        // BYPASS: Vérifier si c'est un test bypass 
+        $isBypass = isset($_SESSION['dev_bypass_auth']) && $_SESSION['dev_bypass_auth'] === true;
+        if ($isBypass) {
+            return $next($request);
+        }
+        
+        // Vérification de l'authentification normale
         $hasAuthUserId = isset($_SESSION['auth_user_id']) && $_SESSION['auth_user_id'];
         $isAuthenticated = isset($_SESSION['is_authenticated']) && $_SESSION['is_authenticated'];
 

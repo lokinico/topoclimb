@@ -265,8 +265,8 @@ class TwigHelpers extends AbstractExtension
      */
     public function isActive(string $path): bool
     {
-        $currentPath = $_SERVER['REQUEST_URI'] ?? '';
-        $currentPath = parse_url($currentPath, PHP_URL_PATH);
+        $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
+        $currentPath = parse_url($currentPath, PHP_URL_PATH) ?: '/';
 
         // Correspondance exacte
         if ($currentPath === $path) {

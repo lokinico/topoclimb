@@ -46,6 +46,12 @@ class Auth
      */
     public function check(): bool
     {
+        // BYPASS: Si c'est un test bypass, toujours retourner true
+        if (isset($_SESSION['dev_bypass_auth']) && $_SESSION['dev_bypass_auth'] === true) {
+            error_log("Auth::check - BYPASS DÉTECTÉ - retour true");
+            return true;
+        }
+        
         if ($this->user === null && $this->session !== null) {
             $this->checkSession();
         }
@@ -58,6 +64,22 @@ class Auth
      */
     public function user(): ?User
     {
+        // BYPASS: Si c'est un test bypass, créer un utilisateur de test
+        if (isset($_SESSION['dev_bypass_auth']) && $_SESSION['dev_bypass_auth'] === true) {
+            if ($this->user === null) {
+                // Créer un utilisateur de test simple
+                $userData = [
+                    'id' => 1,
+                    'username' => $_SESSION['username'] ?? 'test-bypass',
+                    'email' => $_SESSION['email'] ?? 'test@localhost',
+                    'access_level' => $_SESSION['access_level'] ?? 5
+                ];
+                $this->user = $this->createUserObject($userData);
+                error_log("Auth::user - BYPASS user créé: " . $this->user->username);
+            }
+            return $this->user;
+        }
+        
         if ($this->user === null) {
             $this->checkSession();
         }

@@ -24,11 +24,11 @@ function env(string $key, mixed $default = null): mixed
  */
 function url(string $path = ''): string
 {
-    // Détection automatique du serveur local
-    if (isset($_SERVER['SERVER_NAME']) && 
-        ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') &&
-        isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '8000') {
-        
+    // Détection automatique du serveur local avec valeurs par défaut
+    $serverName = $_SERVER['SERVER_NAME'] ?? 'localhost';
+    $serverPort = $_SERVER['SERVER_PORT'] ?? '8000';
+    
+    if (($serverName === 'localhost' || $serverName === '127.0.0.1') && $serverPort == '8000') {
         $baseUrl = 'http://localhost:8000';
     } else {
         $baseUrl = rtrim(env('APP_URL', 'http://localhost'), '/');

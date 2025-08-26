@@ -320,7 +320,7 @@ class AuthService
     public function requireAuth(): void
     {
         if (!$this->check()) {
-            $currentUrl = $_SERVER['REQUEST_URI'];
+            $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
             $this->session->set('intended_url', $currentUrl);
             $this->session->persist();
             Response::redirect('/login');
