@@ -584,14 +584,24 @@ class RegionController extends BaseController
         // Ajouter les colonnes étendues seulement si elles existent
         try {
             // Compatible SQLite et MySQL - détection automatique
+            $existingColumns = [];
             try {
                 // Essayer d'abord PRAGMA (SQLite)
                 $columns = $this->db->fetchAll("PRAGMA table_info(climbing_regions)");
-                $existingColumns = array_column($columns, 'name');
+                if ($columns) {
+                    $existingColumns = array_column($columns, 'name');
+                } else {
+                    throw new \Exception("PRAGMA failed");
+                }
             } catch (\Exception $pragmaError) {
-                // Si PRAGMA échoue, utiliser DESCRIBE (MySQL/MariaDB)
-                $columns = $this->db->fetchAll("DESCRIBE climbing_regions");
-                $existingColumns = array_column($columns, 'Field');
+                try {
+                    // Si PRAGMA échoue, utiliser DESCRIBE (MySQL/MariaDB)
+                    $columns = $this->db->fetchAll("DESCRIBE climbing_regions");
+                    $existingColumns = array_column($columns, 'Field');
+                } catch (\Exception $describeError) {
+                    // Si les deux échouent, utiliser les colonnes de base
+                    $existingColumns = ['id', 'country_id', 'name', 'description', 'coordinates_lat', 'coordinates_lng', 'altitude', 'active', 'created_at', 'updated_at'];
+                }
             }
             
             // Ajouter les colonnes optionnelles si elles existent
@@ -779,14 +789,24 @@ class RegionController extends BaseController
         // Ajouter les colonnes étendues seulement si elles existent
         try {
             // Compatible SQLite et MySQL - détection automatique
+            $existingColumns = [];
             try {
                 // Essayer d'abord PRAGMA (SQLite)
                 $columns = $this->db->fetchAll("PRAGMA table_info(climbing_regions)");
-                $existingColumns = array_column($columns, 'name');
+                if ($columns) {
+                    $existingColumns = array_column($columns, 'name');
+                } else {
+                    throw new \Exception("PRAGMA failed");
+                }
             } catch (\Exception $pragmaError) {
-                // Si PRAGMA échoue, utiliser DESCRIBE (MySQL/MariaDB)
-                $columns = $this->db->fetchAll("DESCRIBE climbing_regions");
-                $existingColumns = array_column($columns, 'Field');
+                try {
+                    // Si PRAGMA échoue, utiliser DESCRIBE (MySQL/MariaDB)
+                    $columns = $this->db->fetchAll("DESCRIBE climbing_regions");
+                    $existingColumns = array_column($columns, 'Field');
+                } catch (\Exception $describeError) {
+                    // Si les deux échouent, utiliser les colonnes de base
+                    $existingColumns = ['id', 'country_id', 'name', 'description', 'coordinates_lat', 'coordinates_lng', 'altitude', 'active', 'created_at', 'updated_at'];
+                }
             }
             
             // Ajouter les colonnes optionnelles si elles existent
@@ -1245,6 +1265,7 @@ class RegionController extends BaseController
      */
     public function update(Request $request): Response
     {
+        $id = null;
         try {
             $id = $this->validateId($request->attributes->get('id'), 'ID de région');
 
@@ -1261,7 +1282,7 @@ class RegionController extends BaseController
             $this->requireEntity($existingRegion, 'Région non trouvée');
 
             // Validation CSRF
-            $this->validateCsrfToken($request);
+            $this->requireCsrfToken($request);
 
             // Validation des données
             $data = $this->validateRegionUpdateData($request->request->all(), $id);
@@ -1282,13 +1303,13 @@ class RegionController extends BaseController
             return $this->redirect('/regions/' . $id);
         } catch (ValidationException $e) {
             $this->flash('error', $e->getMessage());
-            return $this->redirect('/regions/' . $id . '/edit');
+            return $this->redirect($id ? '/regions/' . $id . '/edit' : '/regions');
         } catch (AuthorizationException $e) {
             $this->flash('error', $e->getMessage());
             return $this->redirect('/regions');
         } catch (\Exception $e) {
             $this->handleError($e, 'Erreur lors de la mise à jour de la région');
-            return $this->redirect('/regions/' . $id . '/edit');
+            return $this->redirect($id ? '/regions/' . $id . '/edit' : '/regions');
         }
     }
 
@@ -1390,7 +1411,7 @@ class RegionController extends BaseController
             }
 
             // Validation CSRF
-            $this->validateCsrfToken($request);
+            $this->requireCsrfToken($request);
 
             // Soft delete de la région
             $this->executeInTransaction(function () use ($id) {

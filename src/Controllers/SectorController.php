@@ -1062,16 +1062,21 @@ class SectorController extends BaseController
     {
         app_log("SectorController::handleImageUpload - Début méthode pour secteur {$sectorId}");
         
-        // Vérifier si un fichier a été uploadé (nom du champ: media_file)
+        // Vérifier si un fichier a été uploadé (nom du champ: media_file ou image)
         $files = $request->files->all();
         app_log("SectorController::handleImageUpload - Files reçus: " . print_r($files, true));
         
-        if (!isset($files['media_file']) || !$files['media_file']) {
-            app_log("SectorController::handleImageUpload - Pas de fichier media_file");
+        $uploadedFile = null;
+        if (isset($files['media_file']) && $files['media_file']) {
+            $uploadedFile = $files['media_file'];
+            app_log("SectorController::handleImageUpload - Fichier media_file trouvé");
+        } elseif (isset($files['image']) && $files['image']) {
+            $uploadedFile = $files['image'];
+            app_log("SectorController::handleImageUpload - Fichier image trouvé");
+        } else {
+            app_log("SectorController::handleImageUpload - Pas de fichier media_file ou image");
             return; // Pas de fichier, pas d'erreur
         }
-        
-        $uploadedFile = $files['media_file'];
         
         // Vérifier que c'est bien un objet UploadedFile et qu'il y a un fichier
         if (!$uploadedFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {

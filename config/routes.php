@@ -253,9 +253,17 @@ return [
     ],
     [
         'method' => 'POST',
-        'path' => '/sectors/{id}/edit',
+        'path' => '/sectors/{id}',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'update',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'PUT',
+        'path' => '/sectors/{id}',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'update',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
     [
         'method' => 'GET',
@@ -334,9 +342,17 @@ return [
     ],
     [
         'method' => 'POST',
-        'path' => '/routes/{id}/edit',
+        'path' => '/routes/{id}',
         'controller' => \TopoclimbCH\Controllers\RouteController::class,
         'action' => 'update',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
+    [
+        'method' => 'PUT',
+        'path' => '/routes/{id}',
+        'controller' => \TopoclimbCH\Controllers\RouteController::class,
+        'action' => 'update',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
     [
         'method' => 'GET',
