@@ -76,9 +76,12 @@
                                     <select class="form-control" id="region_id" name="region_id" 
                                             aria-describedby="region-help">
                                         <option value="">Toutes les régions</option>
-                                        {% if selected_region %}
-                                            <option value="{{ selected_region.id }}" selected>{{ selected_region.name }}</option>
-                                        {% endif %}
+                                        {% for region in regions %}
+                                            <option value="{{ region.id }}" 
+                                                    {{ (selected_region and selected_region.id == region.id) or (book.region_id and book.region_id == region.id) ? 'selected' : '' }}>
+                                                {{ region.name }}
+                                            </option>
+                                        {% endfor %}
                                     </select>
                                     <small id="region-help" class="form-text text-muted">
                                         Région géographique principale couverte par le guide

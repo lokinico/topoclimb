@@ -248,10 +248,12 @@ class BookController extends BaseController
     /**
      * Affichage sécurisé d'un guide avec détails
      */
-    public function show($id = null): Response
+    public function show(Request $request): Response
     {
         try {
             // Récupérer l'ID depuis les paramètres de route
+            $id = $request->attributes->get('id');
+            
             if ($id === null) {
                 $this->flash('error', 'ID de guide requis');
                 return $this->redirect('/books');
@@ -268,6 +270,10 @@ class BookController extends BaseController
             $data = $this->getBookDetails($id);
 
             return $this->render('books/show', $data);
+        } catch (\TopoclimbCH\Exceptions\ValidationException $e) {
+            // Gestion spécifique des entités non trouvées
+            $this->flash('error', 'Guide non trouvé');
+            return $this->redirect('/books');
         } catch (\Exception $e) {
             error_log("BookController::show - Erreur: " . $e->getMessage());
             $this->flash('error', 'Erreur lors du chargement du guide');
@@ -471,6 +477,14 @@ class BookController extends BaseController
             // Générer token CSRF
             $csrfToken = $this->createCsrfToken();
             
+            // Récupérer les régions pour le champ "Région couverte"
+            $regions = $this->db->fetchAll(
+                "SELECT id, name 
+                 FROM climbing_regions 
+                 WHERE active = 1 
+                 ORDER BY name ASC"
+            );
+            
             // Récupérer les sites pour sélection contextuelle
             $sites = $this->db->fetchAll(
                 "SELECT s.id, s.name, r.name as region_name 
@@ -483,6 +497,7 @@ class BookController extends BaseController
             return $this->render('books/create', [
                 'title' => 'Créer un guide d\'escalade',
                 'csrf_token' => $csrfToken,
+                'regions' => $regions,
                 'sites' => $sites
             ]);
             
@@ -571,6 +586,17 @@ class BookController extends BaseController
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
+            
+            // Ajouter region_id et site_id s'ils sont fournis (optionnels)
+            $regionId = $request->request->get('region_id');
+            if ($regionId && is_numeric($regionId)) {
+                $data['region_id'] = (int)$regionId;
+            }
+            
+            $siteId = $request->request->get('site_id'); 
+            if ($siteId && is_numeric($siteId)) {
+                $data['site_id'] = (int)$siteId;
+            }
 
             // Validation basique
             if (empty($data['title'])) {

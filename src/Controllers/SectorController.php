@@ -1091,7 +1091,8 @@ class SectorController extends BaseController
         
         if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
             app_log("SectorController::handleImageUpload - Erreur upload: " . $uploadedFile->getError());
-            throw new \InvalidArgumentException('Erreur lors de l\'upload du fichier');
+            app_log("SectorController::handleImageUpload - Création du secteur continue sans image");
+            return; // Ne pas faire échouer la création du secteur pour une erreur d'image
         }
         
         try {
