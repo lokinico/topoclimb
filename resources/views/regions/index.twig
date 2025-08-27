@@ -60,6 +60,18 @@
             {% if regions is defined and regions|length > 0 %}
                 {% for region in regions %}
                     <div class="region-card entity-card card h-100" data-region-id="{{ region.id }}">
+                        {% if region.image %}
+                            <img src="{{ asset(region.image) }}" class="card-img-top" alt="{{ region.name }}" 
+                                 style="height: 200px; object-fit: cover;">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                 style="height: 200px;">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-mountain fa-3x mb-2"></i>
+                                    <div>Pas d'image</div>
+                                </div>
+                            </div>
+                        {% endif %}
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-1">

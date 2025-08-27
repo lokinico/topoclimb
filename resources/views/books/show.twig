@@ -51,6 +51,32 @@
 </div>
 
 <div class="row">
+    <!-- Sidebar avec image -->
+    <div class="col-lg-4 mb-4">
+        {% if book.image %}
+            <div class="book-image mb-3">
+                <img src="{{ asset(book.image) }}" class="img-fluid rounded shadow" alt="{{ book.name }}" style="width: 100%;">
+            </div>
+        {% else %}
+            <div class="book-image mb-3">
+                <div class="bg-light rounded shadow d-flex align-items-center justify-content-center" style="height: 300px;">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-book fa-4x mb-2"></i>
+                        <div>Pas d'image disponible</div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Infos complémentaires -->
+        {% if book.description %}
+            <div class="book-description mb-3">
+                <h5>Description</h5>
+                <p class="text-muted">{{ book.description }}</p>
+            </div>
+        {% endif %}
+    </div>
+    
     <!-- Contenu principal -->
     <div class="col-lg-8">
         <!-- Régions couvertes -->

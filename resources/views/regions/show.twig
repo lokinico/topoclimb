@@ -40,6 +40,14 @@
     </div>
 </div>
 
+<!-- Image de la région -->
+{% if region.image %}
+    <div class="region-image mb-4">
+        <img src="{{ asset(region.image) }}" class="img-fluid rounded shadow" alt="{{ region.name }}" 
+             style="width: 100%; max-height: 350px; object-fit: cover;">
+    </div>
+{% endif %}
+
 <!-- Description -->
 {% if region.description %}
     <div class="description-section mb-4">

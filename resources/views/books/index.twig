@@ -120,6 +120,18 @@
             {% if books|length > 0 %}
                 {% for book in books %}
                     <div class="book-card entity-card card h-100" data-book-id="{{ book.id }}">
+                        {% if book.image %}
+                            <img src="{{ asset(book.image) }}" class="card-img-top" alt="{{ book.title }}" 
+                                 style="height: 200px; object-fit: cover;">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                 style="height: 200px;">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-book fa-3x mb-2"></i>
+                                    <div>Pas d'image</div>
+                                </div>
+                            </div>
+                        {% endif %}
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-1">

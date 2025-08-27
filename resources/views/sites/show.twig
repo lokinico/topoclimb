@@ -50,6 +50,43 @@
 </div>
 
 <div class="row">
+    <!-- Sidebar avec image -->
+    <div class="col-lg-4 mb-4">
+        {% if site.image %}
+            <div class="site-image mb-3">
+                <img src="{{ asset(site.image) }}" class="img-fluid rounded shadow" alt="{{ site.name }}" style="width: 100%;">
+            </div>
+        {% else %}
+            <div class="site-image mb-3">
+                <div class="bg-light rounded shadow d-flex align-items-center justify-content-center" style="height: 250px;">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-map-marker-alt fa-4x mb-2"></i>
+                        <div>Pas d'image disponible</div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Infos techniques -->
+        <div class="site-technical-info">
+            <h5>Informations techniques</h5>
+            <div class="list-group list-group-flush">
+                {% if site.altitude %}
+                    <div class="list-group-item d-flex justify-content-between px-0">
+                        <span>Altitude</span>
+                        <strong>{{ site.altitude }}m</strong>
+                    </div>
+                {% endif %}
+                {% if site.coordinates_lat and site.coordinates_lng %}
+                    <div class="list-group-item d-flex justify-content-between px-0">
+                        <span>Coordonnées</span>
+                        <small>{{ site.coordinates_lat|number_format(6) }}, {{ site.coordinates_lng|number_format(6) }}</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
     <!-- Contenu principal -->
     <div class="col-lg-8">
         <!-- Description -->
