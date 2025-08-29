@@ -1012,6 +1012,11 @@ class SectorController extends BaseController
     public function update(Request $request): Response
     {
         $id = $request->attributes->get('id');
+        error_log("🔧 SectorController::update - DÉBUT pour secteur {$id}");
+        
+        // Log des fichiers uploadés pour debug
+        $files = $request->files->all();
+        error_log("🔧 SectorController::update - Fichiers reçus: " . print_r($files, true));
         
         if (!$id) {
             $this->flash('error', 'ID du secteur non spécifié');
