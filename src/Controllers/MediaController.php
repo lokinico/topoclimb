@@ -5,6 +5,7 @@ namespace TopoclimbCH\Controllers;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use TopoclimbCH\Core\Session;
 use TopoclimbCH\Core\View;
 use TopoclimbCH\Services\MediaService;
@@ -229,7 +230,7 @@ class MediaController extends BaseController
             $id = (int) $request->attributes->get('id');
             
             if (!$id) {
-                return Response::json([
+                return new JsonResponse([
                     'success' => false,
                     'error' => 'ID du média non spécifié'
                 ], 400);
@@ -239,7 +240,7 @@ class MediaController extends BaseController
             $media = $this->db->fetchOne("SELECT * FROM climbing_media WHERE id = ?", [$id]);
             
             if (!$media) {
-                return Response::json([
+                return new JsonResponse([
                     'success' => false,
                     'error' => 'Média non trouvé'
                 ], 404);
@@ -248,7 +249,7 @@ class MediaController extends BaseController
             $this->db->beginTransaction();
 
             // Supprimer les relations du média
-            $this->db->execute("DELETE FROM climbing_media_relationships WHERE media_id = ?", [$id]);
+            $this->db->query("DELETE FROM climbing_media_relationships WHERE media_id = ?", [$id]);
             
             // Supprimer le fichier physique si il existe
             if ($media['file_path']) {
@@ -259,11 +260,11 @@ class MediaController extends BaseController
             }
             
             // Supprimer l'enregistrement du média
-            $this->db->execute("DELETE FROM climbing_media WHERE id = ?", [$id]);
+            $this->db->query("DELETE FROM climbing_media WHERE id = ?", [$id]);
 
             $this->db->commit();
 
-            return Response::json([
+            return new JsonResponse([
                 'success' => true,
                 'message' => 'Média supprimé avec succès'
             ]);
@@ -275,7 +276,7 @@ class MediaController extends BaseController
 
             error_log("MediaController::deleteApi - Erreur: " . $e->getMessage());
             
-            return Response::json([
+            return new JsonResponse([
                 'success' => false,
                 'error' => 'Erreur lors de la suppression: ' . $e->getMessage()
             ], 500);
