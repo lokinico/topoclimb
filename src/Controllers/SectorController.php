@@ -350,16 +350,22 @@ class SectorController extends BaseController
                 [$id]
             );
 
-            // Récupération des médias associés au secteur
-            // TODO: Réactiver une fois la structure de climbing_media identifiée en production
+            // Récupération des médias (structure réelle identifiée)
             $media = [];
             try {
-                // TEMPORAIREMENT DÉSACTIVÉ - Structure table climbing_media inconnue en production
-                // Colonnes testées qui n'existent pas: file_name, is_primary, created_at, active, entity_type
-                // $media = $this->db->fetchAll("SELECT * FROM climbing_media WHERE ...", [$id]);
-                error_log("INFO: Récupération médias désactivée temporairement pour secteur {$id}");
+                // Solution temporaire: récupérer images publiques génériques
+                // TODO: Ajouter colonnes entity_type/entity_id pour liaison spécifique secteurs
+                $media = $this->db->fetchAll(
+                    "SELECT id, title, file_path, filename, media_type, is_featured
+                     FROM climbing_media 
+                     WHERE media_type = 'image' AND is_public = 1 
+                     ORDER BY is_featured DESC, created_at DESC
+                     LIMIT 10"
+                );
+                error_log("INFO: {count($media)} médias génériques récupérés pour secteur {$id}");
             } catch (\Exception $e) {
                 error_log("Erreur récupération médias secteur {$id}: " . $e->getMessage());
+                $media = []; // Fallback sécurisé
             }
 
             $stats = [
@@ -972,18 +978,22 @@ class SectorController extends BaseController
                  ORDER BY r.name, s.name"
             );
             
-            // Récupérer les médias existants
+            // Récupération des médias pour édition (structure réelle identifiée)
             $media = [];
             try {
+                // Solution temporaire: récupérer images publiques génériques 
+                // TODO: Ajouter colonnes entity_type/entity_id pour liaison spécifique secteurs
                 $media = $this->db->fetchAll(
-                    "SELECT id, title, file_path
+                    "SELECT id, title, file_path, filename, media_type, is_featured
                      FROM climbing_media 
-                     WHERE entity_type = 'sector' AND entity_id = ?
-                     ORDER BY id ASC",
-                    [$id]
+                     WHERE media_type = 'image' AND is_public = 1
+                     ORDER BY is_featured DESC, created_at DESC
+                     LIMIT 10"
                 );
+                error_log("INFO: " . count($media) . " médias génériques récupérés pour édition secteur {$id}");
             } catch (\Exception $e) {
                 error_log("Erreur récupération médias edit secteur {$id}: " . $e->getMessage());
+                $media = []; // Fallback sécurisé
             }
             
             return $this->render('sectors/form', [
