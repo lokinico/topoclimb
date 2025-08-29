@@ -425,8 +425,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = e.target.closest('.sector-card');
             const sectorId = card.getAttribute('data-sector-id');
             
-            // Vérifier que ce n'est pas un clic sur un bouton d'action
-            if (!e.target.closest('[data-action]') && !e.target.closest('a')) {
+            // Vérifier que ce n'est pas un clic sur un bouton d'action ou un lien
+            if (!e.target.closest('button') && 
+                !e.target.closest('a') && 
+                !e.target.closest('.sector-actions') &&
+                !e.target.closest('.btn')) {
+                e.preventDefault();
                 window.location.href = `/sectors/${sectorId}`;
             }
         }

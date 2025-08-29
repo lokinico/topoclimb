@@ -239,6 +239,13 @@ return [
     ],
     [
         'method' => 'POST',
+        'path' => '/sectors',
+        'controller' => \TopoclimbCH\Controllers\SectorController::class,
+        'action' => 'store',
+        'middlewares' => [\TopoclimbCH\Middleware\CsrfMiddleware::class]
+    ],
+    [
+        'method' => 'POST',
         'path' => '/sectors/create',
         'controller' => \TopoclimbCH\Controllers\SectorController::class,
         'action' => 'store',

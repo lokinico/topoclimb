@@ -36,7 +36,7 @@
 
 <div class="row">
     <div class="col-lg-8">
-        <form action="{{ sector.id ? url('/sectors/' ~ sector.id ~ '/edit') : url('/sectors/create') }}" 
+        <form action="{{ sector.id ? url('/sectors/' ~ sector.id) : url('/sectors') }}" 
               method="post" 
               enctype="multipart/form-data" 
               class="sector-form-content" 
@@ -197,11 +197,11 @@
                                            value="{{ sector.coordinates_swiss_e|default('') }}" 
                                            aria-describedby="ch-e-help"
                                            placeholder="2600000">
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-secondary" 
+                                    <div class="input-group-text">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" 
                                                 id="convert-to-gps-btn" 
                                                 title="Convertir LV95 → GPS">
-                                            <i class="fa fa-exchange-alt"></i>
+                                            <i class="fa fa-arrow-right"></i> GPS
                                         </button>
                                     </div>
                                 </div>
@@ -220,11 +220,11 @@
                                            value="{{ sector.coordinates_swiss_n|default('') }}" 
                                            aria-describedby="ch-n-help"
                                            placeholder="1200000">
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-secondary" 
+                                    <div class="input-group-text">
+                                        <button type="button" class="btn btn-outline-success btn-sm" 
                                                 id="convert-to-lv95-btn" 
                                                 title="Convertir GPS → LV95">
-                                            <i class="fa fa-exchange-alt"></i>
+                                            <i class="fa fa-arrow-left"></i> LV95
                                         </button>
                                     </div>
                                 </div>
@@ -660,6 +660,12 @@
 <script src="/js/coordinate-converter.js"></script>
 
 <script>
+// Initialiser le convertisseur global
+window.TopoclimbCoordinateConverter = new CoordinateConverter();
+console.log('🌍 Convertisseur de coordonnées initialisé');
+</script>
+
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏔️ Initialisation gestionnaire de formulaire secteur TopoclimbCH');
     
@@ -711,6 +717,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        // Gestion suppression médias
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.media-delete-btn')) {
+                const button = e.target.closest('.media-delete-btn');
+                const mediaId = button.getAttribute('data-media-id');
+                const csrfToken = button.getAttribute('data-csrf-token');
+                
+                if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+                    deleteMedia(mediaId, csrfToken, button);
+                }
+            }
+        });
+        
         // Écouter les événements personnalisés
         window.TopoclimbCH.Events.on('form:validation-error', function(errors) {
             console.warn('⚠️ Erreurs de validation:', errors);
@@ -718,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         window.TopoclimbCH.Events.on('form:media-deleted', function(mediaId) {
             console.log('🗑️ Média supprimé:', mediaId);
-            TopoclimbCH.Notifications.success('Image supprimée avec succès');
+            showNotification('Image supprimée avec succès', 'success');
         });
         
     } catch (error) {
@@ -862,6 +881,49 @@ async function convertGPStoLV95() {
 }
 
 /**
+ * Supprime un média
+ */
+async function deleteMedia(mediaId, csrfToken, buttonElement) {
+    try {
+        // Indicateur de chargement
+        const originalContent = buttonElement.innerHTML;
+        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        buttonElement.disabled = true;
+        
+        const response = await fetch(`/api/media/${mediaId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Supprimer l'élément du DOM
+            const mediaItem = buttonElement.closest('.col-md-4');
+            if (mediaItem) {
+                mediaItem.style.transition = 'opacity 0.3s';
+                mediaItem.style.opacity = '0';
+                setTimeout(() => mediaItem.remove(), 300);
+            }
+            showNotification('Image supprimée avec succès', 'success');
+        } else {
+            throw new Error(data.error || 'Erreur lors de la suppression');
+        }
+        
+    } catch (error) {
+        console.error('Erreur suppression média:', error);
+        showNotification(`Erreur: ${error.message}`, 'error');
+        
+        // Restaurer le bouton
+        buttonElement.innerHTML = originalContent;
+        buttonElement.disabled = false;
+    }
+}
+
+/**
  * Affiche une notification à l'utilisateur
  */
 function showNotification(message, type = 'info') {
@@ -893,10 +955,14 @@ function initRegionSiteCascade() {
     const initialRegionId = regionSelect.value;
     const initialSiteId = '{{ sector.site_id|default("") }}';
 
+    console.log('🔍 État initial cascade - Région:', initialRegionId, 'Site:', initialSiteId);
+
     // Si région déjà sélectionnée (mode édition), charger les sites
     if (initialRegionId) {
-        console.log('Mode édition détecté - Région:', initialRegionId, 'Site:', initialSiteId);
+        console.log('Mode édition détecté - Chargement des sites pour région:', initialRegionId);
         loadSites(initialRegionId, false, initialSiteId);
+    } else {
+        console.log('Mode création - Pas de région sélectionnée');
     }
 
     // Événement changement de région
@@ -914,7 +980,7 @@ function initRegionSiteCascade() {
      */
     async function loadSites(regionId, resetSelection = true, selectedSiteId = null) {
         try {
-            console.log(`🔄 Chargement sites pour région ${regionId}`);
+            console.log(`🔄 Chargement sites pour région ${regionId}, selectedSiteId:`, selectedSiteId);
             
             showSiteLoading(true);
             siteSelect.disabled = true;
@@ -923,13 +989,19 @@ function initRegionSiteCascade() {
                 siteSelect.innerHTML = '<option value="">Chargement des sites...</option>';
             }
 
-            const response = await fetch(`/api/regions/${regionId}/sites`);
+            const url = `/api/regions/${regionId}/sites`;
+            console.log('📡 Appel API:', url);
+            
+            const response = await fetch(url);
+            
+            console.log('📡 Réponse API status:', response.status);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log('📡 Données API reçues:', data);
             
             if (!data.success) {
                 throw new Error(data.error || 'Erreur lors du chargement des sites');
