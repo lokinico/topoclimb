@@ -659,7 +659,7 @@
 <!-- TopoclimbCH JavaScript Components -->
 <script src="/js/coordinate-converter.js"></script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 // Initialiser le convertisseur global
 window.TopoclimbCoordinateConverter = new CoordinateConverter();
 console.log('🌍 Convertisseur de coordonnées initialisé');
@@ -698,7 +698,7 @@ console.log('🌍 Convertisseur de coordonnées initialisé');
 })();
 </script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏔️ Initialisation gestionnaire de formulaire secteur TopoclimbCH');
     
