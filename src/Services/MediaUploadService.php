@@ -31,41 +31,41 @@ class MediaUploadService
     public function uploadMedia(UploadedFile $file, string $entityType, int $entityId, ?string $title = null, ?int $userId = null): ?int
     {
         try {
-            app_log("MediaUploadService::uploadMedia - Début upload");
+            error_log("MediaUploadService::uploadMedia - Début upload");
             
             // Validation du fichier et récupération de la taille
-            app_log("MediaUploadService::uploadMedia - Validation fichier");
+            error_log("MediaUploadService::uploadMedia - Validation fichier");
             $fileSize = $this->validateFile($file);
             
             // Collecter les informations du fichier AVANT de le déplacer
-            app_log("MediaUploadService::uploadMedia - Collecte informations fichier");
+            error_log("MediaUploadService::uploadMedia - Collecte informations fichier");
             $originalName = $file->getClientOriginalName();
             $mimeType = $file->getMimeType();
             $fileSize = $fileSize; // Déjà calculé dans validateFile
             
             // Génération nom de fichier unique
-            app_log("MediaUploadService::uploadMedia - Génération nom fichier");
+            error_log("MediaUploadService::uploadMedia - Génération nom fichier");
             $fileName = $this->generateFileName($file);
             $filePath = '/uploads/media/' . $fileName;
             $fullPath = $this->uploadDirectory . '/' . $fileName;
             
-            app_log("MediaUploadService::uploadMedia - fileName: $fileName, fullPath: $fullPath");
+            error_log("MediaUploadService::uploadMedia - fileName: $fileName, fullPath: $fullPath");
             
             // Déplacement du fichier (extraire nom fichier final et répertoire complet)
             $finalFileName = basename($fileName); // ex: 68a8...png
             $targetDirectory = $this->uploadDirectory . '/' . dirname($fileName); // ex: /...media/2025/08/22
             
-            app_log("MediaUploadService::uploadMedia - Déplacement vers: $targetDirectory/$finalFileName");
+            error_log("MediaUploadService::uploadMedia - Déplacement vers: $targetDirectory/$finalFileName");
             $file->move($targetDirectory, $finalFileName);
             
             // Enregistrement en base de données (avec les données collectées avant move)
-            app_log("MediaUploadService::uploadMedia - Enregistrement base données");
+            error_log("MediaUploadService::uploadMedia - Enregistrement base données");
             $mediaId = $this->saveMediaRecord($entityType, $entityId, $filePath, $originalName, $mimeType, $fileSize, $title, $userId);
             
             return $mediaId;
             
         } catch (\Exception $e) {
-            app_log("MediaUploadService: Erreur upload - " . $e->getMessage());
+            error_log("MediaUploadService: Erreur upload - " . $e->getMessage());
             throw $e;
         }
     }
@@ -76,24 +76,24 @@ class MediaUploadService
      */
     private function validateFile(UploadedFile $file): int
     {
-        app_log("MediaUploadService::validateFile - Début validation");
+        error_log("MediaUploadService::validateFile - Début validation");
         
         // Vérifier que le fichier a été uploadé correctement
-        app_log("MediaUploadService::validateFile - Vérification isValid()");
+        error_log("MediaUploadService::validateFile - Vérification isValid()");
         if (!$file->isValid()) {
             throw new \InvalidArgumentException('Fichier invalide ou erreur d\'upload');
         }
         
         // Vérifier le type MIME
-        app_log("MediaUploadService::validateFile - Vérification MIME type");
+        error_log("MediaUploadService::validateFile - Vérification MIME type");
         $mimeType = $file->getMimeType();
-        app_log("MediaUploadService::validateFile - MIME type détecté: " . $mimeType);
+        error_log("MediaUploadService::validateFile - MIME type détecté: " . $mimeType);
         if (!in_array($mimeType, $this->allowedTypes)) {
             throw new \InvalidArgumentException('Type de fichier non autorisé. Types acceptés: JPG, PNG, GIF, WebP');
         }
         
         // Vérifier la taille (utiliser $_FILES car getClientSize() peut être problématique)
-        app_log("MediaUploadService::validateFile - Vérification taille");
+        error_log("MediaUploadService::validateFile - Vérification taille");
         $fileName = $file->getClientOriginalName();
         $fileSize = null;
         
@@ -112,25 +112,25 @@ class MediaUploadService
             try {
                 $fileSize = $file->getClientSize();
             } catch (\Exception $e) {
-                app_log("MediaUploadService::validateFile - Erreur getClientSize: " . $e->getMessage());
+                error_log("MediaUploadService::validateFile - Erreur getClientSize: " . $e->getMessage());
                 $fileSize = 0; // Si on ne peut pas obtenir la taille, on laisse passer
             }
         }
         
-        app_log("MediaUploadService::validateFile - Taille fichier: " . $fileSize . " bytes");
+        error_log("MediaUploadService::validateFile - Taille fichier: " . $fileSize . " bytes");
         if ($fileSize > $this->maxFileSize) {
             throw new \InvalidArgumentException('Fichier trop volumineux. Taille max: 5MB');
         }
         
         // Vérification sécuritaire supplémentaire via getimagesize
-        app_log("MediaUploadService::validateFile - Vérification getimagesize");
+        error_log("MediaUploadService::validateFile - Vérification getimagesize");
         $tempPath = $file->getPathname();
-        app_log("MediaUploadService::validateFile - Chemin temp: " . $tempPath);
+        error_log("MediaUploadService::validateFile - Chemin temp: " . $tempPath);
         $imageInfo = @getimagesize($tempPath);
         if ($imageInfo === false) {
             throw new \InvalidArgumentException('Fichier corrompu ou non valide');
         }
-        app_log("MediaUploadService::validateFile - Validation terminée avec succès");
+        error_log("MediaUploadService::validateFile - Validation terminée avec succès");
         
         return $fileSize;
     }

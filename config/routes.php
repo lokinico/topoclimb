@@ -1057,6 +1057,13 @@ return [
         'action' => 'uploadForm',
         'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
     ],
+    [
+        'method' => 'DELETE',
+        'path' => '/api/media/{id}',
+        'controller' => \TopoclimbCH\Controllers\MediaController::class,
+        'action' => 'deleteApi',
+        'middlewares' => [\TopoclimbCH\Middleware\AuthMiddleware::class]
+    ],
 
     // **8. FORMATIONS ET SÉCURITÉ**
     // Pages développement futur : Cours en ligne, certifications, quiz sécurité

@@ -1081,38 +1081,38 @@ class SectorController extends BaseController
      */
     private function handleImageUpload(Request $request, int $sectorId): void
     {
-        app_log("SectorController::handleImageUpload - Début méthode pour secteur {$sectorId}");
+        error_log("SectorController::handleImageUpload - Début méthode pour secteur {$sectorId}");
         
         // Vérifier si un fichier a été uploadé (nom du champ: media_file ou image)
         $files = $request->files->all();
-        app_log("SectorController::handleImageUpload - Files reçus: " . print_r($files, true));
+        error_log("SectorController::handleImageUpload - Files reçus: " . print_r($files, true));
         
         $uploadedFile = null;
         if (isset($files['media_file']) && $files['media_file']) {
             $uploadedFile = $files['media_file'];
-            app_log("SectorController::handleImageUpload - Fichier media_file trouvé");
+            error_log("SectorController::handleImageUpload - Fichier media_file trouvé");
         } elseif (isset($files['image']) && $files['image']) {
             $uploadedFile = $files['image'];
-            app_log("SectorController::handleImageUpload - Fichier image trouvé");
+            error_log("SectorController::handleImageUpload - Fichier image trouvé");
         } else {
-            app_log("SectorController::handleImageUpload - Pas de fichier media_file ou image");
+            error_log("SectorController::handleImageUpload - Pas de fichier media_file ou image");
             return; // Pas de fichier, pas d'erreur
         }
         
         // Vérifier que c'est bien un objet UploadedFile et qu'il y a un fichier
         if (!$uploadedFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
-            app_log("SectorController::handleImageUpload - Fichier n'est pas UploadedFile");
+            error_log("SectorController::handleImageUpload - Fichier n'est pas UploadedFile");
             return;
         }
         
         if ($uploadedFile->getError() === UPLOAD_ERR_NO_FILE) {
-            app_log("SectorController::handleImageUpload - UPLOAD_ERR_NO_FILE");
+            error_log("SectorController::handleImageUpload - UPLOAD_ERR_NO_FILE");
             return; // Pas de fichier sélectionné, normal
         }
         
         if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
-            app_log("SectorController::handleImageUpload - Erreur upload: " . $uploadedFile->getError());
-            app_log("SectorController::handleImageUpload - Création du secteur continue sans image");
+            error_log("SectorController::handleImageUpload - Erreur upload: " . $uploadedFile->getError());
+            error_log("SectorController::handleImageUpload - Création du secteur continue sans image");
             return; // Ne pas faire échouer la création du secteur pour une erreur d'image
         }
         
@@ -1130,11 +1130,11 @@ class SectorController extends BaseController
             );
             
             if ($mediaId) {
-                app_log("SectorController: Image uploadée avec succès - Media ID: {$mediaId}");
+                error_log("SectorController: Image uploadée avec succès - Media ID: {$mediaId}");
             }
             
         } catch (\Exception $e) {
-            app_log("SectorController: Erreur upload image - " . $e->getMessage());
+            error_log("SectorController: Erreur upload image - " . $e->getMessage());
             // Ne pas faire échouer la création du secteur pour une erreur d'image
             $this->flash('warning', 'Secteur créé mais erreur lors de l\'upload de l\'image: ' . $e->getMessage());
         }

@@ -221,6 +221,68 @@ class MediaController extends BaseController
     }
 
     /**
+     * API: Suppression d'un média (pour AJAX)
+     */
+    public function deleteApi(Request $request): Response
+    {
+        try {
+            $id = (int) $request->attributes->get('id');
+            
+            if (!$id) {
+                return Response::json([
+                    'success' => false,
+                    'error' => 'ID du média non spécifié'
+                ], 400);
+            }
+
+            // Vérifier que le média existe
+            $media = $this->db->fetchOne("SELECT * FROM climbing_media WHERE id = ?", [$id]);
+            
+            if (!$media) {
+                return Response::json([
+                    'success' => false,
+                    'error' => 'Média non trouvé'
+                ], 404);
+            }
+
+            $this->db->beginTransaction();
+
+            // Supprimer les relations du média
+            $this->db->execute("DELETE FROM climbing_media_relationships WHERE media_id = ?", [$id]);
+            
+            // Supprimer le fichier physique si il existe
+            if ($media['file_path']) {
+                $filePath = __DIR__ . '/../../public/uploads/' . $media['file_path'];
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+            
+            // Supprimer l'enregistrement du média
+            $this->db->execute("DELETE FROM climbing_media WHERE id = ?", [$id]);
+
+            $this->db->commit();
+
+            return Response::json([
+                'success' => true,
+                'message' => 'Média supprimé avec succès'
+            ]);
+
+        } catch (\Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            error_log("MediaController::deleteApi - Erreur: " . $e->getMessage());
+            
+            return Response::json([
+                'success' => false,
+                'error' => 'Erreur lors de la suppression: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Génère l'URL d'un média
      */
     private function generateMediaUrl(string $filename): string
