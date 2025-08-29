@@ -802,7 +802,7 @@ class SectorController extends BaseController
             'access_time' => $request->request->get('access_time') ? (int)$request->request->get('access_time') : null,
             'approach' => trim($request->request->get('approach', '')),
             'parking_info' => trim($request->request->get('parking_info', '')),
-            'orientation' => trim($request->request->get('orientation', '')),
+            // 'orientation' => trim($request->request->get('orientation', '')), // TEMPORAIREMENT RETIRÉ - colonne inexistante en production
             'active' => (int)$request->request->get('active', 1)
         ];
 
@@ -884,8 +884,8 @@ class SectorController extends BaseController
             'access_info' => $data['access_info'],
             'access_time' => $data['access_time'],
             'approach' => $data['approach'],
-            'parking_info' => $data['parking_info'],
-            'orientation' => $data['orientation']
+            'parking_info' => $data['parking_info']
+            // 'orientation' => $data['orientation'] // TEMPORAIREMENT RETIRÉ - colonne inexistante en production
         ];
         
         $columns = $baseColumns;
