@@ -392,6 +392,11 @@ class SectorController extends BaseController
                 'routes' => $routes,
                 'media' => $media,
                 'stats' => $stats,
+                'routes_count' => $stats['routes_count'],
+                'min_difficulty' => $stats['min_difficulty'],
+                'max_difficulty' => $stats['max_difficulty'],
+                'avg_route_length' => $stats['avg_length'],
+                'ascents_count' => 0, // TODO: Implémenter comptage ascensions
                 'csp_nonce' => $this->generateCspNonce()
             ]);
         } catch (\Exception $e) {
@@ -797,7 +802,6 @@ class SectorController extends BaseController
             'access_time' => $request->request->get('access_time') ? (int)$request->request->get('access_time') : null,
             'approach' => trim($request->request->get('approach', '')),
             'parking_info' => trim($request->request->get('parking_info', '')),
-            'color' => $request->request->get('color', '#FF0000'),
             'orientation' => trim($request->request->get('orientation', '')),
             'active' => (int)$request->request->get('active', 1)
         ];
@@ -841,10 +845,6 @@ class SectorController extends BaseController
             throw new \InvalidArgumentException('La longitude doit être entre -180 et 180 degrés');
         }
 
-        // Validation couleur hexadécimale
-        if (!preg_match('/^#[0-9A-F]{6}$/i', $data['color'])) {
-            throw new \InvalidArgumentException('La couleur doit être au format hexadécimal (#RRGGBB)');
-        }
 
         return $data;
     }
@@ -885,7 +885,6 @@ class SectorController extends BaseController
             'access_time' => $data['access_time'],
             'approach' => $data['approach'],
             'parking_info' => $data['parking_info'],
-            'color' => $data['color'],
             'orientation' => $data['orientation']
         ];
         
@@ -947,13 +946,13 @@ class SectorController extends BaseController
         }
         
         try {
-            // Récupérer le secteur avec ses relations
+            // Récupérer le secteur avec ses relations complètes
             $sector = $this->db->fetchOne(
-                "SELECT s.*, site.name as site_name, site.region_id,
-                        reg.name as region_name
+                "SELECT s.*, site.name as site_name, site.region_id as site_region_id,
+                        reg.name as region_name, reg.id as region_id
                  FROM climbing_sectors s
                  LEFT JOIN climbing_sites site ON s.site_id = site.id
-                 LEFT JOIN climbing_regions reg ON site.region_id = reg.id
+                 LEFT JOIN climbing_regions reg ON s.region_id = reg.id
                  WHERE s.id = ? AND s.active = 1",
                 [(int)$id]
             );
@@ -963,19 +962,42 @@ class SectorController extends BaseController
                 return $this->redirect('/sectors');
             }
             
-            // Récupérer les sites pour le formulaire
+            // Récupérer toutes les régions
+            $regions = $this->db->fetchAll(
+                "SELECT * FROM climbing_regions WHERE active = 1 ORDER BY name ASC"
+            );
+            
+            // Récupérer tous les sites avec leurs régions
             $sites = $this->db->fetchAll(
-                "SELECT s.id, s.name, r.name as region_name
+                "SELECT s.id, s.name, s.region_id, r.name as region_name
                  FROM climbing_sites s
                  LEFT JOIN climbing_regions r ON s.region_id = r.id
                  WHERE s.active = 1
                  ORDER BY r.name, s.name"
             );
             
+            // Récupérer les médias existants
+            $media = [];
+            try {
+                $media = $this->db->fetchAll(
+                    "SELECT m.id, m.title, m.file_path, m.media_type, mr.relationship_type
+                     FROM climbing_media m 
+                     JOIN climbing_media_relationships mr ON m.id = mr.media_id
+                     WHERE mr.entity_type = 'sector' AND mr.entity_id = ? AND m.is_public = 1
+                     ORDER BY mr.relationship_type, mr.sort_order ASC",
+                    [$id]
+                );
+            } catch (\Exception $e) {
+                error_log("Erreur récupération médias edit secteur {$id}: " . $e->getMessage());
+            }
+            
             return $this->render('sectors/form', [
                 'title' => 'Modifier le secteur ' . $sector['name'],
                 'sector' => $sector,
+                'regions' => $regions,
                 'sites' => $sites,
+                'media' => $media,
+                'selected_site' => $sector['site_id'] ? ['id' => $sector['site_id'], 'name' => $sector['site_name']] : null,
                 'is_edit' => true,
                 'csrf_token' => $this->createCsrfToken()
             ]);

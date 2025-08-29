@@ -413,6 +413,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'favorite':
                     handleFavoriteAction(button, sectorId);
                     break;
+                case 'view-sector':
+                    // Rediriger vers la page de détail du secteur
+                    window.location.href = `/sectors/${sectorId}`;
+                    break;
+            }
+        }
+        
+        // Gestion clic sur cartes de secteur pour navigation
+        if (e.target.closest('.sector-card')) {
+            const card = e.target.closest('.sector-card');
+            const sectorId = card.getAttribute('data-sector-id');
+            
+            // Vérifier que ce n'est pas un clic sur un bouton d'action
+            if (!e.target.closest('[data-action]') && !e.target.closest('a')) {
+                window.location.href = `/sectors/${sectorId}`;
             }
         }
     });
@@ -646,6 +661,7 @@ function getClimbingAdvice(weatherData) {
 <style>
 .sector-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
 }
 
 .sector-card:hover {

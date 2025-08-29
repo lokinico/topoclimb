@@ -118,8 +118,8 @@
                                     <select name="site_id" id="site_id" class="form-control" 
                                             disabled aria-describedby="site-help">
                                         <option value="">Choisissez d'abord une région...</option>
-                                        {% if selected_site %}
-                                            <option value="{{ selected_site.id }}" selected>{{ selected_site.name }}</option>
+                                        {% if sector.site_id %}
+                                            <option value="{{ sector.site_id }}" selected>{{ sector.site_name|default('Site inconnu') }}</option>
                                         {% endif %}
                                     </select>
                                     <div class="loading-spinner d-none" id="site-loading">
@@ -138,17 +138,6 @@
                             <!-- Espace réservé pour autres champs -->
                         </div>
                         
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label for="color" class="form-label">Couleur d'identification</label>
-                                <input type="color" name="color" id="color" class="form-control" 
-                                       value="{{ sector.color|default('#FF0000') }}" 
-                                       aria-describedby="color-help">
-                                <small id="color-help" class="form-text text-muted">
-                                    Couleur pour identifier ce secteur sur les cartes
-                                </small>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="form-group mb-3">
@@ -308,31 +297,20 @@
 
                         <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label class="form-label">Exposition principale</label>
-                                <div class="form-check-group">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="primary_exposure" 
-                                               id="exposure_n" value="N" {% if sector.primary_exposure == 'N' %}checked{% endif %}>
-                                        <label class="form-check-label" for="exposure_n">Nord</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="primary_exposure" 
-                                               id="exposure_s" value="S" {% if sector.primary_exposure == 'S' %}checked{% endif %}>
-                                        <label class="form-check-label" for="exposure_s">Sud</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="primary_exposure" 
-                                               id="exposure_e" value="E" {% if sector.primary_exposure == 'E' %}checked{% endif %}>
-                                        <label class="form-check-label" for="exposure_e">Est</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="primary_exposure" 
-                                               id="exposure_w" value="W" {% if sector.primary_exposure == 'W' %}checked{% endif %}>
-                                        <label class="form-check-label" for="exposure_w">Ouest</label>
-                                    </div>
-                                </div>
+                                <label for="orientation" class="form-label">Orientation du secteur</label>
+                                <select name="orientation" id="orientation" class="form-control">
+                                    <option value="">Sélectionnez une orientation</option>
+                                    <option value="N" {% if sector.orientation == 'N' %}selected{% endif %}>Nord (N)</option>
+                                    <option value="NE" {% if sector.orientation == 'NE' %}selected{% endif %}>Nord-Est (NE)</option>
+                                    <option value="E" {% if sector.orientation == 'E' %}selected{% endif %}>Est (E)</option>
+                                    <option value="SE" {% if sector.orientation == 'SE' %}selected{% endif %}>Sud-Est (SE)</option>
+                                    <option value="S" {% if sector.orientation == 'S' %}selected{% endif %}>Sud (S)</option>
+                                    <option value="SW" {% if sector.orientation == 'SW' %}selected{% endif %}>Sud-Ouest (SW)</option>
+                                    <option value="W" {% if sector.orientation == 'W' %}selected{% endif %}>Ouest (W)</option>
+                                    <option value="NW" {% if sector.orientation == 'NW' %}selected{% endif %}>Nord-Ouest (NW)</option>
+                                </select>
                                 <small class="form-text text-muted">
-                                    Orientation principale du secteur
+                                    Orientation principale du secteur (exposition dominante)
                                 </small>
                             </div>
                         </div>
@@ -558,16 +536,9 @@
                     </p>
                 </div>
                 
-                <div class="help-item mb-3">
-                    <h6>Couleur d'identification</h6>
-                    <p class="small text-muted">
-                        Choisissez une couleur distinctive pour identifier le secteur sur les cartes 
-                        et topos. Évitez les couleurs déjà utilisées dans le même site.
-                    </p>
-                </div>
 
                 <div class="help-item mb-3">
-                    <h6>Exposition</h6>
+                    <h6>Orientation</h6>
                     <p class="small text-muted">
                         <strong>Nord:</strong> Ombre, frais, séchage lent<br>
                         <strong>Sud:</strong> Soleil toute la journée, chaud<br>
@@ -918,12 +889,13 @@ function initRegionSiteCascade() {
 
     console.log('🔗 Initialisation cascade région→site');
 
-    // État initial
+    // État initial - récupérer les valeurs depuis les données Twig
     const initialRegionId = regionSelect.value;
-    const initialSiteId = siteSelect.value;
+    const initialSiteId = '{{ sector.site_id|default("") }}';
 
     // Si région déjà sélectionnée (mode édition), charger les sites
     if (initialRegionId) {
+        console.log('Mode édition détecté - Région:', initialRegionId, 'Site:', initialSiteId);
         loadSites(initialRegionId, false, initialSiteId);
     }
 
