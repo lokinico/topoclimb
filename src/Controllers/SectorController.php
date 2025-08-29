@@ -350,19 +350,17 @@ class SectorController extends BaseController
                 [$id]
             );
 
-            // Récupération des médias (structure réelle identifiée)
+            // Récupération des médias spécifiques au secteur
             $media = [];
             try {
-                // Solution temporaire: récupérer images publiques génériques
-                // TODO: Ajouter colonnes entity_type/entity_id pour liaison spécifique secteurs
                 $media = $this->db->fetchAll(
-                    "SELECT id, title, file_path, filename, media_type, is_featured
+                    "SELECT id, title, file_path, filename, media_type, is_featured, description
                      FROM climbing_media 
-                     WHERE media_type = 'image' AND is_public = 1 
-                     ORDER BY is_featured DESC, created_at DESC
-                     LIMIT 10"
+                     WHERE entity_type = 'sector' AND entity_id = ? AND media_type = 'image'
+                     ORDER BY is_featured DESC, created_at DESC",
+                    [$id]
                 );
-                error_log("INFO: {count($media)} médias génériques récupérés pour secteur {$id}");
+                error_log("INFO: " . count($media) . " médias spécifiques récupérés pour secteur {$id}");
             } catch (\Exception $e) {
                 error_log("Erreur récupération médias secteur {$id}: " . $e->getMessage());
                 $media = []; // Fallback sécurisé
@@ -978,19 +976,17 @@ class SectorController extends BaseController
                  ORDER BY r.name, s.name"
             );
             
-            // Récupération des médias pour édition (structure réelle identifiée)
+            // Récupération des médias spécifiques au secteur pour édition
             $media = [];
             try {
-                // Solution temporaire: récupérer images publiques génériques 
-                // TODO: Ajouter colonnes entity_type/entity_id pour liaison spécifique secteurs
                 $media = $this->db->fetchAll(
-                    "SELECT id, title, file_path, filename, media_type, is_featured
+                    "SELECT id, title, file_path, filename, media_type, is_featured, description
                      FROM climbing_media 
-                     WHERE media_type = 'image' AND is_public = 1
-                     ORDER BY is_featured DESC, created_at DESC
-                     LIMIT 10"
+                     WHERE entity_type = 'sector' AND entity_id = ? AND media_type = 'image'
+                     ORDER BY is_featured DESC, created_at DESC",
+                    [$id]
                 );
-                error_log("INFO: " . count($media) . " médias génériques récupérés pour édition secteur {$id}");
+                error_log("INFO: " . count($media) . " médias spécifiques récupérés pour édition secteur {$id}");
             } catch (\Exception $e) {
                 error_log("Erreur récupération médias edit secteur {$id}: " . $e->getMessage());
                 $media = []; // Fallback sécurisé
