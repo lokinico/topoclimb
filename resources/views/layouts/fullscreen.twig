@@ -180,7 +180,7 @@
 
     <!-- Scripts -->
     {% block scripts %}
-    <script>
+    <script nonce="{{ csp_nonce|default('') }}">
     // Toggle header
     function toggleHeader() {
         const header = document.getElementById('appHeader');

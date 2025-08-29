@@ -242,7 +242,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce|default('') }}">
 // Exposer les données des sites pour les composants JavaScript modernes
 window.sitesData = {
     sites: [

@@ -721,16 +721,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
     
     try {
-        // Initialiser le gestionnaire de formulaire avec coordonnées existantes
-        const formManager = new SectorFormManager({
-            mapId: 'sector-map',
-            latInputId: 'coordinates_lat',
-            lngInputId: 'coordinates_lng',
-            swissEInputId: 'coordinates_swiss_e',
-            swissNInputId: 'coordinates_swiss_n'
-        });
-        
-        console.log('✅ Gestionnaire de formulaire secteur initialisé');
+        // Note: SectorFormManager temporairement désactivé (en développement)
+        console.log('✅ Gestionnaire de formulaire secteur (mode fallback)');
         
         // Si coordonnées existantes dans le formulaire, les utiliser
         {% if sector.coordinates_lat and sector.coordinates_lng %}
@@ -790,7 +782,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
     } catch (error) {
         console.error('❌ Erreur initialisation formulaire secteur:', error);
-        TopoclimbCH.Notifications.error('Erreur d\'initialisation du formulaire');
+        
+        // Notification d'erreur (fallback safe)
+        if (window.TopoclimbCH && TopoclimbCH.Notifications) {
+            TopoclimbCH.Notifications.error('Erreur d\'initialisation du formulaire');
+        } else {
+            console.warn('⚠️ TopoclimbCH.Notifications non disponible');
+        }
         
         // Fallback vers fonctionnalité basique si erreur
         initBasicFormFunctionality();

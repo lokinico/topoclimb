@@ -516,7 +516,7 @@
 <!-- TopoclimbCH JavaScript Components -->
 <script src="/js/coordinate-converter.js"></script>
 
-<script>
+<script nonce="{{ csp_nonce|default('') }}">
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📝 Initialisation gestionnaire de formulaire région TopoclimbCH');
     

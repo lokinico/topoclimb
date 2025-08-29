@@ -354,7 +354,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-<script>
+<script nonce="{{ csp_nonce|default('') }}">
 document.addEventListener('DOMContentLoaded', function() {
     // Initialiser la carte si les coordonnées sont disponibles
     {% if site.coordinates_lat and site.coordinates_lng %}
@@ -488,7 +488,7 @@ function confirmDelete(siteId, siteName) {
 }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce|default('') }}">
 // Exposer les données du site pour les composants JavaScript modernes
 window.siteData = {
     id: {{ site.id }},

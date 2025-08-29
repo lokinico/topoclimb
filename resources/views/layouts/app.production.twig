@@ -32,7 +32,7 @@
     <!-- Google Analytics -->
     {% if config('google_analytics_id') %}
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('google_analytics_id') }}"></script>
-    <script>
+    <script nonce="{{ csp_nonce|default('') }}">
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
@@ -621,7 +621,7 @@
     {% block scripts %}{% endblock %}
     
     <!-- Initialisation -->
-    <script>
+    <script nonce="{{ csp_nonce|default('') }}">
         document.addEventListener('DOMContentLoaded', function() {
             // Gestion des raccourcis clavier
             document.addEventListener('keydown', function(e) {

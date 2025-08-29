@@ -269,7 +269,7 @@
 }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce|default('') }}">
 // Script intégré pour gérer les messages flash
 document.addEventListener('DOMContentLoaded', function() {
     // Gestion des boutons de fermeture

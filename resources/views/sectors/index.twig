@@ -370,7 +370,7 @@
 
 {% block scripts %}
 <script src="/js/pagination.js"></script>
-<script>
+<script nonce="{{ csp_nonce|default('') }}">
 // JavaScript simple pour la gestion des vues
 document.addEventListener('DOMContentLoaded', function() {
     // Gestion des onglets de vue
