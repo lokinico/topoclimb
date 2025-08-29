@@ -351,15 +351,13 @@ class SectorController extends BaseController
             );
 
             // Récupération des médias associés au secteur
+            // TODO: Réactiver une fois la structure de climbing_media identifiée en production
             $media = [];
             try {
-                $media = $this->db->fetchAll(
-                    "SELECT id, title, file_path
-                     FROM climbing_media 
-                     WHERE entity_type = 'sector' AND entity_id = ?
-                     ORDER BY id ASC",
-                    [$id]
-                );
+                // TEMPORAIREMENT DÉSACTIVÉ - Structure table climbing_media inconnue en production
+                // Colonnes testées qui n'existent pas: file_name, is_primary, created_at, active, entity_type
+                // $media = $this->db->fetchAll("SELECT * FROM climbing_media WHERE ...", [$id]);
+                error_log("INFO: Récupération médias désactivée temporairement pour secteur {$id}");
             } catch (\Exception $e) {
                 error_log("Erreur récupération médias secteur {$id}: " . $e->getMessage());
             }
