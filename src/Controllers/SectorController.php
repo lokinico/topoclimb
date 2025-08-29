@@ -354,10 +354,10 @@ class SectorController extends BaseController
             $media = [];
             try {
                 $media = $this->db->fetchAll(
-                    "SELECT id, title, file_path, file_name, is_primary, created_at
+                    "SELECT id, title, file_path
                      FROM climbing_media 
-                     WHERE entity_type = 'sector' AND entity_id = ? AND active = 1
-                     ORDER BY is_primary DESC, id ASC",
+                     WHERE entity_type = 'sector' AND entity_id = ?
+                     ORDER BY id ASC",
                     [$id]
                 );
             } catch (\Exception $e) {
@@ -978,10 +978,10 @@ class SectorController extends BaseController
             $media = [];
             try {
                 $media = $this->db->fetchAll(
-                    "SELECT id, title, file_path, file_name, is_primary, created_at
+                    "SELECT id, title, file_path
                      FROM climbing_media 
-                     WHERE entity_type = 'sector' AND entity_id = ? AND active = 1
-                     ORDER BY is_primary DESC, id ASC",
+                     WHERE entity_type = 'sector' AND entity_id = ?
+                     ORDER BY id ASC",
                     [$id]
                 );
             } catch (\Exception $e) {
