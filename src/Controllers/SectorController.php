@@ -1030,18 +1030,22 @@ class SectorController extends BaseController
         
         try {
             // Récupérer le secteur à modifier
+            error_log("🔧 SectorController::update - Récupération secteur {$id}");
             $sector = $this->db->fetchOne(
                 "SELECT * FROM climbing_sectors WHERE id = ? AND active = 1", 
                 [$id]
             );
             
             if (!$sector) {
+                error_log("🔧 SectorController::update - Secteur {$id} non trouvé");
                 $this->flash('error', 'Secteur non trouvé');
                 return $this->redirect('/sectors');
             }
             
             // Récupérer et valider les données de mise à jour
+            error_log("🔧 SectorController::update - Début validation données");
             $updateData = $this->validateSectorData($request);
+            error_log("🔧 SectorController::update - Validation données OK");
             $updateData['updated_at'] = date('Y-m-d H:i:s');
             
             // Mettre à jour en base
@@ -1059,6 +1063,8 @@ class SectorController extends BaseController
             }
             
         } catch (\Exception $e) {
+            error_log("🔧 SectorController::update - EXCEPTION: " . $e->getMessage());
+            error_log("🔧 SectorController::update - Stack trace: " . $e->getTraceAsString());
             app_log("Erreur update secteur: " . $e->getMessage());
             $this->flash('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
             return $this->redirect("/sectors/{$id}/edit");
