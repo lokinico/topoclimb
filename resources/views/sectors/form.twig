@@ -663,6 +663,39 @@
 // Initialiser le convertisseur global
 window.TopoclimbCoordinateConverter = new CoordinateConverter();
 console.log('🌍 Convertisseur de coordonnées initialisé');
+
+// Activation immédiate du select site si région sélectionnée
+(function() {
+    const regionSelect = document.getElementById('region_id');
+    const siteSelect = document.getElementById('site_id');
+    
+    if (regionSelect && siteSelect && regionSelect.value && siteSelect.disabled) {
+        console.log('🚀 Activation immédiate site select');
+        siteSelect.disabled = false;
+        
+        // Charger sites immédiatement
+        if (window.fetch) {
+            fetch('/api/regions/' + regionSelect.value + '/sites')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        siteSelect.innerHTML = '<option value="">Aucun site sélectionné</option>';
+                        data.data.forEach(site => {
+                            const option = document.createElement('option');
+                            option.value = site.id;
+                            option.textContent = site.name;
+                            if ('{{ sector.site_id|default("") }}' && site.id == '{{ sector.site_id|default("") }}') {
+                                option.selected = true;
+                            }
+                            siteSelect.appendChild(option);
+                        });
+                        console.log('✅ Sites chargés immédiatement');
+                    }
+                })
+                .catch(err => console.log('Erreur chargement sites:', err));
+        }
+    }
+})();
 </script>
 
 <script>
@@ -670,7 +703,22 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🏔️ Initialisation gestionnaire de formulaire secteur TopoclimbCH');
     
     // Initialiser le cascade région→site
-    initRegionSiteCascade();
+    try {
+        initRegionSiteCascade();
+    } catch (error) {
+        console.error('❌ Erreur initialisation cascade:', error);
+    }
+    
+    // Fallback simple si erreur
+    setTimeout(function() {
+        const siteSelect = document.getElementById('site_id');
+        const regionSelect = document.getElementById('region_id');
+        
+        if (siteSelect && siteSelect.disabled && regionSelect && regionSelect.value) {
+            console.log('🔧 Activation fallback site select');
+            siteSelect.disabled = false;
+        }
+    }, 1000);
     
     try {
         // Initialiser le gestionnaire de formulaire avec coordonnées existantes
@@ -937,133 +985,77 @@ function showNotification(message, type = 'info') {
 }
 
 /**
- * Initialise le système cascade Région → Site pour les secteurs
+ * Initialise le système cascade Région → Site (version simplifiée)
  */
 function initRegionSiteCascade() {
+    console.log('🔗 Initialisation cascade région→site (version simplifiée)');
+    
     const regionSelect = document.getElementById('region_id');
     const siteSelect = document.getElementById('site_id');
-    const siteLoadingSpinner = document.getElementById('site-loading');
 
     if (!regionSelect || !siteSelect) {
-        console.warn('Éléments cascade région→site non trouvés');
+        console.warn('❌ Éléments cascade région→site non trouvés');
         return;
     }
 
-    console.log('🔗 Initialisation cascade région→site');
-
-    // État initial - récupérer les valeurs depuis les données Twig
+    // État initial
     const initialRegionId = regionSelect.value;
     const initialSiteId = '{{ sector.site_id|default("") }}';
+    
+    console.log('🔍 État initial - Région:', initialRegionId, 'Site:', initialSiteId);
 
-    console.log('🔍 État initial cascade - Région:', initialRegionId, 'Site:', initialSiteId);
-
-    // Si région déjà sélectionnée (mode édition), charger les sites
+    // Si région déjà sélectionnée, activer le select site
     if (initialRegionId) {
-        console.log('Mode édition détecté - Chargement des sites pour région:', initialRegionId);
-        loadSites(initialRegionId, false, initialSiteId);
-    } else {
-        console.log('Mode création - Pas de région sélectionnée');
+        siteSelect.disabled = false;
+        loadSitesForRegion(initialRegionId, initialSiteId);
     }
 
     // Événement changement de région
     regionSelect.addEventListener('change', function() {
         const regionId = this.value;
+        console.log('🔄 Changement région:', regionId);
+        
         if (regionId) {
-            loadSites(regionId, true);
+            siteSelect.disabled = false;
+            loadSitesForRegion(regionId);
         } else {
-            resetSiteSelect();
+            siteSelect.disabled = true;
+            siteSelect.innerHTML = '<option value="">Choisissez d\'abord une région...</option>';
         }
     });
 
-    /**
-     * Charge les sites pour une région donnée
-     */
-    async function loadSites(regionId, resetSelection = true, selectedSiteId = null) {
+    async function loadSitesForRegion(regionId, selectedSiteId = null) {
+        console.log(`📡 Chargement sites pour région ${regionId}`);
+        
+        siteSelect.innerHTML = '<option value="">Chargement...</option>';
+        
         try {
-            console.log(`🔄 Chargement sites pour région ${regionId}, selectedSiteId:`, selectedSiteId);
-            
-            showSiteLoading(true);
-            siteSelect.disabled = true;
-
-            if (resetSelection) {
-                siteSelect.innerHTML = '<option value="">Chargement des sites...</option>';
-            }
-
-            const url = `/api/regions/${regionId}/sites`;
-            console.log('📡 Appel API:', url);
-            
-            const response = await fetch(url);
-            
-            console.log('📡 Réponse API status:', response.status);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
+            const response = await fetch(`/api/regions/${regionId}/sites`);
             const data = await response.json();
-            console.log('📡 Données API reçues:', data);
             
-            if (!data.success) {
-                throw new Error(data.error || 'Erreur lors du chargement des sites');
+            console.log('📡 Réponse API:', data);
+            
+            if (data.success && data.data) {
+                siteSelect.innerHTML = '<option value="">Aucun site sélectionné (optionnel)</option>';
+                
+                data.data.forEach(site => {
+                    const option = document.createElement('option');
+                    option.value = site.id;
+                    option.textContent = site.name;
+                    if (selectedSiteId && site.id == selectedSiteId) {
+                        option.selected = true;
+                    }
+                    siteSelect.appendChild(option);
+                });
+                
+                console.log(`✅ ${data.data.length} sites chargés`);
+            } else {
+                throw new Error(data.error || 'Erreur API');
             }
-
-            populateSites(data.data, selectedSiteId);
-            siteSelect.disabled = false;
-            
-            console.log(`✅ Sites chargés: ${data.data.length}`);
-
         } catch (error) {
             console.error('❌ Erreur chargement sites:', error);
-            showNotification(`Erreur lors du chargement des sites: ${error.message}`, 'error');
-            resetSiteSelect();
-        } finally {
-            showSiteLoading(false);
-        }
-    }
-
-    /**
-     * Peuple la liste des sites
-     */
-    function populateSites(sites, selectedSiteId = null) {
-        siteSelect.innerHTML = '';
-        
-        // Option par défaut
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Aucun site sélectionné (optionnel)';
-        siteSelect.appendChild(defaultOption);
-
-        // Ajouter les sites
-        sites.forEach(site => {
-            const option = document.createElement('option');
-            option.value = site.id;
-            option.textContent = site.name;
-            
-            // Sélectionner le site si spécifié
-            if (selectedSiteId && site.id == selectedSiteId) {
-                option.selected = true;
-            }
-            
-            siteSelect.appendChild(option);
-        });
-
-        console.log(`Sites populés: ${sites.length} sites`);
-    }
-
-    /**
-     * Remet à zéro la sélection de site
-     */
-    function resetSiteSelect() {
-        siteSelect.innerHTML = '<option value="">Choisissez d\'abord une région...</option>';
-        siteSelect.disabled = true;
-    }
-
-    /**
-     * Affiche/cache le spinner de chargement des sites
-     */
-    function showSiteLoading(show) {
-        if (siteLoadingSpinner) {
-            siteLoadingSpinner.classList.toggle('d-none', !show);
+            siteSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            alert('Erreur lors du chargement des sites: ' + error.message);
         }
     }
 }
