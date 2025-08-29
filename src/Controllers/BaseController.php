@@ -241,6 +241,7 @@ abstract class BaseController
             $globalData = [
                 'flashes' => $this->session->getFlashes(),
                 'csrf_token' => $this->csrfManager->getToken(),
+                'csp_nonce' => $this->generateCspNonce(), // 🔐 CSP nonce automatique
                 'app' => [
                     'debug' => env('APP_DEBUG', false),
                     'environment' => env('APP_ENV', 'production'),

@@ -142,7 +142,7 @@ class SiteController extends BaseController
                     'sort_by' => $sortBy,
                     'sort_dir' => $sortDir
                 ],
-                'csp_nonce' => $this->generateCspNonce()
+
             ]);
         } catch (\Exception $e) {
             $this->session->flash('error', 'Une erreur est survenue lors du chargement des sites: ' . $e->getMessage());
@@ -247,7 +247,7 @@ class SiteController extends BaseController
                 'media' => $media,
                 'stats' => $stats,
                 'csrf_token' => $this->createCsrfToken(),
-                'csp_nonce' => $this->generateCspNonce()
+
             ]);
         } catch (\Exception $e) {
             $this->session->flash('error', 'Une erreur est survenue: ' . $e->getMessage());

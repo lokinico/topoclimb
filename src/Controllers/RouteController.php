@@ -540,7 +540,6 @@ class RouteController extends BaseController
                 'regions' => $regions,
                 'difficulty_systems' => $difficulty_systems,
                 'csrf_token' => $this->createCsrfToken(),
-                'csp_nonce' => $this->generateCspNonce(),
                 'is_edit' => false
             ]);
         } catch (\Exception $e) {

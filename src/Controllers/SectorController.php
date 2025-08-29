@@ -397,7 +397,6 @@ class SectorController extends BaseController
                 'max_difficulty' => $stats['max_difficulty'],
                 'avg_route_length' => $stats['avg_length'],
                 'ascents_count' => 0, // TODO: Implémenter comptage ascensions
-                'csp_nonce' => $this->generateCspNonce()
             ]);
         } catch (\Exception $e) {
             error_log("SectorController::show - Erreur: " . $e->getMessage());

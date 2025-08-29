@@ -76,7 +76,6 @@ class HomeController extends BaseController
                 'breadcrumbs' => [
                     ['title' => 'Accueil', 'url' => '/']
                 ],
-                'csp_nonce' => $this->generateCspNonce()
             ];
 
             return $this->render('home/index', $data);
